@@ -22,7 +22,7 @@ class Database
     private function __construct()
     {
         $dsn = sprintf(
-            'pgsql:host=%s;port=%s;dbname=%s',
+            'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
             $_ENV['DB_HOST'],
             $_ENV['DB_PORT'],
             $_ENV['DB_NAME']

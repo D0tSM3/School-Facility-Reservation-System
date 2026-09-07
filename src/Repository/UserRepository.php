@@ -53,17 +53,21 @@ class UserRepository
      */
     public function create(string $email, string $passwordHash, string $role = 'Customer'): array
     {
+        $pdo = $this->db->getPdo();
         $stmt = $this->db->query(
             'INSERT INTO Users (email, password_hash, role)
-             VALUES (:email, :password_hash, :role)
-             RETURNING user_id, email, role, created_at',
+             VALUES (:email, :password_hash, :role)',
             [
                 ':email'         => $email,
                 ':password_hash' => $passwordHash,
                 ':role'          => $role,
             ]
         );
-        return $stmt->fetch();
+        // MySQL does not support RETURNING — fetch the inserted row by last insert ID.
+        $newId = $pdo->lastInsertId();
+        // UUID primary keys: lastInsertId() is empty for non-auto-increment PKs;
+        // re-fetch by email instead.
+        return $this->findByEmail($email) ?? [];
     }
 
     /** Return all users (Admin-only). */
@@ -84,17 +88,15 @@ class UserRepository
      */
     public function updateRole(string $userId, string $role): ?array
     {
-        $stmt = $this->db->query(
+        $this->db->query(
             'UPDATE Users
                 SET role = :role
-              WHERE user_id = :user_id
-          RETURNING user_id, email, role, created_at',
+              WHERE user_id = :user_id',
             [
                 ':role'    => $role,
                 ':user_id' => $userId,
             ]
         );
-        $row = $stmt->fetch();
-        return $row ?: null;
+        return $this->findById($userId);
     }
 }

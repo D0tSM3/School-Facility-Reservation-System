@@ -20,21 +20,34 @@ class ReservationRepository
 
     /**
      * Create a new reservation for a customer.
-     * The prevent_double_booking Postgres trigger fires here;
-     * callers must catch PDOException with SQLSTATE P0001.
+     * The prevent_double_booking_insert MySQL trigger fires here;
+     * callers must catch PDOException with SQLSTATE 45000.
      */
     public function create(string $customerId, string $roomId, string $startTime, string $endTime): array
     {
-        $stmt = $this->db->query(
-            "INSERT INTO Reservations (customer_id, room_id, start_time, end_time)
-             VALUES (:customer_id, :room_id, :start_time, :end_time)
-             RETURNING reservation_id, customer_id, room_id,
-                       start_time, end_time, status, processed_by, created_at",
+        $this->db->query(
+            'INSERT INTO Reservations (customer_id, room_id, start_time, end_time)
+             VALUES (:customer_id, :room_id, :start_time, :end_time)',
             [
                 ':customer_id' => $customerId,
                 ':room_id'     => $roomId,
                 ':start_time'  => $startTime,
                 ':end_time'    => $endTime,
+            ]
+        );
+        // UUID PK — re-fetch the latest reservation for this customer+room+time.
+        $stmt = $this->db->query(
+            'SELECT reservation_id, customer_id, room_id,
+                    start_time, end_time, status, processed_by, created_at
+               FROM Reservations
+              WHERE customer_id = :customer_id
+                AND room_id     = :room_id
+                AND start_time  = :start_time
+              LIMIT 1',
+            [
+                ':customer_id' => $customerId,
+                ':room_id'     => $roomId,
+                ':start_time'  => $startTime,
             ]
         );
         return $stmt->fetch();
@@ -126,21 +139,18 @@ class ReservationRepository
         string $status,
         string $processedBy
     ): ?array {
-        $stmt = $this->db->query(
-            "UPDATE Reservations
+        $this->db->query(
+            'UPDATE Reservations
                 SET status       = :status,
                     processed_by = :processed_by
-              WHERE reservation_id = :reservation_id
-          RETURNING reservation_id, customer_id, room_id,
-                    start_time, end_time, status, processed_by, created_at",
+              WHERE reservation_id = :reservation_id',
             [
                 ':status'         => $status,
                 ':processed_by'   => $processedBy,
                 ':reservation_id' => $reservationId,
             ]
         );
-        $row = $stmt->fetch();
-        return $row ?: null;
+        return $this->findById($reservationId);
     }
 
     // ---------------------------------------------------------------
@@ -152,10 +162,22 @@ class ReservationRepository
      */
     public function insertLog(string $userId, string $actionType): array
     {
-        $stmt = $this->db->query(
+        $this->db->query(
             'INSERT INTO System_Logs (user_id, action_type)
-             VALUES (:user_id, :action_type)
-             RETURNING log_id, user_id, action_type, timestamp',
+             VALUES (:user_id, :action_type)',
+            [
+                ':user_id'     => $userId,
+                ':action_type' => $actionType,
+            ]
+        );
+        // Re-fetch the just-inserted log by user_id + action_type (latest).
+        $stmt = $this->db->query(
+            'SELECT log_id, user_id, action_type, timestamp
+               FROM System_Logs
+              WHERE user_id     = :user_id
+                AND action_type = :action_type
+           ORDER BY timestamp DESC
+              LIMIT 1',
             [
                 ':user_id'     => $userId,
                 ':action_type' => $actionType,

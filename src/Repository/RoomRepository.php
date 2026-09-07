@@ -41,7 +41,7 @@ class RoomRepository
                         ELSE r.status
                     END AS live_status
                FROM Rooms r
-              WHERE r.is_active = TRUE
+              WHERE r.is_active = 1
            ORDER BY r.name"
         );
         return $stmt->fetchAll();
@@ -66,17 +66,31 @@ class RoomRepository
      */
     public function create(string $name, int $capacity, string $status = 'Available'): array
     {
-        $stmt = $this->db->query(
+        $this->db->query(
             'INSERT INTO Rooms (name, capacity, status)
-             VALUES (:name, :capacity, :status)
-             RETURNING room_id, name, capacity, status, is_active, created_at',
+             VALUES (:name, :capacity, :status)',
             [
                 ':name'     => $name,
                 ':capacity' => $capacity,
                 ':status'   => $status,
             ]
         );
-        return $stmt->fetch();
+        // UUID PKs: lastInsertId() returns empty string; re-fetch by name.
+        return $this->findByName($name) ?? [];
+    }
+
+    /** Find a room by name (used after INSERT to retrieve UUID PK). */
+    public function findByName(string $name): ?array
+    {
+        $stmt = $this->db->query(
+            'SELECT room_id, name, capacity, status, is_active, created_at
+               FROM Rooms
+              WHERE name = :name
+              LIMIT 1',
+            [':name' => $name]
+        );
+        $row = $stmt->fetch();
+        return $row ?: null;
     }
 
     /**
@@ -96,19 +110,17 @@ class RoomRepository
         }
         if ($isActive !== null) {
             $sets[]             = 'is_active = :is_active';
-            $params[':is_active'] = $isActive ? 'TRUE' : 'FALSE';
+            $params[':is_active'] = $isActive ? 1 : 0;
         }
 
         if (empty($sets)) {
             return $this->findById($roomId);
         }
 
-        $sql  = 'UPDATE Rooms SET ' . implode(', ', $sets)
-              . ' WHERE room_id = :room_id'
-              . ' RETURNING room_id, name, capacity, status, is_active, created_at';
+        $sql = 'UPDATE Rooms SET ' . implode(', ', $sets)
+             . ' WHERE room_id = :room_id';
 
-        $stmt = $this->db->query($sql, $params);
-        $row  = $stmt->fetch();
-        return $row ?: null;
+        $this->db->query($sql, $params);
+        return $this->findById($roomId);
     }
 }

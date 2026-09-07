@@ -47,8 +47,17 @@ header('Content-Type: application/json; charset=utf-8');
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Strip query string and normalise trailing slash.
+// Strip query string.
 $uri = strtok($_SERVER['REQUEST_URI'], '?');
+
+// Strip the application base path so routes work under a subdirectory
+// (e.g. /Project/public/api/... → /api/...).
+// SCRIPT_NAME is something like /Project/public/index.php.
+$basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+if ($basePath !== '' && str_starts_with($uri, $basePath)) {
+    $uri = substr($uri, strlen($basePath));
+}
+
 $uri = rtrim($uri, '/') ?: '/';
 
 // -----------------------------------------------------------------------
