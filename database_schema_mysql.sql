@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS Users;
 -- 1. Users Table
 CREATE TABLE Users (
     user_id       CHAR(36)     NOT NULL PRIMARY KEY DEFAULT (UUID()),
+    name          VARCHAR(150) NOT NULL,
     email         VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role          ENUM('Admin','Staff','Customer') NOT NULL DEFAULT 'Customer',
@@ -32,6 +33,7 @@ CREATE TABLE Reservations (
     reservation_id CHAR(36)    NOT NULL PRIMARY KEY DEFAULT (UUID()),
     customer_id    CHAR(36)    NOT NULL,
     room_id        CHAR(36)    NOT NULL,
+    purpose        VARCHAR(255) NOT NULL,
     start_time     DATETIME    NOT NULL,
     end_time       DATETIME    NOT NULL,
     status         ENUM('Pending','Approved','Rejected','Completed') NOT NULL DEFAULT 'Pending',

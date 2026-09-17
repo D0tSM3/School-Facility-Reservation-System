@@ -1,0 +1,62 @@
+﻿/* ==========================================================================
+   CampusRoom — Design Tokens & Theme Variables
+   Adhering to Buenavista Polytechnic University Institutional Design System
+   ========================================================================== */
+
+:root {
+  /* Brand Hierarchy */
+  --bpu-primary: #5b0617;
+  --bpu-primary-container: #7a1f2b;
+  --bpu-on-primary: #ffffff;
+  --bpu-on-primary-container: #ff8b92;
+  --bpu-primary-fixed: #ffdada;
+  --bpu-primary-fixed-dim: #ffb3b5;
+
+  /* Secondary Gold / Amber */
+  --bpu-secondary: #795900;
+  --bpu-secondary-container: #ffc641;
+  --bpu-on-secondary: #ffffff;
+  --bpu-on-secondary-container: #715300;
+  --bpu-secondary-fixed: #ffdfa0;
+  --bpu-secondary-fixed-dim: #f6be39;
+  --bpu-accent-gold: #d4a017;
+
+  /* Tertiary Charcoal Chrome */
+  --bpu-tertiary: #2b2b2b;
+  --bpu-tertiary-container: #414141;
+  --bpu-on-tertiary: #ffffff;
+  --bpu-on-tertiary-container: #afadac;
+  --bpu-tertiary-fixed: #e4e2e1;
+  --bpu-tertiary-fixed-dim: #c8c6c5;
+
+  /* Neutral Canvas & Surfaces */
+  --bpu-background: #f8f9fb;
+  --bpu-surface: #f8f9fb;
+  --bpu-surface-container-lowest: #ffffff;
+  --bpu-surface-container-low: #f3f4f6;
+  --bpu-surface-container: #edeef0;
+  --bpu-surface-container-high: #e7e8ea;
+  --bpu-surface-container-highest: #e1e2e4;
+  --bpu-on-surface: #191c1e;
+  --bpu-on-surface-variant: #564242;
+
+  /* Semantic Status Indicators */
+  --bpu-status-available: #16a34a;
+  --bpu-status-available-bg: #dcfce7;
+  --bpu-status-available-text: #15803d;
+
+  --bpu-status-pending: #d97706;
+  --bpu-status-pending-bg: #fef3c7;
+  --bpu-status-pending-text: #b45309;
+
+  --bpu-status-maintenance: #64748b;
+  --bpu-status-maintenance-bg: #f1f5f9;
+  --bpu-status-maintenance-text: #475569;
+
+  --bpu-status-rejected: #dc2626;
+  --bpu-status-rejected-bg: #fee2e2;
+  --bpu-status-rejected-text: #b91c1c;
+
+  /* Structural Outlines */
+  --bpu-border-hairline: 1px solid #e2e8f0;
+}

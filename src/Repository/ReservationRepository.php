@@ -23,21 +23,22 @@ class ReservationRepository
      * The prevent_double_booking_insert MySQL trigger fires here;
      * callers must catch PDOException with SQLSTATE 45000.
      */
-    public function create(string $customerId, string $roomId, string $startTime, string $endTime): array
+    public function create(string $customerId, string $roomId, string $purpose, string $startTime, string $endTime): array
     {
         $this->db->query(
-            'INSERT INTO Reservations (customer_id, room_id, start_time, end_time)
-             VALUES (:customer_id, :room_id, :start_time, :end_time)',
+            'INSERT INTO Reservations (customer_id, room_id, purpose, start_time, end_time)
+             VALUES (:customer_id, :room_id, :purpose, :start_time, :end_time)',
             [
                 ':customer_id' => $customerId,
                 ':room_id'     => $roomId,
+                ':purpose'     => $purpose,
                 ':start_time'  => $startTime,
                 ':end_time'    => $endTime,
             ]
         );
         // UUID PK — re-fetch the latest reservation for this customer+room+time.
         $stmt = $this->db->query(
-            'SELECT reservation_id, customer_id, room_id,
+            'SELECT reservation_id, customer_id, room_id, purpose,
                     start_time, end_time, status, processed_by, created_at
                FROM Reservations
               WHERE customer_id = :customer_id
@@ -63,6 +64,7 @@ class ReservationRepository
                     res.customer_id,
                     res.room_id,
                     r.name          AS room_name,
+                    res.purpose,
                     res.start_time,
                     res.end_time,
                     res.status,
@@ -96,6 +98,7 @@ class ReservationRepository
                     u.email         AS customer_email,
                     res.room_id,
                     r.name          AS room_name,
+                    res.purpose,
                     res.start_time,
                     res.end_time,
                     res.status,
@@ -117,7 +120,7 @@ class ReservationRepository
     public function findById(string $reservationId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT reservation_id, customer_id, room_id,
+            'SELECT reservation_id, customer_id, room_id, purpose,
                     start_time, end_time, status, processed_by, created_at
                FROM Reservations
               WHERE reservation_id = :reservation_id

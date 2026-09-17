@@ -1,0 +1,1025 @@
+﻿<!doctype html>
+<style>
+  aside > div:first-child > div {
+    display: none;
+  }
+  .reservation-card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #e1e2e4;
+  }
+  #reservationSearch {
+    width: min(100%, 28rem);
+    background-color: #e5e7eb;
+  }
+</style>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CampusRoom — My Reservations | BPU</title>
+    <meta name="description" content="View and manage your BPU facility reservation history and status." />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/theme.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed-variant": "#474746",
+              "on-secondary-fixed": "#261a00",
+              "on-surface": "#191c1e",
+              surface: "#f8f9fb",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#ff8b92",
+              "surface-dim": "#d9dadc",
+              "on-tertiary-container": "#afadac",
+              "on-primary-fixed": "#40000c",
+              "surface-container-high": "#e7e8ea",
+              "primary-fixed": "#ffdada",
+              "on-secondary-container": "#715300",
+              "tertiary-container": "#414141",
+              "surface-tint": "#a13c46",
+              "on-secondary": "#ffffff",
+              "surface-container": "#edeef0",
+              error: "#ba1a1a",
+              "on-primary-fixed-variant": "#822530",
+              "inverse-on-surface": "#f0f1f3",
+              "on-tertiary-fixed": "#1b1c1c",
+              "secondary-fixed-dim": "#f6be39",
+              "on-error-container": "#93000a",
+              "on-error": "#ffffff",
+              "on-secondary-fixed-variant": "#5c4300",
+              "on-background": "#191c1e",
+              "tertiary-fixed-dim": "#c8c6c5",
+              secondary: "#795900",
+              "secondary-container": "#ffc641",
+              "tertiary-fixed": "#e4e2e1",
+              "outline-variant": "#dcc0c0",
+              background: "#f8f9fb",
+              "inverse-surface": "#2e3132",
+              "surface-container-lowest": "#ffffff",
+              "primary-container": "#7a1f2b",
+              "error-container": "#ffdad6",
+              "surface-bright": "#f8f9fb",
+              "on-surface-variant": "#564242",
+              "surface-container-highest": "#e1e2e4",
+              "secondary-fixed": "#ffdfa0",
+              "primary-fixed-dim": "#ffb3b5",
+              outline: "#897172",
+              "inverse-primary": "#ffb3b5",
+              "surface-variant": "#e1e2e4",
+              "surface-container-low": "#f3f4f6",
+              primary: "#5b0617",
+              "on-tertiary": "#ffffff",
+              tertiary: "#2b2b2b",
+            },
+            borderRadius: {
+              DEFAULT: "0.125rem",
+              lg: "0.25rem",
+              xl: "0.5rem",
+              full: "0.75rem",
+            },
+            spacing: {
+              "space-sm": "0.5rem",
+              "space-xl": "2.25rem",
+              "space-lg": "1.5rem",
+              "space-md": "1rem",
+              margin: "2rem",
+              "margin-mobile": "1rem",
+              "gutter-mobile": "0.75rem",
+              gutter: "1.25rem",
+              "space-xs": "0.25rem",
+            },
+            fontFamily: {
+              "headline-lg": ["Inter"],
+              "body-md": ["Inter"],
+              "headline-lg-mobile": ["Inter"],
+              "label-lg": ["Inter"],
+              "headline-md": ["Inter"],
+              "headline-sm": ["Inter"],
+              "body-lg": ["Inter"],
+              "body-sm": ["Inter"],
+              "label-md": ["Inter"],
+              "label-sm": ["Inter"],
+            },
+            fontSize: {
+              "headline-lg": [
+                "30px",
+                {
+                  lineHeight: "38px",
+                  letterSpacing: "-0.02em",
+                  fontWeight: "700",
+                },
+              ],
+              "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+              "headline-lg-mobile": [
+                "24px",
+                {
+                  lineHeight: "32px",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "700",
+                },
+              ],
+              "label-lg": [
+                "14px",
+                {
+                  lineHeight: "20px",
+                  letterSpacing: "0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "headline-md": [
+                "22px",
+                {
+                  lineHeight: "28px",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "headline-sm": [
+                "18px",
+                { lineHeight: "24px", fontWeight: "600" },
+              ],
+              "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+              "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+              "label-md": [
+                "12px",
+                {
+                  lineHeight: "16px",
+                  letterSpacing: "0.02em",
+                  fontWeight: "600",
+                },
+              ],
+              "label-sm": [
+                "11px",
+                {
+                  lineHeight: "14px",
+                  letterSpacing: "0.04em",
+                  fontWeight: "700",
+                },
+              ],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-background font-body-md text-on-surface antialiased min-h-screen"
+  >
+    <aside
+      class="fixed left-0 top-0 h-full w-[250px] bg-tertiary text-on-tertiary z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+    >
+      <div class="h-16 px-space-md flex items-center gap-space-sm bg-tertiary">
+        <img
+          alt="CampusRoom Maroon &amp; Gold Logo"
+          class="h-8 w-auto object-contain"
+          src="assets/logo.svg"
+        />
+        <div class="flex flex-col">
+          <span
+            class="font-headline-sm text-headline-sm text-on-tertiary tracking-tight"
+            >CampusRoom</span
+          ><span
+            class="font-label-sm text-label-sm text-tertiary-fixed-dim uppercase tracking-wider"
+            >Buenavista Poly</span
+          >
+        </div>
+      </div>
+      <div class="px-space-md py-space-sm">
+        <div
+          class="font-label-sm text-label-sm text-on-tertiary-container uppercase tracking-wider mb-space-xs px-space-sm"
+        >
+          Intranet Core
+        </div>
+      </div>
+      <nav
+        class="flex-1 px-space-sm space-y-space-xs"
+        data-active-classes="bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
+      >
+        <a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="customer-dashboard"
+          href="dashboard.html"
+          ><span class="material-symbols-outlined text-[20px]">dashboard</span
+          ><span>Dashboard</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="rooms"
+          href="book-room.html"
+          ><span class="material-symbols-outlined text-[20px]"
+            >meeting_room</span
+          ><span>Rooms</span></a
+        ><a
+          aria-current="page"
+          class="flex items-center gap-space-sm px-space-md py-space-sm rounded transition-colors bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
+          data-path="my-reservations"
+          href="my-reservations.html"
+          ><span class="material-symbols-outlined text-[20px]"
+            >event_available</span
+          ><span>Reservations</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="staff-queue"
+          href="staff-queue.html"
+          ><span class="material-symbols-outlined text-[20px]">assignment</span
+          ><span>Staff Queue</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="admin-governance"
+          href="staff-queue.html"
+          ><span class="material-symbols-outlined text-[20px]"
+            >admin_panel_settings</span
+          ><span>Admin Governance</span></a
+        >
+      </nav>
+      <div class="p-space-md bg-tertiary-container/40">
+        <div class="flex items-center justify-between">
+          <div class="flex flex-col">
+            <span class="font-label-sm text-label-sm text-tertiary-fixed-dim"
+              >Registrar Desk</span
+            ><span class="font-body-sm text-body-sm text-on-tertiary"
+              >Ext. 4021 / 4022</span
+            >
+          </div>
+          <span
+            class="material-symbols-outlined text-secondary-container text-[18px]"
+            >verified</span
+          >
+        </div>
+      </div>
+    </aside>
+    <div class="pl-[250px]">
+      <header
+        class="fixed top-0 left-[250px] right-0 h-16 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"
+      >
+        <div class="flex items-center gap-space-md">
+          <img
+            alt="CampusRoom Maroon &amp; Gold Logo"
+            class="h-8 w-auto object-contain"
+            src="assets/logo.svg"
+          />
+          <div
+            class="hidden md:flex items-center gap-space-xs px-space-sm py-1 bg-surface-container rounded"
+          >
+            <span class="material-symbols-outlined text-secondary text-[16px]"
+              >school</span
+            ><span
+              class="font-label-sm text-label-sm text-on-surface-variant font-semibold"
+              >AY 2024-2025 • First Semester</span
+            >
+          </div>
+        </div>
+        <div class="flex items-center gap-space-md">
+          <button
+            aria-label="Notifications"
+            class="relative p-space-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors rounded"
+          >
+            <span class="material-symbols-outlined text-[22px]"
+              >notifications</span
+            ><span
+              class="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-container"
+            ></span>
+          </button>
+          <div class="flex items-center gap-space-sm pl-space-sm">
+            <div class="flex flex-col text-right hidden sm:flex">
+              <span class="font-label-md text-label-md text-on-surface"
+                >Dr. Edgardo Valderama</span
+              ><span class="font-label-sm text-label-sm text-primary font-bold"
+                >Faculty / Staff</span
+              >
+            </div>
+            <img
+              alt="Profile"
+              class="w-8 h-8 rounded-full object-cover shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+              src="https://lh3.googleusercontent.com/aida/AEtjO1U7iGCinzQmj8WfjJF5VgThj41jGwMUtCAl6UtghCr0H8BOjy2MVc1ZcmS1rcL4eH5DjegJaqf1lQOSUPybmrihM04sRMvBukR6zwgUNhBcqg6ba8EsbW1u7qRkWlj6RoJCv2_SGlfaBoUFinUOspbM30gtLfocI-6amPSy_5J_K3FcBMsLDowQS-4fD2Nl4vKMVcbAjKVSmjVmJgs1ReAkEPM6Y4GxsQZ7zzth0SbD9ljnAIzmNTNYiA"
+            />
+          </div>
+        </div>
+      </header>
+      <main
+        class="w-full pt-16 bg-background px-space-lg py-space-lg min-h-screen"
+      >
+        <div class="flex flex-col w-full space-y-space-lg">
+          <div
+            class="flex flex-col md:flex-row md:items-end justify-between gap-space-md bg-surface-container-lowest p-space-lg rounded shadow-sm relative overflow-hidden"
+          >
+            <div
+              class="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-primary/5 via-secondary/5 to-transparent pointer-events-none"
+            ></div>
+            <div class="flex flex-col space-y-space-xs z-10">
+              <div class="flex items-center gap-space-xs">
+                <span
+                  class="font-label-sm text-label-sm text-secondary font-bold uppercase tracking-wider"
+                  >Faculty Portal • Schedule Desk</span
+                >
+                <span class="text-outline-variant">•</span>
+                <span
+                  class="font-label-sm text-label-sm text-on-surface-variant"
+                  >AY 2024-2025</span
+                >
+              </div>
+              <h1
+                class="font-headline-lg text-headline-lg text-primary tracking-tight font-bold"
+              >
+                My Reservations
+              </h1>
+              <p
+                class="font-body-md text-body-md text-on-surface-variant max-w-2xl"
+              >
+                Track your academic space bookings, pending approvals, and
+                historical permits.
+              </p>
+            </div>
+            <div class="flex items-center gap-space-sm z-10">
+              <button
+                class="inline-flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg rounded transition-colors shadow-sm"
+                id="exportSlipBtn"
+              >
+                <span class="material-symbols-outlined text-[18px]"
+                  >file_download</span
+                >
+                <span>Export Schedule Slip</span>
+              </button>
+              <button
+                class="inline-flex items-center gap-space-xs px-space-md py-space-sm bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg rounded transition-colors shadow-sm"
+                id="newReservationBtn"
+              >
+                <span class="material-symbols-outlined text-[18px]"
+                  >add_circle</span
+                >
+                <span>+ New Reservation</span>
+              </button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
+            <div class="lg:col-span-12 flex flex-col space-y-space-md">
+              <div
+                class="flex flex-wrap items-center justify-between gap-space-sm bg-surface-container-lowest p-space-xs rounded shadow-sm"
+              >
+                <div
+                  class="flex items-center gap-space-xs overflow-x-auto py-1"
+                  id="filterTabGroup"
+                >
+                  <button
+                    class="filter-tab px-space-md py-space-sm rounded font-label-md text-label-md transition-colors bg-primary text-on-primary font-semibold shadow-sm flex items-center gap-space-xs"
+                    data-filter="all"
+                  >
+                    <span>All Reservations</span>
+                    <span
+                      class="px-1.5 py-0.5 rounded-full text-[10px] bg-secondary-container text-on-secondary-fixed"
+                      >8</span
+                    >
+                  </button>
+                  <button
+                    class="filter-tab px-space-md py-space-sm rounded font-label-md text-label-md transition-colors text-on-surface-variant hover:text-on-surface hover:bg-surface-container flex items-center gap-space-xs"
+                    data-filter="pending"
+                  >
+                    <span>Pending Review</span>
+                    <span
+                      class="px-1.5 py-0.5 rounded-full text-[10px] bg-surface-container-highest text-on-surface"
+                      >2</span
+                    >
+                  </button>
+                  <button
+                    class="filter-tab px-space-md py-space-sm rounded font-label-md text-label-md transition-colors text-on-surface-variant hover:text-on-surface hover:bg-surface-container flex items-center gap-space-xs"
+                    data-filter="approved"
+                  >
+                    <span>Approved &amp; Upcoming</span>
+                    <span
+                      class="px-1.5 py-0.5 rounded-full text-[10px] bg-surface-container-highest text-on-surface"
+                      >3</span
+                    >
+                  </button>
+                  <button
+                    class="filter-tab px-space-md py-space-sm rounded font-label-md text-label-md transition-colors text-on-surface-variant hover:text-on-surface hover:bg-surface-container flex items-center gap-space-xs"
+                    data-filter="history"
+                  >
+                    <span>Past / History</span>
+                    <span
+                      class="px-1.5 py-0.5 rounded-full text-[10px] bg-surface-container-highest text-on-surface"
+                      >3</span
+                    >
+                  </button>
+                </div>
+                <div class="flex items-center gap-space-xs px-space-sm py-1">
+                  <span
+                    class="material-symbols-outlined text-outline text-[18px]"
+                    >search</span
+                  >
+                  <input
+                    class="text-body-sm font-body-sm bg-surface-container-low text-on-surface px-space-sm py-1 rounded placeholder-outline focus:outline-none focus:ring-1 focus:ring-primary w-44"
+                    id="reservationSearch"
+                    placeholder="Search reference or venue..."
+                    type="text"
+                  />
+                </div>
+              </div>
+              <div class="flex flex-col space-y-space-sm" id="reservationList">
+                <div
+                  data-status="pending"
+                  class="reservation-card status-border-pending bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md"
+                >
+                  <div
+                    class="flex flex-col md:flex-row md:items-center justify-between gap-space-md"
+                  >
+                    <div class="flex items-start gap-space-md">
+                      <div
+                        class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center"
+                      >
+                        <span
+                          class="font-label-sm text-label-sm text-secondary font-bold uppercase"
+                          >OCT</span
+                        >
+                        <span
+                          class="font-headline-md text-headline-md text-on-surface font-bold leading-none"
+                          >25</span
+                        >
+                      </div>
+                      <div class="flex flex-col space-y-space-xs">
+                        <div class="flex items-center gap-space-sm flex-wrap">
+                          <span
+                            class="font-label-md text-label-md text-primary font-bold"
+                            >#BPU-8902</span
+                          >
+                          <span
+                            class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold bg-[#FEF3C7] text-[#B45309] flex items-center gap-1"
+                          >
+                            <span
+                              class="inline-block w-1.5 h-1.5 rounded-full bg-[#D97706]"
+                            ></span>
+                            Pending Staff Review
+                          </span>
+                          <span
+                            class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1"
+                          >
+                            <span class="material-symbols-outlined text-[14px]"
+                              >schedule</span
+                            >
+                            2:00 PM – 4:00 PM
+                          </span>
+                        </div>
+                        <div
+                          class="font-headline-sm text-headline-sm text-on-surface font-semibold"
+                        >
+                          Faculty Thesis Prep
+                        </div>
+                        <div
+                          class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant"
+                        >
+                          <span
+                            class="flex items-center gap-1 font-medium text-on-surface"
+                          >
+                            <span
+                              class="material-symbols-outlined text-[16px] text-secondary"
+                              >domain</span
+                            >
+                            Tech Hall North Room 204
+                          </span>
+                          <span>•</span>
+                          <span>Capacity: 45 pax</span>
+                          <span>•</span>
+                          <span class="text-secondary font-semibold"
+                            >AV Lectern Requested</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="flex items-center md:flex-col lg:flex-row gap-space-xs shrink-0 self-end md:self-center"
+                    >
+                      <button
+                        class="px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm cancel-trigger"
+                        data-permit="#BPU-8902"
+                      >
+                        <span class="material-symbols-outlined text-[16px]"
+                          >cancel</span
+                        >
+                        <span>Cancel Booking</span>
+                      </button>
+                      <button
+                        class="p-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded transition-colors"
+                        title="Permit details"
+                      >
+                        <span class="material-symbols-outlined text-[20px]"
+                          >more_vert</span
+                        >
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  data-status="pending"
+                  class="reservation-card status-border-pending bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md"
+                >
+                  <div
+                    class="flex flex-col md:flex-row md:items-center justify-between gap-space-md"
+                  >
+                    <div class="flex items-start gap-space-md">
+                      <div
+                        class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center"
+                      >
+                        <span
+                          class="font-label-sm text-label-sm text-secondary font-bold uppercase"
+                          >OCT</span
+                        >
+                        <span
+                          class="font-headline-md text-headline-md text-on-surface font-bold leading-none"
+                          >28</span
+                        >
+                      </div>
+                      <div class="flex flex-col space-y-space-xs">
+                        <div class="flex items-center gap-space-sm flex-wrap">
+                          <span
+                            class="font-label-md text-label-md text-primary font-bold"
+                            >#BPU-8841</span
+                          >
+                          <span
+                            class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold bg-[#FEF3C7] text-[#B45309] flex items-center gap-1"
+                          >
+                            <span
+                              class="inline-block w-1.5 h-1.5 rounded-full bg-[#D97706]"
+                            ></span>
+                            Pending Dept Clearance
+                          </span>
+                          <span
+                            class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1"
+                          >
+                            <span class="material-symbols-outlined text-[14px]"
+                              >schedule</span
+                            >
+                            9:00 AM – 11:00 AM
+                          </span>
+                        </div>
+                        <div
+                          class="font-headline-sm text-headline-sm text-on-surface font-semibold"
+                        >
+                          AI Workshop
+                        </div>
+                        <div
+                          class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant"
+                        >
+                          <span
+                            class="flex items-center gap-1 font-medium text-on-surface"
+                          >
+                            <span
+                              class="material-symbols-outlined text-[16px] text-secondary"
+                              >science</span
+                            >
+                            Science Complex Lab 102
+                          </span>
+                          <span>•</span>
+                          <span>Workstations: 32 high-spec</span>
+                          <span>•</span>
+                          <span class="text-on-surface-variant"
+                            >Dept: Computing Studies</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="flex items-center md:flex-col lg:flex-row gap-space-xs shrink-0 self-end md:self-center"
+                    >
+                      <button
+                        class="px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm cancel-trigger"
+                        data-permit="#BPU-8841"
+                      >
+                        <span class="material-symbols-outlined text-[16px]"
+                          >cancel</span
+                        >
+                        <span>Cancel Booking</span>
+                      </button>
+                      <button
+                        class="p-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded transition-colors"
+                        title="Permit details"
+                      >
+                        <span class="material-symbols-outlined text-[20px]"
+                          >more_vert</span
+                        >
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  data-status="approved"
+                  class="reservation-card status-border-approved bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md"
+                >
+                  <div
+                    class="flex flex-col md:flex-row md:items-center justify-between gap-space-md"
+                  >
+                    <div class="flex items-start gap-space-md">
+                      <div
+                        class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center"
+                      >
+                        <span
+                          class="font-label-sm text-label-sm text-primary font-bold uppercase"
+                          >NOV</span
+                        >
+                        <span
+                          class="font-headline-md text-headline-md text-on-surface font-bold leading-none"
+                          >02</span
+                        >
+                      </div>
+                      <div class="flex flex-col space-y-space-xs">
+                        <div class="flex items-center gap-space-sm flex-wrap">
+                          <span
+                            class="font-label-md text-label-md text-primary font-bold"
+                            >#BPU-8720</span
+                          >
+                          <span
+                            class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold bg-[#DCFCE7] text-[#15803D] flex items-center gap-1"
+                          >
+                            <span class="material-symbols-outlined text-[14px]"
+                              >lock_open</span
+                            >
+                            Approved (Passcode: #4912)
+                          </span>
+                          <span
+                            class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1"
+                          >
+                            <span class="material-symbols-outlined text-[14px]"
+                              >schedule</span
+                            >
+                            1:00 PM – 3:00 PM
+                          </span>
+                        </div>
+                        <div
+                          class="font-headline-sm text-headline-sm text-on-surface font-semibold"
+                        >
+                          Midterm Exam
+                        </div>
+                        <div
+                          class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant"
+                        >
+                          <span
+                            class="flex items-center gap-1 font-medium text-on-surface"
+                          >
+                            <span
+                              class="material-symbols-outlined text-[16px] text-secondary"
+                              >meeting_room</span
+                            >
+                            Main Quad Hall A
+                          </span>
+                          <span>•</span>
+                          <span>Seating Layout: Amphitheater (120)</span>
+                          <span>•</span>
+                          <span class="text-[#15803D] font-semibold"
+                            >Facilities Verified</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="flex items-center gap-space-xs shrink-0 self-end md:self-center"
+                    >
+                      <button
+                        class="px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1"
+                      >
+                        <span class="material-symbols-outlined text-[16px]"
+                          >receipt_long</span
+                        >
+                        <span>View Confirmation Slip</span>
+                      </button>
+                      <button
+                        class="p-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded transition-colors"
+                        title="Permit options"
+                      >
+                        <span class="material-symbols-outlined text-[20px]"
+                          >more_vert</span
+                        >
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  data-status="approved"
+                  class="reservation-card status-border-approved bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md"
+                >
+                  <div
+                    class="flex flex-col md:flex-row md:items-center justify-between gap-space-md"
+                  >
+                    <div class="flex items-start gap-space-md">
+                      <div
+                        class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center"
+                      >
+                        <span
+                          class="font-label-sm text-label-sm text-primary font-bold uppercase"
+                          >NOV</span
+                        >
+                        <span
+                          class="font-headline-md text-headline-md text-on-surface font-bold leading-none"
+                          >06</span
+                        >
+                      </div>
+                      <div class="flex flex-col space-y-space-xs">
+                        <div class="flex items-center gap-space-sm flex-wrap">
+                          <span
+                            class="font-label-md text-label-md text-primary font-bold"
+                            >#BPU-8715</span
+                          >
+                          <span
+                            class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold bg-[#DCFCE7] text-[#15803D] flex items-center gap-1"
+                          >
+                            <span class="material-symbols-outlined text-[14px]"
+                              >lock_open</span
+                            >
+                            Approved (Passcode: #8129)
+                          </span>
+                          <span
+                            class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1"
+                          >
+                            <span class="material-symbols-outlined text-[14px]"
+                              >schedule</span
+                            >
+                            10:00 AM – 12:00 PM
+                          </span>
+                        </div>
+                        <div
+                          class="font-headline-sm text-headline-sm text-on-surface font-semibold"
+                        >
+                          Curriculum Committee
+                        </div>
+                        <div
+                          class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant"
+                        >
+                          <span
+                            class="flex items-center gap-1 font-medium text-on-surface"
+                          >
+                            <span
+                              class="material-symbols-outlined text-[16px] text-secondary"
+                              >groups</span
+                            >
+                            Humanities Room 312
+                          </span>
+                          <span>•</span>
+                          <span>Boardroom Table (20 pax)</span>
+                          <span>•</span>
+                          <span class="text-[#15803D] font-semibold"
+                            >Smartboard Active</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="flex items-center gap-space-xs shrink-0 self-end md:self-center"
+                    >
+                      <button
+                        class="px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1"
+                      >
+                        <span class="material-symbols-outlined text-[16px]"
+                          >receipt_long</span
+                        >
+                        <span>View Confirmation Slip</span>
+                      </button>
+                      <button
+                        class="p-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded transition-colors"
+                        title="Permit options"
+                      >
+                        <span class="material-symbols-outlined text-[20px]"
+                          >more_vert</span
+                        >
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  data-status="history"
+                  class="reservation-card status-border-rejected bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md"
+                >
+                  <div
+                    class="flex flex-col md:flex-row md:items-center justify-between gap-space-md"
+                  >
+                    <div class="flex items-start gap-space-md">
+                      <div
+                        class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center opacity-75"
+                      >
+                        <span
+                          class="font-label-sm text-label-sm text-outline font-bold uppercase"
+                          >OCT</span
+                        >
+                        <span
+                          class="font-headline-md text-headline-md text-on-surface font-bold leading-none"
+                          >14</span
+                        >
+                      </div>
+                      <div class="flex flex-col space-y-space-xs">
+                        <div class="flex items-center gap-space-sm flex-wrap">
+                          <span
+                            class="font-label-md text-label-md text-outline font-bold"
+                            >#BPU-8601</span
+                          >
+                          <span
+                            class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold bg-[#FEE2E2] text-[#B91C1C] flex items-center gap-1"
+                          >
+                            <span class="material-symbols-outlined text-[14px]"
+                              >error</span
+                            >
+                            Rejected: Dean's Office Conflict
+                          </span>
+                          <span
+                            class="text-body-sm font-body-sm text-on-surface-variant"
+                            >Archived Slip</span
+                          >
+                        </div>
+                        <div
+                          class="font-headline-sm text-headline-sm text-on-surface font-semibold line-through text-on-surface-variant"
+                        >
+                          Research Advisory Meeting
+                        </div>
+                        <div
+                          class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant"
+                        >
+                          <span
+                            class="flex items-center gap-1 text-on-surface-variant"
+                          >
+                            <span class="material-symbols-outlined text-[16px]"
+                              >meeting_room</span
+                            >
+                            Conference Room C
+                          </span>
+                          <span>•</span>
+                          <span class="text-[#DC2626] font-medium"
+                            >Overridden by Vice-Chancellor Cabinet Booking</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="flex items-center gap-space-xs shrink-0 self-end md:self-center"
+                    >
+                      <button
+                        class="px-space-md py-space-sm bg-secondary-container hover:bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm"
+                      >
+                        <span class="material-symbols-outlined text-[16px]"
+                          >sync</span
+                        >
+                        <span>Re-book Space</span>
+                      </button>
+                      <button
+                        class="p-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded transition-colors"
+                        title="Audit details"
+                      >
+                        <span class="material-symbols-outlined text-[20px]"
+                          >info</span
+                        >
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  data-status="history"
+                  class="reservation-card status-border-rejected bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md"
+                >
+                  <div
+                    class="flex flex-col md:flex-row md:items-center justify-between gap-space-md"
+                  >
+                    <div class="flex items-start gap-space-md">
+                      <div
+                        class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center"
+                      >
+                        <span
+                          class="font-label-sm text-label-sm text-outline font-bold uppercase"
+                          >OCT</span
+                        >
+                        <span
+                          class="font-headline-md text-headline-md text-on-surface font-bold leading-none"
+                          >15</span
+                        >
+                      </div>
+                      <div class="flex flex-col space-y-space-xs">
+                        <div class="flex items-center gap-space-sm flex-wrap">
+                          <span
+                            class="font-label-md text-label-md text-outline font-bold"
+                            >#BPU-8552</span
+                          >
+                          <span
+                            class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold bg-[#F1F5F9] text-[#475569] flex items-center gap-1"
+                          >
+                            <span class="material-symbols-outlined text-[14px]"
+                              >check_circle</span
+                            >
+                            Completed &amp; Logged
+                          </span>
+                          <span
+                            class="text-body-sm font-body-sm text-on-surface-variant"
+                            >Archived Slip</span
+                          >
+                        </div>
+                        <div
+                          class="font-headline-sm text-headline-sm text-on-surface font-semibold"
+                        >
+                          Fall Student Review
+                        </div>
+                        <div
+                          class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant"
+                        >
+                          <span
+                            class="flex items-center gap-1 font-medium text-on-surface"
+                          >
+                            <span
+                              class="material-symbols-outlined text-[16px] text-secondary"
+                              >class</span
+                            >
+                            Room 310
+                          </span>
+                          <span>•</span>
+                          <span>Attendance: 28 recorded</span>
+                          <span>•</span>
+                          <span class="text-on-surface-variant"
+                            >Key Returned: 11:32 AM</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="flex items-center gap-space-xs shrink-0 self-end md:self-center"
+                    >
+                      <button
+                        class="px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1"
+                      >
+                        <span class="material-symbols-outlined text-[16px]"
+                          >folder_open</span
+                        >
+                        <span>View Log Archive</span>
+                      </button>
+                      <button
+                        class="p-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded transition-colors"
+                        title="Audit details"
+                      >
+                        <span class="material-symbols-outlined text-[20px]"
+                          >more_vert</span
+                        >
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center hidden"
+            id="cancelModal"
+          >
+            <div
+              class="bg-surface-container-lowest p-space-lg rounded max-w-md w-full mx-space-md shadow-xl flex flex-col space-y-space-md border border-surface-container"
+            >
+              <div class="flex items-center gap-space-sm text-[#DC2626]">
+                <span class="material-symbols-outlined text-[28px]"
+                  >warning</span
+                >
+                <h3
+                  class="font-headline-sm text-headline-sm font-bold text-on-surface"
+                >
+                  Cancel Pending Slip?
+                </h3>
+              </div>
+              <p class="font-body-md text-body-md text-on-surface-variant">
+                Are you sure you wish to withdraw reservation
+                <span class="font-bold text-primary" id="modalPermitCode"></span
+                >? This slot will immediately be made available to other
+                academic departments.
+              </p>
+              <div
+                class="flex items-center justify-end gap-space-sm pt-space-xs"
+              >
+                <button
+                  class="px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold rounded transition-colors"
+                  id="modalCloseBtn"
+                >
+                  Dismiss
+                </button>
+                <button
+                  class="px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-md text-label-md font-semibold rounded transition-colors shadow-sm"
+                  id="modalConfirmBtn"
+                >
+                  Confirm Cancellation
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script src="js/db.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/reservations.js"></script>
+  </body>
+</html>

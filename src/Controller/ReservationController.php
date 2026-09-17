@@ -65,11 +65,12 @@ class ReservationController
         $body = $this->jsonBody();
 
         $roomId    = trim($body['room_id']    ?? '');
+        $purpose   = trim($body['purpose']    ?? '');
         $startTime = trim($body['start_time'] ?? '');
         $endTime   = trim($body['end_time']   ?? '');
 
-        if ($roomId === '' || $startTime === '' || $endTime === '') {
-            Response::error('room_id, start_time, and end_time are required.', 422);
+        if ($roomId === '' || $purpose === '' || $startTime === '' || $endTime === '') {
+            Response::error('room_id, purpose, start_time, and end_time are required.', 422);
         }
 
         // Basic timestamp sanity — Postgres will enforce the constraint too.
@@ -84,12 +85,13 @@ class ReservationController
             $reservation = $this->reservations->create(
                 Auth::userId(),
                 $roomId,
+                $purpose,
                 $startTime,
                 $endTime
             );
         } catch (PDOException $e) {
-            // SQLSTATE P0001 = PL/pgSQL RAISE EXCEPTION (our trigger)
-            if ($e->getCode() === 'P0001') {
+            // SQLSTATE 45000 = MySQL SIGNAL SQLSTATE (our trigger)
+            if ($e->getCode() === '45000') {
                 Response::error(
                     'Scheduling Collision: Room is already booked or pending during this time window.',
                     409
@@ -129,7 +131,7 @@ class ReservationController
                 Auth::userId()
             );
         } catch (PDOException $e) {
-            if ($e->getCode() === 'P0001') {
+            if ($e->getCode() === '45000') {
                 Response::error(
                     'Scheduling Collision: Room is already booked or pending during this time window.',
                     409

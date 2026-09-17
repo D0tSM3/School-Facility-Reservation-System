@@ -1,0 +1,1401 @@
+﻿<!doctype html>
+<style>
+  aside > div:first-child > div {
+    display: none;
+  }
+
+  #roomGrid .room-card {
+    border: 1px solid #e1e2e4;
+    box-sizing: border-box;
+  }
+</style>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CampusRoom — Dashboard | BPU Facility Gateway</title>
+    <meta name="description" content="View and book available academic facilities at Buenavista Polytechnic University in real time." />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/theme.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed-variant": "#474746",
+              "on-secondary-fixed": "#261a00",
+              "on-surface": "#191c1e",
+              surface: "#f8f9fb",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#ff8b92",
+              "surface-dim": "#d9dadc",
+              "on-tertiary-container": "#afadac",
+              "on-primary-fixed": "#40000c",
+              "surface-container-high": "#e7e8ea",
+              "primary-fixed": "#ffdada",
+              "on-secondary-container": "#715300",
+              "tertiary-container": "#414141",
+              "surface-tint": "#a13c46",
+              "on-secondary": "#ffffff",
+              "surface-container": "#edeef0",
+              error: "#ba1a1a",
+              "on-primary-fixed-variant": "#822530",
+              "inverse-on-surface": "#f0f1f3",
+              "on-tertiary-fixed": "#1b1c1c",
+              "secondary-fixed-dim": "#f6be39",
+              "on-error-container": "#93000a",
+              "on-error": "#ffffff",
+              "on-secondary-fixed-variant": "#5c4300",
+              "on-background": "#191c1e",
+              "tertiary-fixed-dim": "#c8c6c5",
+              secondary: "#795900",
+              "secondary-container": "#ffc641",
+              "tertiary-fixed": "#e4e2e1",
+              "outline-variant": "#dcc0c0",
+              background: "#f8f9fb",
+              "inverse-surface": "#2e3132",
+              "surface-container-lowest": "#ffffff",
+              "primary-container": "#7a1f2b",
+              "error-container": "#ffdad6",
+              "surface-bright": "#f8f9fb",
+              "on-surface-variant": "#564242",
+              "surface-container-highest": "#e1e2e4",
+              "secondary-fixed": "#ffdfa0",
+              "primary-fixed-dim": "#ffb3b5",
+              outline: "#897172",
+              "inverse-primary": "#ffb3b5",
+              "surface-variant": "#e1e2e4",
+              "surface-container-low": "#f3f4f6",
+              primary: "#5b0617",
+              "on-tertiary": "#ffffff",
+              tertiary: "#2b2b2b",
+            },
+            borderRadius: {
+              DEFAULT: "0.125rem",
+              lg: "0.25rem",
+              xl: "0.5rem",
+              full: "0.75rem",
+            },
+            spacing: {
+              "space-sm": "0.5rem",
+              "space-xl": "2.25rem",
+              "space-lg": "1.5rem",
+              "space-md": "1rem",
+              margin: "2rem",
+              "margin-mobile": "1rem",
+              "gutter-mobile": "0.75rem",
+              gutter: "1.25rem",
+              "space-xs": "0.25rem",
+            },
+            fontFamily: {
+              "headline-lg": ["Inter"],
+              "body-md": ["Inter"],
+              "headline-lg-mobile": ["Inter"],
+              "label-lg": ["Inter"],
+              "headline-md": ["Inter"],
+              "headline-sm": ["Inter"],
+              "body-lg": ["Inter"],
+              "body-sm": ["Inter"],
+              "label-md": ["Inter"],
+              "label-sm": ["Inter"],
+            },
+            fontSize: {
+              "headline-lg": [
+                "30px",
+                {
+                  lineHeight: "38px",
+                  letterSpacing: "-0.02em",
+                  fontWeight: "700",
+                },
+              ],
+              "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+              "headline-lg-mobile": [
+                "24px",
+                {
+                  lineHeight: "32px",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "700",
+                },
+              ],
+              "label-lg": [
+                "14px",
+                {
+                  lineHeight: "20px",
+                  letterSpacing: "0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "headline-md": [
+                "22px",
+                {
+                  lineHeight: "28px",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "headline-sm": [
+                "18px",
+                { lineHeight: "24px", fontWeight: "600" },
+              ],
+              "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+              "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+              "label-md": [
+                "12px",
+                {
+                  lineHeight: "16px",
+                  letterSpacing: "0.02em",
+                  fontWeight: "600",
+                },
+              ],
+              "label-sm": [
+                "11px",
+                {
+                  lineHeight: "14px",
+                  letterSpacing: "0.04em",
+                  fontWeight: "700",
+                },
+              ],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-background font-body-md text-on-surface antialiased min-h-screen"
+  >
+    <aside
+      class="fixed left-0 top-0 h-full w-[250px] bg-tertiary text-on-tertiary z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+    >
+      <div class="h-16 px-space-md flex items-center gap-space-sm bg-tertiary">
+        <img
+          alt="CampusRoom Maroon &amp; Gold Logo"
+          class="h-8 w-auto object-contain"
+          src="assets/logo.svg"
+        />
+        <div class="flex flex-col">
+          <span
+            class="font-headline-sm text-headline-sm text-on-tertiary tracking-tight"
+            >CampusRoom</span
+          ><span
+            class="font-label-sm text-label-sm text-tertiary-fixed-dim uppercase tracking-wider"
+            >Buenavista Poly</span
+          >
+        </div>
+      </div>
+      <div class="px-space-md py-space-sm">
+        <div
+          class="font-label-sm text-label-sm text-on-tertiary-container uppercase tracking-wider mb-space-xs px-space-sm"
+        >
+          Intranet Core
+        </div>
+      </div>
+      <nav
+        class="flex-1 px-space-sm space-y-space-xs"
+        data-active-classes="bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
+      >
+        <a
+          aria-current="page"
+          class="flex items-center gap-space-sm px-space-md py-space-sm rounded transition-colors bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
+          data-path="customer-dashboard"
+          href="dashboard.html"
+          ><span class="material-symbols-outlined text-[20px]">dashboard</span
+          ><span>Dashboard</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="rooms"
+          href="book-room.html"
+          ><span class="material-symbols-outlined text-[20px]"
+            >meeting_room</span
+          ><span>Rooms</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="my-reservations"
+          href="my-reservations.html"
+          ><span class="material-symbols-outlined text-[20px]"
+            >event_available</span
+          ><span>Reservations</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="staff-queue"
+          href="staff-queue.html"
+          ><span class="material-symbols-outlined text-[20px]">assignment</span
+          ><span>Staff Queue</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="admin-governance"
+          href="staff-queue.html"
+          ><span class="material-symbols-outlined text-[20px]"
+            >admin_panel_settings</span
+          ><span>Admin Governance</span></a
+        >
+      </nav>
+      <div class="p-space-md bg-tertiary-container/40">
+        <div class="flex items-center justify-between">
+          <div class="flex flex-col">
+            <span class="font-label-sm text-label-sm text-tertiary-fixed-dim"
+              >Registrar Desk</span
+            ><span class="font-body-sm text-body-sm text-on-tertiary"
+              >Ext. 4021 / 4022</span
+            >
+          </div>
+          <span
+            class="material-symbols-outlined text-secondary-container text-[18px]"
+            >verified</span
+          >
+        </div>
+      </div>
+    </aside>
+    <div class="pl-[250px]">
+      <header
+        class="fixed top-0 left-[250px] right-0 h-16 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"
+      >
+        <div class="flex items-center gap-space-md">
+          <img
+            alt="CampusRoom Maroon &amp; Gold Logo"
+            class="h-8 w-auto object-contain"
+            src="assets/logo.svg"
+          />
+          <div
+            class="hidden md:flex items-center gap-space-xs px-space-sm py-1 bg-surface-container rounded"
+          >
+            <span class="material-symbols-outlined text-secondary text-[16px]"
+              >school</span
+            ><span
+              class="font-label-sm text-label-sm text-on-surface-variant font-semibold"
+              >AY 2024-2025 • First Semester</span
+            >
+          </div>
+        </div>
+        <div class="flex items-center gap-space-md">
+          <button
+            aria-label="Notifications"
+            class="relative p-space-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors rounded"
+          >
+            <span class="material-symbols-outlined text-[22px]"
+              >notifications</span
+            ><span
+              class="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-container"
+            ></span>
+          </button>
+          <div class="flex items-center gap-space-sm pl-space-sm">
+            <div class="flex flex-col text-right hidden sm:flex">
+              <span class="font-label-md text-label-md text-on-surface"
+                >Dr. Edgardo Valderama</span
+              ><span class="font-label-sm text-label-sm text-primary font-bold"
+                >Faculty / Staff</span
+              >
+            </div>
+            <img
+              alt="Profile"
+              class="w-8 h-8 rounded-full object-cover shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+              src="https://lh3.googleusercontent.com/aida/AEtjO1U7iGCinzQmj8WfjJF5VgThj41jGwMUtCAl6UtghCr0H8BOjy2MVc1ZcmS1rcL4eH5DjegJaqf1lQOSUPybmrihM04sRMvBukR6zwgUNhBcqg6ba8EsbW1u7qRkWlj6RoJCv2_SGlfaBoUFinUOspbM30gtLfocI-6amPSy_5J_K3FcBMsLDowQS-4fD2Nl4vKMVcbAjKVSmjVmJgs1ReAkEPM6Y4GxsQZ7zzth0SbD9ljnAIzmNTNYiA"
+            />
+          </div>
+        </div>
+      </header>
+      <main
+        class="w-full pt-16 bg-background px-space-lg py-space-lg min-h-screen"
+      >
+        <div class="flex flex-col w-full">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+            <!-- Main Content Area: Search, Filters & Live Room Grid -->
+            <div class="lg:col-span-8 xl:col-span-9 flex flex-col gap-space-lg">
+              <!-- Operational Header Banner with Micro Metrics -->
+              <div
+                class="bg-surface-container-lowest p-space-lg rounded shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-space-md"
+              >
+                <div>
+                  <div class="flex items-center gap-space-xs mb-1">
+                    <span
+                      class="inline-block w-2.5 h-2.5 rounded-full bg-[#16A34A] animate-pulse"
+                    ></span>
+                    <span
+                      class="font-label-sm text-label-sm uppercase tracking-wider text-secondary"
+                      >Academic Intranet Live Feed</span
+                    >
+                  </div>
+                  <p class="font-headline-md text-headline-md text-on-surface">
+                    Buenavista Facility Gateway
+                  </p>
+                  <p class="font-body-md text-body-md text-on-surface-variant">
+                    Real-time room allocation, specialized lab readiness, and
+                    immediate booking permits.
+                  </p>
+                </div>
+                <div class="flex items-center gap-space-sm shrink-0">
+                  <button
+                    class="inline-flex items-center gap-space-xs px-space-md py-space-sm bg-secondary-container text-on-secondary-container font-label-lg text-label-lg rounded shadow-sm hover:opacity-95 transition-all"
+                    type="button"
+                    id="quickReserveBtn"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >bolt</span
+                    >
+                    <span>Quick Reserve</span>
+                  </button>
+                  <button
+                    class="inline-flex items-center gap-space-xs px-space-md py-space-sm bg-primary-container text-on-primary font-label-lg text-label-lg rounded hover:bg-primary transition-all"
+                    btn-book-room
+                    type="button"
+                    id="newRequestBtn"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >add_circle</span
+                    >
+                    <span>New Request</span>
+                  </button>
+                </div>
+              </div>
+              <!-- Search & Structured Filter Bar -->
+              <div
+                class="bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-md"
+              >
+                <!-- Main Search Input -->
+                <div class="relative w-full">
+                  <span
+                    class="material-symbols-outlined absolute left-space-md top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]"
+                    >search</span
+                  >
+                  <input
+                    class="w-full pl-10 pr-space-md py-space-sm bg-surface-container-low text-on-surface placeholder:text-on-tertiary-container font-body-md text-body-md rounded focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-secondary transition-all"
+                    id="roomSearchInput"
+                    placeholder="Search rooms by hall, room number, or equipment: e.g. 4K Projector, Lab benches..."
+                    type="text"
+                  />
+                </div>
+                <!-- Facet Dropdowns and Counter Indicator -->
+                <div
+                  class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-space-sm items-center"
+                >
+                  <div class="relative">
+                    <label class="sr-only" for="buildingFilter"
+                      >Filter Building</label
+                    >
+                    <select
+                      class="w-full bg-surface-container-low py-space-xs px-space-sm text-on-surface font-label-md text-label-md rounded focus:outline-none focus:ring-2 focus:ring-primary-container appearance-none pr-8"
+                      id="buildingFilter"
+                    >
+                      <option value="all">All Buildings</option>
+                      <option value="tech">Tech Hall North</option>
+                      <option value="science">Science Complex B</option>
+                      <option value="main">Main Quad</option>
+                      <option value="humanities">Humanities Center</option>
+                      <option value="engineering">Engineering Wing</option>
+                      <option value="innovation">Innovation Hub</option>
+                    </select>
+                    <span
+                      class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]"
+                      >expand_more</span
+                    >
+                  </div>
+                  <div class="relative">
+                    <label class="sr-only" for="capacityFilter"
+                      >Filter Capacity</label
+                    >
+                    <select
+                      class="w-full bg-surface-container-low py-space-xs px-space-sm text-on-surface font-label-md text-label-md rounded focus:outline-none focus:ring-2 focus:ring-primary-container appearance-none pr-8"
+                      id="capacityFilter"
+                    >
+                      <option value="any">Any Capacity</option>
+                      <option value="small">1 - 30 seats</option>
+                      <option value="medium">31 - 60 seats</option>
+                      <option value="large">60+ seats</option>
+                    </select>
+                    <span
+                      class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]"
+                      >expand_more</span
+                    >
+                  </div>
+                  <div class="relative">
+                    <label class="sr-only" for="statusFilter"
+                      >Filter Status</label
+                    >
+                    <select
+                      class="w-full bg-surface-container-low py-space-xs px-space-sm text-on-surface font-label-md text-label-md rounded focus:outline-none focus:ring-2 focus:ring-primary-container appearance-none pr-8"
+                      id="statusFilter"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="available">Available Now</option>
+                      <option value="occupied">Occupied</option>
+                      <option value="maintenance">Under Maintenance</option>
+                    </select>
+                    <span
+                      class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]"
+                      >expand_more</span
+                    >
+                  </div>
+                  <div
+                    class="flex items-center justify-between sm:justify-end gap-space-xs px-space-xs"
+                  >
+                    <span
+                      class="font-label-sm text-label-sm text-on-surface-variant"
+                      >Showing
+                      <strong class="text-on-surface" id="visibleRoomsCount"
+                        >6</strong
+                      >
+                      of 6 rooms</span
+                    >
+                    <button
+                      class="text-secondary hover:text-primary font-label-sm text-label-sm underline ml-1"
+                      id="resetFilters"
+                      type="button"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <!-- Live Room Availability Grid -->
+              <div
+                class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-gutter"
+                id="roomGrid"
+              >
+                <!-- Room 1: Tech Hall North - Room 204 -->
+                <div
+                  class="room-card group bg-surface-container-lowest rounded shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between"
+                  data-building="tech"
+                  data-capacity="35"
+                  data-status="available"
+                >
+                  <!-- Left Status Strip -->
+                  <div
+                    class="absolute left-0 top-0 bottom-0 w-[4px] bg-[#16A34A]"
+                  ></div>
+                  <div
+                    class="p-space-md pl-[calc(1rem+4px)] flex flex-col gap-space-sm"
+                  >
+                    <div class="flex items-start justify-between gap-space-xs">
+                      <div>
+                        <span
+                          class="font-label-sm text-label-sm uppercase tracking-wider text-secondary"
+                          >Tech Hall North</span
+                        >
+                        <p
+                          class="font-headline-sm text-headline-sm text-on-surface leading-tight"
+                        >
+                          Room 204
+                        </p>
+                      </div>
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-[#DCFCE7] text-[#15803D] font-label-sm text-label-sm font-semibold flex items-center gap-1 shrink-0"
+                      >
+                        <span
+                          class="w-1.5 h-1.5 rounded-full bg-[#16A34A]"
+                        ></span>
+                        Available
+                      </span>
+                    </div>
+                    <div
+                      class="relative h-28 w-full rounded overflow-hidden mt-1"
+                    >
+                      <img
+                        class="w-full h-full object-cover"
+                        data-alt="University smart lecture hall with tiered wooden seating, high-end 4K laser projection surface, pristine institutional lighting, Buenavista Polytechnic colors accents"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZr6OKRxRUpi1apuQGApDoT5wqb1GWFtZ17PqQIJqqL-afwi7q4Titls5j6qTw3Bx74sKJ9TCZVsAcuK4zQAR8Zcc5M22v0RepU4SaTrgzsiAXQ1_oFnLvV_IzYVx81QEbkcpXTbcgz3W22PJEr3g5FxmyMkChxHD7foLsg7JWQRUswPWnX674tJCb9YGupGkbqCYRSLFoHD9BoIJLayDZFmMUhw8EFmHzxqiiTQGUqp3QNP58zrLt"
+                      />
+                      <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"
+                      ></div>
+                      <span
+                        class="absolute bottom-2 left-2 text-white font-label-sm text-label-sm bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm"
+                        >Tier-2 Lecture &amp; Seminar</span
+                      >
+                    </div>
+                    <div
+                      class="flex items-center gap-space-sm text-on-surface-variant font-body-sm text-body-sm pt-1"
+                    >
+                      <span
+                        class="flex items-center gap-1 font-medium text-on-surface"
+                      >
+                        <span
+                          class="material-symbols-outlined text-[16px] text-secondary"
+                          >group</span
+                        >
+                        35 Seats
+                      </span>
+                      <span>•</span>
+                      <span class="truncate">Floor 2, Wing A</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >4K Laser Projector</span
+                      >
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >Lapel Mic</span
+                      >
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >Lecture Capture</span
+                      >
+                    </div>
+                  </div>
+                  <div class="p-space-md pl-[calc(1rem+4px)] pt-0">
+                    <button
+                      class="w-full py-2 px-space-sm bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg rounded transition-colors flex items-center justify-center gap-1"
+                      btn-book-room
+                      type="button"
+                    >
+                      <span class="material-symbols-outlined text-[18px]"
+                        >calendar_today</span
+                      >
+                      <span>Book This Room</span>
+                    </button>
+                  </div>
+                </div>
+                <!-- Room 2: Science Complex B - Lab 102 -->
+                <div
+                  class="room-card group bg-surface-container-lowest rounded shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between"
+                  data-building="science"
+                  data-capacity="24"
+                  data-status="occupied"
+                >
+                  <!-- Left Status Strip -->
+                  <div
+                    class="absolute left-0 top-0 bottom-0 w-[4px] bg-[#D97706]"
+                  ></div>
+                  <div
+                    class="p-space-md pl-[calc(1rem+4px)] flex flex-col gap-space-sm"
+                  >
+                    <div class="flex items-start justify-between gap-space-xs">
+                      <div>
+                        <span
+                          class="font-label-sm text-label-sm uppercase tracking-wider text-secondary"
+                          >Science Complex B</span
+                        >
+                        <p
+                          class="font-headline-sm text-headline-sm text-on-surface leading-tight"
+                        >
+                          Lab 102
+                        </p>
+                      </div>
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-[#FEF3C7] text-[#B45309] font-label-sm text-label-sm font-semibold flex items-center gap-1 shrink-0"
+                      >
+                        <span
+                          class="w-1.5 h-1.5 rounded-full bg-[#D97706]"
+                        ></span>
+                        Occupied
+                      </span>
+                    </div>
+                    <div
+                      class="relative h-28 w-full rounded overflow-hidden mt-1"
+                    >
+                      <img
+                        class="w-full h-full object-cover"
+                        data-alt="Advanced computational computer laboratory with dual-monitor developer stations, organized cabling, whiteboards with calculus diagrams, warm institutional ambient lighting"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuDFF06U7lr_-mIVKK5BtN3RCMRrOSLsLdArBqiHC8DiBAlvbTfNWl9LuMyfBxQ8zVuFbX2eWFQpb9MskPt99anxINsJP2YpJHPkCpjnL6Tt9PLzG5owEoQNr1kJscP2tSKuNpY_3kvPQ2F00_w2t_zZOQxbNJ7CPhBSuEGmI04hAiG7iNzIgmpvX7dttk2XMRdAxeBzfGUJgz0ecfrJirfBbgrqzPZrMwRsPyXbqvdlJe_Z5Txyjh7G"
+                      />
+                      <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"
+                      ></div>
+                      <span
+                        class="absolute bottom-2 left-2 text-white font-label-sm text-label-sm bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm"
+                        >Computational Lab</span
+                      >
+                    </div>
+                    <div
+                      class="p-2 rounded bg-surface-container font-body-sm text-body-sm text-on-surface"
+                    >
+                      <div
+                        class="flex items-center gap-1 font-semibold text-secondary"
+                      >
+                        <span class="material-symbols-outlined text-[16px]"
+                          >schedule</span
+                        >
+                        <span>Occupied until 1:30 PM</span>
+                      </div>
+                      <span
+                        class="text-on-surface-variant text-[11px] block mt-0.5"
+                        >Session: Prof. Alvarez (CS-314 Algo)</span
+                      >
+                    </div>
+                    <div
+                      class="flex items-center gap-space-sm text-on-surface-variant font-body-sm text-body-sm"
+                    >
+                      <span
+                        class="flex items-center gap-1 font-medium text-on-surface"
+                      >
+                        <span
+                          class="material-symbols-outlined text-[16px] text-secondary"
+                          >desktop_windows</span
+                        >
+                        24 Workstations
+                      </span>
+                      <span>•</span>
+                      <span class="truncate">High-spec GPUs</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >CUDA Cluster</span
+                      >
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >Optic Fiber</span
+                      >
+                    </div>
+                  </div>
+                  <div class="p-space-md pl-[calc(1rem+4px)] pt-0">
+                    <button
+                      class="w-full py-2 px-space-sm bg-surface-container-high hover:bg-surface-dim text-on-surface font-label-lg text-label-lg rounded transition-colors flex items-center justify-center gap-1"
+                      type="button"
+                    >
+                      <span class="material-symbols-outlined text-[18px]"
+                        >visibility</span
+                      >
+                      <span>View Schedule</span>
+                    </button>
+                  </div>
+                </div>
+                <!-- Room 3: Main Quad - Auditorium Hall A -->
+                <div
+                  class="room-card group bg-surface-container-lowest rounded shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between"
+                  data-building="main"
+                  data-capacity="220"
+                  data-status="available"
+                >
+                  <!-- Left Status Strip -->
+                  <div
+                    class="absolute left-0 top-0 bottom-0 w-[4px] bg-[#16A34A]"
+                  ></div>
+                  <div
+                    class="p-space-md pl-[calc(1rem+4px)] flex flex-col gap-space-sm"
+                  >
+                    <div class="flex items-start justify-between gap-space-xs">
+                      <div>
+                        <span
+                          class="font-label-sm text-label-sm uppercase tracking-wider text-secondary"
+                          >Main Quad</span
+                        >
+                        <p
+                          class="font-headline-sm text-headline-sm text-on-surface leading-tight"
+                        >
+                          Auditorium Hall A
+                        </p>
+                      </div>
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-[#DCFCE7] text-[#15803D] font-label-sm text-label-sm font-semibold flex items-center gap-1 shrink-0"
+                      >
+                        <span
+                          class="w-1.5 h-1.5 rounded-full bg-[#16A34A]"
+                        ></span>
+                        Available
+                      </span>
+                    </div>
+                    <div
+                      class="relative h-28 w-full rounded overflow-hidden mt-1"
+                    >
+                      <img
+                        class="w-full h-full object-cover"
+                        data-alt="Grand university collegiate amphitheater with plush maroon auditorium seating, wooden acoustic paneling, massive projection screen, professional stage lighting rig"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIio9yQ2Q2MvibyYS0vTuZ1QePH4YylySTepOLZ6gVcClwtvNNdnA9Wt25qW-E3g8eLZa06as81aAd5AeubNgl5wYCaVCGWNO0VnBrPSzXAkyOEa-ilahBY57Hr9OIjAIpjhu41-SIaxO1z96yO1YU5GOpbLIaDse1PtouioPbrT9CcLHPgX5u2fkUxWdllRO9s47rSaJuL_GBiaUUFY3X-fKdZpXNE96q9JVzHRftG78Mrsr3ggbA"
+                      />
+                      <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"
+                      ></div>
+                      <span
+                        class="absolute bottom-2 left-2 text-white font-label-sm text-label-sm bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm"
+                        >Flagship Auditorium</span
+                      >
+                    </div>
+                    <div
+                      class="flex items-center gap-space-sm text-on-surface-variant font-body-sm text-body-sm pt-1"
+                    >
+                      <span
+                        class="flex items-center gap-1 font-medium text-on-surface"
+                      >
+                        <span
+                          class="material-symbols-outlined text-[16px] text-secondary"
+                          >theater_comedy</span
+                        >
+                        220 Seats
+                      </span>
+                      <span>•</span>
+                      <span class="truncate">Ground Level</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >Stage Lighting</span
+                      >
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >Dual Projection</span
+                      >
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >Livestream Rig</span
+                      >
+                    </div>
+                  </div>
+                  <div class="p-space-md pl-[calc(1rem+4px)] pt-0">
+                    <button
+                      class="w-full py-2 px-space-sm bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg rounded transition-colors flex items-center justify-center gap-1"
+                      btn-book-room
+                      type="button"
+                    >
+                      <span class="material-symbols-outlined text-[18px]"
+                        >calendar_today</span
+                      >
+                      <span>Book This Room</span>
+                    </button>
+                  </div>
+                </div>
+                <!-- Room 4: Humanities Center - Room 310 -->
+                <div
+                  class="room-card group bg-surface-container-lowest rounded shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between opacity-90"
+                  data-building="humanities"
+                  data-capacity="16"
+                  data-status="maintenance"
+                >
+                  <!-- Left Status Strip -->
+                  <div
+                    class="absolute left-0 top-0 bottom-0 w-[4px] bg-[#64748B]"
+                  ></div>
+                  <div
+                    class="p-space-md pl-[calc(1rem+4px)] flex flex-col gap-space-sm"
+                  >
+                    <div class="flex items-start justify-between gap-space-xs">
+                      <div>
+                        <span
+                          class="font-label-sm text-label-sm uppercase tracking-wider text-secondary"
+                          >Humanities Center</span
+                        >
+                        <p
+                          class="font-headline-sm text-headline-sm text-on-surface leading-tight"
+                        >
+                          Room 310
+                        </p>
+                      </div>
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-[#F1F5F9] text-[#475569] font-label-sm text-label-sm font-semibold flex items-center gap-1 shrink-0"
+                      >
+                        <span
+                          class="w-1.5 h-1.5 rounded-full bg-[#64748B]"
+                        ></span>
+                        Maintenance
+                      </span>
+                    </div>
+                    <div
+                      class="relative h-28 w-full rounded overflow-hidden mt-1"
+                    >
+                      <img
+                        class="w-full h-full object-cover grayscale-[30%]"
+                        data-alt="Executive collegiate conference boardroom with walnut table, ergonomic charcoal leather chairs, integrated video conferencing bar, modern soft office lighting"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoix1axGqJAerCSg49RJ1dHWUnhGaWnklszGFP1_UKVNRiGMwQphqub-zpZ7q2fgEJ_ksXsUih2w8zTOZAKNTuEEQU63Tw0jMHnu1wGS4Wupd2mCeWrhpAn2USCV7fTPxmhwHfBTAWZ4wDi26i1RgELr2wsMv05PMYhOIGi5gfyp_RWtSKRuZRjgF1QgAs5XmWfIm9Txg_azAdNkoQs8VoILPcA9226avggA7e5ENOslN_kOeRLJwk"
+                      />
+                      <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"
+                      ></div>
+                      <span
+                        class="absolute bottom-2 left-2 text-white font-label-sm text-label-sm bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm"
+                        >Executive Conference Suite</span
+                      >
+                    </div>
+                    <div
+                      class="p-2 rounded bg-surface-container font-body-sm text-body-sm text-on-surface"
+                    >
+                      <div
+                        class="flex items-center gap-1 font-semibold text-error"
+                      >
+                        <span class="material-symbols-outlined text-[16px]"
+                          >build</span
+                        >
+                        <span>HVAC Servicing until 4:00 PM</span>
+                      </div>
+                      <span
+                        class="text-on-surface-variant text-[11px] block mt-0.5"
+                        >Work Order #WO-8821 • Facilities Dept</span
+                      >
+                    </div>
+                    <div
+                      class="flex items-center gap-space-sm text-on-surface-variant font-body-sm text-body-sm"
+                    >
+                      <span
+                        class="flex items-center gap-1 font-medium text-on-surface"
+                      >
+                        <span
+                          class="material-symbols-outlined text-[16px] text-secondary"
+                          >meeting_room</span
+                        >
+                        16 Seats
+                      </span>
+                      <span>•</span>
+                      <span class="truncate">Floor 3</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >Video Bar</span
+                      >
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >Digital Board</span
+                      >
+                    </div>
+                  </div>
+                  <div class="p-space-md pl-[calc(1rem+4px)] pt-0">
+                    <button
+                      class="w-full py-2 px-space-sm bg-surface-container-high text-on-tertiary-container cursor-not-allowed font-label-lg text-label-lg rounded flex items-center justify-center gap-1"
+                      disabled=""
+                      type="button"
+                    >
+                      <span class="material-symbols-outlined text-[18px]"
+                        >block</span
+                      >
+                      <span>Unavailable</span>
+                    </button>
+                  </div>
+                </div>
+                <!-- Room 5: Engineering Wing - Room 105 -->
+                <div
+                  class="room-card group bg-surface-container-lowest rounded shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between"
+                  data-building="engineering"
+                  data-capacity="45"
+                  data-status="available"
+                >
+                  <!-- Left Status Strip -->
+                  <div
+                    class="absolute left-0 top-0 bottom-0 w-[4px] bg-[#16A34A]"
+                  ></div>
+                  <div
+                    class="p-space-md pl-[calc(1rem+4px)] flex flex-col gap-space-sm"
+                  >
+                    <div class="flex items-start justify-between gap-space-xs">
+                      <div>
+                        <span
+                          class="font-label-sm text-label-sm uppercase tracking-wider text-secondary"
+                          >Engineering Wing</span
+                        >
+                        <p
+                          class="font-headline-sm text-headline-sm text-on-surface leading-tight"
+                        >
+                          Room 105
+                        </p>
+                      </div>
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-[#DCFCE7] text-[#15803D] font-label-sm text-label-sm font-semibold flex items-center gap-1 shrink-0"
+                      >
+                        <span
+                          class="w-1.5 h-1.5 rounded-full bg-[#16A34A]"
+                        ></span>
+                        Available
+                      </span>
+                    </div>
+                    <div
+                      class="relative h-28 w-full rounded overflow-hidden mt-1"
+                    >
+                      <img
+                        class="w-full h-full object-cover"
+                        data-alt="High tech polytechnic robotics prototyping lab, heavy-duty workbench tables, 3D printing clusters in background, industrial overhead power drops, clean collegiate aesthetic"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAF3kynYiW-g8K0-5q_ep3k4S68DFGrSFDwB8R6woBKEvyqsCPDQk-3ES-H30xRP29HeECQOOtR4a-2wF0OfWvunJd9o4_wmi2yBAeZ7X0JObEfdRtKBz5ssyD2N1aKe0B8KllsDfHj4x5ACrp3p0WhujIFvEaCAt0r8nQRzLyQaPzm_Mmnx7iaFHgv9Nslb_4s6cpweV2uzNnEQUmt_wqV-UTt97dQbPbMaIT4wcC6Swv9cwZ_eysu"
+                      />
+                      <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"
+                      ></div>
+                      <span
+                        class="absolute bottom-2 left-2 text-white font-label-sm text-label-sm bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm"
+                        >Robotics Prototyping Workshop</span
+                      >
+                    </div>
+                    <div
+                      class="flex items-center gap-space-sm text-on-surface-variant font-body-sm text-body-sm pt-1"
+                    >
+                      <span
+                        class="flex items-center gap-1 font-medium text-on-surface"
+                      >
+                        <span
+                          class="material-symbols-outlined text-[16px] text-secondary"
+                          >precision_manufacturing</span
+                        >
+                        45 Seats
+                      </span>
+                      <span>•</span>
+                      <span class="truncate">Ground Bay 1</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >3-Phase Power</span
+                      >
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >Exhaust Vent</span
+                      >
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >Safety Shower</span
+                      >
+                    </div>
+                  </div>
+                  <div class="p-space-md pl-[calc(1rem+4px)] pt-0">
+                    <button
+                      class="w-full py-2 px-space-sm bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg rounded transition-colors flex items-center justify-center gap-1"
+                      btn-book-room
+                      type="button"
+                    >
+                      <span class="material-symbols-outlined text-[18px]"
+                        >calendar_today</span
+                      >
+                      <span>Book This Room</span>
+                    </button>
+                  </div>
+                </div>
+                <!-- Room 6: Innovation Hub - Seminar Room 4B -->
+                <div
+                  class="room-card group bg-surface-container-lowest rounded shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between"
+                  data-building="innovation"
+                  data-capacity="28"
+                  data-status="occupied"
+                >
+                  <!-- Left Status Strip -->
+                  <div
+                    class="absolute left-0 top-0 bottom-0 w-[4px] bg-[#D97706]"
+                  ></div>
+                  <div
+                    class="p-space-md pl-[calc(1rem+4px)] flex flex-col gap-space-sm"
+                  >
+                    <div class="flex items-start justify-between gap-space-xs">
+                      <div>
+                        <span
+                          class="font-label-sm text-label-sm uppercase tracking-wider text-secondary"
+                          >Innovation Hub</span
+                        >
+                        <p
+                          class="font-headline-sm text-headline-sm text-on-surface leading-tight"
+                        >
+                          Seminar Room 4B
+                        </p>
+                      </div>
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-[#FEF3C7] text-[#B45309] font-label-sm text-label-sm font-semibold flex items-center gap-1 shrink-0"
+                      >
+                        <span
+                          class="w-1.5 h-1.5 rounded-full bg-[#D97706]"
+                        ></span>
+                        Occupied
+                      </span>
+                    </div>
+                    <div
+                      class="relative h-28 w-full rounded overflow-hidden mt-1"
+                    >
+                      <img
+                        class="w-full h-full object-cover"
+                        data-alt="Modern collaborative university workshop room with modular rollable tables, floor-to-ceiling glass wall, sticky notes and design thinking boards, sunny campus morning"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpbXBEVHeqdKlYpgJNO01om1dL1biicZD4Ir4chM4Gw8M1rwz5eXWZKn7wojMLr0OJ704wKk-NYDtq4P5n7zRMh3YKcdHjJLrUPUBzMa_nhlgga-RCCs8vhbmQDN5ESh9aJxJo23ya-SDUB3MMjiCx2wq2M2CM9pw5b8MgKL1M3u_Wk9niSZitU2TyJpmlJvcF5SLc9L7sUWvsG3miS2y-swWg09t18SuZi9BwJ5cwIldVlCBW4rk-"
+                      />
+                      <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"
+                      ></div>
+                      <span
+                        class="absolute bottom-2 left-2 text-white font-label-sm text-label-sm bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm"
+                        >Collaborative Studio</span
+                      >
+                    </div>
+                    <div
+                      class="p-2 rounded bg-surface-container font-body-sm text-body-sm text-on-surface"
+                    >
+                      <div
+                        class="flex items-center gap-1 font-semibold text-secondary"
+                      >
+                        <span class="material-symbols-outlined text-[16px]"
+                          >schedule</span
+                        >
+                        <span>Occupied until 11:30 AM</span>
+                      </div>
+                      <span
+                        class="text-on-surface-variant text-[11px] block mt-0.5"
+                        >Dean's Advisory Group • Special Session</span
+                      >
+                    </div>
+                    <div
+                      class="flex items-center gap-space-sm text-on-surface-variant font-body-sm text-body-sm"
+                    >
+                      <span
+                        class="flex items-center gap-1 font-medium text-on-surface"
+                      >
+                        <span
+                          class="material-symbols-outlined text-[16px] text-secondary"
+                          >groups</span
+                        >
+                        28 Seats
+                      </span>
+                      <span>•</span>
+                      <span class="truncate">Level 4 Mezzanine</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >Mobile Pods</span
+                      >
+                      <span
+                        class="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[11px] font-label-sm rounded"
+                        >Writable Walls</span
+                      >
+                    </div>
+                  </div>
+                  <div class="p-space-md pl-[calc(1rem+4px)] pt-0">
+                    <button
+                      class="w-full py-2 px-space-sm bg-surface-container-high hover:bg-surface-dim text-on-surface font-label-lg text-label-lg rounded transition-colors flex items-center justify-center gap-1"
+                      type="button"
+                    >
+                      <span class="material-symbols-outlined text-[18px]"
+                        >visibility</span
+                      >
+                      <span>View Schedule</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <!-- No match fallback state (hidden by default) -->
+              <div
+                class="hidden bg-surface-container-lowest p-space-xl rounded text-center shadow-sm flex-col items-center justify-center gap-space-sm"
+                id="noResultsNotice"
+              >
+                <span class="material-symbols-outlined text-[48px] text-outline"
+                  >search_off</span
+                >
+                <p class="font-headline-sm text-headline-sm text-on-surface">
+                  No Facilities Match Your Filter Criteria
+                </p>
+                <p
+                  class="font-body-md text-body-md text-on-surface-variant max-w-md"
+                >
+                  Try expanding capacity boundaries, clearing specific building
+                  tags, or searching with broader keywords.
+                </p>
+                <button
+                  class="px-space-md py-space-sm bg-primary-container text-on-primary font-label-lg text-label-lg rounded mt-space-xs"
+                  btn-book-room
+                  id="clearAllFiltersBtn"
+                  type="button"
+                >
+                  Clear All Filters
+                </button>
+              </div>
+            </div>
+            <!-- Right-Hand Column: Notices/Announcement Panel -->
+            <div class="lg:col-span-4 xl:col-span-3 flex flex-col gap-space-lg">
+              <!-- Campus Overview & Tasks Card -->
+              <div
+                class="hidden bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-md"
+              >
+                <div
+                  class="flex items-center justify-between pb-space-xs border-b border-surface-container"
+                >
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="material-symbols-outlined text-primary text-[20px]"
+                      >task_alt</span
+                    >
+                    <h2
+                      class="font-headline-sm text-headline-sm text-on-surface"
+                    >
+                      Campus Overview &amp; Tasks
+                    </h2>
+                  </div>
+                  <span class="w-2 h-2 rounded-full bg-secondary"></span>
+                </div>
+                <!-- Metric Badges / Summary Counters -->
+                <div class="space-y-space-xs">
+                  <!-- Pending Approvals -->
+                  <div
+                    class="p-space-sm rounded bg-[#FEF3C7] text-on-secondary-fixed flex items-center justify-between transition-transform hover:translate-x-1"
+                  >
+                    <div class="flex items-center gap-space-xs">
+                      <span
+                        class="material-symbols-outlined text-[#D97706] text-[20px]"
+                        >hourglass_top</span
+                      >
+                      <div class="flex flex-col">
+                        <span
+                          class="font-label-md text-label-md text-[#715300] font-semibold"
+                          >Pending Approvals</span
+                        >
+                        <span
+                          class="font-body-sm text-body-sm text-on-secondary-fixed-variant"
+                          >Faculty reservation requests</span
+                        >
+                      </div>
+                    </div>
+                    <span
+                      class="px-2 py-0.5 bg-[#ffc641] text-[#261a00] font-label-sm text-label-sm font-bold rounded"
+                      >4 Requests</span
+                    >
+                  </div>
+                  <!-- Rooms Under Maintenance -->
+                  <div
+                    class="p-space-sm rounded bg-[#F1F5F9] text-on-tertiary-fixed flex items-center justify-between transition-transform hover:translate-x-1"
+                  >
+                    <div class="flex items-center gap-space-xs">
+                      <span
+                        class="material-symbols-outlined text-[#64748B] text-[20px]"
+                        >engineering</span
+                      >
+                      <div class="flex flex-col">
+                        <span
+                          class="font-label-md text-label-md text-[#475569] font-semibold"
+                          >Under Maintenance</span
+                        >
+                        <span
+                          class="font-body-sm text-body-sm text-on-tertiary-fixed-variant"
+                          >HVAC &amp; AV hardware sync</span
+                        >
+                      </div>
+                    </div>
+                    <span
+                      class="px-2 py-0.5 bg-surface-container-high text-[#1b1c1c] font-label-sm text-label-sm font-bold rounded"
+                      >3 Rooms</span
+                    >
+                  </div>
+                  <!-- Today's Bookings -->
+                  <div
+                    class="p-space-sm rounded bg-primary-fixed text-on-primary-fixed flex items-center justify-between transition-transform hover:translate-x-1"
+                  >
+                    <div class="flex items-center gap-space-xs">
+                      <span
+                        class="material-symbols-outlined text-primary-container text-[20px]"
+                        >event_note</span
+                      >
+                      <div class="flex flex-col">
+                        <span
+                          class="font-label-md text-label-md text-primary font-semibold"
+                          >Today's Bookings</span
+                        >
+                        <span
+                          class="font-body-sm text-body-sm text-on-primary-fixed-variant"
+                          >Campus-wide verified events</span
+                        >
+                      </div>
+                    </div>
+                    <span
+                      class="px-2 py-0.5 bg-primary-container text-on-primary font-label-sm text-label-sm font-bold rounded"
+                      >48 Scheduled</span
+                    >
+                  </div>
+                </div>
+                <!-- Inline Visual: Room Utilization SVG Sparkline Chart -->
+                <div
+                  class="p-space-sm bg-surface-container rounded flex flex-col gap-1 mt-1"
+                >
+                  <div
+                    class="flex items-center justify-between font-label-sm text-label-sm"
+                  >
+                    <span class="text-on-surface-variant font-medium"
+                      >Campus Capacity Utilization</span
+                    >
+                    <span class="text-primary font-bold">78% Peak</span>
+                  </div>
+                  <div class="w-full h-12 flex items-end pt-2">
+                    <svg
+                      class="w-full h-full text-primary-container"
+                      fill="none"
+                      preserveaspectratio="none"
+                      viewbox="0 0 200 40"
+                    >
+                      <path
+                        d="M0 35 Q 25 32, 50 20 T 100 12 T 150 6 T 200 18"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-width="2.5"
+                      ></path>
+                      <path
+                        d="M0 35 Q 25 32, 50 20 T 100 12 T 150 6 T 200 18 L 200 40 L 0 40 Z"
+                        fill="currentColor"
+                        fill-opacity="0.12"
+                      ></path>
+                      <circle
+                        class="fill-secondary stroke-white"
+                        cx="150"
+                        cy="6"
+                        r="3"
+                        stroke-width="1.5"
+                      ></circle>
+                    </svg>
+                  </div>
+                  <div
+                    class="flex justify-between text-[10px] text-on-tertiary-container font-medium px-1"
+                  >
+                    <span>08:00 AM</span>
+                    <span>12:00 PM (Peak)</span>
+                    <span>06:00 PM</span>
+                  </div>
+                </div>
+                <!-- Next Reservation Feature Mini Card -->
+                <div class="pt-space-xs">
+                  <span
+                    class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold block mb-space-xs"
+                    >My Next Reservation</span
+                  >
+                  <div
+                    class="p-space-md rounded bg-surface-container border-l-4 border-primary-container flex flex-col gap-space-xs"
+                  >
+                    <div class="flex items-center justify-between">
+                      <span
+                        class="font-headline-sm text-headline-sm text-on-surface"
+                        >Tech Hall North 204</span
+                      >
+                      <span
+                        class="px-2 py-0.5 bg-primary-container text-on-primary text-[10px] font-bold rounded uppercase tracking-wider"
+                        >Confirmed</span
+                      >
+                    </div>
+                    <div
+                      class="flex items-center gap-1.5 text-on-surface font-label-md text-label-md"
+                    >
+                      <span
+                        class="material-symbols-outlined text-primary text-[18px]"
+                        >calendar_clock</span
+                      >
+                      <span>Today at 2:00 PM – 3:30 PM</span>
+                    </div>
+                    <p
+                      class="font-body-sm text-body-sm text-on-surface-variant"
+                    >
+                      Faculty Council Prep &amp; Curriculum Review with Dept
+                      Chairs.
+                    </p>
+                    <div class="pt-2 flex items-center justify-between">
+                      <a
+                        class="text-primary hover:text-primary-container font-label-sm text-label-sm font-semibold flex items-center gap-0.5"
+                        href="#"
+                      >
+                        <span>Manage Permit</span>
+                        <span class="material-symbols-outlined text-[14px]"
+                          >arrow_forward</span
+                        >
+                      </a>
+                      <span
+                        class="text-[11px] text-on-tertiary-container font-mono"
+                        >ID: #RES-9402</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="notice-stack flex flex-col gap-space-sm">
+                <!-- Campus Facilities Notice -->
+                <div
+                  class="bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-sm"
+                >
+                <span
+                  class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold"
+                  >Campus Facilities Notice</span
+                >
+                <div
+                  class="flex gap-space-sm items-start bg-surface-container-low p-space-sm rounded"
+                >
+                  <span
+                    class="material-symbols-outlined text-secondary text-[20px] shrink-0 mt-0.5"
+                    >construction</span
+                  >
+                  <div class="flex flex-col">
+                    <span
+                      class="font-label-md text-label-md text-on-surface font-semibold"
+                      >Tech Hall North HVAC Routine</span
+                    >
+                    <span
+                      class="font-body-sm text-body-sm text-on-surface-variant"
+                      >Scheduled duct cleaning on Saturday, Oct 26 from 6:00 AM
+                      to 12:00 PM. Bookings during this interval are
+                      automatically relocated.</span
+                    >
+                  </div>
+                </div>
+                </div>
+                <!-- Department Chair Notice Widget -->
+                <div
+                  class="bg-surface-container-lowest p-space-md rounded shadow-sm flex items-start gap-space-sm"
+                >
+                <span
+                  class="material-symbols-outlined text-secondary-container text-[24px] shrink-0 mt-0.5"
+                  >info</span
+                >
+                <div class="flex flex-col">
+                  <span
+                    class="font-label-md text-label-md font-bold text-on-surface"
+                    >Midterm Exams Blockout Period</span
+                  >
+                  <p
+                    class="font-body-sm text-body-sm text-on-surface-variant mt-0.5"
+                  >
+                    Main Quad and Science Hall auditorium tiers enter Registrar
+                    Priority Lockdown starting next Monday. External seminars
+                    must be booked 72h ahead.
+                  </p>
+                </div>
+                </div>
+              </div>
+              <!-- Policy and assistance footer -->
+              <div class="policy-assistance-footer pt-space-xs flex flex-col gap-space-xs">
+                <span
+                  class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold"
+                  >Policy &amp; Assistance</span
+                >
+                <a
+                  class="p-space-sm rounded bg-surface-container-low hover:bg-surface-container text-on-surface flex items-center justify-between transition-colors"
+                  href="#"
+                >
+                  <span class="flex items-center gap-2">
+                    <span
+                      class="material-symbols-outlined text-secondary text-[20px]"
+                      >menu_book</span
+                    >
+                    <span class="font-label-md text-label-md font-semibold"
+                      >BPU Space Policy Handbook</span
+                    >
+                  </span>
+                  <span
+                    class="material-symbols-outlined text-on-surface-variant text-[18px]"
+                    >open_in_new</span
+                  >
+                </a>
+                <a
+                  class="p-space-sm rounded bg-surface-container-low hover:bg-surface-container text-on-surface flex items-center justify-between transition-colors"
+                  href="#"
+                >
+                  <span class="flex items-center gap-2">
+                    <span
+                      class="material-symbols-outlined text-error text-[20px]"
+                      >emergency</span
+                    >
+                    <span class="font-label-md text-label-md font-semibold"
+                      >Facility Emergency Hotline</span
+                    >
+                  </span>
+                  <span
+                    class="material-symbols-outlined text-on-surface-variant text-[18px]"
+                    >call</span
+                  >
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script src="js/db.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/dashboard.js"></script>
+  </body>
+</html>

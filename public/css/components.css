@@ -1,0 +1,98 @@
+/* ==========================================================================
+   CampusRoom — Extracted Component Styles & UI States
+   Extracted from inline styles and modularized into reusable CSS classes
+   ========================================================================== */
+
+/* Auth Hero Background (extracted from inline style in login) */
+.auth-hero-bg {
+  background-image: url('assets/campus-bg.png');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Fallback remote image if local asset fails */
+.auth-hero-bg-external {
+  background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDm1dFp2IQ-nstXYA4RNY_-b8YXtL1R48WKgbBAWALMZIV6oSrAY9EauYg40kFGJ41sRdnRZI8b58tiBdRdMQEwNe66zndw8ab8sisT46d_weniE3Fu4kXWzpiBM4fmdcGjTfNWRu8IfGJd63VnL-tRawlkb1vFRabIOdTXD91TYA_p-pCpSQERBr_Fv3onVk2dxmSxJPcIn7FIc_knk8ThzQ0yKC7xVQkB0b7n-m1A75oW2LkZd1o7');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Academic Reservation Left Status Accent Strips (extracted from inline style) */
+.status-border-pending {
+  border-left: 4px solid #D97706;
+}
+
+.status-border-approved {
+  border-left: 4px solid #16A34A;
+}
+
+.status-border-rejected {
+  border-left: 4px solid #DC2626;
+}
+
+.status-border-maintenance {
+  border-left: 4px solid #64748B;
+}
+
+.status-border-completed {
+  border-left: 4px solid #4F46E5;
+}
+
+/* Progress bar width utility (extracted from inline style="width: 60%") */
+.progress-bar-60 {
+  width: 60%;
+}
+
+.progress-bar-100 {
+  width: 100%;
+}
+
+/* Focus and Interactive rings */
+.input-focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 198, 65, 0.7);
+}
+
+/* Modal Overlay Layer with Blur */
+.modal-backdrop-blur {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Dimmed background backdrop for modal preview */
+.dimmed-canvas-preview {
+  opacity: 0.2;
+  pointer-events: none;
+  user-select: none;
+  filter: blur(2px);
+}
+
+/* Badge variants */
+.badge-available {
+  background-color: var(--bpu-status-available-bg, #dcfce7);
+  color: var(--bpu-status-available-text, #15803d);
+}
+
+.badge-pending {
+  background-color: var(--bpu-status-pending-bg, #fef3c7);
+  color: var(--bpu-status-pending-text, #b45309);
+}
+
+.badge-maintenance {
+  background-color: var(--bpu-status-maintenance-bg, #f1f5f9);
+  color: var(--bpu-status-maintenance-text, #475569);
+}
+
+.badge-rejected {
+  background-color: var(--bpu-status-rejected-bg, #fee2e2);
+  color: var(--bpu-status-rejected-text, #b91c1c);
+}
+
+/* Toast alert fixed position container */
+.toast-fixed {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+}

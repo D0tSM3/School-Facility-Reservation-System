@@ -34,6 +34,7 @@ use CampusRoom\Controller\UserController;
 $dotenv = Dotenv::createImmutable(BASE_DIR);
 $dotenv->load();
 $dotenv->required(['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD']);
+$dotenv->required(['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI']);
 
 // Start session once here so every controller can rely on it.
 Auth::startSession();
@@ -68,10 +69,14 @@ $uri = rtrim($uri, '/') ?: '/';
 // Named captures (?P<name>...) are passed to the callable as arguments.
 
 $routes = [
-    // Auth
-    ['POST',  '#^/api/auth/register$#',              fn() => (new AuthController())->register()],
-    ['POST',  '#^/api/auth/login$#',                 fn() => (new AuthController())->login()],
-    ['POST',  '#^/api/auth/logout$#',                fn() => (new AuthController())->logout()],
+    // Auth — registration & login
+    ['POST', '#^/api/auth/register$#',    fn() => (new AuthController())->register()],
+    ['POST', '#^/api/auth/login$#',       fn() => (new AuthController())->login()],
+    ['POST', '#^/api/auth/verify-otp$#',  fn() => (new AuthController())->verifyOtp()],
+    ['POST', '#^/api/auth/resend-otp$#',  fn() => (new AuthController())->resendOtp()],
+    // Auth — session
+    ['GET',  '#^/api/auth/me$#',          fn() => (new AuthController())->me()],
+    ['POST', '#^/api/auth/logout$#',      fn() => (new AuthController())->logout()],
 
     // Rooms — Customer (GET) + Admin (POST / PATCH)
     ['GET',   '#^/api/rooms$#',                      fn() => (new RoomController())->index()],

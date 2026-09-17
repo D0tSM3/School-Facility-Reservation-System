@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 60" width="260" height="60">
+  <defs>
+    <linearGradient id="maroonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7A1F2B" />
+      <stop offset="100%" stop-color="#52131C" />
+    </linearGradient>
+  </defs>
+  <!-- University Shield Emblem -->
+  <g transform="translate(10, 6)">
+    <path d="M24 2 L42 9 V26 C42 38 24 46 24 46 C24 46 6 38 6 26 V9 Z" fill="url(#maroonGrad)" stroke="#D4A017" stroke-width="1.5" />
+    <!-- Classic university architectural pediment / columns in warm gold -->
+    <path d="M15 16 L24 10 L33 16 H15 Z" fill="#D4A017" />
+    <path d="M16 19 H32 M18 19 V32 M24 19 V32 M30 19 V32 M16 32 H32" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <circle cx="24" cy="38" r="2.5" fill="#D4A017" />
+  </g>
+  <!-- Typography -->
+  <text x="64" y="27" font-family="'Inter', sans-serif" font-weight="800" font-size="20" fill="#7A1F2B" letter-spacing="-0.5">CampusRoom</text>
+  <text x="65" y="42" font-family="'Inter', sans-serif" font-weight="700" font-size="9.5" fill="#D4A017" letter-spacing="1.4">BUENAVISTA POLYTECHNIC UNIV</text>
+</svg>

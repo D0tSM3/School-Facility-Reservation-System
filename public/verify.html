@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>CampusRoom — Verify Your Email</title>
+  <meta name="description" content="Enter the 6-digit code sent to your email to verify your CampusRoom account."/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          primary:'#5b0617','primary-container':'#7a1f2b',
+          secondary:'#795900','secondary-container':'#ffc641',
+          tertiary:'#2b2b2b',
+          surface:'#f8f9fb','on-surface':'#191c1e',
+          'surface-container-lowest':'#ffffff',
+          'on-surface-variant':'#564242','outline-variant':'#dcc0c0',
+          error:'#ba1a1a','error-container':'#ffdad6','on-error-container':'#93000a',
+        },
+        fontFamily:{ sans:['Inter','sans-serif'] },
+      }},
+    };
+  </script>
+  <style>
+    body{font-family:'Inter',sans-serif;}
+    /* OTP digit inputs */
+    .otp-digit{
+      width:3rem;height:3.5rem;text-align:center;font-size:1.5rem;font-weight:700;
+      border:2px solid #dcc0c0;border-radius:.5rem;color:#5b0617;background:#fff;
+      outline:none;transition:border-color .15s,box-shadow .15s;
+      font-family:'Inter',monospace;
+    }
+    .otp-digit:focus{border-color:#5b0617;box-shadow:0 0 0 3px rgba(91,6,23,.12);}
+    .btn-primary{
+      width:100%;padding:.625rem 1rem;background:#5b0617;color:#fff;font-weight:600;
+      font-size:.875rem;border:none;border-radius:.375rem;cursor:pointer;
+      transition:background .15s,transform .1s;
+    }
+    .btn-primary:hover{background:#7a1f2b;}
+    .btn-primary:active{transform:scale(.98);}
+    .btn-primary:disabled{opacity:.6;cursor:not-allowed;}
+  </style>
+</head>
+<body class="min-h-screen bg-surface flex items-center justify-center p-4">
+
+<main class="w-full max-w-md">
+
+  <!-- Branded header -->
+  <div class="relative w-full rounded-xl overflow-hidden shadow-xl bg-tertiary mb-0">
+    <div class="absolute inset-0 bg-cover bg-center opacity-30"
+         style="background-image:url('https://lh3.googleusercontent.com/aida-public/AB6AXuDm1dFp2IQ-nstXYA4RNY_-b8YXtL1R48WKgbBAWALMZIV6oSrAY9EauYg40kFGJ41sRdnRZI8b58tiBdRdMQEwNe66zndw8ab8sisT46d_weniE3Fu4kXWzpiBM4fmdcGjTfNWRu8IfGJd63VnL-tRawlkb1vFRabIOdTXD91TYA_p-pCpSQERBr_Fv3onVk2dxmSxJPcIn7FIc_knk8ThzQ0yKC7xVQkB0b7n-m1A75oW2LkZd1o7');">
+    </div>
+    <div class="absolute inset-0 bg-gradient-to-b from-primary/95 via-primary-container/90 to-tertiary/95"></div>
+    <div class="relative z-10 w-full px-6 py-7 flex flex-col items-center text-center">
+      <div class="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center mb-3">
+        <span class="material-symbols-outlined text-secondary-container text-[28px]">mark_email_read</span>
+      </div>
+      <h1 class="text-white text-xl font-bold tracking-tight mb-0.5">Check Your Email</h1>
+      <p id="emailHint" class="text-secondary-container text-xs opacity-90 font-medium"></p>
+    </div>
+  </div>
+
+  <!-- Verify form -->
+  <div class="bg-surface-container-lowest rounded-b-xl shadow-xl border border-t-0 border-outline-variant px-6 py-6">
+    <h2 class="text-primary text-lg font-semibold mb-0.5 text-center">Enter Verification Code</h2>
+    <p class="text-on-surface-variant text-xs text-center mb-5">
+      We sent a 6-digit code to your email. It expires in <strong>10 minutes</strong>.
+    </p>
+
+    <!-- Dev mode banner: shows OTP in-page when SMTP not configured -->
+    <div id="devBanner" class="hidden mb-4 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-4 py-3 flex items-start gap-2">
+      <span class="material-symbols-outlined text-amber-600 text-[18px] shrink-0 mt-0.5">construction</span>
+      <div>
+        <p class="text-xs font-semibold">Dev Mode — SMTP not configured</p>
+        <p class="text-xs mt-0.5">Your code is: <strong id="devOtpDisplay" class="font-mono text-base tracking-widest text-primary"></strong></p>
+      </div>
+    </div>
+
+    <!-- Error banner -->
+    <div id="errorBanner" class="hidden mb-4 bg-error-container text-on-error-container rounded-lg px-4 py-3 flex items-start gap-2">
+      <span class="material-symbols-outlined text-error text-[18px] shrink-0 mt-0.5">error</span>
+      <p id="errorMsg" class="text-xs font-medium leading-snug"></p>
+    </div>
+
+    <!-- 6-digit OTP inputs -->
+    <div class="flex justify-center gap-2 mb-6" id="otpInputs">
+      <input class="otp-digit" type="text" inputmode="numeric" maxlength="1" data-idx="0" id="otp0" autocomplete="one-time-code"/>
+      <input class="otp-digit" type="text" inputmode="numeric" maxlength="1" data-idx="1" id="otp1"/>
+      <input class="otp-digit" type="text" inputmode="numeric" maxlength="1" data-idx="2" id="otp2"/>
+      <input class="otp-digit" type="text" inputmode="numeric" maxlength="1" data-idx="3" id="otp3"/>
+      <input class="otp-digit" type="text" inputmode="numeric" maxlength="1" data-idx="4" id="otp4"/>
+      <input class="otp-digit" type="text" inputmode="numeric" maxlength="1" data-idx="5" id="otp5"/>
+    </div>
+
+    <button type="button" id="verifyBtn" class="btn-primary mb-4">Verify &amp; Sign In</button>
+
+    <div class="text-center">
+      <p class="text-xs text-on-surface-variant mb-1">Didn't receive a code?</p>
+      <button type="button" id="resendBtn"
+              class="text-primary text-xs font-semibold hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
+        Resend Code <span id="resendCountdown" class="text-on-surface-variant font-normal"></span>
+      </button>
+    </div>
+
+    <p class="mt-5 text-center text-xs text-on-surface-variant">
+      <a id="backLink" href="#" class="text-primary font-semibold hover:underline">&larr; Back to Sign In</a>
+    </p>
+  </div>
+
+  <p class="text-center text-xs text-on-surface-variant opacity-60 mt-3">
+    &copy; 2024 Buenavista Polytechnic University. All rights reserved.
+  </p>
+</main>
+
+<script>
+(function(){
+  var BASE  = window.location.pathname.replace(/[^\/]*$/, '');
+  var email = sessionStorage.getItem('otp_email') || '';
+  var devOtp = sessionStorage.getItem('dev_otp') || '';
+
+  // If arrived without an email, redirect back to login
+  if (!email) {
+    window.location.replace(BASE + 'index.html');
+    return;
+  }
+
+  document.getElementById('backLink').href = BASE + 'index.html';
+
+  // Show masked email hint
+  var parts = email.split('@');
+  var masked = (parts[0] || '').slice(0, 2) + '***@' + (parts[1] || '');
+  document.getElementById('emailHint').textContent = 'Sent to ' + masked;
+
+  // Dev mode: show OTP in-page banner
+  if (devOtp) {
+    document.getElementById('devOtpDisplay').textContent = devOtp;
+    document.getElementById('devBanner').classList.remove('hidden');
+  }
+
+  // OTP digit input wiring (auto-advance + backspace)
+  var inputs = document.querySelectorAll('.otp-digit');
+  inputs.forEach(function(inp, i){
+    inp.addEventListener('input', function(){
+      var val = inp.value.replace(/[^0-9]/g, '');
+      inp.value = val ? val[val.length - 1] : '';
+      if (val && i < inputs.length - 1) inputs[i + 1].focus();
+    });
+    inp.addEventListener('keydown', function(e){
+      if (e.key === 'Backspace' && !inp.value && i > 0) {
+        inputs[i - 1].focus();
+        inputs[i - 1].value = '';
+      }
+    });
+    // Allow paste of full 6-digit code on first box
+    inp.addEventListener('paste', function(e){
+      var text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+      if (text.length >= 6) {
+        e.preventDefault();
+        for (var j = 0; j < 6; j++) {
+          inputs[j].value = text[j] || '';
+        }
+        inputs[5].focus();
+      }
+    });
+  });
+
+  function getOtpValue(){
+    return Array.from(inputs).map(function(i){ return i.value; }).join('');
+  }
+
+  function showError(msg){
+    document.getElementById('errorMsg').textContent = msg;
+    document.getElementById('errorBanner').classList.remove('hidden');
+  }
+  function clearError(){
+    document.getElementById('errorBanner').classList.add('hidden');
+  }
+
+  // Verify
+  document.getElementById('verifyBtn').addEventListener('click', function(){
+    clearError();
+    var otp = getOtpValue();
+    if (otp.length !== 6) { showError('Please enter all 6 digits.'); return; }
+
+    var btn = document.getElementById('verifyBtn');
+    btn.disabled = true;
+    btn.textContent = 'Verifying\u2026';
+
+    fetch(BASE + 'api/auth/verify-otp', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: email, otp: otp}),
+    })
+    .then(function(res){ return res.json().then(function(d){ return {status: res.status, data: d}; }); })
+    .then(function(r){
+      if (r.status === 200 && r.data.user_id) {
+        sessionStorage.removeItem('otp_email');
+        sessionStorage.removeItem('dev_otp');
+        var role = r.data.role;
+        if (role === 'Admin') {
+          window.location.replace(BASE + 'admin-governance.html');
+        } else if (role === 'Staff') {
+          window.location.replace(BASE + 'staff-queue.html');
+        } else {
+          window.location.replace(BASE + 'dashboard.html');
+        }
+        return;
+      }
+      showError(r.data.error || 'Verification failed. Please try again.');
+      inputs.forEach(function(i){ i.value = ''; });
+      inputs[0].focus();
+    })
+    .catch(function(){ showError('Network error. Please check your connection.'); })
+    .finally(function(){ btn.disabled = false; btn.textContent = 'Verify & Sign In'; });
+  });
+
+  // Resend with 30-second cooldown
+  var cooldown = 0;
+  var resendBtn = document.getElementById('resendBtn');
+  var countdownEl = document.getElementById('resendCountdown');
+
+  function startCooldown(){
+    cooldown = 30;
+    resendBtn.disabled = true;
+    var iv = setInterval(function(){
+      cooldown--;
+      countdownEl.textContent = cooldown > 0 ? '(' + cooldown + 's)' : '';
+      if (cooldown <= 0) {
+        clearInterval(iv);
+        resendBtn.disabled = false;
+      }
+    }, 1000);
+  }
+
+  resendBtn.addEventListener('click', function(){
+    fetch(BASE + 'api/auth/resend-otp', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: email}),
+    })
+    .then(function(res){ return res.json().then(function(d){ return {status: res.status, data: d}; }); })
+    .then(function(r){
+      if (r.data.dev_otp) {
+        sessionStorage.setItem('dev_otp', r.data.dev_otp);
+        document.getElementById('devOtpDisplay').textContent = r.data.dev_otp;
+        document.getElementById('devBanner').classList.remove('hidden');
+      }
+      startCooldown();
+    })
+    .catch(function(){ showError('Could not resend code. Please try again.'); });
+  });
+
+  // Auto-focus first digit on load
+  inputs[0].focus();
+})();
+</script>
+</body>
+</html>

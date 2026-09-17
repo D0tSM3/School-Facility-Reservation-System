@@ -1,0 +1,539 @@
+﻿<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CampusRoom — Create Account | BPU</title>
+    <meta name="description" content="Register for a CampusRoom account to book lecture halls, laboratories, and seminar spaces at BPU." />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/theme.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed-variant": "#474746",
+              "on-secondary-fixed": "#261a00",
+              "on-surface": "#191c1e",
+              surface: "#f8f9fb",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#ff8b92",
+              "surface-dim": "#d9dadc",
+              "on-tertiary-container": "#afadac",
+              "on-primary-fixed": "#40000c",
+              "surface-container-high": "#e7e8ea",
+              "primary-fixed": "#ffdada",
+              "on-secondary-container": "#715300",
+              "tertiary-container": "#414141",
+              "surface-tint": "#a13c46",
+              "on-secondary": "#ffffff",
+              "surface-container": "#edeef0",
+              error: "#ba1a1a",
+              "on-primary-fixed-variant": "#822530",
+              "inverse-on-surface": "#f0f1f3",
+              "on-tertiary-fixed": "#1b1c1c",
+              "secondary-fixed-dim": "#f6be39",
+              "on-error-container": "#93000a",
+              "on-error": "#ffffff",
+              "on-secondary-fixed-variant": "#5c4300",
+              "on-background": "#191c1e",
+              "tertiary-fixed-dim": "#c8c6c5",
+              secondary: "#795900",
+              "secondary-container": "#ffc641",
+              "tertiary-fixed": "#e4e2e1",
+              "outline-variant": "#dcc0c0",
+              background: "#f8f9fb",
+              "inverse-surface": "#2e3132",
+              "surface-container-lowest": "#ffffff",
+              "primary-container": "#7a1f2b",
+              "error-container": "#ffdad6",
+              "surface-bright": "#f8f9fb",
+              "on-surface-variant": "#564242",
+              "surface-container-highest": "#e1e2e4",
+              "secondary-fixed": "#ffdfa0",
+              "primary-fixed-dim": "#ffb3b5",
+              outline: "#897172",
+              "inverse-primary": "#ffb3b5",
+              "surface-variant": "#e1e2e4",
+              "surface-container-low": "#f3f4f6",
+              primary: "#5b0617",
+              "on-tertiary": "#ffffff",
+              tertiary: "#2b2b2b",
+            },
+            borderRadius: {
+              DEFAULT: "0.125rem",
+              lg: "0.25rem",
+              xl: "0.5rem",
+              full: "0.75rem",
+            },
+            spacing: {
+              "space-sm": "0.5rem",
+              "space-xl": "2.25rem",
+              "space-lg": "1.5rem",
+              "space-md": "1rem",
+              margin: "2rem",
+              "margin-mobile": "1rem",
+              "gutter-mobile": "0.75rem",
+              gutter: "1.25rem",
+              "space-xs": "0.25rem",
+            },
+            fontFamily: {
+              "headline-lg": ["Inter"],
+              "body-md": ["Inter"],
+              "headline-lg-mobile": ["Inter"],
+              "label-lg": ["Inter"],
+              "headline-md": ["Inter"],
+              "headline-sm": ["Inter"],
+              "body-lg": ["Inter"],
+              "body-sm": ["Inter"],
+              "label-md": ["Inter"],
+              "label-sm": ["Inter"],
+            },
+            fontSize: {
+              "headline-lg": [
+                "30px",
+                {
+                  lineHeight: "38px",
+                  letterSpacing: "-0.02em",
+                  fontWeight: "700",
+                },
+              ],
+              "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+              "headline-lg-mobile": [
+                "24px",
+                {
+                  lineHeight: "32px",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "700",
+                },
+              ],
+              "label-lg": [
+                "14px",
+                {
+                  lineHeight: "20px",
+                  letterSpacing: "0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "headline-md": [
+                "22px",
+                {
+                  lineHeight: "28px",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "headline-sm": [
+                "18px",
+                { lineHeight: "24px", fontWeight: "600" },
+              ],
+              "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+              "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+              "label-md": [
+                "12px",
+                {
+                  lineHeight: "16px",
+                  letterSpacing: "0.02em",
+                  fontWeight: "600",
+                },
+              ],
+              "label-sm": [
+                "11px",
+                {
+                  lineHeight: "14px",
+                  letterSpacing: "0.04em",
+                  fontWeight: "700",
+                },
+              ],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-background font-body-md text-on-surface antialiased min-h-screen flex items-center justify-center p-space-md"
+  >
+    <main class="w-full max-w-md">
+      <div class="flex flex-col w-full">
+        <!-- Accent Top Dual-Band Indicator -->
+        <div class="w-full flex h-1.5 rounded-t-xl overflow-hidden shadow-sm">
+          <div class="w-2/3 bg-primary-container"></div>
+          <div class="w-1/3 bg-secondary-container"></div>
+        </div>
+        <!-- Registration Card Surface -->
+        <div
+          class="w-full bg-surface-container-lowest p-space-lg shadow-xl rounded-b-xl flex flex-col"
+        >
+          <!-- Header & Institutional Branding -->
+          <div
+            class="flex flex-col items-center text-center space-y-space-xs mb-space-md"
+          >
+            <div class="flex items-center justify-center p-space-xs">
+              <img
+                alt="CampusRoom Maroon &amp; Gold Logo"
+                class="h-10 w-auto object-contain max-w-[220px]"
+                src="assets/logo.svg"
+              />
+            </div>
+            <div
+              class="flex items-center gap-1.5 bg-surface-container px-space-sm py-0.5 rounded-full"
+            >
+              <span
+                class="w-1.5 h-1.5 rounded-full bg-secondary-container"
+              ></span>
+              <span
+                class="font-label-sm text-label-sm text-tertiary uppercase tracking-wider"
+                >Buenavista Polytechnic University</span
+              >
+            </div>
+            <h1
+              class="font-headline-md text-headline-md text-primary mt-space-xs"
+            >
+              Create Space Reservation Account
+            </h1>
+            <p
+              class="font-body-sm text-body-sm text-on-surface-variant max-w-sm"
+            >
+              Unified campus facility reservation portal for faculty, staff, and
+              student organizations.
+            </p>
+          </div>
+          <!-- Dynamic Registration Alert -->
+          <div
+            id="registerAlert"
+            class="mb-space-sm bg-error-container text-on-error-container rounded-lg p-space-sm items-start gap-2 text-left hidden"
+          >
+            <span
+              class="material-symbols-outlined text-error shrink-0 text-[18px] mt-0.5"
+              >error</span
+            >
+            <p
+              id="registerAlertText"
+              class="font-body-sm text-body-sm text-error leading-tight font-medium"
+            >
+              Error message.
+            </p>
+          </div>
+          <!-- Registration Form -->
+          <form class="flex flex-col space-y-space-md" id="registerForm">
+            <!-- 1. Full Academic Name -->
+            <div class="flex flex-col space-y-1">
+              <label
+                class="font-label-md text-label-md text-on-surface flex items-center justify-between"
+                for="fullName"
+              >
+                <span
+                  >Full Academic Name <span class="text-error">*</span></span
+                >
+                <span
+                  class="font-body-sm text-body-sm text-on-surface-variant text-[10px]"
+                  >Prefix &amp; Suffixes included</span
+                >
+              </label>
+              <div class="relative flex items-center">
+                <span
+                  class="material-symbols-outlined absolute left-3 text-on-surface-variant text-base"
+                  >badge</span
+                >
+                <input
+                  class="w-full pl-9 pr-3 py-2 bg-surface-container-low text-on-surface rounded font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_2px_rgba(255,198,65,0.7)] transition-all"
+                  id="fullName"
+                  placeholder="e.g. Dr. Marcus Rodriguez"
+                  required=""
+                  type="text"
+                  value="Dr. Marcus Rodriguez"
+                />
+              </div>
+            </div>
+            <!-- 2. University Email -->
+            <div class="flex flex-col space-y-1">
+              <label
+                class="font-label-md text-label-md text-on-surface flex items-center justify-between"
+                for="univEmail"
+              >
+                <span>University Email <span class="text-error">*</span></span>
+                <span
+                  class="font-label-sm text-label-sm text-secondary flex items-center gap-1 text-[10px]"
+                  id="emailDomainNotice"
+                >
+                  <span class="material-symbols-outlined text-[12px]"
+                    >verified</span
+                  >
+                  Validated
+                </span>
+              </label>
+              <div class="relative flex items-center">
+                <span
+                  class="material-symbols-outlined absolute left-3 text-on-surface-variant text-base"
+                  >mail</span
+                >
+                <input
+                  class="w-full pl-9 pr-3 py-2 bg-surface-container-low text-on-surface rounded font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_2px_rgba(255,198,65,0.7)] transition-all"
+                  id="univEmail"
+                  placeholder="username@bpu.edu"
+                  required=""
+                  type="email"
+                  value="m.rodriguez@bpu.edu"
+                />
+              </div>
+              <p
+                class="font-body-sm text-body-sm text-on-surface-variant text-[11px] flex items-center gap-1"
+              >
+                <span
+                  class="material-symbols-outlined text-[13px] text-tertiary"
+                  >info</span
+                >
+                Requires an institutional
+                <strong class="font-semibold">@bpu.edu</strong> or
+                <strong class="font-semibold">@student.bpu.edu</strong> account.
+              </p>
+            </div>
+            <!-- 3. Academic Department / College Dropdown -->
+            <div class="flex flex-col space-y-1">
+              <label
+                class="font-label-md text-label-md text-on-surface"
+                for="department"
+              >
+                Academic Department / College <span class="text-error">*</span>
+              </label>
+              <div class="relative flex items-center">
+                <span
+                  class="material-symbols-outlined absolute left-3 text-on-surface-variant text-base"
+                  >account_balance</span
+                >
+                <select
+                  class="w-full pl-9 pr-8 py-2 bg-surface-container-low text-on-surface rounded font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_2px_rgba(255,198,65,0.7)] appearance-none transition-all cursor-pointer"
+                  id="department"
+                  required=""
+                >
+                  <option disabled="" value="">
+                    Select Department or Academic Unit
+                  </option>
+                  <option selected="" value="CET">
+                    College of Engineering &amp; Technology
+                  </option>
+                  <option value="COS">College of Science</option>
+                  <option value="CAL">College of Arts &amp; Letters</option>
+                  <option value="CBA">
+                    College of Business Administration
+                  </option>
+                  <option value="CED">College of Education</option>
+                  <option value="ADMIN">
+                    University Administration &amp; Facilities Staff
+                  </option>
+                </select>
+                <span
+                  class="material-symbols-outlined absolute right-2.5 text-on-surface-variant text-base pointer-events-none"
+                  >expand_more</span
+                >
+              </div>
+            </div>
+            <!-- 4. Employee / Student ID Number -->
+            <div class="flex flex-col space-y-1">
+              <label
+                class="font-label-md text-label-md text-on-surface"
+                for="idNumber"
+              >
+                Institutional ID Number <span class="text-error">*</span>
+              </label>
+              <div class="relative flex items-center">
+                <span
+                  class="material-symbols-outlined absolute left-3 text-on-surface-variant text-base"
+                  >pin</span
+                >
+                <input
+                  class="w-full pl-9 pr-3 py-2 bg-surface-container-low text-on-surface rounded font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_2px_rgba(255,198,65,0.7)] transition-all font-mono uppercase"
+                  id="idNumber"
+                  placeholder="BPU-YYYY-XXXXX"
+                  required=""
+                  type="text"
+                  value="BPU-2024-88921"
+                />
+              </div>
+            </div>
+            <!-- 5. Password Field with Strength Meter -->
+            <div class="flex flex-col space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label
+                  class="font-label-md text-label-md text-on-surface"
+                  for="password"
+                >
+                  Institutional Password <span class="text-error">*</span>
+                </label>
+                <span
+                  id="passwordStrengthLabel"
+                  class="font-label-sm text-label-sm text-secondary font-semibold"
+                  >Strong (4/4)</span
+                >
+              </div>
+              <div class="relative flex items-center">
+                <span
+                  class="material-symbols-outlined absolute left-3 text-on-surface-variant text-base"
+                  >lock</span
+                >
+                <input
+                  class="w-full pl-9 pr-10 py-2 bg-surface-container-low text-on-surface rounded font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_2px_rgba(255,198,65,0.7)] transition-all"
+                  id="password"
+                  required=""
+                  type="password"
+                  value="Buenavista@2025#"
+                />
+                <button
+                  id="togglePasswordBtn"
+                  class="absolute right-3 text-on-surface-variant hover:text-on-surface flex items-center"
+                  type="button"
+                >
+                  <span class="material-symbols-outlined text-base"
+                    >visibility</span
+                  >
+                </button>
+              </div>
+              <!-- 4-bar Password Strength Indicator -->
+              <div class="grid grid-cols-4 gap-1.5 pt-1">
+                <div
+                  class="h-1.5 rounded-full bg-secondary-container pwd-strength-bar"
+                ></div>
+                <div
+                  class="h-1.5 rounded-full bg-secondary-container pwd-strength-bar"
+                ></div>
+                <div
+                  class="h-1.5 rounded-full bg-secondary-container pwd-strength-bar"
+                ></div>
+                <div
+                  class="h-1.5 rounded-full bg-secondary-container pwd-strength-bar"
+                ></div>
+              </div>
+              <div
+                class="flex items-center justify-between text-[11px] text-on-surface-variant"
+              >
+                <span>Min 10 chars, symbols &amp; digits</span>
+                <span class="text-secondary font-medium">Policy verified</span>
+              </div>
+            </div>
+            <!-- 6. Confirm Password with Inline Match Badge -->
+            <div class="flex flex-col space-y-1">
+              <div class="flex items-center justify-between">
+                <label
+                  class="font-label-md text-label-md text-on-surface"
+                  for="confirmPassword"
+                >
+                  Confirm Password <span class="text-error">*</span>
+                </label>
+                <span
+                  id="passwordMatchBadge"
+                  class="font-label-sm text-label-sm text-secondary flex items-center gap-0.5 bg-secondary-fixed/30 px-1.5 py-0.5 rounded"
+                >
+                  <span
+                    class="material-symbols-outlined text-[13px] text-secondary"
+                    >check_circle</span
+                  >
+                  Passwords match
+                </span>
+              </div>
+              <div class="relative flex items-center">
+                <span
+                  class="material-symbols-outlined absolute left-3 text-on-surface-variant text-base"
+                  >lock_reset</span
+                >
+                <input
+                  class="w-full pl-9 pr-10 py-2 bg-surface-container-low text-on-surface rounded font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_2px_rgba(255,198,65,0.7)] transition-all"
+                  id="confirmPassword"
+                  required=""
+                  type="password"
+                  value="Buenavista@2025#"
+                />
+                <span
+                  class="material-symbols-outlined absolute right-3 text-secondary text-base"
+                  >check_circle</span
+                >
+              </div>
+            </div>
+            <!-- 7. Terms & University Honor Code Checkbox -->
+            <div
+              class="flex items-start gap-2.5 p-space-sm bg-surface-container-low rounded-lg mt-1"
+            >
+              <input
+                checked=""
+                class="mt-0.5 h-4 w-4 rounded accent-primary-container cursor-pointer"
+                id="termsCheck"
+                required=""
+                type="checkbox"
+              />
+              <label
+                class="font-body-sm text-body-sm text-on-surface leading-tight cursor-pointer"
+                for="termsCheck"
+              >
+                I agree to abide by the
+                <span
+                  class="font-semibold text-primary underline underline-offset-2"
+                  >Buenavista Polytechnic University Facility Use Policy</span
+                >, safety guidelines, and campus honor code.
+              </label>
+            </div>
+            <!-- Primary Action CTA -->
+            <button
+              class="w-full py-2.5 px-4 bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg rounded shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer"
+              type="submit"
+            >
+              <span
+                class="w-1.5 h-1.5 rounded-full bg-secondary-container"
+              ></span>
+              <span>Complete Registration</span>
+              <span
+                class="material-symbols-outlined text-base group-hover:translate-x-1 transition-transform"
+                >arrow_forward</span
+              >
+            </button>
+          </form>
+          <!-- Intranet Context & Credentials Audit Strip -->
+          <div
+            class="mt-space-md pt-space-md bg-surface-container-low rounded-lg p-space-sm flex flex-col space-y-space-xs text-center"
+          >
+            <div
+              class="flex items-center justify-center gap-1 font-body-sm text-body-sm text-on-surface"
+            >
+              <span>Already have an institutional account?</span>
+              <a
+                class="font-label-md text-label-md text-primary font-semibold hover:underline"
+                href="index.html"
+                >Sign in here</a
+              >
+            </div>
+            <div
+              class="flex items-center justify-center gap-2 text-on-surface-variant font-label-sm text-label-sm pt-1"
+            >
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]"
+                  >support_agent</span
+                >
+                ICT Helpdesk: ext. 4100
+              </span>
+              <span>•</span>
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]"
+                  >domain</span
+                >
+                BPU Facilities Management
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+  </body>
+</html>

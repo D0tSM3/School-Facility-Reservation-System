@@ -1,0 +1,1063 @@
+﻿<!doctype html>
+<style>
+  aside > div:first-child > div {
+    display: none;
+  }
+</style>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CampusRoom — Book a Room | BPU</title>
+    <meta name="description" content="Submit a space reservation request for BPU academic facilities." />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/theme.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed-variant": "#474746",
+              "on-secondary-fixed": "#261a00",
+              "on-surface": "#191c1e",
+              surface: "#f8f9fb",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#ff8b92",
+              "surface-dim": "#d9dadc",
+              "on-tertiary-container": "#afadac",
+              "on-primary-fixed": "#40000c",
+              "surface-container-high": "#e7e8ea",
+              "primary-fixed": "#ffdada",
+              "on-secondary-container": "#715300",
+              "tertiary-container": "#414141",
+              "surface-tint": "#a13c46",
+              "on-secondary": "#ffffff",
+              "surface-container": "#edeef0",
+              error: "#ba1a1a",
+              "on-primary-fixed-variant": "#822530",
+              "inverse-on-surface": "#f0f1f3",
+              "on-tertiary-fixed": "#1b1c1c",
+              "secondary-fixed-dim": "#f6be39",
+              "on-error-container": "#93000a",
+              "on-error": "#ffffff",
+              "on-secondary-fixed-variant": "#5c4300",
+              "on-background": "#191c1e",
+              "tertiary-fixed-dim": "#c8c6c5",
+              secondary: "#795900",
+              "secondary-container": "#ffc641",
+              "tertiary-fixed": "#e4e2e1",
+              "outline-variant": "#dcc0c0",
+              background: "#f8f9fb",
+              "inverse-surface": "#2e3132",
+              "surface-container-lowest": "#ffffff",
+              "primary-container": "#7a1f2b",
+              "error-container": "#ffdad6",
+              "surface-bright": "#f8f9fb",
+              "on-surface-variant": "#564242",
+              "surface-container-highest": "#e1e2e4",
+              "secondary-fixed": "#ffdfa0",
+              "primary-fixed-dim": "#ffb3b5",
+              outline: "#897172",
+              "inverse-primary": "#ffb3b5",
+              "surface-variant": "#e1e2e4",
+              "surface-container-low": "#f3f4f6",
+              primary: "#5b0617",
+              "on-tertiary": "#ffffff",
+              tertiary: "#2b2b2b",
+            },
+            borderRadius: {
+              DEFAULT: "0.125rem",
+              lg: "0.25rem",
+              xl: "0.5rem",
+              full: "0.75rem",
+            },
+            spacing: {
+              "space-sm": "0.5rem",
+              "space-xl": "2.25rem",
+              "space-lg": "1.5rem",
+              "space-md": "1rem",
+              margin: "2rem",
+              "margin-mobile": "1rem",
+              "gutter-mobile": "0.75rem",
+              gutter: "1.25rem",
+              "space-xs": "0.25rem",
+            },
+            fontFamily: {
+              "headline-lg": ["Inter"],
+              "body-md": ["Inter"],
+              "headline-lg-mobile": ["Inter"],
+              "label-lg": ["Inter"],
+              "headline-md": ["Inter"],
+              "headline-sm": ["Inter"],
+              "body-lg": ["Inter"],
+              "body-sm": ["Inter"],
+              "label-md": ["Inter"],
+              "label-sm": ["Inter"],
+            },
+            fontSize: {
+              "headline-lg": [
+                "30px",
+                {
+                  lineHeight: "38px",
+                  letterSpacing: "-0.02em",
+                  fontWeight: "700",
+                },
+              ],
+              "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+              "headline-lg-mobile": [
+                "24px",
+                {
+                  lineHeight: "32px",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "700",
+                },
+              ],
+              "label-lg": [
+                "14px",
+                {
+                  lineHeight: "20px",
+                  letterSpacing: "0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "headline-md": [
+                "22px",
+                {
+                  lineHeight: "28px",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "headline-sm": [
+                "18px",
+                { lineHeight: "24px", fontWeight: "600" },
+              ],
+              "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+              "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+              "label-md": [
+                "12px",
+                {
+                  lineHeight: "16px",
+                  letterSpacing: "0.02em",
+                  fontWeight: "600",
+                },
+              ],
+              "label-sm": [
+                "11px",
+                {
+                  lineHeight: "14px",
+                  letterSpacing: "0.04em",
+                  fontWeight: "700",
+                },
+              ],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-background font-body-md text-on-surface antialiased min-h-screen"
+  >
+    <aside
+      class="fixed left-0 top-0 h-full w-[250px] bg-tertiary text-on-tertiary z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+    >
+      <div class="h-16 px-space-md flex items-center gap-space-sm bg-tertiary">
+        <img
+          alt="CampusRoom Maroon &amp; Gold Logo"
+          class="h-8 w-auto object-contain"
+          src="assets/logo.svg"
+        />
+        <div class="flex flex-col">
+          <span
+            class="font-headline-sm text-headline-sm text-on-tertiary tracking-tight"
+            >CampusRoom</span
+          ><span
+            class="font-label-sm text-label-sm text-tertiary-fixed-dim uppercase tracking-wider"
+            >Buenavista Poly</span
+          >
+        </div>
+      </div>
+      <div class="px-space-md py-space-sm">
+        <div
+          class="font-label-sm text-label-sm text-on-tertiary-container uppercase tracking-wider mb-space-xs px-space-sm"
+        >
+          Intranet Core
+        </div>
+      </div>
+      <nav
+        class="flex-1 px-space-sm space-y-space-xs"
+        data-active-classes="bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
+      >
+        <a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="customer-dashboard"
+          href="dashboard.html"
+          ><span class="material-symbols-outlined text-[20px]">dashboard</span
+          ><span>Dashboard</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="rooms"
+          href="book-room.html"
+          ><span class="material-symbols-outlined text-[20px]"
+            >meeting_room</span
+          ><span>Rooms</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="my-reservations"
+          href="my-reservations.html"
+          ><span class="material-symbols-outlined text-[20px]"
+            >event_available</span
+          ><span>Reservations</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="staff-queue"
+          href="staff-queue.html"
+          ><span class="material-symbols-outlined text-[20px]">assignment</span
+          ><span>Staff Queue</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="admin-governance"
+          href="staff-queue.html"
+          ><span class="material-symbols-outlined text-[20px]"
+            >admin_panel_settings</span
+          ><span>Admin Governance</span></a
+        >
+      </nav>
+      <div class="p-space-md bg-tertiary-container/40">
+        <div class="flex items-center justify-between">
+          <div class="flex flex-col">
+            <span class="font-label-sm text-label-sm text-tertiary-fixed-dim"
+              >Registrar Desk</span
+            ><span class="font-body-sm text-body-sm text-on-tertiary"
+              >Ext. 4021 / 4022</span
+            >
+          </div>
+          <span
+            class="material-symbols-outlined text-secondary-container text-[18px]"
+            >verified</span
+          >
+        </div>
+      </div>
+    </aside>
+    <div class="pl-[250px]">
+      <header
+        class="fixed top-0 left-[250px] right-0 h-16 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"
+      >
+        <div class="flex items-center gap-space-md">
+          <img
+            alt="CampusRoom Maroon &amp; Gold Logo"
+            class="h-8 w-auto object-contain"
+            src="assets/logo.svg"
+          />
+          <div
+            class="hidden md:flex items-center gap-space-xs px-space-sm py-1 bg-surface-container rounded"
+          >
+            <span class="material-symbols-outlined text-secondary text-[16px]"
+              >school</span
+            ><span
+              class="font-label-sm text-label-sm text-on-surface-variant font-semibold"
+              >AY 2024-2025 • First Semester</span
+            >
+          </div>
+        </div>
+        <div class="flex items-center gap-space-md">
+          <button
+            aria-label="Notifications"
+            class="relative p-space-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors rounded"
+          >
+            <span class="material-symbols-outlined text-[22px]"
+              >notifications</span
+            ><span
+              class="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-container"
+            ></span>
+          </button>
+          <div class="flex items-center gap-space-sm pl-space-sm">
+            <div class="flex flex-col text-right hidden sm:flex">
+              <span class="font-label-md text-label-md text-on-surface"
+                >Dr. Edgardo Valderama</span
+              ><span class="font-label-sm text-label-sm text-primary font-bold"
+                >Faculty / Staff</span
+              >
+            </div>
+            <img
+              alt="Profile"
+              class="w-8 h-8 rounded-full object-cover shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+              src="https://lh3.googleusercontent.com/aida/AEtjO1U7iGCinzQmj8WfjJF5VgThj41jGwMUtCAl6UtghCr0H8BOjy2MVc1ZcmS1rcL4eH5DjegJaqf1lQOSUPybmrihM04sRMvBukR6zwgUNhBcqg6ba8EsbW1u7qRkWlj6RoJCv2_SGlfaBoUFinUOspbM30gtLfocI-6amPSy_5J_K3FcBMsLDowQS-4fD2Nl4vKMVcbAjKVSmjVmJgs1ReAkEPM6Y4GxsQZ7zzth0SbD9ljnAIzmNTNYiA"
+            />
+          </div>
+        </div>
+      </header>
+      <main
+        class="w-full pt-16 bg-background px-space-lg py-space-lg min-h-screen"
+      >
+        <div class="flex flex-col w-full relative">
+          <!-- Dimmed Intranet Canvas Background (Simulated Parent Context) -->
+          <div
+            class="w-full grid grid-cols-12 gap-gutter opacity-20 pointer-events-none select-none blur-[2px]"
+          >
+            <div
+              class="col-span-12 flex items-center justify-between pb-space-md"
+            >
+              <div>
+                <span
+                  class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold"
+                  >Academic Scheduling System</span
+                >
+                <h1 class="font-headline-lg text-headline-lg text-on-surface">
+                  Campus Facilities Registry
+                </h1>
+              </div>
+              <div class="flex gap-space-sm">
+                <div
+                  class="h-9 px-space-md bg-surface-container rounded flex items-center gap-space-xs text-on-surface-variant"
+                >
+                  <span class="material-symbols-outlined text-[18px]"
+                    >tune</span
+                  >
+                  <span class="font-label-md text-label-md"
+                    >Filter Registry</span
+                  >
+                </div>
+              </div>
+            </div>
+            <!-- Background Mock Room Cards -->
+            <div
+              class="col-span-4 bg-surface-container-lowest rounded shadow-sm p-space-md"
+            >
+              <div class="h-40 bg-surface-container rounded mb-space-sm"></div>
+              <div
+                class="h-5 w-2/3 bg-surface-container-high rounded mb-space-xs"
+              ></div>
+              <div class="h-4 w-1/3 bg-surface-container rounded"></div>
+            </div>
+            <div
+              class="col-span-4 bg-surface-container-lowest rounded shadow-sm p-space-md"
+            >
+              <div class="h-40 bg-surface-container rounded mb-space-sm"></div>
+              <div
+                class="h-5 w-2/3 bg-surface-container-high rounded mb-space-xs"
+              ></div>
+              <div class="h-4 w-1/3 bg-surface-container rounded"></div>
+            </div>
+            <div
+              class="col-span-4 bg-surface-container-lowest rounded shadow-sm p-space-md"
+            >
+              <div class="h-40 bg-surface-container rounded mb-space-sm"></div>
+              <div
+                class="h-5 w-2/3 bg-surface-container-high rounded mb-space-xs"
+              ></div>
+              <div class="h-4 w-1/3 bg-surface-container rounded"></div>
+            </div>
+          </div>
+          <!-- Modal Backdrop Overlay with Functional Institutional Elevation -->
+          <div
+            class="fixed inset-0 z-50 flex items-center justify-center p-space-md sm:p-space-lg bg-tertiary/75 backdrop-blur-[3px] overflow-y-auto"
+          >
+            <!-- Active Modal Container -->
+            <div
+              class="relative w-full max-w-3xl my-auto bg-surface-container-lowest rounded shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            >
+              <!-- Top Brand Accent Strip -->
+              <div class="h-1.5 w-full bg-secondary-container"></div>
+              <!-- Modal Header (Deep Maroon Authority Tone) -->
+              <header
+                class="bg-primary-container text-on-primary px-space-lg py-space-md flex items-center justify-between shadow-sm"
+              >
+                <div class="flex items-center gap-space-md">
+                  <div
+                    class="w-10 h-10 rounded bg-primary flex items-center justify-center text-secondary-container shadow-inner"
+                  >
+                    <span class="material-symbols-outlined text-[24px]"
+                      >meeting_room</span
+                    >
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-space-xs">
+                      <span
+                        class="font-label-sm text-label-sm uppercase tracking-wider text-secondary-fixed"
+                        >Buenavista Polytechnic</span
+                      >
+                      <span class="text-primary-fixed-dim text-xs">•</span>
+                      <span
+                        class="font-label-sm text-label-sm text-primary-fixed"
+                        >Form AR-204</span
+                      >
+                    </div>
+                    <h2
+                      class="font-headline-sm text-headline-sm text-on-primary tracking-tight"
+                    >
+                      Reserve Academic Space — Tech Hall North (Room 204)
+                    </h2>
+                  </div>
+                </div>
+                <button
+                  id="closeModalBtn"
+                  aria-label="Close dialog"
+                  class="w-9 h-9 rounded flex items-center justify-center text-primary-fixed-dim hover:text-on-primary hover:bg-primary transition-colors"
+                  type="button"
+                >
+                  <span class="material-symbols-outlined text-[20px]"
+                    >close</span
+                  >
+                </button>
+              </header>
+              <!-- Context Ribbon & Selected Facility Summary Pill -->
+              <div
+                class="bg-surface-container px-space-lg py-space-sm flex flex-wrap items-center justify-between gap-space-sm"
+              >
+                <div class="flex items-center gap-space-sm">
+                  <span
+                    class="material-symbols-outlined text-secondary text-[18px]"
+                    >verified_user</span
+                  >
+                  <span class="font-label-md text-label-md text-on-surface"
+                    >Target Facility:</span
+                  >
+                  <span
+                    class="inline-flex items-center gap-space-xs px-space-sm py-0.5 rounded bg-surface-container-lowest text-on-surface shadow-sm font-label-md text-label-md"
+                  >
+                    <span class="w-2 h-2 rounded-full bg-[#16A34A]"></span>
+                    Room 204
+                  </span>
+                  <span
+                    class="inline-flex items-center gap-space-xs px-space-sm py-0.5 rounded bg-surface-container-lowest text-on-surface shadow-sm font-label-md text-label-md"
+                  >
+                    <span
+                      class="material-symbols-outlined text-[15px] text-on-surface-variant"
+                      >groups</span
+                    >
+                    35 seats
+                  </span>
+                  <span
+                    class="inline-flex items-center gap-space-xs px-space-sm py-0.5 rounded bg-secondary-fixed/50 text-on-secondary-fixed font-label-md text-label-md"
+                  >
+                    <span class="material-symbols-outlined text-[15px]"
+                      >co_present</span
+                    >
+                    Lecture &amp; Seminar Setup
+                  </span>
+                </div>
+                <div
+                  class="flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant"
+                >
+                  <span
+                    class="material-symbols-outlined text-[16px] text-secondary"
+                    >domain</span
+                  >
+                  <span>College of Engineering</span>
+                </div>
+              </div>
+              <!-- Scrollable Form Body -->
+              <form
+                class="p-space-lg space-y-space-lg max-h-[calc(88vh-130px)] overflow-y-auto"
+                id="roomReservationForm"
+              >
+                <!-- Dynamic Schedule Collision (MySQL Trigger Emulation) Banner -->
+                <div
+                  id="collisionErrorBanner"
+                  class="hidden items-start gap-space-xs p-space-sm bg-error-container text-on-error-container rounded mb-space-md border-l-4 border-error shadow-sm"
+                >
+                  <span
+                    class="material-symbols-outlined text-error shrink-0 text-[20px] mt-0.5"
+                    >error</span
+                  >
+                  <div class="flex flex-col">
+                    <span
+                      class="font-label-md text-label-md font-bold text-error"
+                      >Database Scheduling Collision (Trigger SQLSTATE
+                      45000)</span
+                    >
+                    <p
+                      id="collisionErrorText"
+                      class="font-body-sm text-body-sm text-error leading-tight mt-0.5"
+                    >
+                      Scheduling Collision: Room is already booked or pending
+                      during this time window.
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Dynamic Success Banner -->
+                <div
+                  id="bookingSuccessBanner"
+                  class="hidden items-start gap-space-xs p-space-sm bg-[#DCFCE7] text-[#15803D] rounded mb-space-md border-l-4 border-[#16A34A] shadow-sm"
+                >
+                  <span
+                    class="material-symbols-outlined text-[#16A34A] shrink-0 text-[20px] mt-0.5"
+                    >check_circle</span
+                  >
+                  <div class="flex flex-col">
+                    <span
+                      class="font-label-md text-label-md font-bold text-[#15803D]"
+                      >Reservation Request Dispatched</span
+                    >
+                    <p
+                      id="bookingSuccessText"
+                      class="font-body-sm text-body-sm text-[#15803D] leading-tight mt-0.5"
+                    >
+                      Permit created successfully. Redirecting to My
+                      Reservations...
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Grid: Room Selector & Reservation Date -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+                  <!-- Field 1: Room Selector (Pre-selected) -->
+                  <div class="md:col-span-6 flex flex-col space-y-space-xs">
+                    <label
+                      class="font-label-md text-label-md text-on-surface flex items-center justify-between"
+                      for="roomSelect"
+                    >
+                      <span
+                        >Assigned Facility
+                        <span class="text-error">*</span></span
+                      >
+                      <span
+                        class="font-body-sm text-body-sm text-on-surface-variant"
+                        >Fixed for this request</span
+                      >
+                    </label>
+                    <div class="relative">
+                      <span
+                        class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-primary"
+                        >location_city</span
+                      >
+                      <select
+                        class="w-full pl-9 pr-8 py-2 bg-surface-container-low text-on-surface font-label-md text-label-md rounded appearance-none focus:outline-none focus:bg-surface-container-lowest cursor-default"
+                        id="roomSelect"
+                        readonly=""
+                      >
+                        <option selected="" value="THN-204">
+                          Tech Hall North - Room 204 (Audiovisual Tiered)
+                        </option>
+                        <option disabled="" value="THN-205">
+                          Tech Hall North - Room 205 (Full Lab)
+                        </option>
+                        <option disabled="" value="AGH-101">
+                          Agri-Science Hall - 101
+                        </option>
+                      </select>
+                      <span
+                        class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-on-surface-variant pointer-events-none"
+                        >lock</span
+                      >
+                    </div>
+                    <p
+                      class="font-body-sm text-body-sm text-on-surface-variant"
+                    >
+                      Equipped with central acoustics &amp; dual presentation
+                      screens.
+                    </p>
+                  </div>
+                  <!-- Field 2: Reservation Date Picker -->
+                  <div class="md:col-span-6 flex flex-col space-y-space-xs">
+                    <label
+                      class="font-label-md text-label-md text-on-surface flex items-center justify-between"
+                      for="reservationDate"
+                    >
+                      <span
+                        >Reservation Date
+                        <span class="text-error">*</span></span
+                      >
+                      <span
+                        class="font-label-sm text-label-sm text-secondary font-semibold"
+                        >Term Calendar Active</span
+                      >
+                    </label>
+                    <div class="relative">
+                      <span
+                        class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-on-surface-variant"
+                        >calendar_today</span
+                      >
+                      <input
+                        class="w-full pl-9 pr-3 py-2 bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded shadow-sm focus:outline-none focus:bg-surface-container-low"
+                        id="resDate"
+                        type="date"
+                        required
+                      />
+                      <button
+                        aria-label="Open mini calendar picker"
+                        class="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary"
+                        type="button"
+                      >
+                        <span class="material-symbols-outlined text-[18px]"
+                          >edit_calendar</span
+                        >
+                      </button>
+                    </div>
+                    <p
+                      class="font-body-sm text-body-sm text-on-surface-variant"
+                    >
+                      Regular instructional period (Midterm Assessment Week).
+                    </p>
+                  </div>
+                </div>
+                <!-- Field 3: Time Slot Fields with EXPLICIT VALIDATION REQUIREMENT -->
+                <div class="p-space-md rounded bg-surface-container-low">
+                  <div class="flex items-center justify-between mb-space-sm">
+                    <div class="flex items-center gap-space-xs">
+                      <span
+                        class="material-symbols-outlined text-[18px] text-primary"
+                        >schedule</span
+                      >
+                      <span
+                        class="font-label-md text-label-md text-on-surface font-semibold"
+                        >Scheduled Block Duration</span
+                      >
+                    </div>
+                    <span
+                      class="font-label-sm text-label-sm uppercase tracking-wider text-error font-bold flex items-center gap-1"
+                    >
+                      <span class="w-2 h-2 rounded-full bg-error"></span> Timing
+                      Anomaly
+                    </span>
+                  </div>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+                    <!-- Start Time -->
+                    <div class="flex flex-col space-y-space-xs">
+                      <label
+                        class="font-label-sm text-label-sm text-on-surface font-semibold"
+                        for="startTime"
+                      >
+                        Start Time <span class="text-error">*</span>
+                      </label>
+                      <div class="relative">
+                        <span
+                          class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-on-surface-variant"
+                          >login</span
+                        >
+                        <input
+                          class="w-full pl-9 pr-3 py-2 bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded shadow-sm focus:outline-none"
+                          id="startTime"
+                          type="time"
+                          value="14:00"
+                          required
+                        />
+                      </div>
+                      <span
+                        class="font-body-sm text-body-sm text-on-surface-variant"
+                        >Session setup window opens 10m prior</span
+                      >
+                    </div>
+                    <!-- End Time with Explicit Inline Validation Alert -->
+                    <div class="flex flex-col space-y-space-xs">
+                      <label
+                        class="font-label-sm text-label-sm text-error font-bold flex items-center justify-between"
+                        for="endTime"
+                      >
+                        <span>End Time <span class="text-error">*</span></span>
+                        <span class="text-error text-xs font-semibold"
+                          >Invalid Time Order</span
+                        >
+                      </label>
+                      <div class="relative">
+                        <span
+                          class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-error"
+                          >logout</span
+                        >
+                        <!-- Highlighting with error container background and solid red visual indicator -->
+                        <input
+                          class="w-full pl-9 pr-3 py-2 bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded shadow-sm focus:outline-none"
+                          id="endTime"
+                          type="time"
+                          value="16:00"
+                          required
+                        />
+                        <span
+                          class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-error text-[18px]"
+                          >error</span
+                        >
+                      </div>
+                      <!-- EXPLICIT VALIDATION REQUIREMENT: Highlighted under end-time with red text and visual indicator -->
+                      <div
+                        class="flex items-start gap-space-xs p-space-xs px-space-sm bg-error-container/60 rounded text-error"
+                      >
+                        <span
+                          class="material-symbols-outlined text-[16px] shrink-0 mt-0.5"
+                          >warning</span
+                        >
+                        <p
+                          class="font-label-sm text-label-sm font-bold leading-tight"
+                        >
+                          End time must be after start time. Please select a
+                          valid duration.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Field 4: Reservation Purpose Radio Buttons / Pill Selector -->
+                <div class="space-y-space-xs">
+                  <label
+                    class="font-label-md text-label-md text-on-surface flex items-center justify-between"
+                  >
+                    <span
+                      >Primary Reservation Classification
+                      <span class="text-error">*</span></span
+                    >
+                    <span
+                      class="font-body-sm text-body-sm text-on-surface-variant"
+                      >Select standard institutional purpose</span
+                    >
+                  </label>
+                  <div
+                    class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-space-xs"
+                  >
+                    <!-- Option 1 -->
+                    <label class="cursor-pointer">
+                      <input
+                        class="peer sr-only"
+                        name="reservation_purpose"
+                        type="radio"
+                        value="lecture"
+                      />
+                      <div
+                        class="h-full px-space-sm py-2 rounded bg-surface-container-low text-on-surface-variant text-center transition-all peer-checked:bg-primary-container peer-checked:text-on-primary flex flex-col items-center justify-center gap-1 shadow-sm"
+                      >
+                        <span class="material-symbols-outlined text-[18px]"
+                          >menu_book</span
+                        >
+                        <span class="font-label-sm text-label-sm"
+                          >Academic Lecture</span
+                        >
+                      </div>
+                    </label>
+                    <!-- Option 2 (Selected) -->
+                    <label class="cursor-pointer">
+                      <input
+                        checked=""
+                        class="peer sr-only"
+                        name="reservation_purpose"
+                        type="radio"
+                        value="defense"
+                      />
+                      <div
+                        class="h-full px-space-sm py-2 rounded bg-surface-container-low text-on-surface-variant text-center transition-all peer-checked:bg-primary-container peer-checked:text-on-primary flex flex-col items-center justify-center gap-1 shadow-sm"
+                      >
+                        <span
+                          class="material-symbols-outlined text-[18px] text-secondary-container"
+                          >workspace_premium</span
+                        >
+                        <span class="font-label-sm text-label-sm font-bold"
+                          >Faculty Defense</span
+                        >
+                      </div>
+                    </label>
+                    <!-- Option 3 -->
+                    <label class="cursor-pointer">
+                      <input
+                        class="peer sr-only"
+                        name="reservation_purpose"
+                        type="radio"
+                        value="student_org"
+                      />
+                      <div
+                        class="h-full px-space-sm py-2 rounded bg-surface-container-low text-on-surface-variant text-center transition-all peer-checked:bg-primary-container peer-checked:text-on-primary flex flex-col items-center justify-center gap-1 shadow-sm"
+                      >
+                        <span class="material-symbols-outlined text-[18px]"
+                          >diversity_3</span
+                        >
+                        <span class="font-label-sm text-label-sm"
+                          >Student Org Meeting</span
+                        >
+                      </div>
+                    </label>
+                    <!-- Option 4 -->
+                    <label class="cursor-pointer">
+                      <input
+                        class="peer sr-only"
+                        name="reservation_purpose"
+                        type="radio"
+                        value="workshop"
+                      />
+                      <div
+                        class="h-full px-space-sm py-2 rounded bg-surface-container-low text-on-surface-variant text-center transition-all peer-checked:bg-primary-container peer-checked:text-on-primary flex flex-col items-center justify-center gap-1 shadow-sm"
+                      >
+                        <span class="material-symbols-outlined text-[18px]"
+                          >architecture</span
+                        >
+                        <span class="font-label-sm text-label-sm"
+                          >Dept Workshop</span
+                        >
+                      </div>
+                    </label>
+                    <!-- Option 5 -->
+                    <label class="cursor-pointer col-span-2 sm:col-span-1">
+                      <input
+                        class="peer sr-only"
+                        name="reservation_purpose"
+                        type="radio"
+                        value="exam"
+                      />
+                      <div
+                        class="h-full px-space-sm py-2 rounded bg-surface-container-low text-on-surface-variant text-center transition-all peer-checked:bg-primary-container peer-checked:text-on-primary flex flex-col items-center justify-center gap-1 shadow-sm"
+                      >
+                        <span class="material-symbols-outlined text-[18px]"
+                          >quiz</span
+                        >
+                        <span class="font-label-sm text-label-sm"
+                          >Exam / Quiz</span
+                        >
+                      </div>
+                    </label>
+                  </div>
+                </div>
+                <!-- Field 5 & Field 6 Grid: Detailed Description & Expected Attendees -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+                  <!-- Field 5: Detailed Purpose Description Textarea -->
+                  <div class="md:col-span-8 flex flex-col space-y-space-xs">
+                    <label
+                      class="font-label-md text-label-md text-on-surface flex items-center justify-between"
+                      for="purposeDescription"
+                    >
+                      <span
+                        >Detailed Purpose Description
+                        <span class="text-error">*</span></span
+                      >
+                      <span
+                        class="font-body-sm text-body-sm text-on-surface-variant"
+                        >Required for Provost logging</span
+                      >
+                    </label>
+                    <textarea
+                      class="w-full p-space-sm bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded shadow-sm focus:outline-none focus:bg-surface-container-low leading-relaxed"
+                      id="purpose"
+                      rows="3"
+                    >
+Graduate Thesis Defense Prep — requires laser projector and podium audio feed.</textarea>
+                    <span
+                      class="font-body-sm text-body-sm text-on-surface-variant"
+                      >State agenda items, invited committees, or special
+                      technical rigging needs.</span
+                    >
+                  </div>
+                  <!-- Field 6: Expected Attendees Counter -->
+                  <div
+                    class="md:col-span-4 flex flex-col justify-between space-y-space-xs"
+                  >
+                    <div>
+                      <label
+                        class="font-label-md text-label-md text-on-surface"
+                        for="attendeeInput"
+                        >Expected Attendees</label
+                      >
+                      <p
+                        class="font-body-sm text-body-sm text-on-surface-variant"
+                      >
+                        Within 35 seat facility cap
+                      </p>
+                    </div>
+                    <div
+                      class="bg-surface-container-low p-space-sm rounded space-y-space-xs shadow-sm"
+                    >
+                      <div class="flex items-center justify-between">
+                        <button
+                          aria-label="Decrease attendees"
+                          class="w-8 h-8 rounded bg-surface-container-lowest hover:bg-surface-container-high text-on-surface flex items-center justify-center font-bold shadow-sm active:scale-95 transition-transform"
+                          type="button"
+                        >
+                          <span class="material-symbols-outlined text-[16px]"
+                            >remove</span
+                          >
+                        </button>
+                        <div class="text-center">
+                          <span
+                            class="font-headline-sm text-headline-sm font-bold text-primary"
+                            >21</span
+                          >
+                          <span
+                            class="font-label-sm text-label-sm text-on-surface-variant block"
+                            >Total Headcount</span
+                          >
+                        </div>
+                        <button
+                          aria-label="Increase attendees"
+                          class="w-8 h-8 rounded bg-surface-container-lowest hover:bg-surface-container-high text-on-surface flex items-center justify-center font-bold shadow-sm active:scale-95 transition-transform"
+                          type="button"
+                        >
+                          <span class="material-symbols-outlined text-[16px]"
+                            >add</span
+                          >
+                        </button>
+                      </div>
+                      <div
+                        class="text-center px-space-xs py-1 rounded bg-surface-container-lowest font-label-sm text-label-sm text-on-surface font-medium"
+                      >
+                        21 attendees (18 students &amp; 3 faculty panel)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Field 7: Special Equipment Checklist -->
+                <div class="space-y-space-xs">
+                  <div class="flex items-center justify-between">
+                    <span
+                      class="font-label-md text-label-md text-on-surface font-semibold"
+                      >Special Equipment &amp; Technical Logistics</span
+                    >
+                    <span
+                      class="font-body-sm text-body-sm text-secondary font-semibold"
+                      >Audiovisual Services Desk</span
+                    >
+                  </div>
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-space-sm">
+                    <!-- Checkbox 1 (Checked) -->
+                    <label
+                      class="flex items-start gap-space-sm p-space-sm bg-surface-container-low rounded cursor-pointer hover:bg-surface-container transition-colors shadow-sm"
+                    >
+                      <input
+                        checked=""
+                        class="mt-0.5 rounded text-primary-container focus:ring-0 w-4 h-4 accent-primary"
+                        type="checkbox"
+                      />
+                      <div class="flex flex-col">
+                        <span
+                          class="font-label-md text-label-md text-on-surface font-semibold"
+                          >Wireless Lapel Mic</span
+                        >
+                        <span
+                          class="font-body-sm text-body-sm text-on-surface-variant"
+                          >2 Transmitters &amp; fresh batteries</span
+                        >
+                      </div>
+                    </label>
+                    <!-- Checkbox 2 (Checked) -->
+                    <label
+                      class="flex items-start gap-space-sm p-space-sm bg-surface-container-low rounded cursor-pointer hover:bg-surface-container transition-colors shadow-sm"
+                    >
+                      <input
+                        checked=""
+                        class="mt-0.5 rounded text-primary-container focus:ring-0 w-4 h-4 accent-primary"
+                        type="checkbox"
+                      />
+                      <div class="flex flex-col">
+                        <span
+                          class="font-label-md text-label-md text-on-surface font-semibold"
+                          >HDMI Cable Kit</span
+                        >
+                        <span
+                          class="font-body-sm text-body-sm text-on-surface-variant"
+                          >USB-C to 4K / DisplayPort dongles</span
+                        >
+                      </div>
+                    </label>
+                    <!-- Checkbox 3 (Unchecked) -->
+                    <label
+                      class="flex items-start gap-space-sm p-space-sm bg-surface-container-low rounded cursor-pointer hover:bg-surface-container transition-colors opacity-80 hover:opacity-100 shadow-sm"
+                    >
+                      <input
+                        class="mt-0.5 rounded text-primary-container focus:ring-0 w-4 h-4 accent-primary"
+                        type="checkbox"
+                      />
+                      <div class="flex flex-col">
+                        <span
+                          class="font-label-md text-label-md text-on-surface"
+                          >Archival Recording Pod</span
+                        >
+                        <span
+                          class="font-body-sm text-body-sm text-on-surface-variant"
+                          >Fixed dual cam room capture</span
+                        >
+                      </div>
+                    </label>
+                  </div>
+                </div>
+                <!-- Field 8: University Compliance Checkbox -->
+                <div class="p-space-md bg-secondary-fixed/20 rounded shadow-sm">
+                  <label class="flex items-start gap-space-sm cursor-pointer">
+                    <input
+                      checked=""
+                      class="mt-0.5 rounded text-primary-container focus:ring-0 w-4 h-4 accent-primary shrink-0"
+                      type="checkbox"
+                    />
+                    <div class="flex flex-col">
+                      <span
+                        class="font-label-md text-label-md text-on-secondary-fixed font-bold"
+                      >
+                        Institutional Space Policy Acknowledgement
+                      </span>
+                      <p
+                        class="font-body-sm text-body-sm text-on-secondary-fixed-variant mt-0.5"
+                      >
+                        I confirm that this reservation complies with BPU
+                        Administrative Space Policies and acknowledge
+                        responsibility for room integrity. I guarantee immediate
+                        vacancy at the conclusion of the approved slot and will
+                        ensure all campus AV peripherals are safely docked.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </form>
+              <!-- Modal Footer -->
+              <footer
+                class="bg-surface-container px-space-lg py-space-md flex flex-col sm:flex-row items-center justify-between gap-space-md shadow-inner"
+              >
+                <div
+                  class="flex items-center gap-space-xs text-on-surface-variant"
+                >
+                  <span class="material-symbols-outlined text-[18px] text-error"
+                    >info</span
+                  >
+                  <span class="font-body-sm text-body-sm"
+                    >Resolve timing conflict above prior to dispatching
+                    request.</span
+                  >
+                </div>
+                <div
+                  class="flex items-center gap-space-sm w-full sm:w-auto justify-end"
+                >
+                  <!-- Secondary Cancel Button -->
+                  <button
+                    id="cancelModalBtn"
+                    class="px-space-md py-2 bg-surface-container-lowest text-tertiary font-label-lg text-label-lg rounded hover:bg-surface-container-high transition-colors shadow-sm"
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <!-- Primary Submit Booking Button in Deep Maroon (#7A1F2B) with Gold Hover Accent -->
+                  <button
+                    type="submit"
+                    form="roomReservationForm"
+                    class="relative group px-space-lg py-2 bg-primary-container text-on-primary font-label-lg text-label-lg rounded shadow-md hover:bg-primary transition-all flex items-center gap-space-xs overflow-hidden cursor-pointer"
+                  >
+                    >
+                    <span
+                      class="absolute inset-x-0 bottom-0 h-1 bg-secondary-container transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"
+                    ></span>
+                    <span
+                      class="material-symbols-outlined text-[18px] group-hover:text-secondary-container transition-colors"
+                      >send</span
+                    >
+                    <span>Submit Booking Request</span>
+                  </button>
+                </div>
+              </footer>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script src="js/db.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/booking.js"></script>
+  </body>
+</html>

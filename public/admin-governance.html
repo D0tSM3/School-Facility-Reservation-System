@@ -1,0 +1,522 @@
+﻿<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @layer base {
+        html,
+        body {
+          margin: 0;
+          padding: 0;
+        }
+        body {
+          overscroll-behavior: none;
+        }
+        main > :first-child {
+          margin-top: 0 !important;
+        }
+        main > :last-child {
+          margin-bottom: 0 !important;
+        }
+      }
+      ::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed-variant": "#474746",
+              "on-secondary-fixed": "#261a00",
+              "on-surface": "#191c1e",
+              surface: "#f8f9fb",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#ff8b92",
+              "surface-dim": "#d9dadc",
+              "on-tertiary-container": "#afadac",
+              "on-primary-fixed": "#40000c",
+              "surface-container-high": "#e7e8ea",
+              "primary-fixed": "#ffdada",
+              "on-secondary-container": "#715300",
+              "tertiary-container": "#414141",
+              "surface-tint": "#a13c46",
+              "on-secondary": "#ffffff",
+              "surface-container": "#edeef0",
+              error: "#ba1a1a",
+              "on-primary-fixed-variant": "#822530",
+              "inverse-on-surface": "#f0f1f3",
+              "on-tertiary-fixed": "#1b1c1c",
+              "secondary-fixed-dim": "#f6be39",
+              "on-error-container": "#93000a",
+              "on-error": "#ffffff",
+              "on-secondary-fixed-variant": "#5c4300",
+              "on-background": "#191c1e",
+              "tertiary-fixed-dim": "#c8c6c5",
+              secondary: "#795900",
+              "secondary-container": "#ffc641",
+              "tertiary-fixed": "#e4e2e1",
+              "outline-variant": "#dcc0c0",
+              background: "#f8f9fb",
+              "inverse-surface": "#2e3132",
+              "surface-container-lowest": "#ffffff",
+              "primary-container": "#7a1f2b",
+              "error-container": "#ffdad6",
+              "surface-bright": "#f8f9fb",
+              "on-surface-variant": "#564242",
+              "surface-container-highest": "#e1e2e4",
+              "secondary-fixed": "#ffdfa0",
+              "primary-fixed-dim": "#ffb3b5",
+              outline: "#897172",
+              "inverse-primary": "#ffb3b5",
+              "surface-variant": "#e1e2e4",
+              "surface-container-low": "#f3f4f6",
+              primary: "#5b0617",
+              "on-tertiary": "#ffffff",
+              tertiary: "#2b2b2b",
+            },
+            borderRadius: {
+              DEFAULT: "0.125rem",
+              lg: "0.25rem",
+              xl: "0.5rem",
+              full: "0.75rem",
+            },
+            spacing: {
+              "space-sm": "0.5rem",
+              "space-xl": "2.25rem",
+              "space-lg": "1.5rem",
+              "space-md": "1rem",
+              margin: "2rem",
+              "margin-mobile": "1rem",
+              "gutter-mobile": "0.75rem",
+              gutter: "1.25rem",
+              "space-xs": "0.25rem",
+            },
+            fontFamily: {
+              "headline-lg": ["Inter"],
+              "body-md": ["Inter"],
+              "headline-lg-mobile": ["Inter"],
+              "label-lg": ["Inter"],
+              "headline-md": ["Inter"],
+              "headline-sm": ["Inter"],
+              "body-lg": ["Inter"],
+              "body-sm": ["Inter"],
+              "label-md": ["Inter"],
+              "label-sm": ["Inter"],
+            },
+            fontSize: {
+              "headline-lg": [
+                "30px",
+                {
+                  lineHeight: "38px",
+                  letterSpacing: "-0.02em",
+                  fontWeight: "700",
+                },
+              ],
+              "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+              "headline-lg-mobile": [
+                "24px",
+                {
+                  lineHeight: "32px",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "700",
+                },
+              ],
+              "label-lg": [
+                "14px",
+                {
+                  lineHeight: "20px",
+                  letterSpacing: "0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "headline-md": [
+                "22px",
+                {
+                  lineHeight: "28px",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "headline-sm": [
+                "18px",
+                { lineHeight: "24px", fontWeight: "600" },
+              ],
+              "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+              "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+              "label-md": [
+                "12px",
+                {
+                  lineHeight: "16px",
+                  letterSpacing: "0.02em",
+                  fontWeight: "600",
+                },
+              ],
+              "label-sm": [
+                "11px",
+                {
+                  lineHeight: "14px",
+                  letterSpacing: "0.04em",
+                  fontWeight: "700",
+                },
+              ],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-background font-body-md text-on-surface antialiased min-h-screen"
+  >
+    <aside
+      class="fixed left-0 top-0 h-full w-[250px] bg-tertiary text-on-tertiary z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+    >
+      <div class="h-16 px-space-md flex items-center gap-space-sm bg-tertiary">
+        <img
+          alt="CampusRoom Maroon &amp; Gold Logo"
+          class="h-8 w-auto object-contain"
+          src="https://lh3.googleusercontent.com/aida/AEtjO1WFGnm34vHHRpWglGzteAXRyfFRuoi8Syt8Wg-vzGn_wNq22Q8eoUDQ3dxiXlqtGEYI2wIgtejxw5CdRnVIdbeDN0NyGT1b23dyWa0sc-RdMZ86o4dHQ1aIATeuu8Ie5BX3Ul_Kxn3xhpNMP-Vj_nlxcXZLFiQgtTaI7eje_ljKeW9Ur_ZHOPbrDZNaxs26VlFrjKzWKO3vjBrk1V-vUXl4W5q9NwnA_V6quGKjDI8wZYa5NXqYvCdaGOk"
+        />
+        <div class="flex flex-col">
+          <span
+            class="font-headline-sm text-headline-sm text-on-tertiary tracking-tight"
+            >CampusRoom</span
+          ><span
+            class="font-label-sm text-label-sm text-tertiary-fixed-dim uppercase tracking-wider"
+            >Buenavista Poly</span
+          >
+        </div>
+      </div>
+      <div class="px-space-md py-space-sm">
+        <div
+          class="font-label-sm text-label-sm text-on-tertiary-container uppercase tracking-wider mb-space-xs px-space-sm"
+        >
+          Intranet Core
+        </div>
+      </div>
+      <nav
+        class="flex-1 px-space-sm space-y-space-xs"
+        data-active-classes="bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
+      >
+        <a
+          aria-current="page"
+          class="flex items-center gap-space-sm px-space-md py-space-sm rounded transition-colors bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
+          data-path="customer-dashboard"
+          href="#"
+          ><span class="material-symbols-outlined text-[20px]">dashboard</span
+          ><span>Dashboard</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="rooms"
+          href="#"
+          ><span class="material-symbols-outlined text-[20px]"
+            >meeting_room</span
+          ><span>Rooms</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="my-reservations"
+          href="#"
+          ><span class="material-symbols-outlined text-[20px]"
+            >event_available</span
+          ><span>Reservations</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="staff-queue"
+          href="#"
+          ><span class="material-symbols-outlined text-[20px]">assignment</span
+          ><span>Staff Queue</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="admin-governance" aria-current="page" class="flex items-center gap-space-sm px-space-md py-space-sm rounded transition-colors bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg" href="admin-governance.html"><span class="material-symbols-outlined text-[20px]"
+            >admin_panel_settings</span
+          ><span>Admin Governance</span></a
+        >
+      </nav>
+      <div class="p-space-md bg-tertiary-container/40" id="sidebarUserFooter">
+        <!-- populated by app.js -->
+      </div>
+    </aside>
+    <div class="pl-[250px]">
+      <header
+        class="fixed top-0 left-[250px] right-0 h-16 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"
+      >
+        <div class="flex items-center gap-space-md">
+          <img
+            alt="CampusRoom Maroon &amp; Gold Logo"
+            class="h-8 w-auto object-contain"
+            src="https://lh3.googleusercontent.com/aida/AEtjO1WFGnm34vHHRpWglGzteAXRyfFRuoi8Syt8Wg-vzGn_wNq22Q8eoUDQ3dxiXlqtGEYI2wIgtejxw5CdRnVIdbeDN0NyGT1b23dyWa0sc-RdMZ86o4dHQ1aIATeuu8Ie5BX3Ul_Kxn3xhpNMP-Vj_nlxcXZLFiQgtTaI7eje_ljKeW9Ur_ZHOPbrDZNaxs26VlFrjKzWKO3vjBrk1V-vUXl4W5q9NwnA_V6quGKjDI8wZYa5NXqYvCdaGOk"
+          />
+        </div>
+        <div class="flex items-center gap-space-md">
+          <div class="flex items-center gap-space-sm pl-space-sm">
+            <div class="flex flex-col text-right hidden sm:flex">
+              <span class="font-label-md text-label-md text-on-surface" data-user-name>Loading…</span>
+              <span class="font-label-sm text-label-sm text-primary font-bold" data-user-role></span>
+            </div>
+            <span data-user-avatar></span>
+          </div>
+        </div>
+      </header>
+      <main
+        class="w-full pt-16 bg-background px-space-lg py-space-lg min-h-screen"
+      ><div class="flex flex-col w-full space-y-space-lg">
+    <div class="flex flex-col space-y-space-xs">
+        <h1 class="font-headline-lg text-headline-lg text-primary tracking-tight font-bold">Admin Governance</h1>
+        <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">Manage users, adjust room status, and view system logs.</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex items-center gap-space-sm border-b border-surface-variant">
+        <button id="tabUsers" class="px-space-md py-space-sm font-label-lg text-primary border-b-2 border-primary">Users</button>
+        <button id="tabRooms" class="px-space-md py-space-sm font-label-lg text-on-surface-variant hover:text-on-surface">Rooms</button>
+        <button id="tabLogs" class="px-space-md py-space-sm font-label-lg text-on-surface-variant hover:text-on-surface">System Logs</button>
+    </div>
+
+    <!-- Users View -->
+    <div id="viewUsers" class="space-y-space-md">
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">User Management</h2>
+        <div class="bg-surface-container-lowest p-space-md rounded shadow-sm overflow-x-auto">
+            <table class="w-full text-left font-body-sm text-on-surface border-collapse">
+                <thead>
+                    <tr class="border-b border-surface-variant text-on-surface-variant uppercase text-[11px] tracking-wider">
+                        <th class="p-2">Name</th>
+                        <th class="p-2">Email</th>
+                        <th class="p-2">Role</th>
+                        <th class="p-2 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Rooms View (Hidden by default) -->
+    <div id="viewRooms" class="hidden space-y-space-md">
+        <div class="flex justify-between items-center">
+            <h2 class="font-headline-sm text-headline-sm text-on-surface">Room Management</h2>
+            <button id="btnNewRoom" class="px-space-md py-1 bg-primary text-on-primary rounded font-label-sm">Add Room</button>
+        </div>
+        <div class="bg-surface-container-lowest p-space-md rounded shadow-sm overflow-x-auto">
+            <table class="w-full text-left font-body-sm text-on-surface border-collapse">
+                <thead>
+                    <tr class="border-b border-surface-variant text-on-surface-variant uppercase text-[11px] tracking-wider">
+                        <th class="p-2">Room Name</th>
+                        <th class="p-2">Capacity</th>
+                        <th class="p-2">Status</th>
+                        <th class="p-2 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="roomsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Logs View (Hidden by default) -->
+    <div id="viewLogs" class="hidden space-y-space-md">
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">System Logs</h2>
+        <div class="bg-surface-container-lowest p-space-md rounded shadow-sm overflow-x-auto">
+            <table class="w-full text-left font-body-sm text-on-surface border-collapse">
+                <thead>
+                    <tr class="border-b border-surface-variant text-on-surface-variant uppercase text-[11px] tracking-wider">
+                        <th class="p-2 w-48">Timestamp</th>
+                        <th class="p-2 w-48">User ID</th>
+                        <th class="p-2">Action Details</th>
+                    </tr>
+                </thead>
+                <tbody id="logsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    var BASE = window.location.pathname.replace(/[^\/]*$/, '');
+
+    const tabs = {
+        users: { btn: document.getElementById('tabUsers'), view: document.getElementById('viewUsers'), load: loadUsers },
+        rooms: { btn: document.getElementById('tabRooms'), view: document.getElementById('viewRooms'), load: loadRooms },
+        logs:  { btn: document.getElementById('tabLogs'), view: document.getElementById('viewLogs'), load: loadLogs }
+    };
+    
+    function switchTab(activeKey) {
+        Object.keys(tabs).forEach(key => {
+            if (key === activeKey) {
+                tabs[key].btn.classList.add('text-primary', 'border-b-2', 'border-primary');
+                tabs[key].btn.classList.remove('text-on-surface-variant');
+                tabs[key].view.classList.remove('hidden');
+                tabs[key].load();
+            } else {
+                tabs[key].btn.classList.remove('text-primary', 'border-b-2', 'border-primary');
+                tabs[key].btn.classList.add('text-on-surface-variant');
+                tabs[key].view.classList.add('hidden');
+            }
+        });
+    }
+    
+    tabs.users.btn.addEventListener('click', () => switchTab('users'));
+    tabs.rooms.btn.addEventListener('click', () => switchTab('rooms'));
+    tabs.logs.btn.addEventListener('click', () => switchTab('logs'));
+    
+    // Initial Load
+    switchTab('users');
+
+    async function loadUsers() {
+        try {
+            const res = await fetch(BASE + 'api/users', { credentials: 'same-origin' });
+            if (!res.ok) return alert('Cannot load users.');
+            const data = await res.json();
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            data.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-surface-variant";
+                tr.innerHTML = `
+                    <td class="p-2">${u.name}</td>
+                    <td class="p-2">${u.email}</td>
+                    <td class="p-2">
+                        <select class="role-select p-1 bg-surface border rounded text-xs" data-id="${u.user_id}">
+                            <option value="Customer" ${u.role==='Customer'?'selected':''}>Customer</option>
+                            <option value="Staff" ${u.role==='Staff'?'selected':''}>Staff</option>
+                            <option value="Admin" ${u.role==='Admin'?'selected':''}>Admin</option>
+                        </select>
+                    </td>
+                    <td class="p-2 text-right">
+                        <button class="save-role text-primary font-bold text-xs" data-id="${u.user_id}">Save</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            document.querySelectorAll('.save-role').forEach(b => {
+                b.addEventListener('click', async (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    const sel = document.querySelector(`.role-select[data-id="${id}"]`);
+                    const role = sel.value;
+                    const resp = await fetch(BASE + 'api/users/' + id + '/role', {
+                        method: 'PATCH',
+                        credentials: 'same-origin',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({role})
+                    });
+                    if (resp.ok) alert('Saved!');
+                    else alert('Error saving role.');
+                });
+            });
+        } catch(err) { console.error(err); }
+    }
+
+    async function loadRooms() {
+        try {
+            const res = await fetch(BASE + 'api/rooms', { credentials: 'same-origin' });
+            if (!res.ok) return alert('Cannot load rooms.');
+            const data = await res.json();
+            const tbody = document.getElementById('roomsTableBody');
+            tbody.innerHTML = '';
+            data.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-surface-variant";
+                tr.innerHTML = `
+                    <td class="p-2 font-medium">${r.name}</td>
+                    <td class="p-2">${r.capacity}</td>
+                    <td class="p-2">
+                        <select class="status-select p-1 bg-surface border rounded text-xs" data-id="${r.room_id}">
+                            <option value="Available" ${r.status==='Available'?'selected':''}>Available</option>
+                            <option value="Maintenance" ${r.status==='Maintenance'?'selected':''}>Maintenance</option>
+                        </select>
+                    </td>
+                    <td class="p-2 text-right">
+                        <button class="save-room text-primary font-bold text-xs" data-id="${r.room_id}">Save</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            document.querySelectorAll('.save-room').forEach(b => {
+                b.addEventListener('click', async (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    const sel = document.querySelector(`.status-select[data-id="${id}"]`);
+                    const status = sel.value;
+                    const resp = await fetch(BASE + 'api/rooms/' + id, {
+                        method: 'PATCH',
+                        credentials: 'same-origin',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({status})
+                    });
+                    if (resp.ok) alert('Saved!');
+                    else alert('Error saving room.');
+                });
+            });
+        } catch(err) { console.error(err); }
+    }
+    
+    document.getElementById('btnNewRoom').addEventListener('click', async () => {
+        const name = prompt("Room Name:");
+        if (!name) return;
+        const capacity = prompt("Capacity (number):");
+        if (!capacity) return;
+        
+        const resp = await fetch(BASE + 'api/rooms', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, capacity: parseInt(capacity), status: 'Available'})
+        });
+        if (resp.ok) loadRooms();
+        else alert('Error adding room.');
+    });
+
+    async function loadLogs() {
+        try {
+            const res = await fetch(BASE + 'api/logs', { credentials: 'same-origin' });
+            if (!res.ok) return alert('Cannot load logs.');
+            const data = await res.json();
+            const tbody = document.getElementById('logsTableBody');
+            tbody.innerHTML = '';
+            data.forEach(l => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-surface-variant";
+                const d = new Date(l.timestamp);
+                tr.innerHTML = `
+                    <td class="p-2 text-on-surface-variant">${d.toLocaleString()}</td>
+                    <td class="p-2 font-mono text-[10px] text-on-surface-variant truncate max-w-[100px]" title="${l.user_id}">${l.user_id ? l.user_id.substring(0,8) : '—'}</td>
+                    <td class="p-2">${l.action_type}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch(err) { console.error(err); }
+    }
+});
+    </script>
+    <script>
+      window.APP_ALLOWED_ROLES = ["Admin"];
+      window.APP_ACTIVE_NAV   = 'admin-governance';
+    </script>
+    <script>
+      (function() {
+        var base = window.location.pathname.replace(/[^\/]*$/, '');
+        var s = document.createElement('script');
+        s.src = base + 'js/app.js';
+        document.head.appendChild(s);
+      })();
+    </script>
+  </body>
+</html>

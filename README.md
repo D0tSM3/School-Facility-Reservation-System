@@ -268,3 +268,15 @@ singleton.  Controllers never call PDO directly.  This means:
 * If the backend is re-implemented in another language, the HTTP contract
   (URL, method, request/response shape) stays identical.
 * Prepared statements are centralised and easy to audit.
+
+## 8 — UI Cut Features & Rationale
+
+The front-end templates provided by the Stitch export contained several mock UI elements that did not map to the provided `database_schema_mysql.sql`. As per the requirements, these features were removed or simplified to match the DB schema strictly:
+
+*   **Campus Capacity Utilization SVG Chart:** Removed from Customer Dashboard (no historical tracking/capacity tables in the DB).
+*   **Building/Floor/Wing labels & Building Filter Dropdown:** Removed from Room Cards and Dashboard because the `Rooms` table only has `name` and `capacity`, and does not support complex geography (e.g. Building, Floor, Wing) or filtering by them.
+*   **Room Photos:** Removed from room cards (no image paths or binary storage columns in DB).
+*   **Equipment/Amenity Tags:** Removed from room cards and booking flow (no equipment or amenities columns in DB).
+*   **Department / ID Number:** Removed from the Register page (Users table only contains `email`, `password_hash`, `role`, and `name`).
+*   **Expected Attendees / Assets:** Removed from the booking flow since the schema only accepts `room_id`, `start_time`, `end_time`, and `purpose`.
+*   **Notification Bell & Advanced Filters:** Removed due to lack of corresponding backend tables (No `Notifications` or `Saved Filters` tables).

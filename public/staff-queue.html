@@ -1,0 +1,1337 @@
+﻿<!doctype html>
+<style>
+  aside > div:first-child > div {
+    display: none;
+  }
+</style>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CampusRoom — Staff Queue | BPU</title>
+    <meta name="description" content="Staff approval queue for managing pending facility reservation requests at BPU." />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/theme.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed-variant": "#474746",
+              "on-secondary-fixed": "#261a00",
+              "on-surface": "#191c1e",
+              surface: "#f8f9fb",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#ff8b92",
+              "surface-dim": "#d9dadc",
+              "on-tertiary-container": "#afadac",
+              "on-primary-fixed": "#40000c",
+              "surface-container-high": "#e7e8ea",
+              "primary-fixed": "#ffdada",
+              "on-secondary-container": "#715300",
+              "tertiary-container": "#414141",
+              "surface-tint": "#a13c46",
+              "on-secondary": "#ffffff",
+              "surface-container": "#edeef0",
+              error: "#ba1a1a",
+              "on-primary-fixed-variant": "#822530",
+              "inverse-on-surface": "#f0f1f3",
+              "on-tertiary-fixed": "#1b1c1c",
+              "secondary-fixed-dim": "#f6be39",
+              "on-error-container": "#93000a",
+              "on-error": "#ffffff",
+              "on-secondary-fixed-variant": "#5c4300",
+              "on-background": "#191c1e",
+              "tertiary-fixed-dim": "#c8c6c5",
+              secondary: "#795900",
+              "secondary-container": "#ffc641",
+              "tertiary-fixed": "#e4e2e1",
+              "outline-variant": "#dcc0c0",
+              background: "#f8f9fb",
+              "inverse-surface": "#2e3132",
+              "surface-container-lowest": "#ffffff",
+              "primary-container": "#7a1f2b",
+              "error-container": "#ffdad6",
+              "surface-bright": "#f8f9fb",
+              "on-surface-variant": "#564242",
+              "surface-container-highest": "#e1e2e4",
+              "secondary-fixed": "#ffdfa0",
+              "primary-fixed-dim": "#ffb3b5",
+              outline: "#897172",
+              "inverse-primary": "#ffb3b5",
+              "surface-variant": "#e1e2e4",
+              "surface-container-low": "#f3f4f6",
+              primary: "#5b0617",
+              "on-tertiary": "#ffffff",
+              tertiary: "#2b2b2b",
+            },
+            borderRadius: {
+              DEFAULT: "0.125rem",
+              lg: "0.25rem",
+              xl: "0.5rem",
+              full: "0.75rem",
+            },
+            spacing: {
+              "space-sm": "0.5rem",
+              "space-xl": "2.25rem",
+              "space-lg": "1.5rem",
+              "space-md": "1rem",
+              margin: "2rem",
+              "margin-mobile": "1rem",
+              "gutter-mobile": "0.75rem",
+              gutter: "1.25rem",
+              "space-xs": "0.25rem",
+            },
+            fontFamily: {
+              "headline-lg": ["Inter"],
+              "body-md": ["Inter"],
+              "headline-lg-mobile": ["Inter"],
+              "label-lg": ["Inter"],
+              "headline-md": ["Inter"],
+              "headline-sm": ["Inter"],
+              "body-lg": ["Inter"],
+              "body-sm": ["Inter"],
+              "label-md": ["Inter"],
+              "label-sm": ["Inter"],
+            },
+            fontSize: {
+              "headline-lg": [
+                "30px",
+                {
+                  lineHeight: "38px",
+                  letterSpacing: "-0.02em",
+                  fontWeight: "700",
+                },
+              ],
+              "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+              "headline-lg-mobile": [
+                "24px",
+                {
+                  lineHeight: "32px",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "700",
+                },
+              ],
+              "label-lg": [
+                "14px",
+                {
+                  lineHeight: "20px",
+                  letterSpacing: "0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "headline-md": [
+                "22px",
+                {
+                  lineHeight: "28px",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "headline-sm": [
+                "18px",
+                { lineHeight: "24px", fontWeight: "600" },
+              ],
+              "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+              "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+              "label-md": [
+                "12px",
+                {
+                  lineHeight: "16px",
+                  letterSpacing: "0.02em",
+                  fontWeight: "600",
+                },
+              ],
+              "label-sm": [
+                "11px",
+                {
+                  lineHeight: "14px",
+                  letterSpacing: "0.04em",
+                  fontWeight: "700",
+                },
+              ],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-background font-body-md text-on-surface antialiased min-h-screen"
+  >
+    <aside
+      class="fixed left-0 top-0 h-full w-[250px] bg-tertiary text-on-tertiary z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+    >
+      <div class="h-16 px-space-md flex items-center gap-space-sm bg-tertiary">
+        <img
+          alt="CampusRoom Maroon &amp; Gold Logo"
+          class="h-8 w-auto object-contain"
+          src="assets/logo.svg"
+        />
+        <div class="flex flex-col">
+          <span
+            class="font-headline-sm text-headline-sm text-on-tertiary tracking-tight"
+            >CampusRoom</span
+          ><span
+            class="font-label-sm text-label-sm text-tertiary-fixed-dim uppercase tracking-wider"
+            >Buenavista Poly</span
+          >
+        </div>
+      </div>
+      <div class="px-space-md py-space-sm">
+        <div
+          class="font-label-sm text-label-sm text-on-tertiary-container uppercase tracking-wider mb-space-xs px-space-sm"
+        >
+          Intranet Core
+        </div>
+      </div>
+      <nav
+        class="flex-1 px-space-sm space-y-space-xs"
+        data-active-classes="bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
+      >
+        <a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="customer-dashboard"
+          href="dashboard.html"
+          ><span class="material-symbols-outlined text-[20px]">dashboard</span
+          ><span>Dashboard</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="rooms"
+          href="book-room.html"
+          ><span class="material-symbols-outlined text-[20px]"
+            >meeting_room</span
+          ><span>Rooms</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="my-reservations"
+          href="my-reservations.html"
+          ><span class="material-symbols-outlined text-[20px]"
+            >event_available</span
+          ><span>Reservations</span></a
+        ><a
+          aria-current="page"
+          class="flex items-center gap-space-sm px-space-md py-space-sm rounded transition-colors bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
+          data-path="staff-queue"
+          href="staff-queue.html"
+          ><span class="material-symbols-outlined text-[20px]">assignment</span
+          ><span>Staff Queue</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="admin-governance"
+          href="staff-queue.html"
+          ><span class="material-symbols-outlined text-[20px]"
+            >admin_panel_settings</span
+          ><span>Admin Governance</span></a
+        >
+      </nav>
+      <div class="p-space-md bg-tertiary-container/40">
+        <div class="flex items-center justify-between">
+          <div class="flex flex-col">
+            <span class="font-label-sm text-label-sm text-tertiary-fixed-dim"
+              >Registrar Desk</span
+            ><span class="font-body-sm text-body-sm text-on-tertiary"
+              >Ext. 4021 / 4022</span
+            >
+          </div>
+          <span
+            class="material-symbols-outlined text-secondary-container text-[18px]"
+            >verified</span
+          >
+        </div>
+      </div>
+    </aside>
+    <div class="pl-[250px]">
+      <header
+        class="fixed top-0 left-[250px] right-0 h-16 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"
+      >
+        <div class="flex items-center gap-space-md">
+          <img
+            alt="CampusRoom Maroon &amp; Gold Logo"
+            class="h-8 w-auto object-contain"
+            src="assets/logo.svg"
+          />
+          <div
+            class="hidden md:flex items-center gap-space-xs px-space-sm py-1 bg-surface-container rounded"
+          >
+            <span class="material-symbols-outlined text-secondary text-[16px]"
+              >school</span
+            ><span
+              class="font-label-sm text-label-sm text-on-surface-variant font-semibold"
+              >AY 2024-2025 • First Semester</span
+            >
+          </div>
+        </div>
+        <div class="flex items-center gap-space-md">
+          <button
+            aria-label="Notifications"
+            class="relative p-space-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors rounded"
+          >
+            <span class="material-symbols-outlined text-[22px]"
+              >notifications</span
+            ><span
+              class="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-container"
+            ></span>
+          </button>
+          <div class="flex items-center gap-space-sm pl-space-sm">
+            <div class="flex flex-col text-right hidden sm:flex">
+              <span class="font-label-md text-label-md text-on-surface"
+                >Dr. Edgardo Valderama</span
+              ><span class="font-label-sm text-label-sm text-primary font-bold"
+                >Faculty / Staff</span
+              >
+            </div>
+            <img
+              alt="Profile"
+              class="w-8 h-8 rounded-full object-cover shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+              src="https://lh3.googleusercontent.com/aida/AEtjO1U7iGCinzQmj8WfjJF5VgThj41jGwMUtCAl6UtghCr0H8BOjy2MVc1ZcmS1rcL4eH5DjegJaqf1lQOSUPybmrihM04sRMvBukR6zwgUNhBcqg6ba8EsbW1u7qRkWlj6RoJCv2_SGlfaBoUFinUOspbM30gtLfocI-6amPSy_5J_K3FcBMsLDowQS-4fD2Nl4vKMVcbAjKVSmjVmJgs1ReAkEPM6Y4GxsQZ7zzth0SbD9ljnAIzmNTNYiA"
+            />
+          </div>
+        </div>
+      </header>
+      <main
+        class="w-full pt-16 bg-background px-space-lg py-space-lg min-h-screen"
+      >
+        <div class="flex flex-col w-full">
+          <!-- Header & Administrative Meta Strip -->
+          <div
+            class="flex flex-col lg:flex-row lg:items-end justify-between pb-space-lg gap-space-md"
+          >
+            <div class="space-y-space-xs">
+              <div
+                class="flex items-center gap-space-xs text-on-surface-variant font-label-sm uppercase tracking-wider"
+              >
+                <span class="material-symbols-outlined text-[16px] text-primary"
+                  >verified_user</span
+                >
+                <span>Facilities &amp; Academic Space Administration</span>
+                <span class="text-outline-variant">•</span>
+                <span class="font-bold text-secondary">Terminal 04-A</span>
+              </div>
+              <h1
+                class="font-headline-lg text-headline-lg text-primary tracking-tight"
+              >
+                Staff Space Dispatch &amp; Approval Queue
+              </h1>
+              <p
+                class="font-body-md text-body-md text-on-surface-variant max-w-3xl"
+              >
+                Review incoming faculty and student space applications and
+                toggle room maintenance states across BPU campus.
+              </p>
+            </div>
+            <!-- Live Status Timestamp & Duty Badge -->
+            <div
+              class="flex items-center gap-space-sm bg-surface-container px-space-md py-space-sm rounded-lg shadow-sm"
+            >
+              <div
+                class="w-2.5 h-2.5 rounded-full bg-secondary-fixed-dim animate-pulse"
+              ></div>
+              <div class="flex flex-col">
+                <span
+                  class="font-label-sm text-label-sm text-on-surface font-semibold"
+                  >Live Dispatch Active</span
+                >
+                <span class="font-body-sm text-body-sm text-on-surface-variant"
+                  >Sync: Oct 25, 2024 • 14:48:12 PHT</span
+                >
+              </div>
+            </div>
+          </div>
+          <!-- Quick Metrics KPI Row -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-space-lg">
+            <!-- Metric 1: Pending Review (Amber) -->
+            <div
+              class="relative bg-surface-container-lowest p-space-md rounded-lg shadow-sm overflow-hidden flex items-center justify-between"
+            >
+              <div
+                class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary"
+              ></div>
+              <div class="pl-space-xs space-y-1">
+                <span
+                  class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider block"
+                  >Pending Review</span
+                >
+                <div class="flex items-baseline gap-space-xs">
+                  <span
+                    id="kpi-pending-count"
+                    class="font-headline-lg text-headline-lg text-secondary font-bold"
+                    >4</span
+                  >
+                  <span
+                    class="font-label-lg text-label-lg text-on-surface-variant font-medium"
+                    >Applications</span
+                  >
+                </div>
+                <span
+                  class="font-body-sm text-body-sm text-secondary flex items-center gap-1 font-semibold"
+                >
+                  <span class="material-symbols-outlined text-[14px]"
+                    >hourglass_top</span
+                  >
+                  Requires registrar sign-off
+                </span>
+              </div>
+              <div
+                class="w-12 h-12 rounded-xl bg-secondary-fixed/50 flex items-center justify-center text-secondary"
+              >
+                <span class="material-symbols-outlined text-[26px]"
+                  >pending_actions</span
+                >
+              </div>
+            </div>
+            <!-- Metric 2: Offline / Maintenance (Slate Gray / Tertiary) -->
+            <div
+              class="relative bg-surface-container-lowest p-space-md rounded-lg shadow-sm overflow-hidden flex items-center justify-between"
+            >
+              <div
+                class="absolute left-0 top-0 bottom-0 w-1.5 bg-tertiary"
+              ></div>
+              <div class="pl-space-xs space-y-1">
+                <span
+                  class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider block"
+                  >Offline / Maintenance</span
+                >
+                <div class="flex items-baseline gap-space-xs">
+                  <span
+                    class="font-headline-lg text-headline-lg text-tertiary font-bold"
+                    >3</span
+                  >
+                  <span
+                    class="font-label-lg text-label-lg text-on-surface-variant font-medium"
+                    >Chambers</span
+                  >
+                </div>
+                <span
+                  class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1"
+                >
+                  <span class="material-symbols-outlined text-[14px]"
+                    >build_circle</span
+                  >
+                  HVAC &amp; lab sanitization
+                </span>
+              </div>
+              <div
+                class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant"
+              >
+                <span class="material-symbols-outlined text-[26px]"
+                  >engineering</span
+                >
+              </div>
+            </div>
+            <!-- Metric 3: Authorized Today (Maroon) -->
+            <div
+              class="relative bg-surface-container-lowest p-space-md rounded-lg shadow-sm overflow-hidden flex items-center justify-between"
+            >
+              <div
+                class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"
+              ></div>
+              <div class="pl-space-xs space-y-1">
+                <span
+                  class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider block"
+                  >Authorized Today</span
+                >
+                <div class="flex items-baseline gap-space-xs">
+                  <span
+                    id="kpi-auth-count"
+                    class="font-headline-lg text-headline-lg text-primary font-bold"
+                    >31</span
+                  >
+                  <span
+                    class="font-label-lg text-label-lg text-on-surface-variant font-medium"
+                    >Approvals</span
+                  >
+                </div>
+                <span
+                  class="font-body-sm text-body-sm text-primary flex items-center gap-1 font-semibold"
+                >
+                  <span class="material-symbols-outlined text-[14px]"
+                    >check_circle</span
+                  >
+                  All room locks synced
+                </span>
+              </div>
+              <div
+                class="w-12 h-12 rounded-xl bg-primary-fixed/40 flex items-center justify-center text-primary"
+              >
+                <span class="material-symbols-outlined text-[26px]"
+                  >task_alt</span
+                >
+              </div>
+            </div>
+          </div>
+          <!-- Primary Navigation Tabs & Bulk Toolbars -->
+          <div
+            class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md mb-space-md"
+          >
+            <!-- Tabs Header -->
+            <div class="inline-flex bg-surface-container-high p-1 rounded-lg">
+              <button
+                class="flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-lowest text-primary font-label-lg shadow-sm transition-all duration-150"
+                id="tab-pending"
+              >
+                <span class="material-symbols-outlined text-[18px]"
+                  >rule_folder</span
+                >
+                <span>Pending Booking Approvals</span>
+                <span
+                  class="ml-1 px-1.5 py-0.5 rounded text-label-sm font-bold bg-secondary-fixed text-on-secondary-fixed"
+                  id="pending-badge-count"
+                  >4 Requests</span
+                >
+              </button>
+              <button
+                class="flex items-center gap-space-xs px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-label-lg transition-all duration-150"
+                id="tab-maintenance"
+              >
+                <span class="material-symbols-outlined text-[18px]"
+                  >room_preferences</span
+                >
+                <span>Facility State &amp; Maintenance Toggle</span>
+                <span
+                  class="ml-1 px-1.5 py-0.5 rounded text-label-sm font-semibold bg-surface-container-highest text-on-surface-variant"
+                  >18 Rooms</span
+                >
+              </button>
+            </div>
+            <!-- Batch Actions Bar -->
+            <div class="flex flex-wrap items-center gap-space-xs">
+              <button
+                class="flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-lg transition-all shadow-sm"
+                id="btn-batch-approve"
+              >
+                <span class="material-symbols-outlined text-[18px]"
+                  >done_all</span
+                >
+                <span>Batch Approve Verified (2)</span>
+              </button>
+              <button
+                class="flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-on-surface font-label-lg shadow-sm transition-all"
+                id="btn-export-log"
+              >
+                <span
+                  class="material-symbols-outlined text-[18px] text-on-surface-variant"
+                  >file_download</span
+                >
+                <span>Export Audit Dispatch Log</span>
+              </button>
+            </div>
+          </div>
+          <!-- Notification Toast Box (Hidden by default) -->
+          <div
+            class="hidden mb-space-md p-space-sm bg-surface-container-highest text-on-surface rounded-lg shadow-sm flex items-center justify-between transition-opacity"
+            id="action-toast"
+          >
+            <div class="flex items-center gap-space-sm">
+              <span class="material-symbols-outlined text-secondary-container"
+                >info</span
+              >
+              <span
+                class="font-body-md text-body-md font-semibold"
+                id="action-toast-text"
+                >Queue updated.</span
+              >
+            </div>
+            <button
+              class="p-1 text-on-surface-variant hover:text-on-surface rounded"
+              id="btn-dismiss-toast"
+            >
+              <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
+          <!-- Tab 1 Viewport: Pending Approvals -->
+          <div class="space-y-space-sm mb-space-lg" id="view-pending">
+            <!-- Application 1: Sarah Lin -->
+            <div
+              class="relative bg-surface-container-lowest rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md"
+              id="card-BPU-9102"
+            >
+              <!-- Institutional Left Amber Strip -->
+              <div
+                class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary"
+              ></div>
+              <div
+                class="p-space-md pl-space-lg flex flex-col xl:flex-row xl:items-center justify-between gap-space-md"
+              >
+                <!-- Requester & Location Meta -->
+                <div
+                  class="flex flex-col md:flex-row md:items-start gap-space-md flex-1"
+                >
+                  <div class="flex-shrink-0">
+                    <span
+                      class="px-space-xs py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm tracking-wide"
+                    >
+                      #BPU-9102
+                    </span>
+                  </div>
+                  <div class="space-y-1 flex-1">
+                    <div class="flex flex-wrap items-center gap-space-xs">
+                      <h3
+                        class="font-headline-sm text-headline-sm text-on-surface font-bold"
+                      >
+                        Prof. Sarah Lin
+                      </h3>
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm"
+                        >Bioengineering Dept</span
+                      >
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-secondary-container/30 text-on-secondary-container font-label-sm font-semibold flex items-center gap-0.5"
+                      >
+                        <span class="material-symbols-outlined text-[14px]"
+                          >biotech</span
+                        >
+                        Lab Clearance Tier 3
+                      </span>
+                    </div>
+                    <div
+                      class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-space-md gap-y-1 pt-space-xs text-on-surface-variant font-body-sm text-body-sm"
+                    >
+                      <div class="flex items-center gap-1">
+                        <span
+                          class="material-symbols-outlined text-[16px] text-primary"
+                          >meeting_room</span
+                        >
+                        <span class="font-semibold text-on-surface"
+                          >Lab 102</span
+                        >
+                        <span>(Science Wing B)</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <span
+                          class="material-symbols-outlined text-[16px] text-secondary"
+                          >calendar_today</span
+                        >
+                        <span class="font-semibold text-on-surface"
+                          >Oct 26, 2024</span
+                        >
+                        <span>10:00 AM – 1:00 PM</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <span
+                          class="material-symbols-outlined text-[16px] text-tertiary"
+                          >category</span
+                        >
+                        <span>Purpose:</span>
+                        <span class="font-semibold text-on-surface"
+                          >Genetic Sequencing Lab</span
+                        >
+                      </div>
+                    </div>
+                    <div
+                      class="pt-space-xs flex flex-wrap items-center gap-space-xs font-body-sm text-body-sm text-on-surface-variant"
+                    >
+                      <span
+                        class="font-label-sm text-label-sm text-on-tertiary-fixed-variant"
+                        >Allocated Assets:</span
+                      >
+                      <span
+                        class="bg-surface-container-high px-2 py-0.5 rounded text-on-surface font-medium"
+                        >24 Workstations</span
+                      >
+                      <span
+                        class="bg-surface-container-high px-2 py-0.5 rounded text-on-surface font-medium"
+                        >Autoclave Unit A</span
+                      >
+                      <span
+                        class="bg-secondary-fixed/40 px-2 py-0.5 rounded text-on-secondary-fixed font-medium"
+                        >Verified Cleanliness Cert</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <!-- Decision Strip Actions -->
+                <div
+                  class="flex items-center gap-space-xs justify-end flex-shrink-0 pt-space-xs xl:pt-0"
+                >
+                  <button
+                    class="btn-approve-req flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-lowest text-[#15803D] hover:bg-[#DCFCE7] shadow-sm font-label-lg transition-all"
+                    data-id="BPU-9102"
+                    data-name="Prof. Sarah Lin"
+                    title="Approve Reservation"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >check</span
+                    >
+                    <span>Approve</span>
+                  </button>
+                  <button
+                    class="btn-reject-req flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-lowest text-error hover:bg-error-container shadow-sm font-label-lg transition-all"
+                    data-id="BPU-9102"
+                    data-name="Prof. Sarah Lin"
+                    title="Decline Reservation"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >close</span
+                    >
+                    <span>Reject</span>
+                  </button>
+                  <button
+                    class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+                    title="Inspect Application Details"
+                  >
+                    <span class="material-symbols-outlined text-[20px]"
+                      >more_vert</span
+                    >
+                  </button>
+                </div>
+              </div>
+            </div>
+            <!-- Application 2: Dr. Elena Vance -->
+            <div
+              class="relative bg-surface-container-lowest rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md"
+              id="card-BPU-9105"
+            >
+              <!-- Institutional Left Amber Strip -->
+              <div
+                class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary"
+              ></div>
+              <div
+                class="p-space-md pl-space-lg flex flex-col xl:flex-row xl:items-center justify-between gap-space-md"
+              >
+                <!-- Requester & Location Meta -->
+                <div
+                  class="flex flex-col md:flex-row md:items-start gap-space-md flex-1"
+                >
+                  <div class="flex-shrink-0">
+                    <span
+                      class="px-space-xs py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm tracking-wide"
+                    >
+                      #BPU-9105
+                    </span>
+                  </div>
+                  <div class="space-y-1 flex-1">
+                    <div class="flex flex-wrap items-center gap-space-xs">
+                      <h3
+                        class="font-headline-sm text-headline-sm text-on-surface font-bold"
+                      >
+                        Dr. Elena Vance
+                      </h3>
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm"
+                        >Academic Services</span
+                      >
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-primary-fixed text-on-primary-fixed font-label-sm font-semibold flex items-center gap-0.5"
+                      >
+                        <span class="material-symbols-outlined text-[14px]"
+                          >stars</span
+                        >
+                        Dean's Council Priority
+                      </span>
+                    </div>
+                    <div
+                      class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-space-md gap-y-1 pt-space-xs text-on-surface-variant font-body-sm text-body-sm"
+                    >
+                      <div class="flex items-center gap-1">
+                        <span
+                          class="material-symbols-outlined text-[16px] text-primary"
+                          >meeting_room</span
+                        >
+                        <span class="font-semibold text-on-surface"
+                          >Room 204</span
+                        >
+                        <span>(Tech Hall)</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <span
+                          class="material-symbols-outlined text-[16px] text-secondary"
+                          >calendar_today</span
+                        >
+                        <span class="font-semibold text-on-surface"
+                          >Oct 27, 2024</span
+                        >
+                        <span>2:00 PM – 4:00 PM</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <span
+                          class="material-symbols-outlined text-[16px] text-tertiary"
+                          >category</span
+                        >
+                        <span>Purpose:</span>
+                        <span class="font-semibold text-on-surface"
+                          >Faculty Council Bi-Weekly Sync</span
+                        >
+                      </div>
+                    </div>
+                    <div
+                      class="pt-space-xs flex flex-wrap items-center gap-space-xs font-body-sm text-body-sm text-on-surface-variant"
+                    >
+                      <span
+                        class="font-label-sm text-label-sm text-on-tertiary-fixed-variant"
+                        >Allocated Assets:</span
+                      >
+                      <span
+                        class="bg-surface-container-high px-2 py-0.5 rounded text-on-surface font-medium"
+                        >4K Projector</span
+                      >
+                      <span
+                        class="bg-surface-container-high px-2 py-0.5 rounded text-on-surface font-medium"
+                        >Lapel Mic</span
+                      >
+                      <span
+                        class="bg-surface-container-high px-2 py-0.5 rounded text-on-surface font-medium"
+                        >HDMI Video Wall Hub</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <!-- Decision Strip Actions -->
+                <div
+                  class="flex items-center gap-space-xs justify-end flex-shrink-0 pt-space-xs xl:pt-0"
+                >
+                  <button
+                    class="btn-approve-req flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-lowest text-[#15803D] hover:bg-[#DCFCE7] shadow-sm font-label-lg transition-all"
+                    data-id="BPU-9105"
+                    data-name="Dr. Elena Vance"
+                    title="Approve Reservation"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >check</span
+                    >
+                    <span>Approve</span>
+                  </button>
+                  <button
+                    class="btn-reject-req flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-lowest text-error hover:bg-error-container shadow-sm font-label-lg transition-all"
+                    data-id="BPU-9105"
+                    data-name="Dr. Elena Vance"
+                    title="Decline Reservation"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >close</span
+                    >
+                    <span>Reject</span>
+                  </button>
+                  <button
+                    class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+                    title="Inspect Application Details"
+                  >
+                    <span class="material-symbols-outlined text-[20px]"
+                      >more_vert</span
+                    >
+                  </button>
+                </div>
+              </div>
+            </div>
+            <!-- Application 3: BPU Robotics Club -->
+            <div
+              class="relative bg-surface-container-lowest rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md"
+              id="card-BPU-9118"
+            >
+              <!-- Institutional Left Amber Strip -->
+              <div
+                class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary"
+              ></div>
+              <div
+                class="p-space-md pl-space-lg flex flex-col xl:flex-row xl:items-center justify-between gap-space-md"
+              >
+                <!-- Requester & Location Meta -->
+                <div
+                  class="flex flex-col md:flex-row md:items-start gap-space-md flex-1"
+                >
+                  <div class="flex-shrink-0">
+                    <span
+                      class="px-space-xs py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm tracking-wide"
+                    >
+                      #BPU-9118
+                    </span>
+                  </div>
+                  <div class="space-y-1 flex-1">
+                    <div class="flex flex-wrap items-center gap-space-xs">
+                      <h3
+                        class="font-headline-sm text-headline-sm text-on-surface font-bold"
+                      >
+                        BPU Robotics Club
+                      </h3>
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm"
+                        >Student Org (Tier 1)</span
+                      >
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-label-sm font-medium flex items-center gap-0.5"
+                      >
+                        <span class="material-symbols-outlined text-[14px]"
+                          >shield</span
+                        >
+                        Faculty Adviser Endorsed
+                      </span>
+                    </div>
+                    <div
+                      class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-space-md gap-y-1 pt-space-xs text-on-surface-variant font-body-sm text-body-sm"
+                    >
+                      <div class="flex items-center gap-1">
+                        <span
+                          class="material-symbols-outlined text-[16px] text-primary"
+                          >meeting_room</span
+                        >
+                        <span class="font-semibold text-on-surface"
+                          >Room 105</span
+                        >
+                        <span>(Engineering Wing)</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <span
+                          class="material-symbols-outlined text-[16px] text-secondary"
+                          >calendar_today</span
+                        >
+                        <span class="font-semibold text-on-surface"
+                          >Oct 28, 2024</span
+                        >
+                        <span>6:00 PM – 9:00 PM</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <span
+                          class="material-symbols-outlined text-[16px] text-tertiary"
+                          >category</span
+                        >
+                        <span>Purpose:</span>
+                        <span class="font-semibold text-on-surface"
+                          >Hackathon Sprint</span
+                        >
+                      </div>
+                    </div>
+                    <div
+                      class="pt-space-xs flex flex-wrap items-center gap-space-xs font-body-sm text-body-sm text-on-surface-variant"
+                    >
+                      <span
+                        class="font-label-sm text-label-sm text-on-tertiary-fixed-variant"
+                        >Allocated Assets:</span
+                      >
+                      <span
+                        class="bg-surface-container-high px-2 py-0.5 rounded text-on-surface font-medium"
+                        >3-Phase Power Feed</span
+                      >
+                      <span
+                        class="bg-surface-container-high px-2 py-0.5 rounded text-on-surface font-medium"
+                        >Heavy Duty Extension Reels</span
+                      >
+                      <span
+                        class="bg-surface-container-high px-2 py-0.5 rounded text-on-surface font-medium"
+                        >Overnight Keypad Passcode</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <!-- Decision Strip Actions -->
+                <div
+                  class="flex items-center gap-space-xs justify-end flex-shrink-0 pt-space-xs xl:pt-0"
+                >
+                  <button
+                    class="btn-approve-req flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-lowest text-[#15803D] hover:bg-[#DCFCE7] shadow-sm font-label-lg transition-all"
+                    data-id="BPU-9118"
+                    data-name="BPU Robotics Club"
+                    title="Approve Reservation"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >check</span
+                    >
+                    <span>Approve</span>
+                  </button>
+                  <button
+                    class="btn-reject-req flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-lowest text-error hover:bg-error-container shadow-sm font-label-lg transition-all"
+                    data-id="BPU-9118"
+                    data-name="BPU Robotics Club"
+                    title="Decline Reservation"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >close</span
+                    >
+                    <span>Reject</span>
+                  </button>
+                  <button
+                    class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+                    title="Inspect Application Details"
+                  >
+                    <span class="material-symbols-outlined text-[20px]"
+                      >more_vert</span
+                    >
+                  </button>
+                </div>
+              </div>
+            </div>
+            <!-- Application 4: Dept. Mathematics -->
+            <div
+              class="relative bg-surface-container-lowest rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md"
+              id="card-BPU-9122"
+            >
+              <!-- Institutional Left Amber Strip -->
+              <div
+                class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary"
+              ></div>
+              <div
+                class="p-space-md pl-space-lg flex flex-col xl:flex-row xl:items-center justify-between gap-space-md"
+              >
+                <!-- Requester & Location Meta -->
+                <div
+                  class="flex flex-col md:flex-row md:items-start gap-space-md flex-1"
+                >
+                  <div class="flex-shrink-0">
+                    <span
+                      class="px-space-xs py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm tracking-wide"
+                    >
+                      #BPU-9122
+                    </span>
+                  </div>
+                  <div class="space-y-1 flex-1">
+                    <div class="flex flex-wrap items-center gap-space-xs">
+                      <h3
+                        class="font-headline-sm text-headline-sm text-on-surface font-bold"
+                      >
+                        Dept. Mathematics
+                      </h3>
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm"
+                        >Academic Faculty</span
+                      >
+                      <span
+                        class="px-space-xs py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-label-sm font-medium flex items-center gap-0.5"
+                      >
+                        <span class="material-symbols-outlined text-[14px]"
+                          >groups</span
+                        >
+                        Public Campus Event
+                      </span>
+                    </div>
+                    <div
+                      class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-space-md gap-y-1 pt-space-xs text-on-surface-variant font-body-sm text-body-sm"
+                    >
+                      <div class="flex items-center gap-1">
+                        <span
+                          class="material-symbols-outlined text-[16px] text-primary"
+                          >meeting_room</span
+                        >
+                        <span class="font-semibold text-on-surface"
+                          >Hall A</span
+                        >
+                        <span>(Auditorium)</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <span
+                          class="material-symbols-outlined text-[16px] text-secondary"
+                          >calendar_today</span
+                        >
+                        <span class="font-semibold text-on-surface"
+                          >Oct 29, 2024</span
+                        >
+                        <span>1:00 PM – 3:00 PM</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <span
+                          class="material-symbols-outlined text-[16px] text-tertiary"
+                          >category</span
+                        >
+                        <span>Purpose:</span>
+                        <span class="font-semibold text-on-surface"
+                          >Guest Lecture Series</span
+                        >
+                      </div>
+                    </div>
+                    <div
+                      class="pt-space-xs flex flex-wrap items-center gap-space-xs font-body-sm text-body-sm text-on-surface-variant"
+                    >
+                      <span
+                        class="font-label-sm text-label-sm text-on-tertiary-fixed-variant"
+                        >Allocated Assets:</span
+                      >
+                      <span
+                        class="bg-surface-container-high px-2 py-0.5 rounded text-on-surface font-medium"
+                        >Stage Podiums (2)</span
+                      >
+                      <span
+                        class="bg-surface-container-high px-2 py-0.5 rounded text-on-surface font-medium"
+                        >Full Audio PA Array</span
+                      >
+                      <span
+                        class="bg-surface-container-high px-2 py-0.5 rounded text-on-surface font-medium"
+                        >Live Broadcast Cam</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <!-- Decision Strip Actions -->
+                <div
+                  class="flex items-center gap-space-xs justify-end flex-shrink-0 pt-space-xs xl:pt-0"
+                >
+                  <button
+                    class="btn-approve-req flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-lowest text-[#15803D] hover:bg-[#DCFCE7] shadow-sm font-label-lg transition-all"
+                    data-id="BPU-9122"
+                    data-name="Dept. Mathematics"
+                    title="Approve Reservation"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >check</span
+                    >
+                    <span>Approve</span>
+                  </button>
+                  <button
+                    class="btn-reject-req flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-lowest text-error hover:bg-error-container shadow-sm font-label-lg transition-all"
+                    data-id="BPU-9122"
+                    data-name="Dept. Mathematics"
+                    title="Decline Reservation"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >close</span
+                    >
+                    <span>Reject</span>
+                  </button>
+                  <button
+                    class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+                    title="Inspect Application Details"
+                  >
+                    <span class="material-symbols-outlined text-[20px]"
+                      >more_vert</span
+                    >
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Tab 2 Viewport: Facility State & Maintenance Toggle (Hidden on start) -->
+          <div
+            class="hidden space-y-space-md mb-space-lg"
+            id="view-maintenance"
+          >
+            <div
+              class="bg-surface-container-lowest p-space-md rounded-lg shadow-sm"
+            >
+              <div
+                class="flex flex-col md:flex-row md:items-center justify-between pb-space-sm gap-space-sm"
+              >
+                <div>
+                  <h3 class="font-headline-sm text-headline-sm text-on-surface">
+                    Campus Facility State Grid
+                  </h3>
+                  <p class="font-body-sm text-body-sm text-on-surface-variant">
+                    Switch physical spaces between operational booking,
+                    sanitization, and lockouts.
+                  </p>
+                </div>
+                <div class="flex items-center gap-space-xs">
+                  <span
+                    class="font-label-sm text-label-sm text-on-surface-variant"
+                    >Filter Wing:</span
+                  >
+                  <select
+                    class="bg-surface-container px-2.5 py-1.5 rounded text-label-md text-on-surface focus:outline-none"
+                  >
+                    <option>All Sectors (18 Rooms)</option>
+                    <option>Science Wing B</option>
+                    <option>Tech Hall</option>
+                    <option>Humanities Complex</option>
+                    <option>Engineering Wing</option>
+                  </select>
+                </div>
+              </div>
+              <!-- Quick Maintenance Roster -->
+              <div
+                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-md pt-space-xs"
+              >
+                <!-- Room Item 1 -->
+                <div
+                  class="p-space-md rounded-lg bg-surface-container flex flex-col justify-between space-y-space-sm"
+                >
+                  <div class="flex items-start justify-between">
+                    <div>
+                      <span
+                        class="font-headline-sm text-headline-sm text-on-surface font-bold"
+                        >Room 102</span
+                      >
+                      <p
+                        class="font-body-sm text-body-sm text-on-surface-variant"
+                      >
+                        Science Wing B • Cap: 36
+                      </p>
+                    </div>
+                    <span
+                      class="px-2 py-0.5 rounded text-label-sm bg-[#DCFCE7] text-[#15803D] font-bold"
+                      >AVAILABLE</span
+                    >
+                  </div>
+                  <div class="flex items-center justify-between pt-space-xs">
+                    <span
+                      class="font-label-sm text-label-sm text-on-surface-variant"
+                      >Lockout Override</span
+                    >
+                    <button
+                      class="btn-toggle-facility px-3 py-1 rounded bg-surface-container-highest text-on-surface hover:bg-outline-variant font-label-md transition-colors"
+                      data-room-name="Room 102"
+                    >
+                      Set Maintenance
+                    </button>
+                  </div>
+                </div>
+                <!-- Room Item 2 -->
+                <div
+                  class="p-space-md rounded-lg bg-surface-container flex flex-col justify-between space-y-space-sm"
+                >
+                  <div class="flex items-start justify-between">
+                    <div>
+                      <span
+                        class="font-headline-sm text-headline-sm text-on-surface font-bold"
+                        >Room 310</span
+                      >
+                      <p
+                        class="font-body-sm text-body-sm text-on-surface-variant"
+                      >
+                        Humanities Complex • Cap: 50
+                      </p>
+                    </div>
+                    <span
+                      class="px-2 py-0.5 rounded text-label-sm bg-surface-container-highest text-tertiary font-bold"
+                      >MAINTENANCE</span
+                    >
+                  </div>
+                  <div class="flex items-center justify-between pt-space-xs">
+                    <span
+                      class="font-label-sm text-label-sm text-on-surface-variant"
+                      >HVAC Cleared</span
+                    >
+                    <button
+                      class="px-3 py-1 rounded bg-primary-container text-on-primary font-label-md shadow-sm transition-colors"
+                    >
+                      Toggle Available
+                    </button>
+                  </div>
+                </div>
+                <!-- Room Item 3 -->
+                <div
+                  class="p-space-md rounded-lg bg-surface-container flex flex-col justify-between space-y-space-sm"
+                >
+                  <div class="flex items-start justify-between">
+                    <div>
+                      <span
+                        class="font-headline-sm text-headline-sm text-on-surface font-bold"
+                        >Hall A (Auditorium)</span
+                      >
+                      <p
+                        class="font-body-sm text-body-sm text-on-surface-variant"
+                      >
+                        Central Quad • Cap: 420
+                      </p>
+                    </div>
+                    <span
+                      class="px-2 py-0.5 rounded text-label-sm bg-[#DCFCE7] text-[#15803D] font-bold"
+                      >AVAILABLE</span
+                    >
+                  </div>
+                  <div class="flex items-center justify-between pt-space-xs">
+                    <span
+                      class="font-label-sm text-label-sm text-on-surface-variant"
+                      >A/V Rig Status</span
+                    >
+                    <button
+                      class="btn-toggle-facility px-3 py-1 rounded bg-surface-container-highest text-on-surface hover:bg-outline-variant font-label-md transition-colors"
+                      data-room-name="Hall A"
+                    >
+                      Set Maintenance
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Facility State Quick Toggle Banner Section -->
+          <div
+            class="relative bg-surface-container-lowest rounded-lg shadow-sm overflow-hidden mb-space-lg"
+            id="room-310-banner"
+          >
+            <!-- Crimson/Amber Institutional Attention Strip -->
+            <div
+              class="absolute left-0 top-0 bottom-0 w-2 bg-secondary-container"
+            ></div>
+            <div
+              class="p-space-lg pl-space-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-md"
+            >
+              <div class="flex items-start gap-space-md max-w-3xl">
+                <div
+                  class="p-2.5 rounded-xl bg-secondary-container/20 text-secondary flex-shrink-0 mt-1"
+                >
+                  <span class="material-symbols-outlined text-[28px]"
+                    >notification_important</span
+                  >
+                </div>
+                <div class="space-y-1">
+                  <div class="flex items-center gap-space-xs">
+                    <span
+                      class="px-2 py-0.5 rounded text-label-sm font-bold bg-secondary-container text-on-secondary-container"
+                      >INSTANT ACTION READY</span
+                    >
+                    <span
+                      class="font-label-sm text-label-sm text-on-surface-variant font-semibold"
+                      >Humanities Complex</span
+                    >
+                  </div>
+                  <h2
+                    class="font-headline-sm text-headline-sm text-primary font-bold"
+                  >
+                    Instant Facility Action • Room 310 State Alert
+                  </h2>
+                  <p class="font-body-md text-body-md text-on-surface-variant">
+                    Servicing complete for Humanities 310 HVAC. Technician
+                    inspection verified by Operations Lead. Room is currently
+                    tagged Offline.
+                  </p>
+                </div>
+              </div>
+              <!-- Maroon CTA with Gold Accent -->
+              <div class="flex-shrink-0 w-full lg:w-auto">
+                <button
+                  class="w-full lg:w-auto flex items-center justify-center gap-space-sm px-space-lg py-3 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-lg shadow-md transition-all group"
+                  id="btn-toggle-310"
+                >
+                  <span
+                    class="material-symbols-outlined text-[20px] text-secondary-container group-hover:rotate-45 transition-transform"
+                    >power_settings_new</span
+                  >
+                  <span>Toggle Room 310 to Available (Active)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- Operational Audit Footer Notes -->
+          <div
+            class="bg-surface-container p-space-md rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between text-on-surface-variant gap-space-sm"
+          >
+            <div
+              class="flex items-center gap-space-xs font-body-sm text-body-sm"
+            >
+              <span class="material-symbols-outlined text-[16px] text-secondary"
+                >policy</span
+              >
+              <span
+                >Polytechnic Dispatch Protocol: Approvals automatically notify
+                Campus Security &amp; Facilities Access Keycard Servers.</span
+              >
+            </div>
+            <div
+              class="flex items-center gap-space-md font-label-sm text-label-sm"
+            >
+              <span>Registrar Desk: Ext. 4021</span>
+              <span class="text-outline-variant">•</span>
+              <span>BPU Facilities Helpdesk: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script src="js/db.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/staff-queue.js"></script>
+  </body>
+</html>
