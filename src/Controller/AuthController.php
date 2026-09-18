@@ -48,46 +48,7 @@ class AuthController
     // POST /api/auth/register
     // ---------------------------------------------------------------
 
-    public function register(): never
-    {
-        $body = $this->jsonBody();
 
-        $name     = trim($body['name']     ?? '');
-        $email    = trim($body['email']    ?? '');
-        $password = trim($body['password'] ?? '');
-
-        if ($name === '' || $email === '' || $password === '') {
-            Response::error('name, email and password are required.', 422);
-        }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            Response::error('Invalid email format.', 422);
-        }
-        if (strlen($password) < 8) {
-            Response::error('Password must be at least 8 characters.', 422);
-        }
-
-        try {
-            $hash = password_hash($password, PASSWORD_BCRYPT);
-            // Default role is Customer. is_verified doesn't matter anymore, but we set it to 1 just in case.
-            $user = $this->users->create($name, $email, $hash, 'Customer');
-            $this->users->markVerified($user['user_id']); // Ensure it's 1
-        } catch (PDOException $e) {
-            if (str_starts_with((string) $e->getCode(), '23')) {
-                Response::error('This email is already registered.', 409);
-            }
-            throw $e;
-        }
-
-        Auth::login($user['user_id'], $user['role']);
-        unset($user['password_hash'], $user['otp_code'], $user['otp_expires_at']);
-        
-        Response::json([
-            'message' => 'Account created successfully.',
-            'user'    => $user,
-            'role'    => $user['role'],
-            'user_id' => $user['user_id']
-        ], 201);
-    }
 
     // ---------------------------------------------------------------
     // POST /api/auth/login
@@ -108,6 +69,25 @@ class AuthController
 
         if ($user === null || empty($user['password_hash']) || !password_verify($password, $user['password_hash'])) {
             Response::error('Invalid email or password.', 401);
+        }
+        
+        if (!(bool)$user['is_verified']) {
+            $otp  = $this->issueOtp($user['user_id']);
+            $sent = Mailer::sendOtp($email, $user['name'], $otp);
+            
+            $payload = [
+                'error' => 'Please verify your email address to continue.',
+                'email' => $email,
+                'requires_verification' => true
+            ];
+            
+            if (!$sent || empty($_ENV['SMTP_HOST'] ?? '') || empty($_ENV['SMTP_USER'] ?? '')) {
+                $payload['dev_otp']  = $otp;
+                $payload['dev_note'] = 'SMTP not configured — OTP returned for development use only.';
+            }
+
+            Response::json($payload, 403);
+            exit;
         }
 
         Auth::login($user['user_id'], $user['role']);

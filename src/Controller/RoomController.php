@@ -32,6 +32,11 @@ class RoomController
         Auth::requireRole(['Customer', 'Staff', 'Admin']);
 
         $rooms = $this->rooms->findAllActive();
+        foreach ($rooms as &$room) {
+            $room['next_available'] = $this->reservations->getNextAvailableSlot($room['room_id']);
+        }
+        unset($room);
+        
         Response::json($rooms);
     }
 

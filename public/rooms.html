@@ -13,8 +13,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>CampusRoom — Dashboard | BPU Facility Gateway</title>
-    <meta name="description" content="View and book available academic facilities at Buenavista Polytechnic University in real time." />
+    <title>CampusRoom — Rooms | BPU Facility Gateway</title>
+    <meta name="description" content="View all academic facilities and their real-time availability." />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap"
@@ -313,8 +313,7 @@
       >
         <div class="flex flex-col w-full">
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-            <!-- Main Content Area: Search, Filters & Live Room Grid -->
-            <div class="lg:col-span-8 xl:col-span-9 flex flex-col gap-space-lg">
+            <div class="lg:col-span-12 xl:col-span-12 flex flex-col gap-space-lg">
               <!-- Operational Header Banner with Micro Metrics -->
               <div
                 class="bg-surface-container-lowest p-space-lg rounded shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-space-md"
@@ -338,43 +337,166 @@
                   </p>
                 </div>
                 <div class="flex items-center gap-space-sm shrink-0">
-                  <a
+                  <button
                     class="inline-flex items-center gap-space-xs px-space-md py-space-sm bg-secondary-container text-on-secondary-container font-label-lg text-label-lg rounded shadow-sm hover:opacity-95 transition-all"
-                    href="rooms.html"
+                    type="button"
+                    id="quickReserveBtn"
                   >
                     <span class="material-symbols-outlined text-[18px]"
                       >bolt</span
                     >
                     <span>Quick Reserve</span>
-                  </a>
-                  <a
+                  </button>
+                  <button
                     class="inline-flex items-center gap-space-xs px-space-md py-space-sm bg-primary-container text-on-primary font-label-lg text-label-lg rounded hover:bg-primary transition-all"
-                    href="rooms.html"
+                    btn-book-room
+                    type="button"
+                    id="newRequestBtn"
                   >
                     <span class="material-symbols-outlined text-[18px]"
                       >add_circle</span
                     >
                     <span>New Request</span>
-                  </a>
+                  </button>
                 </div>
               </div>
-              <!-- Reservation Summary Cards -->
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter mt-space-md" id="dashboardSummary">
-                <div class="bg-surface-container-lowest p-space-lg rounded shadow-sm flex flex-col items-center justify-center text-center gap-space-sm">
-                  <span class="material-symbols-outlined text-[32px] text-primary">event</span>
-                  <p class="font-headline-md text-headline-md text-on-surface" id="summaryUpcoming">0</p>
-                  <p class="font-label-md text-label-md text-on-surface-variant">Upcoming Reservations</p>
+              <!-- Search & Structured Filter Bar -->
+              <div
+                class="bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-md"
+              >
+                <!-- Main Search Input -->
+                <div class="relative w-full">
+                  <span
+                    class="material-symbols-outlined absolute left-space-md top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]"
+                    >search</span
+                  >
+                  <input
+                    class="w-full pl-10 pr-space-md py-space-sm bg-surface-container-low text-on-surface placeholder:text-on-tertiary-container font-body-md text-body-md rounded focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-secondary transition-all"
+                    id="roomSearchInput"
+                    placeholder="Search rooms by hall, room number, or equipment: e.g. 4K Projector, Lab benches..."
+                    type="text"
+                  />
                 </div>
-                <div class="bg-surface-container-lowest p-space-lg rounded shadow-sm flex flex-col items-center justify-center text-center gap-space-sm">
-                  <span class="material-symbols-outlined text-[32px] text-secondary">history</span>
-                  <p class="font-headline-md text-headline-md text-on-surface" id="summaryPast">0</p>
-                  <p class="font-label-md text-label-md text-on-surface-variant">Past Reservations</p>
+                <!-- Facet Dropdowns and Counter Indicator -->
+                <div
+                  class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-space-sm items-center"
+                >
+                  <div class="relative">
+                    <label class="sr-only" for="floorFilter">Filter Floor</label>
+                    <select
+                      class="w-full bg-surface-container-low py-space-xs px-space-sm text-on-surface font-label-md text-label-md rounded focus:outline-none focus:ring-2 focus:ring-primary-container appearance-none pr-8"
+                      id="floorFilter"
+                    >
+                      <option value="all">All Floors</option>
+                      <!-- Dynamically populated -->
+                    </select>
+                    <span
+                      class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]"
+                      >expand_more</span
+                    >
+                  </div>
+                  <div class="relative">
+                    <label class="sr-only" for="roomTypeFilter">Filter Room Type</label>
+                    <select
+                      class="w-full bg-surface-container-low py-space-xs px-space-sm text-on-surface font-label-md text-label-md rounded focus:outline-none focus:ring-2 focus:ring-primary-container appearance-none pr-8"
+                      id="roomTypeFilter"
+                    >
+                      <option value="all">Any Room Type</option>
+                      <!-- Dynamically populated -->
+                    </select>
+                    <span
+                      class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]"
+                      >expand_more</span
+                    >
+                  </div>
+                  <div class="relative">
+                    <label class="sr-only" for="statusFilter">Filter Status</label>
+                    <select
+                      class="w-full bg-surface-container-low py-space-xs px-space-sm text-on-surface font-label-md text-label-md rounded focus:outline-none focus:ring-2 focus:ring-primary-container appearance-none pr-8"
+                      id="statusFilter"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="available">Available Now</option>
+                      <option value="occupied">Occupied</option>
+                      <option value="maintenance">Under Maintenance</option>
+                    </select>
+                    <span
+                      class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]"
+                      >expand_more</span
+                    >
+                  </div>
+                  <div
+                    class="flex items-center justify-between sm:justify-end gap-space-xs px-space-xs"
+                  >
+                    <span
+                      class="font-label-sm text-label-sm text-on-surface-variant"
+                      >Showing
+                      <strong class="text-on-surface" id="visibleRoomsCount"
+                        >6</strong
+                      >
+                      of <strong class="text-on-surface" id="totalRoomsCount">6</strong> rooms</span
+                    >
+                    <button
+                      class="text-secondary hover:text-primary font-label-sm text-label-sm underline ml-1"
+                      id="resetFilters"
+                      type="button"
+                    >
+                      Reset
+                    </button>
+                  </div>
                 </div>
-                <div class="bg-surface-container-lowest p-space-lg rounded shadow-sm flex flex-col items-center justify-center text-center gap-space-sm">
-                  <span class="material-symbols-outlined text-[32px] text-[#D97706]">pending_actions</span>
-                  <p class="font-headline-md text-headline-md text-on-surface" id="summaryPending">0</p>
-                  <p class="font-label-md text-label-md text-on-surface-variant">Pending Approvals</p>
-                </div>
+              </div>
+              <!-- Live Room Availability Grid -->
+              <div
+                class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-gutter"
+                id="roomGrid"
+              >
+                <!-- Dynamically populated by JS -->
+              </div>
+              
+              <!-- Pagination Controls -->
+              <div class="hidden flex-wrap items-center justify-center gap-space-sm mt-space-md w-full" id="paginationControls">
+                <button
+                  class="px-space-md py-space-sm bg-surface-container hover:bg-surface-dim text-on-surface font-label-md rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  id="prevPageBtn"
+                  type="button"
+                >
+                  <span class="material-symbols-outlined align-middle text-[18px]">chevron_left</span> Previous
+                </button>
+                <span class="font-label-md text-on-surface-variant mx-space-sm" id="pageIndicator">Page 1 of 1</span>
+                <button
+                  class="px-space-md py-space-sm bg-surface-container hover:bg-surface-dim text-on-surface font-label-md rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  id="nextPageBtn"
+                  type="button"
+                >
+                  Next <span class="material-symbols-outlined align-middle text-[18px]">chevron_right</span>
+                </button>
+              </div>
+              <!-- No match fallback state (hidden by default) -->
+              <div
+                class="hidden bg-surface-container-lowest p-space-xl rounded text-center shadow-sm flex-col items-center justify-center gap-space-sm"
+                id="noResultsNotice"
+              >
+                <span class="material-symbols-outlined text-[48px] text-outline"
+                  >search_off</span
+                >
+                <p class="font-headline-sm text-headline-sm text-on-surface">
+                  No Facilities Match Your Filter Criteria
+                </p>
+                <p
+                  class="font-body-md text-body-md text-on-surface-variant max-w-md"
+                >
+                  Try expanding capacity boundaries, clearing specific building
+                  tags, or searching with broader keywords.
+                </p>
+                <button
+                  class="px-space-md py-space-sm bg-primary-container text-on-primary font-label-lg text-label-lg rounded mt-space-xs"
+                  btn-book-room
+                  id="clearAllFiltersBtn"
+                  type="button"
+                >
+                  Clear All Filters
+                </button>
               </div>
             </div>
             <!-- Right-Hand Column: Notices/Announcement Panel -->
@@ -468,218 +590,12 @@
                         <span
                           class="font-body-sm text-body-sm text-on-primary-fixed-variant"
                           >Campus-wide verified events</span
-                        >
-                      </div>
-                    </div>
-                    <span
-                      class="px-2 py-0.5 bg-primary-container text-on-primary font-label-sm text-label-sm font-bold rounded"
-                      >48 Scheduled</span
-                    >
-                  </div>
-                </div>
-                <!-- Inline Visual: Room Utilization SVG Sparkline Chart -->
-                <div
-                  class="p-space-sm bg-surface-container rounded flex flex-col gap-1 mt-1"
-                >
-                  <div
-                    class="flex items-center justify-between font-label-sm text-label-sm"
-                  >
-                    <span class="text-on-surface-variant font-medium"
-                      >Campus Capacity Utilization</span
-                    >
-                    <span class="text-primary font-bold">78% Peak</span>
-                  </div>
-                  <div class="w-full h-12 flex items-end pt-2">
-                    <svg
-                      class="w-full h-full text-primary-container"
-                      fill="none"
-                      preserveaspectratio="none"
-                      viewbox="0 0 200 40"
-                    >
-                      <path
-                        d="M0 35 Q 25 32, 50 20 T 100 12 T 150 6 T 200 18"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-linecap="round"
-                        stroke-width="2.5"
-                      ></path>
-                      <path
-                        d="M0 35 Q 25 32, 50 20 T 100 12 T 150 6 T 200 18 L 200 40 L 0 40 Z"
-                        fill="currentColor"
-                        fill-opacity="0.12"
-                      ></path>
-                      <circle
-                        class="fill-secondary stroke-white"
-                        cx="150"
-                        cy="6"
-                        r="3"
-                        stroke-width="1.5"
-                      ></circle>
-                    </svg>
-                  </div>
-                  <div
-                    class="flex justify-between text-[10px] text-on-tertiary-container font-medium px-1"
-                  >
-                    <span>08:00 AM</span>
-                    <span>12:00 PM (Peak)</span>
-                    <span>06:00 PM</span>
-                  </div>
-                </div>
-                <!-- Next Reservation Feature Mini Card -->
-                <div class="pt-space-xs">
-                  <span
-                    class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold block mb-space-xs"
-                    >My Next Reservation</span
-                  >
-                  <div
-                    class="p-space-md rounded bg-surface-container border-l-4 border-primary-container flex flex-col gap-space-xs"
-                  >
-                    <div class="flex items-center justify-between">
-                      <span
-                        class="font-headline-sm text-headline-sm text-on-surface"
-                        >Tech Hall North 204</span
-                      >
-                      <span
-                        class="px-2 py-0.5 bg-primary-container text-on-primary text-[10px] font-bold rounded uppercase tracking-wider"
-                        >Confirmed</span
-                      >
-                    </div>
-                    <div
-                      class="flex items-center gap-1.5 text-on-surface font-label-md text-label-md"
-                    >
-                      <span
-                        class="material-symbols-outlined text-primary text-[18px]"
-                        >calendar_clock</span
-                      >
-                      <span>Today at 2:00 PM – 3:30 PM</span>
-                    </div>
-                    <p
-                      class="font-body-sm text-body-sm text-on-surface-variant"
-                    >
-                      Faculty Council Prep &amp; Curriculum Review with Dept
-                      Chairs.
-                    </p>
-                    <div class="pt-2 flex items-center justify-between">
-                      <a
-                        class="text-primary hover:text-primary-container font-label-sm text-label-sm font-semibold flex items-center gap-0.5"
-                        href="#"
-                      >
-                        <span>Manage Permit</span>
-                        <span class="material-symbols-outlined text-[14px]"
-                          >arrow_forward</span
-                        >
-                      </a>
-                      <span
-                        class="text-[11px] text-on-tertiary-container font-mono"
-                        >ID: #RES-9402</span
-                      >
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="notice-stack flex flex-col gap-space-sm">
-                <!-- Campus Facilities Notice -->
-                <div
-                  class="bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-sm"
-                >
-                <span
-                  class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold"
-                  >Campus Facilities Notice</span
-                >
-                <div
-                  class="flex gap-space-sm items-start bg-surface-container-low p-space-sm rounded"
-                >
-                  <span
-                    class="material-symbols-outlined text-secondary text-[20px] shrink-0 mt-0.5"
-                    >construction</span
-                  >
-                  <div class="flex flex-col">
-                    <span
-                      class="font-label-md text-label-md text-on-surface font-semibold"
-                      >Tech Hall North HVAC Routine</span
-                    >
-                    <span
-                      class="font-body-sm text-body-sm text-on-surface-variant"
-                      >Scheduled duct cleaning on Saturday, Oct 26 from 6:00 AM
-                      to 12:00 PM. Bookings during this interval are
-                      automatically relocated.</span
-                    >
-                  </div>
-                </div>
-                </div>
-                <!-- Department Chair Notice Widget -->
-                <div
-                  class="bg-surface-container-lowest p-space-md rounded shadow-sm flex items-start gap-space-sm"
-                >
-                <span
-                  class="material-symbols-outlined text-secondary-container text-[24px] shrink-0 mt-0.5"
-                  >info</span
-                >
-                <div class="flex flex-col">
-                  <span
-                    class="font-label-md text-label-md font-bold text-on-surface"
-                    >Midterm Exams Blockout Period</span
-                  >
-                  <p
-                    class="font-body-sm text-body-sm text-on-surface-variant mt-0.5"
-                  >
-                    Main Quad and Science Hall auditorium tiers enter Registrar
-                    Priority Lockdown starting next Monday. External seminars
-                    must be booked 72h ahead.
-                  </p>
-                </div>
-                </div>
-              </div>
-              <!-- Policy and assistance footer -->
-              <div class="policy-assistance-footer pt-space-xs flex flex-col gap-space-xs">
-                <span
-                  class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold"
-                  >Policy &amp; Assistance</span
-                >
-                <a
-                  class="p-space-sm rounded bg-surface-container-low hover:bg-surface-container text-on-surface flex items-center justify-between transition-colors"
-                  href="#"
-                >
-                  <span class="flex items-center gap-2">
-                    <span
-                      class="material-symbols-outlined text-secondary text-[20px]"
-                      >menu_book</span
-                    >
-                    <span class="font-label-md text-label-md font-semibold"
-                      >BPU Space Policy Handbook</span
-                    >
-                  </span>
-                  <span
-                    class="material-symbols-outlined text-on-surface-variant text-[18px]"
-                    >open_in_new</span
-                  >
-                </a>
-                <a
-                  class="p-space-sm rounded bg-surface-container-low hover:bg-surface-container text-on-surface flex items-center justify-between transition-colors"
-                  href="#"
-                >
-                  <span class="flex items-center gap-2">
-                    <span
-                      class="material-symbols-outlined text-error text-[20px]"
-                      >emergency</span
-                    >
-                    <span class="font-label-md text-label-md font-semibold"
-                      >Facility Emergency Hotline</span
-                    >
-                  </span>
-                  <span
-                    class="material-symbols-outlined text-on-surface-variant text-[18px]"
-                    >call</span
-                  >
-                </a>
-              </div>
-            </div>
           </div>
         </div>
       </main>
     </div>
 
     <script src="js/app.js"></script>
-    <script src="js/dashboard.js"></script>
+    <script src="js/rooms.js"></script>
   </body>
 </html>

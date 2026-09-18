@@ -69,8 +69,7 @@ $uri = rtrim($uri, '/') ?: '/';
 // Named captures (?P<name>...) are passed to the callable as arguments.
 
 $routes = [
-    // Auth — registration & login
-    ['POST', '#^/api/auth/register$#',    fn() => (new AuthController())->register()],
+    // Auth — login
     ['POST', '#^/api/auth/login$#',       fn() => (new AuthController())->login()],
     ['POST', '#^/api/auth/verify-otp$#',  fn() => (new AuthController())->verifyOtp()],
     ['POST', '#^/api/auth/resend-otp$#',  fn() => (new AuthController())->resendOtp()],
@@ -88,6 +87,7 @@ $routes = [
     ['GET',   '#^/api/reservations/mine$#',          fn() => (new ReservationController())->mine()],
     ['GET',   '#^/api/reservations$#',               fn() => (new ReservationController())->index()],
     ['POST',  '#^/api/reservations$#',               fn() => (new ReservationController())->store()],
+    ['PATCH', '#^/api/reservations/(?P<id>[^/]+)/cancel$#', fn(string $id) => (new ReservationController())->cancel($id)],
     ['PATCH', '#^/api/reservations/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->update($id)],
 
     // Users (Admin)

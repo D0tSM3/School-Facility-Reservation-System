@@ -47,20 +47,6 @@ class UserRepository
         return $row ?: null;
     }
 
-    /** Find a user by their Google sub (unique Google ID). */
-    public function findByGoogleId(string $googleId): ?array
-    {
-        $stmt = $this->db->query(
-            'SELECT user_id, name, email, google_id, role, created_at
-               FROM Users
-              WHERE google_id = :google_id
-              LIMIT 1',
-            [':google_id' => $googleId]
-        );
-        $row = $stmt->fetch();
-        return $row ?: null;
-    }
-
     /** Find a user by primary key (public fields — no password/OTP). */
     public function findById(string $userId): ?array
     {
@@ -111,35 +97,6 @@ class UserRepository
             'UPDATE Users SET is_verified = 1, otp_code = NULL, otp_expires_at = NULL WHERE user_id = :uid',
             [':uid' => $userId]
         );
-    }
-
-    /**
-     * Create a new user from Google OAuth (no password).
-     * If a user already exists with this email, links their google_id instead.
-     */
-    public function createFromGoogle(string $googleId, string $email, string $name): array
-    {
-        // If email already exists (old password account), just link google_id
-        $existing = $this->findByEmail($email);
-        if ($existing !== null) {
-            $this->db->query(
-                'UPDATE Users SET google_id = :google_id WHERE email = :email',
-                [':google_id' => $googleId, ':email' => $email]
-            );
-            return $this->findByEmail($email) ?? [];
-        }
-
-        $this->db->query(
-            'INSERT INTO Users (name, email, google_id, role)
-             VALUES (:name, :email, :google_id, :role)',
-            [
-                ':name'      => $name,
-                ':email'     => $email,
-                ':google_id' => $googleId,
-                ':role'      => 'Customer',
-            ]
-        );
-        return $this->findByEmail($email) ?? [];
     }
 
     /** Return all users (Admin-only). */

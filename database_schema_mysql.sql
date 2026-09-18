@@ -15,6 +15,9 @@ CREATE TABLE Users (
     email         VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role          ENUM('Admin','Staff','Customer') NOT NULL DEFAULT 'Customer',
+    is_verified   TINYINT(1)   NOT NULL DEFAULT 0,
+    otp_code      VARCHAR(6)   NULL,
+    otp_expires_at DATETIME    NULL,
     created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -22,6 +25,8 @@ CREATE TABLE Users (
 CREATE TABLE Rooms (
     room_id    CHAR(36)     NOT NULL PRIMARY KEY DEFAULT (UUID()),
     name       VARCHAR(100) NOT NULL,
+    floor      INT          NULL,
+    room_type  VARCHAR(50)  NULL,
     capacity   INT          NOT NULL CHECK (capacity > 0),
     is_active  TINYINT(1)   NOT NULL DEFAULT 1,
     status     ENUM('Available','Maintenance') NOT NULL DEFAULT 'Available',

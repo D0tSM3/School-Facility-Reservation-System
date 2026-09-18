@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CampusRoom — Authentication & Account Registration Logic
  * Handles user sign in, registration validation, and password strength checks.
  */
@@ -6,8 +6,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
-  const DB = window.CampusRoomDB;
-  if (!DB) return;
+
 
   // ==========================================
   // 1. Sign In Page Logic
@@ -30,22 +29,37 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const user = DB.findUserByEmail(email);
+      const BASE = window.location.pathname.replace(/[^\/]*$/, '');
+      fetch(BASE + 'api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
+      .then(res => res.json().then(json => ({ status: res.status, json })))
+      .then(({ status, json }) => {
+        const payload = json.data || {};
+        if (status === 200) {
+          hideLoginError();
 
-      // Verify credentials
-      if (user && (user.password_hash === password || password === '••••••••••••' || password === 'password123' || password === 'staff123')) {
-        hideLoginError();
-        DB.setCurrentUser(user);
-
-        // Redirect based on role
-        if (user.role === 'Staff') {
-          window.location.href = 'staff-queue.html';
+          
+          if (payload.role === 'Admin') {
+            window.location.href = 'admin-governance.html';
+          } else if (payload.role === 'Staff') {
+            window.location.href = 'staff-queue.html';
+          } else {
+            window.location.href = 'dashboard.html';
+          }
+        } else if (status === 403 && payload.requires_verification) {
+          sessionStorage.setItem('otp_email', payload.email);
+          if (payload.dev_otp) sessionStorage.setItem('dev_otp', payload.dev_otp);
+          window.location.href = 'verify.html';
         } else {
-          window.location.href = 'dashboard.html';
+          showLoginError(payload.error || json.error || 'Authentication failed: Invalid credentials provided.');
         }
-      } else {
-        showLoginError('Authentication failed: Invalid credentials provided. Please verify your faculty/student institutional ID or password.');
-      }
+      })
+      .catch((err) => {
+        showLoginError('Network error. Please try again later.');
+      });
     });
 
     function showLoginError(msg) {
@@ -69,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
       demoCustomerBtn.addEventListener('click', () => {
         const emailInput = document.getElementById('bpu-email');
         const passwordInput = document.getElementById('bpu-password');
-        if (emailInput) emailInput.value = 'm.garcia@bpu.edu';
+        if (emailInput) emailInput.value = 'customer@bpu.edu.ph';
         if (passwordInput) passwordInput.value = 'password123';
         loginForm.dispatchEvent(new Event('submit'));
       });
@@ -80,8 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
       demoStaffBtn.addEventListener('click', () => {
         const emailInput = document.getElementById('bpu-email');
         const passwordInput = document.getElementById('bpu-password');
-        if (emailInput) emailInput.value = 'staff@bpu.edu';
-        if (passwordInput) passwordInput.value = 'staff123';
+        if (emailInput) emailInput.value = 'staff@bpu.edu.ph';
+        if (passwordInput) passwordInput.value = 'password123';
         loginForm.dispatchEvent(new Event('submit'));
       });
     }
@@ -171,50 +185,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const fullName = fullNameInput ? fullNameInput.value.trim() : '';
       const email = emailInput ? emailInput.value.trim() : '';
-      const department = departmentSelect ? departmentSelect.value : '';
-      const idNumber = idNumberInput ? idNumberInput.value.trim() : '';
       const password = passwordInput ? passwordInput.value : '';
       const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
-
-      // Validate email domain
-      if (!email.toLowerCase().endsWith('@bpu.edu') && !email.toLowerCase().endsWith('@student.bpu.edu')) {
-        showRegisterError('Registration requires an institutional email address ending in @bpu.edu or @student.bpu.edu.');
-        return;
-      }
-
-      // Validate passwords
-      if (password.length < 8) {
-        showRegisterError('Password must be at least 8 characters in length.');
-        return;
-      }
 
       if (password !== confirmPassword) {
         showRegisterError('Password and confirmation password do not match.');
         return;
       }
 
-      const role = (department === 'ADMIN' || idNumber.includes('STAFF')) ? 'Staff' : 'Customer';
-
-      try {
-        const newUser = DB.createUser({
-          name: fullName,
-          email: email,
-          password: password,
-          department: department,
-          id_number: idNumber,
-          role: role
-        });
-
-        DB.setCurrentUser(newUser);
-
-        if (role === 'Staff') {
-          window.location.href = 'staff-queue.html';
+      const BASE = window.location.pathname.replace(/[^\/]*$/, '');
+      fetch(BASE + 'api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: fullName, email, password })
+      })
+      .then(res => res.json().then(data => ({ status: res.status, data })))
+      .then(({ status, data }) => {
+        if (status === 201) {
+          sessionStorage.setItem('otp_email', data.email);
+          if (data.dev_otp) {
+            sessionStorage.setItem('dev_otp', data.dev_otp);
+          }
+          window.location.href = 'verify.html';
         } else {
-          window.location.href = 'dashboard.html';
+          showRegisterError(data.error || 'An error occurred during account registration.');
         }
-      } catch (err) {
-        showRegisterError(err.message || 'An error occurred during account registration.');
-      }
+      })
+      .catch(err => {
+        showRegisterError('Network error. Please try again later.');
+      });
     });
 
     function showRegisterError(msg) {

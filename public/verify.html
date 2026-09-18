@@ -195,12 +195,13 @@
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({email: email, otp: otp}),
     })
-    .then(function(res){ return res.json().then(function(d){ return {status: res.status, data: d}; }); })
+    .then(function(res){ return res.json().then(function(d){ return {status: res.status, json: d}; }); })
     .then(function(r){
-      if (r.status === 200 && r.data.user_id) {
+      var payload = r.json.data || {};
+      if (r.status === 200 && payload.user_id) {
         sessionStorage.removeItem('otp_email');
         sessionStorage.removeItem('dev_otp');
-        var role = r.data.role;
+        var role = payload.role;
         if (role === 'Admin') {
           window.location.replace(BASE + 'admin-governance.html');
         } else if (role === 'Staff') {
@@ -210,7 +211,7 @@
         }
         return;
       }
-      showError(r.data.error || 'Verification failed. Please try again.');
+      showError(payload.error || r.json.error || 'Verification failed. Please try again.');
       inputs.forEach(function(i){ i.value = ''; });
       inputs[0].focus();
     })
@@ -245,9 +246,10 @@
     })
     .then(function(res){ return res.json().then(function(d){ return {status: res.status, data: d}; }); })
     .then(function(r){
-      if (r.data.dev_otp) {
-        sessionStorage.setItem('dev_otp', r.data.dev_otp);
-        document.getElementById('devOtpDisplay').textContent = r.data.dev_otp;
+      var payload = r.data.data || {};
+      if (payload.dev_otp) {
+        sessionStorage.setItem('dev_otp', payload.dev_otp);
+        document.getElementById('devOtpDisplay').textContent = payload.dev_otp;
         document.getElementById('devBanner').classList.remove('hidden');
       }
       startCooldown();

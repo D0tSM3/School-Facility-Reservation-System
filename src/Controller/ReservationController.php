@@ -154,6 +154,42 @@ class ReservationController
     }
 
     // ---------------------------------------------------------------
+    // Customer: PATCH /api/reservations/{id}/cancel
+    // ---------------------------------------------------------------
+
+    public function cancel(string $reservationId): never
+    {
+        Auth::requireRole(['Customer']);
+
+        $existing = $this->reservations->findById($reservationId);
+        if ($existing === null) {
+            Response::error('Reservation not found.', 404);
+        }
+
+        // Only allow cancelling if it belongs to the user and is still Pending
+        if ($existing['customer_id'] !== Auth::userId()) {
+            Response::error('Forbidden.', 403);
+        }
+
+        if ($existing['status'] !== 'Pending') {
+            Response::error('Only pending reservations can be cancelled.', 422);
+        }
+
+        $reservation = $this->reservations->updateStatus(
+            $reservationId,
+            'Cancelled',
+            Auth::userId()
+        );
+
+        $this->reservations->insertLog(
+            Auth::userId(),
+            "Reservation {$reservationId} cancelled by customer"
+        );
+
+        Response::json($reservation);
+    }
+
+    // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------
 

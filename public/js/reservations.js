@@ -1,16 +1,6 @@
-﻿/**
- * CampusRoom — My Reservations Management
- * Handles status tab filtering, search, interactive cancellation, and schedule export.
- */
-
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
-  const DB = window.CampusRoomDB;
-  if (!DB) return;
-
-  const currentUser = DB.getCurrentUser();
-  const isAdmin = currentUser && currentUser.role === 'Admin';
   const tabs = document.querySelectorAll('.filter-tab');
   const reservationList = document.getElementById('reservationList');
   const searchInput = document.getElementById('reservationSearch');
@@ -23,11 +13,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const exportSlipBtn = document.getElementById('exportSlipBtn');
 
   let currentTargetCard = null;
+  let currentTargetReservationId = null;
   let activeFilter = 'all';
+  let allReservations = [];
 
-  const reservations = isAdmin
-    ? DB.getReservations()
-    : DB.getReservations(currentUser ? currentUser.user_id : null);
+  const BASE = window.location.pathname.replace(/[^\/]*$/, '');
+
+  function fetchReservations() {
+    fetch(BASE + 'api/reservations/mine')
+      .then(res => res.json())
+      .then(json => {
+        if (json.success && json.data) {
+          allReservations = json.data;
+          renderReservations();
+          applyFilters();
+        }
+      })
+      .catch(err => console.error('Error fetching reservations:', err));
+  }
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>'"]/g, character => ({
@@ -56,39 +59,41 @@ document.addEventListener('DOMContentLoaded', () => {
       : date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   }
 
-  function statusLabel(status) {
-    return status === 'Pending' ? 'Pending Review' : status;
-  }
-
   function renderReservations() {
     if (!reservationList) return;
 
-    reservationList.innerHTML = reservations.map(reservation => {
+    reservationList.innerHTML = allReservations.map(reservation => {
       const date = formatDate(reservation.start_time);
-      const room = DB.getRoomById(reservation.room_id);
-      const owner = isAdmin
-        ? `<span>Requester: ${escapeHtml(reservation.customer_name || reservation.customer_id)}</span><span>•</span>`
-        : '';
-      const canCancel = !isAdmin && reservation.status === 'Pending';
+      // Determine strictly if it's past
+      const isPast = new Date(reservation.end_time) < new Date();
+      
+      const canCancel = reservation.status === 'Pending';
       const statusClass = reservation.status === 'Approved'
         ? 'bg-[#DCFCE7] text-[#15803D]'
-        : reservation.status === 'Rejected'
+        : reservation.status === 'Rejected' || reservation.status === 'Cancelled'
           ? 'bg-[#FEE2E2] text-[#B91C1C]'
           : reservation.status === 'Completed'
             ? 'bg-[#F1F5F9] text-[#475569]'
             : 'bg-[#FEF3C7] text-[#B45309]';
       const statusIcon = reservation.status === 'Approved'
         ? 'check_circle'
-        : reservation.status === 'Rejected'
+        : reservation.status === 'Rejected' || reservation.status === 'Cancelled'
           ? 'error'
           : reservation.status === 'Completed'
             ? 'check_circle'
             : 'schedule';
+            
       const action = canCancel
-        ? `<button class="px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm cancel-trigger" data-permit="${escapeHtml(reservation.reservation_id)}"><span class="material-symbols-outlined text-[16px]">cancel</span><span>Cancel Booking</span></button>`
+        ? `<button class="px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm cancel-trigger" data-id="${escapeHtml(reservation.reservation_id)}" data-permit="${escapeHtml(reservation.reservation_id)}"><span class="material-symbols-outlined text-[16px]">cancel</span><span>Cancel Booking</span></button>`
         : `<span class="p-space-sm text-on-surface-variant" title="Reservation details"><span class="material-symbols-outlined text-[20px]">visibility</span></span>`;
 
-      return `<div data-status="${escapeHtml(reservation.status.toLowerCase())}" class="reservation-card bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md">
+      // Define filter status
+      let filterStatus = reservation.status.toLowerCase();
+      if (isPast && reservation.status !== 'Rejected' && reservation.status !== 'Cancelled') {
+         filterStatus = 'history';
+      }
+
+      return `<div data-status="${escapeHtml(filterStatus)}" class="reservation-card bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md">
           <div class="flex items-start gap-space-md">
             <div class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center">
@@ -97,13 +102,13 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="flex flex-col space-y-space-xs">
               <div class="flex items-center gap-space-sm flex-wrap">
-                <span class="font-label-md text-label-md text-primary font-bold">${escapeHtml(reservation.code || reservation.reservation_id)}</span>
-                <span class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold ${statusClass} flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">${statusIcon}</span>${escapeHtml(statusLabel(reservation.status))}</span>
+                <span class="font-label-md text-label-md text-primary font-bold">REQ-${escapeHtml(reservation.reservation_id).substring(0,8)}</span>
+                <span class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold ${statusClass} flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">${statusIcon}</span>${escapeHtml(reservation.status)}</span>
                 <span class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span>${formatTime(reservation.start_time)} - ${formatTime(reservation.end_time)}</span>
               </div>
               <div class="font-headline-sm text-headline-sm text-on-surface font-semibold">${escapeHtml(reservation.purpose)}</div>
               <div class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant flex-wrap">
-                ${owner}<span class="flex items-center gap-1 font-medium text-on-surface"><span class="material-symbols-outlined text-[16px] text-secondary">meeting_room</span>${escapeHtml(room ? room.name : reservation.room_id)}</span><span>•</span><span>Capacity: ${escapeHtml(room ? room.capacity : 'N/A')} pax</span>
+                <span class="flex items-center gap-1 font-medium text-on-surface"><span class="material-symbols-outlined text-[16px] text-secondary">meeting_room</span>${escapeHtml(reservation.room_name || reservation.room_id)}</span>
               </div>
             </div>
           </div>
@@ -111,32 +116,38 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       </div>`;
     }).join('');
-  }
 
-  renderReservations();
-
-  const cards = document.querySelectorAll('.reservation-card');
-
-  // Navigation Redirect for New Reservation
-  if (newReservationBtn) {
-    newReservationBtn.addEventListener('click', () => {
-      window.location.href = 'book-room.html';
+    // Reattach listeners
+    document.querySelectorAll('.cancel-trigger').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const permit = btn.getAttribute('data-permit') || '#BPU-XXXX';
+        const id = btn.getAttribute('data-id');
+        if (modalPermitCode) modalPermitCode.textContent = 'REQ-' + permit.substring(0,8);
+        currentTargetCard = btn.closest('.reservation-card');
+        currentTargetReservationId = id;
+        if (modal) modal.classList.remove('hidden');
+      });
     });
   }
 
-  // Export Schedule Slip
+  if (newReservationBtn) {
+    newReservationBtn.addEventListener('click', () => {
+      window.location.href = 'rooms.html';
+    });
+  }
+
   if (exportSlipBtn) {
     exportSlipBtn.addEventListener('click', () => {
       let csv = 'Permit,Venue,Purpose,Start Time,End Time,Status\n';
-      reservations.forEach(r => {
-        csv += `"${r.code}","${r.room_id}","${r.purpose}","${r.start_time}","${r.end_time}","${r.status}"\n`;
+      allReservations.forEach(r => {
+        csv += `"REQ-${r.reservation_id.substring(0,8)}","${r.room_name || r.room_id}","${r.purpose}","${r.start_time}","${r.end_time}","${r.status}"\n`;
       });
-
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `BPU_Schedule_Permits_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `Reservations_${new Date().toISOString().slice(0, 10)}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -146,12 +157,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function applyFilters() {
     const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
+    const cards = document.querySelectorAll('.reservation-card');
 
     cards.forEach(card => {
       const cardStatus = (card.getAttribute('data-status') || '').toLowerCase();
       const text = card.textContent.toLowerCase();
 
-      const matchesFilter = (activeFilter === 'all') || (cardStatus === activeFilter);
+      // For "approved", let's make it match "approved"
+      // For "pending", let's make it match "pending"
+      // For "history", match "history" OR "completed" OR "rejected" OR "cancelled"
+      let matchesFilter = false;
+      if (activeFilter === 'all') matchesFilter = true;
+      else if (activeFilter === 'history') {
+        matchesFilter = ['history', 'completed', 'rejected', 'cancelled'].includes(cardStatus);
+      }
+      else {
+        matchesFilter = (cardStatus === activeFilter);
+      }
+
       const matchesSearch = !query || text.includes(query);
 
       if (matchesFilter && matchesSearch) {
@@ -182,19 +205,10 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', applyFilters);
   }
 
-  document.querySelectorAll('.cancel-trigger').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const permit = btn.getAttribute('data-permit') || '#BPU-XXXX';
-      if (modalPermitCode) modalPermitCode.textContent = permit;
-      currentTargetCard = btn.closest('.reservation-card');
-      if (modal) modal.classList.remove('hidden');
-    });
-  });
-
   function closeModal() {
     if (modal) modal.classList.add('hidden');
     currentTargetCard = null;
+    currentTargetReservationId = null;
   }
 
   if (modalClose) modalClose.addEventListener('click', closeModal);
@@ -202,29 +216,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (modalConfirm) {
     modalConfirm.addEventListener('click', () => {
-      if (currentTargetCard) {
-        const permit = modalPermitCode ? modalPermitCode.textContent : '';
-        DB.cancelReservation(permit);
-
-        currentTargetCard.style.opacity = '0.45';
-        currentTargetCard.setAttribute('data-status', 'history');
-        currentTargetCard.className = currentTargetCard.className.replace(/status-border-\w+/, 'status-border-rejected');
-
-        const cancelBtn = currentTargetCard.querySelector('.cancel-trigger');
-        if (cancelBtn) {
-          cancelBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">done</span><span>Cancelled</span>';
-          cancelBtn.disabled = true;
-          cancelBtn.className = 'px-space-md py-space-sm bg-[#64748B] text-white font-label-sm text-label-sm font-semibold rounded shadow-sm cursor-not-allowed flex items-center gap-1';
-        }
-
-        const statusPill = currentTargetCard.querySelector('.font-label-sm.font-bold');
-        if (statusPill) {
-          statusPill.textContent = 'Cancelled by User';
-          statusPill.className = 'px-2 py-0.5 rounded font-label-sm text-label-sm font-bold bg-[#FEE2E2] text-[#B91C1C] flex items-center gap-1';
-        }
+      if (currentTargetReservationId) {
+        fetch(BASE + 'api/reservations/' + currentTargetReservationId + '/cancel', {
+          method: 'PATCH'
+        })
+        .then(res => res.json())
+        .then(json => {
+           if (json.success) {
+             fetchReservations(); // reload entirely
+           } else {
+             alert(json.error || 'Failed to cancel reservation');
+           }
+        })
+        .catch(err => {
+           console.error(err);
+           alert('Network error');
+        });
       }
       closeModal();
-      applyFilters();
     });
   }
+
+  fetchReservations();
 });

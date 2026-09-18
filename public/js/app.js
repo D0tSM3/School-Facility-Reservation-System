@@ -6,39 +6,56 @@
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
-  const DB = window.CampusRoomDB;
-  if (!DB) return;
+  const BASE = window.location.pathname.replace(/[^\/]*$/, '');
 
-  const currentUser = DB.getCurrentUser();
-  const role = currentUser ? String(currentUser.role || '').toLowerCase() : '';
-  const staffLink = document.querySelector('aside nav a[data-path="staff-queue"]');
-  const adminLink = document.querySelector('aside nav a[data-path="admin-governance"]');
+  // 1. Fetch real session info
+  fetch(BASE + 'api/auth/me', { credentials: 'include' })
+    .then(res => res.json())
+    .then(json => {
+      const currentUser = json.success ? json.data : null;
+      if (!currentUser) return; // Not logged in or error
 
-  if (staffLink) {
-    const canViewStaffQueue = role === 'staff' || role === 'admin';
-    staffLink.hidden = !canViewStaffQueue;
-    staffLink.style.setProperty('display', canViewStaffQueue ? 'flex' : 'none', 'important');
-  }
-  if (adminLink) {
-    const canViewAdminGovernance = role === 'admin';
-    adminLink.hidden = !canViewAdminGovernance;
-    adminLink.style.setProperty('display', canViewAdminGovernance ? 'flex' : 'none', 'important');
-  }
+      const role = String(currentUser.role || '').toLowerCase();
+      
+      const staffLink = document.querySelector('aside nav a[data-path="staff-queue"]');
+      const adminLink = document.querySelector('aside nav a[data-path="admin-governance"]');
 
-  // 1. Update Profile Header if present
-  const headerUserName = document.querySelector('header .font-label-md.text-on-surface');
-  const headerUserRole = document.querySelector('header .font-label-sm.text-primary');
+      if (staffLink) {
+        const canViewStaffQueue = role === 'staff' || role === 'admin';
+        staffLink.hidden = !canViewStaffQueue;
+        staffLink.style.setProperty('display', canViewStaffQueue ? 'flex' : 'none', 'important');
+      }
+      if (adminLink) {
+        const canViewAdminGovernance = role === 'admin';
+        adminLink.hidden = !canViewAdminGovernance;
+        adminLink.style.setProperty('display', canViewAdminGovernance ? 'flex' : 'none', 'important');
+      }
 
-  if (currentUser && headerUserName) {
-    headerUserName.textContent = currentUser.name;
-    if (headerUserRole) {
-      headerUserRole.textContent = currentUser.role === 'Staff' || currentUser.role === 'Admin'
-        ? `${currentUser.role} / Registrar`
-        : 'Faculty / Academic';
-    }
-  }
+      // 2. Update Profile Header if present
+      const headerUserName = document.querySelector('header .font-label-md.text-on-surface');
+      const headerUserRole = document.querySelector('header .font-label-sm.text-primary');
 
-  // 2. Highlight Active Navigation Link & Ensure Correct Relative URLs
+      if (headerUserName) {
+        headerUserName.textContent = currentUser.name;
+        if (headerUserRole) {
+          headerUserRole.textContent = currentUser.role === 'Staff' || currentUser.role === 'Admin'
+            ? `${currentUser.role} / Registrar`
+            : 'Faculty / Academic';
+        }
+        
+        // Update initials
+        const headerInitials = document.querySelector('.header-initials');
+        if (headerInitials) {
+          const parts = currentUser.name.split(' ').filter(p => p.toLowerCase() !== 'dr.');
+          const initial1 = parts[0] ? parts[0][0] : '';
+          const initial2 = parts.length > 1 ? parts[parts.length - 1][0] : '';
+          headerInitials.textContent = (initial1 + initial2).toUpperCase();
+        }
+      }
+    })
+    .catch(err => console.error('Failed to fetch user session', err));
+
+  // 3. Highlight Active Navigation Link & Ensure Correct Relative URLs
   const currentPath = window.location.pathname.toLowerCase();
   const navLinks = document.querySelectorAll('aside nav a');
 
@@ -49,25 +66,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dataPath === 'customer-dashboard') {
       link.setAttribute('href', 'dashboard.html');
     } else if (dataPath === 'rooms') {
-      link.setAttribute('href', 'book-room.html');
-    } else if (dataPath === 'my-reservations') {
-      link.setAttribute('href', 'my-reservations.html');
-    } else if (dataPath === 'staff-queue') {
-      link.setAttribute('href', 'staff-queue.html');
-    } else if (dataPath === 'admin-governance') {
-      link.setAttribute('href', 'admin-governance.html');
+      link.setAttribute('href', 'rooms.html');
     }
 
+    const href = link.getAttribute('href');
+    if (!href || href === '#') return;
+
     let isActive = false;
-    if (currentPath.includes('dashboard.html') && dataPath === 'customer-dashboard') {
+    const isDashboard = currentPath.endsWith('/') || currentPath.endsWith('/dashboard.html');
+
+    if (dataPath === 'customer-dashboard' && isDashboard) {
       isActive = true;
-    } else if (currentPath.includes('book-room.html') && dataPath === 'rooms') {
-      isActive = true;
-    } else if (currentPath.includes('my-reservations.html') && dataPath === 'my-reservations') {
-      isActive = true;
-    } else if (currentPath.includes('staff-queue.html') && dataPath === 'staff-queue') {
-      isActive = true;
-    } else if (currentPath.includes('admin-governance.html') && dataPath === 'admin-governance') {
+    } else if (dataPath !== 'customer-dashboard' && href !== 'dashboard.html' && currentPath.includes(href.toLowerCase())) {
       isActive = true;
     }
 
@@ -80,57 +90,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 3. User Role Switcher in Sidebar Footer
+  // 4. Logout Footer
   const aside = document.querySelector('aside');
-  if (aside && !document.getElementById('role-switcher-banner')) {
-    const switcherDiv = document.createElement('div');
-    switcherDiv.id = 'role-switcher-banner';
-    switcherDiv.className = 'p-space-sm bg-tertiary border-t border-white/10 text-xs flex flex-col gap-1.5';
+  if (aside && !document.getElementById('logout-banner')) {
+    const logoutDiv = document.createElement('div');
+    logoutDiv.id = 'logout-banner';
+    logoutDiv.className = 'p-space-sm bg-tertiary border-t border-white/10 text-xs flex justify-end';
     
-    const roleTitle = document.createElement('div');
-    roleTitle.className = 'flex items-center justify-between text-tertiary-fixed-dim font-label-sm';
-    roleTitle.innerHTML = `<span>Session: <strong>${currentUser ? currentUser.role : 'Guest'}</strong></span>`;
-
-    const btnContainer = document.createElement('div');
-    btnContainer.className = 'flex gap-1';
-
-    const custBtn = document.createElement('button');
-    custBtn.className = 'flex-1 py-1 px-1.5 rounded text-[11px] bg-white/10 hover:bg-white/20 text-white transition-colors';
-    custBtn.textContent = 'Customer';
-    custBtn.title = 'Switch to Dr. Edgardo Valderama';
-    custBtn.addEventListener('click', () => {
-      const users = DB.getUsers();
-      const cust = users.find(u => u.role === 'Customer') || users[0];
-      DB.setCurrentUser(cust);
-      window.location.reload();
-    });
-
-    const staffBtn = document.createElement('button');
-    staffBtn.className = 'flex-1 py-1 px-1.5 rounded text-[11px] bg-white/10 hover:bg-white/20 text-white transition-colors';
-    staffBtn.textContent = 'Staff Desk';
-    staffBtn.title = 'Switch to Facilities Staff Desk';
-    staffBtn.addEventListener('click', () => {
-      const users = DB.getUsers();
-      const staff = users.find(u => u.role === 'Staff') || users[1];
-      DB.setCurrentUser(staff);
-      window.location.href = 'staff-queue.html';
-    });
-
     const logoutBtn = document.createElement('button');
-    logoutBtn.className = 'py-1 px-2 rounded text-[11px] bg-red-900/60 hover:bg-red-800 text-white transition-colors flex items-center justify-center';
-    logoutBtn.innerHTML = '<span class="material-symbols-outlined text-[14px]">logout</span>';
+    logoutBtn.className = 'py-1 px-2 rounded text-[11px] bg-red-900/60 hover:bg-red-800 text-white transition-colors flex items-center justify-center gap-1';
+    logoutBtn.innerHTML = '<span class="material-symbols-outlined text-[14px]">logout</span><span>Sign Out</span>';
     logoutBtn.title = 'Sign Out';
     logoutBtn.addEventListener('click', () => {
-      DB.logout();
-      window.location.href = 'index.html';
+      fetch(BASE + 'api/auth/logout', { method: 'POST', credentials: 'include' })
+        .then(() => { window.location.href = 'index.html'; })
+        .catch(err => {
+          console.error(err);
+          window.location.href = 'index.html';
+        });
     });
 
-    btnContainer.appendChild(custBtn);
-    btnContainer.appendChild(staffBtn);
-    btnContainer.appendChild(logoutBtn);
-
-    switcherDiv.appendChild(roleTitle);
-    switcherDiv.appendChild(btnContainer);
-    aside.appendChild(switcherDiv);
+    logoutDiv.appendChild(logoutBtn);
+    aside.appendChild(logoutDiv);
   }
 });

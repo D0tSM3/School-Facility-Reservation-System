@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CampusRoom — Staff Dispatch & Room Maintenance Queue
  * Handles booking approvals, rejections, batch sign-offs, and room maintenance toggles.
  */
@@ -6,8 +6,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
-  const DB = window.CampusRoomDB;
-  if (!DB) return;
+  const BASE = window.location.pathname.replace(/[^\/]*$/, '');
 
   const tabPending = document.getElementById('tab-pending');
   const tabMaintenance = document.getElementById('tab-maintenance');
@@ -74,6 +73,34 @@ document.addEventListener('DOMContentLoaded', () => {
     if (authKpi) authKpi.textContent = authorizedCount.toString();
   }
 
+  function apiUpdateReservation(id, status, callback) {
+    fetch(BASE + 'api/reservations/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    })
+    .then(res => res.json())
+    .then(json => {
+      if (json.success) callback(true);
+      else callback(false, json.error);
+    })
+    .catch(err => callback(false, err));
+  }
+
+  function apiUpdateRoom(id, status, callback) {
+    fetch(BASE + 'api/rooms/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    })
+    .then(res => res.json())
+    .then(json => {
+      if (json.success) callback(true);
+      else callback(false, json.error);
+    })
+    .catch(err => callback(false, err));
+  }
+
   const approveButtons = document.querySelectorAll('.btn-approve-req');
   approveButtons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -83,12 +110,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (card) {
         card.style.opacity = '0.3';
-        setTimeout(() => {
-          card.remove();
-          updateCounters(-1, 1);
-          DB.updateReservationStatus(id, 'Approved');
-          showToast(`Application ${id} (${name}) Approved. Electronic permit and keycard permissions dispatched.`);
-        }, 250);
+        apiUpdateReservation(id, 'Approved', (success) => {
+          if (success) {
+            card.remove();
+            updateCounters(-1, 1);
+            showToast(`Application ${id} (${name}) Approved. Electronic permit and keycard permissions dispatched.`);
+          } else {
+            card.style.opacity = '1';
+            showToast(`Failed to approve ${id}`);
+          }
+        });
       }
     });
   });
@@ -102,12 +133,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (card) {
         card.style.opacity = '0.3';
-        setTimeout(() => {
-          card.remove();
-          updateCounters(-1, 0);
-          DB.updateReservationStatus(id, 'Rejected');
-          showToast(`Application ${id} (${name}) Rejected. Institutional notice sent to requester.`);
-        }, 250);
+        apiUpdateReservation(id, 'Rejected', (success) => {
+          if (success) {
+            card.remove();
+            updateCounters(-1, 0);
+            showToast(`Application ${id} (${name}) Rejected. Institutional notice sent to requester.`);
+          } else {
+            card.style.opacity = '1';
+            showToast(`Failed to reject ${id}`);
+          }
+        });
       }
     });
   });
@@ -118,16 +153,36 @@ document.addEventListener('DOMContentLoaded', () => {
       const card2 = document.getElementById('card-BPU-9105');
       let removed = 0;
 
-      if (card1) { card1.remove(); removed++; DB.updateReservationStatus('BPU-9102', 'Approved'); }
-      if (card2) { card2.remove(); removed++; DB.updateReservationStatus('BPU-9105', 'Approved'); }
+      const finishBatch = () => {
+        if (removed > 0) {
+          updateCounters(-removed, removed);
+          batchApproveBtn.textContent = 'Batch Completed';
+          batchApproveBtn.classList.add('opacity-50', 'pointer-events-none');
+          showToast(`Batch approved verified faculty reservations (#BPU-9102, #BPU-9105). Digital door schedules updated.`);
+        } else {
+          showToast('No pending verified reservations available for batch approval.');
+        }
+      };
 
-      if (removed > 0) {
-        updateCounters(-removed, removed);
-        batchApproveBtn.textContent = 'Batch Completed';
-        batchApproveBtn.classList.add('opacity-50', 'pointer-events-none');
-        showToast(`Batch approved verified faculty reservations (#BPU-9102, #BPU-9105). Digital door schedules updated.`);
+      if (card1) {
+        apiUpdateReservation('BPU-9102', 'Approved', (ok) => {
+           if(ok) { card1.remove(); removed++; }
+           if(card2) {
+              apiUpdateReservation('BPU-9105', 'Approved', (ok2) => {
+                if(ok2) { card2.remove(); removed++; }
+                finishBatch();
+              });
+           } else {
+              finishBatch();
+           }
+        });
+      } else if (card2) {
+        apiUpdateReservation('BPU-9105', 'Approved', (ok) => {
+           if(ok) { card2.remove(); removed++; }
+           finishBatch();
+        });
       } else {
-        showToast('No pending verified reservations available for batch approval.');
+        finishBatch();
       }
     });
   }
@@ -146,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toggle310Btn.classList.replace('bg-primary', 'bg-[#15803D]');
         toggle310Btn.classList.add('pointer-events-none');
 
-        DB.updateRoom('rm-mq-310', { status: 'Available' });
+        apiUpdateRoom('rm-mq-310', 'Available', () => {});
         showToast('Room 310 restored to Available in the master campus database.');
       }
     });
@@ -161,12 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (btn.textContent.includes('Maintenance')) {
         btn.textContent = 'Set Available';
         btn.classList.replace('bg-surface-container-highest', 'bg-secondary-fixed');
-        if (roomId) DB.updateRoom(roomId, { status: 'Maintenance' });
+        if (roomId) apiUpdateRoom(roomId, 'Maintenance', () => {});
         showToast(`${roomName} flagged for maintenance inspection.`);
       } else {
         btn.textContent = 'Set Maintenance';
         btn.classList.replace('bg-secondary-fixed', 'bg-surface-container-highest');
-        if (roomId) DB.updateRoom(roomId, { status: 'Available' });
+        if (roomId) apiUpdateRoom(roomId, 'Available', () => {});
         showToast(`${roomName} restored to available booking inventory.`);
       }
     });
@@ -174,22 +229,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (exportLogBtn) {
     exportLogBtn.addEventListener('click', () => {
-      const logs = DB.getSystemLogs();
-      let csv = 'Log ID,User ID,Action,Timestamp\n';
-      logs.forEach(l => {
-        csv += `"${l.log_id}","${l.user_id || 'System'}","${l.action_type}","${l.timestamp}"\n`;
-      });
+      fetch(BASE + 'api/logs')
+        .then(res => res.json())
+        .then(json => {
+           if(!json.success) { showToast('Error fetching logs'); return; }
+           const logs = json.data;
+           let csv = 'Log ID,User ID,Action,Timestamp\n';
+           logs.forEach(l => {
+             csv += `"${l.log_id}","${l.user_id || 'System'}","${l.action}"\n`;
+           });
 
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `BPU_Dispatch_Log_${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast('Generating BPU dispatch log CSV export for current duty shift...');
+           const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+           const url = URL.createObjectURL(blob);
+           const a = document.createElement('a');
+           a.href = url;
+           a.download = `BPU_Dispatch_Log_${new Date().toISOString().slice(0, 10)}.csv`;
+           document.body.appendChild(a);
+           a.click();
+           document.body.removeChild(a);
+           URL.revokeObjectURL(url);
+           showToast('Generating BPU dispatch log CSV export for current duty shift...');
+        })
+        .catch(() => showToast('Network error fetching logs'));
     });
   }
 });

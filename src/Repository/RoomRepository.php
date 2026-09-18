@@ -27,6 +27,8 @@ class RoomRepository
         $stmt = $this->db->query(
             "SELECT r.room_id,
                     r.name,
+                    r.floor,
+                    r.room_type,
                     r.capacity,
                     r.status,
                     r.is_active,
@@ -51,7 +53,7 @@ class RoomRepository
     public function findById(string $roomId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT room_id, name, capacity, status, is_active, created_at
+            'SELECT room_id, name, floor, room_type, capacity, status, is_active, created_at
                FROM Rooms
               WHERE room_id = :room_id
               LIMIT 1',
@@ -64,15 +66,17 @@ class RoomRepository
     /**
      * Create a new room (Admin-only).
      */
-    public function create(string $name, int $capacity, string $status = 'Available'): array
+    public function create(string $name, int $capacity, string $status = 'Available', ?int $floor = null, ?string $roomType = null): array
     {
         $this->db->query(
-            'INSERT INTO Rooms (name, capacity, status)
-             VALUES (:name, :capacity, :status)',
+            'INSERT INTO Rooms (name, floor, room_type, capacity, status)
+             VALUES (:name, :floor, :room_type, :capacity, :status)',
             [
-                ':name'     => $name,
-                ':capacity' => $capacity,
-                ':status'   => $status,
+                ':name'      => $name,
+                ':floor'     => $floor,
+                ':room_type' => $roomType,
+                ':capacity'  => $capacity,
+                ':status'    => $status,
             ]
         );
         // UUID PKs: lastInsertId() returns empty string; re-fetch by name.
@@ -83,7 +87,7 @@ class RoomRepository
     public function findByName(string $name): ?array
     {
         $stmt = $this->db->query(
-            'SELECT room_id, name, capacity, status, is_active, created_at
+            'SELECT room_id, name, floor, room_type, capacity, status, is_active, created_at
                FROM Rooms
               WHERE name = :name
               LIMIT 1',

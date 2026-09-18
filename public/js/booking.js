@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CampusRoom — Facility Reservation Logic
  * Enforces MySQL overlap-prevention trigger, field validation, and reservation dispatch.
  */
@@ -6,8 +6,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
-  const DB = window.CampusRoomDB;
-  if (!DB) return;
+  const BASE = window.location.pathname.replace(/[^\/]*$/, '');
 
   const form = document.getElementById('roomReservationForm');
   const roomSelect = document.getElementById('roomSelect');
@@ -38,25 +37,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const preselectedRoom = urlParams.get('room');
 
   if (roomSelect) {
-    const rooms = DB.getRooms();
-    roomSelect.innerHTML = '';
-    rooms.forEach(r => {
-      const opt = document.createElement('option');
-      opt.value = r.code || r.room_id;
-      opt.textContent = `${r.building_name} - ${r.name} (${r.room_type} • ${r.capacity} seats)`;
-      if (r.status === 'Maintenance') {
-        opt.textContent += ' [Under Maintenance]';
-        opt.disabled = true;
-      }
-      if (preselectedRoom && (r.room_id === preselectedRoom || r.code === preselectedRoom)) {
-        opt.selected = true;
-      }
-      roomSelect.appendChild(opt);
-    });
+    fetch(BASE + 'api/rooms')
+      .then(res => res.json())
+      .then(json => {
+        if (!json.success || !json.data) return;
+        const rooms = json.data;
+        roomSelect.innerHTML = '';
+        rooms.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.room_id;
+          opt.textContent = `${r.building_name || ''} - ${r.name} (${r.room_type || 'General'} • ${r.capacity} seats)`;
+          if (r.status === 'Maintenance') {
+            opt.textContent += ' [Under Maintenance]';
+            opt.disabled = true;
+          }
+          if (preselectedRoom && (r.room_id === preselectedRoom)) {
+            opt.selected = true;
+          }
+          roomSelect.appendChild(opt);
+        });
 
-    if (!roomSelect.value && roomSelect.options.length > 0) {
-      roomSelect.selectedIndex = 0;
-    }
+        if (!roomSelect.value && roomSelect.options.length > 0) {
+          roomSelect.selectedIndex = 0;
+        }
+      })
+      .catch(err => console.error('Error fetching rooms:', err));
   }
 
   if (resDateInput && !resDateInput.value) {
@@ -102,14 +107,14 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       hideCollisionError();
 
-      const roomId = roomSelect ? roomSelect.value : 'THN-204';
+      const roomId = roomSelect ? roomSelect.value : '';
       const dateVal = resDateInput ? resDateInput.value : '';
       const startVal = startTimeInput ? startTimeInput.value : '';
       const endVal = endTimeInput ? endTimeInput.value : '';
       const purpose = purposeInput ? purposeInput.value.trim() : '';
 
-      if (!dateVal || !startVal || !endVal) {
-        showCollisionError('Please provide a complete date, start time, and end time for the reservation.');
+      if (!roomId || !dateVal || !startVal || !endVal) {
+        showCollisionError('Please provide a room, date, start time, and end time for the reservation.');
         return;
       }
 
@@ -137,38 +142,45 @@ document.addEventListener('DOMContentLoaded', () => {
         if (label) equipmentNotes.push(label.textContent.trim());
       });
 
-      try {
-        const newRes = DB.createReservation({
-          room_id: roomId,
-          purpose: purpose,
-          start_time: startDateTimeStr,
-          end_time: endDateTimeStr,
-          equipment_notes: equipmentNotes.join(', ') || 'Standard Academic Setup'
-        });
+      const payload = {
+        room_id: roomId,
+        purpose: purpose,
+        start_time: startDateTimeStr,
+        end_time: endDateTimeStr,
+        equipment_notes: equipmentNotes.join(', ') || 'Standard Academic Setup'
+      };
 
-        showSuccess(`Reservation Permit Created: ${newRes.code} has been placed in the Staff Dispatch Queue for verification.`);
-
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) {
-          submitBtn.disabled = true;
-          submitBtn.classList.add('opacity-50', 'pointer-events-none');
-          submitBtn.textContent = 'Permit Submitted';
+      fetch(BASE + 'api/reservations', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(json => {
+        if (!json.success) {
+          showCollisionError(json.error || 'Failed to create reservation due to scheduling conflict.');
+        } else {
+          const newRes = json.data;
+          showSuccess(`Reservation Permit Created: REQ-${newRes.reservation_id.substring(0,8)} has been placed in the Staff Dispatch Queue for verification.`);
+          form.reset();
+          if (roomSelect) roomSelect.value = roomId;
+          
+          if (resDateInput) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            resDateInput.value = tomorrow.toISOString().split('T')[0];
+          }
+          if (startTimeInput) startTimeInput.value = '08:00';
+          if (endTimeInput) endTimeInput.value = '10:00';
         }
-
-        setTimeout(() => {
-          window.location.href = 'my-reservations.html';
-        }, 1200);
-
-      } catch (err) {
-        showCollisionError(err.message || 'Scheduling Collision: Room is already booked or pending during this time window.');
-        if (endTimeInput) {
-          endTimeInput.focus();
-          endTimeInput.parentElement.classList.add('animate-pulse');
-          setTimeout(() => {
-            endTimeInput.parentElement.classList.remove('animate-pulse');
-          }, 1000);
-        }
-      }
+      })
+      .catch(err => {
+        console.error('API Error:', err);
+        showCollisionError('A network error occurred while communicating with the facility server.');
+      });
     });
   }
 });
