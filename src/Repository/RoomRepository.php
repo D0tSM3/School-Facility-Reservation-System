@@ -136,13 +136,16 @@ class RoomRepository
     {
         // 1. Fetch Reservations (Pending and Approved only, overlapping the date range)
         $reservationsStmt = $this->db->query(
-            "SELECT reservation_id, customer_name, purpose, start_time, end_time, status
-               FROM Reservations
-              WHERE room_id = :room_id
-                AND status IN ('Pending', 'Approved')
-                AND start_time < :end_date
-                AND end_time > :start_date
-              ORDER BY start_time",
+            "SELECT r.reservation_id,
+                    u.name AS customer_name,
+                    r.purpose, r.start_time, r.end_time, r.status
+               FROM Reservations r
+               JOIN Users u ON u.user_id = r.customer_id
+              WHERE r.room_id = :room_id
+                AND r.status IN ('Pending', 'Approved')
+                AND r.start_time < :end_date
+                AND r.end_time > :start_date
+              ORDER BY r.start_time",
             [
                 ':room_id'    => $roomId,
                 ':start_date' => $startDate . ' 00:00:00',

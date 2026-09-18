@@ -120,7 +120,8 @@ class RoomController
 
     public function getCalendar(string $roomId): never
     {
-        Auth::requireRole(['Staff', 'Admin']);
+        // Allow any logged-in role to view the calendar
+        Auth::requireRole(['Customer', 'Staff', 'Admin']);
         
         $start = $_GET['start'] ?? null;
         $end   = $_GET['end']   ?? null;

@@ -15,7 +15,17 @@ class RoomCalendar {
     const diff = this.currentDate.getDate() - day + (day === 0 ? -6 : 1);
     this.currentDate.setDate(diff);
 
-    this.hours = Array.from({length: 15}, (_, i) => i + 7); // 7 AM to 9 PM
+    this.blocks = [
+      { start: "07:30", label: "7:30 AM" },
+      { start: "09:00", label: "9:00 AM" },
+      { start: "10:30", label: "10:30 AM" },
+      { start: "12:00", label: "12:00 PM" },
+      { start: "13:30", label: "1:30 PM" },
+      { start: "15:00", label: "3:00 PM" },
+      { start: "16:30", label: "4:30 PM" },
+      { start: "18:00", label: "6:00 PM" },
+      { start: "19:30", label: "7:30 PM" }
+    ];
 
     if (!this.container) {
       console.error('RoomCalendar: Container not found');
@@ -28,7 +38,7 @@ class RoomCalendar {
 
   getDatesForWeek() {
     const dates = [];
-    for (let i = 0; i < 6; i++) { // Monday to Saturday
+    for (let i = 0; i < 7; i++) { // Monday to Sunday
       const d = new Date(this.currentDate);
       d.setDate(d.getDate() + i);
       dates.push(d);
@@ -55,21 +65,17 @@ class RoomCalendar {
           </button>
         </div>
         
-        <div class="flex-1 overflow-auto relative min-h-[400px]">
-          <div class="grid grid-cols-7 border-b border-outline-variant sticky top-0 bg-surface-container-lowest z-30 header-grid">
-            <div class="p-2 border-r border-outline-variant font-label-sm text-center text-on-surface-variant bg-surface-container-low">Time</div>
-            <!-- Day headers injected here -->
-          </div>
-          
-          <div class="grid grid-cols-7 relative body-grid">
-            <!-- Time column -->
-            <div class="border-r border-outline-variant bg-surface-container-lowest relative z-10 time-column">
-               <!-- Time labels injected here -->
-            </div>
-            
-            <!-- Day columns -->
-            <!-- Columns injected here -->
-          </div>
+        <div class="flex-1 overflow-auto bg-surface-container-lowest p-4">
+          <table class="w-full border-collapse border border-outline-variant text-center" id="calendarTable">
+            <thead>
+              <tr id="calendarHeaderRow" class="bg-[#FDE68A]">
+                <!-- Headers injected here -->
+              </tr>
+            </thead>
+            <tbody id="calendarBody">
+              <!-- Rows injected here -->
+            </tbody>
+          </table>
         </div>
         
         <div class="px-space-sm py-space-xs border-t border-outline-variant bg-surface-container-low flex gap-space-md flex-wrap">
@@ -115,129 +121,99 @@ class RoomCalendar {
   }
 
   timeToPercent(timeStr) {
-    // timeStr format: "HH:MM:SS" or "HH:MM"
     const parts = timeStr.split(':');
     const h = parseInt(parts[0], 10);
     const m = parseInt(parts[1], 10);
     
-    const startHour = this.hours[0];
-    const totalHours = this.hours.length;
+    const startHour = 7.5; // 7:30 AM
+    const totalHours = 13.5; // 7:30 AM to 9:00 PM
     
-    if (h < startHour) return 0;
-    if (h >= startHour + totalHours) return 100;
+    const decimalHours = h + (m / 60);
+    if (decimalHours <= startHour) return 0;
+    if (decimalHours >= startHour + totalHours) return 100;
     
-    const decimalHours = (h - startHour) + (m / 60);
-    return (decimalHours / totalHours) * 100;
+    return ((decimalHours - startHour) / totalHours) * 100;
   }
 
   renderGrid(dates, data) {
-    const headerGrid = this.container.querySelector('.header-grid');
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     
-    // Clear old headers (keep first col)
-    while (headerGrid.children.length > 1) {
-      headerGrid.removeChild(headerGrid.lastChild);
-    }
+    // Headers
+    const headerRow = this.container.querySelector('#calendarHeaderRow');
+    if (!headerRow) return;
     
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    headerRow.innerHTML = '<th class="p-2 border border-outline-variant font-label-sm font-semibold w-24">Time</th>';
     
-    // Build Headers
     dates.forEach((date, i) => {
       const isToday = this.formatDateYMD(date) === this.formatDateYMD(new Date());
-      const div = document.createElement('div');
-      div.className = `p-2 border-r border-outline-variant font-label-sm text-center ${isToday ? 'text-primary font-bold bg-primary-container/10' : 'text-on-surface'}`;
-      div.innerHTML = `<div>${days[i].substring(0,3)}</div><div class="text-body-sm text-on-surface-variant font-normal">${date.getDate()}</div>`;
-      headerGrid.appendChild(div);
+      const th = document.createElement('th');
+      th.className = `p-2 border border-outline-variant font-label-sm font-semibold ${isToday ? 'bg-primary/20' : ''}`;
+      th.innerHTML = `<div>${days[i]}</div><div class="text-xs font-normal mt-0.5">${date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}</div>`;
+      headerRow.appendChild(th);
     });
 
-    const bodyGrid = this.container.querySelector('.body-grid');
+    // Body
+    const tbody = this.container.querySelector('#calendarBody');
+    tbody.innerHTML = '';
     
-    // Clear old body (keep first col)
-    while (bodyGrid.children.length > 1) {
-      bodyGrid.removeChild(bodyGrid.lastChild);
-    }
-
-    const timeCol = this.container.querySelector('.time-column');
-    timeCol.innerHTML = '';
-    // 60px per hour
-    const hourHeight = 60;
-    timeCol.style.height = `${this.hours.length * hourHeight}px`;
-
-    this.hours.forEach((h, i) => {
-      const div = document.createElement('div');
-      div.className = 'absolute w-full border-b border-outline-variant/30 text-right pr-2 text-[10px] text-on-surface-variant';
-      div.style.top = `${i * hourHeight}px`;
-      div.style.height = `${hourHeight}px`;
+    this.blocks.forEach((block, index) => {
+      const tr = document.createElement('tr');
       
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const dispH = h > 12 ? h - 12 : h;
-      div.textContent = `${dispH} ${ampm}`;
-      timeCol.appendChild(div);
-    });
+      const tdTime = document.createElement('td');
+      tdTime.className = 'p-2 border border-outline-variant font-label-sm font-semibold text-on-surface-variant align-top';
+      const nextBlock = this.blocks[index + 1];
+      const endLabel = nextBlock ? nextBlock.label : '9:00 PM';
+      tdTime.innerHTML = `<div>${block.label}</div><div class="text-xs font-normal mt-0.5">${endLabel}</div>`;
+      tr.appendChild(tdTime);
+      
+      dates.forEach((date, i) => {
+        const dateYMD = this.formatDateYMD(date);
+        const dayName = days[i];
+        
+        const td = document.createElement('td');
+        td.className = 'p-2 border border-outline-variant text-[11px] align-top min-w-[100px] h-20';
+        
+        // Sunday
+        if (dayName === 'Sunday') {
+          td.className += ' bg-surface-container-low';
+          tr.appendChild(td);
+          return;
+        }
 
-    // Generate day columns
-    dates.forEach((date, i) => {
-      const dateYMD = this.formatDateYMD(date);
-      const dayName = days[i];
-      const div = document.createElement('div');
-      div.className = 'relative border-r border-outline-variant/30';
-      div.style.height = `${this.hours.length * hourHeight}px`;
+        const holiday = data.holidays.find(h => h.holiday_date === dateYMD);
+        if (holiday) {
+          td.innerHTML = `<div class="bg-gray-100 text-on-surface-variant p-1 text-center h-full flex flex-col justify-center rounded">
+            <span class="material-symbols-outlined text-[16px] mb-1">celebration</span>
+            <span class="font-bold">${holiday.name}</span>
+          </div>`;
+          tr.appendChild(td);
+          return;
+        }
 
-      // Check holidays
-      const holiday = data.holidays.find(h => h.holiday_date === dateYMD);
-      if (holiday) {
-        const holDiv = document.createElement('div');
-        holDiv.className = 'absolute inset-0 bg-gray-100 flex items-center justify-center text-center p-2 text-on-surface-variant font-label-sm flex-col opacity-80 z-20';
-        holDiv.innerHTML = `<span class="material-symbols-outlined text-[24px] mb-1">celebration</span><span>${holiday.name}</span><span class="text-[10px]">${holiday.type} Holiday</span>`;
-        div.appendChild(holDiv);
-      } else {
-        // Draw grid lines
-        this.hours.forEach((h, j) => {
-          const line = document.createElement('div');
-          line.className = 'absolute w-full border-b border-outline-variant/30';
-          line.style.top = `${j * hourHeight}px`;
-          line.style.height = `${hourHeight}px`;
-          div.appendChild(line);
-        });
-
-        // Add Classes
-        const classes = data.class_schedules.filter(c => c.day_of_week === dayName);
+        // Classes
+        const classes = data.class_schedules.filter(c => c.day_of_week === dayName && c.start_time.startsWith(block.start));
         classes.forEach(c => {
-          const topPct = this.timeToPercent(c.start_time);
-          const bottomPct = this.timeToPercent(c.end_time);
-          if (bottomPct <= 0 || topPct >= 100) return; // out of bounds
-          
-          const ev = document.createElement('div');
-          ev.className = 'absolute left-0 right-0 mx-1 rounded border p-1 overflow-hidden text-[10px] leading-tight bg-blue-50 border-blue-200 text-blue-800 z-10 shadow-sm';
-          ev.style.top = `${topPct}%`;
-          ev.style.height = `${bottomPct - topPct}%`;
-          ev.innerHTML = `<div class="font-bold">${c.course_code} ${c.section}</div>`;
-          div.appendChild(ev);
+          const div = document.createElement('div');
+          div.className = 'bg-blue-50 border border-blue-200 text-blue-800 rounded p-1 mb-1 shadow-sm';
+          div.innerHTML = `<div class="font-bold">${c.course_code}</div><div>${c.section}</div>`;
+          td.appendChild(div);
         });
 
-        // Add Reservations
-        const resList = data.reservations.filter(r => r.start_time.startsWith(dateYMD));
+        // Reservations
+        const resList = data.reservations.filter(r => r.start_time.startsWith(dateYMD) && r.start_time.split(' ')[1].startsWith(block.start));
         resList.forEach(r => {
-          const tStart = r.start_time.split(' ')[1];
-          const tEnd = r.end_time.split(' ')[1];
-          
-          const topPct = this.timeToPercent(tStart);
-          const bottomPct = this.timeToPercent(tEnd);
-          if (bottomPct <= 0 || topPct >= 100) return;
-          
           const isPending = r.status === 'Pending';
           const bgClass = isPending ? 'bg-amber-50 border-amber-200 text-amber-800 border-dashed' : 'bg-[#DCFCE7] border-[#86EFAC] text-[#15803D]';
-          
-          const ev = document.createElement('div');
-          ev.className = `absolute left-0 right-0 mx-1 rounded border p-1 overflow-hidden text-[10px] leading-tight z-20 shadow-sm ${bgClass}`;
-          ev.style.top = `${topPct}%`;
-          ev.style.height = `${bottomPct - topPct}%`;
-          ev.innerHTML = `<div class="font-bold whitespace-nowrap truncate">${r.purpose}</div><div class="truncate">${r.customer_name}</div>`;
-          ev.title = `${r.purpose} (${r.status})`;
-          div.appendChild(ev);
+          const div = document.createElement('div');
+          div.className = `border rounded p-1 mb-1 shadow-sm ${bgClass}`;
+          div.innerHTML = `<div class="font-bold truncate" title="${r.purpose}">${r.purpose}</div><div class="truncate">${r.customer_name}</div>`;
+          td.appendChild(div);
         });
-      }
+        
+        tr.appendChild(td);
+      });
       
-      bodyGrid.appendChild(div);
+      tbody.appendChild(tr);
     });
   }
 }

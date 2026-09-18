@@ -617,83 +617,72 @@
                     </div>
                     <span
                       class="font-label-sm text-label-sm uppercase tracking-wider text-error font-bold flex items-center gap-1"
-                    >
-                      <span class="w-2 h-2 rounded-full bg-error"></span> Timing
-                      Anomaly
-                    </span>
+                    </h3>
                   </div>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
                     <!-- Start Time -->
                     <div class="flex flex-col space-y-space-xs">
-                      <label
-                        class="font-label-sm text-label-sm text-on-surface font-semibold"
-                        for="startTime"
-                      >
+                      <label class="font-label-sm text-label-sm text-on-surface font-semibold" for="startTime">
                         Start Time <span class="text-error">*</span>
                       </label>
                       <div class="relative">
-                        <span
-                          class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-on-surface-variant"
-                          >login</span
-                        >
-                        <input
-                          class="w-full pl-9 pr-3 py-2 bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded shadow-sm focus:outline-none"
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-on-surface-variant">login</span>
+                        <select
+                          class="w-full pl-9 pr-8 py-2 bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded shadow-sm focus:outline-none appearance-none"
                           id="startTime"
-                          type="time"
-                          value="14:00"
                           required
-                        />
-                      </div>
-                      <span
-                        class="font-body-sm text-body-sm text-on-surface-variant"
-                        >Session setup window opens 10m prior</span
-                      >
-                    </div>
-                    <!-- End Time with Explicit Inline Validation Alert -->
-                    <div class="flex flex-col space-y-space-xs">
-                      <label
-                        class="font-label-sm text-label-sm text-error font-bold flex items-center justify-between"
-                        for="endTime"
-                      >
-                        <span>End Time <span class="text-error">*</span></span>
-                        <span class="text-error text-xs font-semibold"
-                          >Invalid Time Order</span
                         >
+                          <option value="">Select Start</option>
+                          <option value="07:30">07:30 AM</option>
+                          <option value="09:00">09:00 AM</option>
+                          <option value="10:30">10:30 AM</option>
+                          <option value="12:00">12:00 PM</option>
+                          <option value="13:30">01:30 PM</option>
+                          <option value="15:00">03:00 PM</option>
+                          <option value="16:30">04:30 PM</option>
+                          <option value="18:00">06:00 PM</option>
+                          <option value="19:30">07:30 PM</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-on-surface-variant">
+                          <span class="material-symbols-outlined text-[20px]">arrow_drop_down</span>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- End Time -->
+                    <div class="flex flex-col space-y-space-xs">
+                      <label class="font-label-sm text-label-sm font-semibold flex items-center justify-between" for="endTime" id="endTimeLabel">
+                        <span>End Time <span class="text-error">*</span></span>
                       </label>
                       <div class="relative">
-                        <span
-                          class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-error"
-                          >logout</span
-                        >
-                        <!-- Highlighting with error container background and solid red visual indicator -->
-                        <input
-                          class="w-full pl-9 pr-3 py-2 bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded shadow-sm focus:outline-none"
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-on-surface-variant" id="endTimeIcon">logout</span>
+                        <select
+                          class="w-full pl-9 pr-8 py-2 bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded shadow-sm focus:outline-none appearance-none"
                           id="endTime"
-                          type="time"
-                          value="16:00"
                           required
-                        />
-                        <span
-                          class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-error text-[18px]"
-                          >error</span
                         >
-                      </div>
-                      <!-- EXPLICIT VALIDATION REQUIREMENT: Highlighted under end-time with red text and visual indicator -->
-                      <div
-                        class="flex items-start gap-space-xs p-space-xs px-space-sm bg-error-container/60 rounded text-error"
-                      >
-                        <span
-                          class="material-symbols-outlined text-[16px] shrink-0 mt-0.5"
-                          >warning</span
-                        >
-                        <p
-                          class="font-label-sm text-label-sm font-bold leading-tight"
-                        >
-                          End time must be after start time. Please select a
-                          valid duration.
-                        </p>
+                          <option value="">Select End</option>
+                          <option value="09:00">09:00 AM</option>
+                          <option value="10:30">10:30 AM</option>
+                          <option value="12:00">12:00 PM</option>
+                          <option value="13:30">01:30 PM</option>
+                          <option value="15:00">03:00 PM</option>
+                          <option value="16:30">04:30 PM</option>
+                          <option value="18:00">06:00 PM</option>
+                          <option value="19:30">07:30 PM</option>
+                          <option value="21:00">09:00 PM</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-on-surface-variant">
+                          <span class="material-symbols-outlined text-[20px]">arrow_drop_down</span>
+                        </div>
                       </div>
                     </div>
+                  </div>
+                  <!-- Error Message Container (Hidden by default) -->
+                  <div id="timeErrorContainer" class="hidden items-start gap-space-xs p-space-xs px-space-sm bg-error-container/60 rounded text-error mt-2">
+                    <span class="material-symbols-outlined text-[16px] shrink-0 mt-0.5">warning</span>
+                    <p class="font-label-sm text-label-sm font-bold leading-tight" id="timeErrorText">
+                      End time must be after start time.
+                    </p>
                   </div>
                 </div>
                 <!-- Field 4: Reservation Purpose Radio Buttons / Pill Selector -->

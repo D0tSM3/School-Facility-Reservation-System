@@ -104,6 +104,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (resDateInput) {
     resDateInput.addEventListener('change', () => {
+      const selectedDate = new Date(resDateInput.value);
+      if (selectedDate.getDay() === 0) {
+        showCollisionError('Sundays are not available for reservation.');
+        resDateInput.value = '';
+      } else {
+        hideCollisionError();
+      }
       updatePurpose();
     });
   }
@@ -114,6 +121,27 @@ document.addEventListener('DOMContentLoaded', () => {
       purposeEdited = true;
     });
   }
+
+  const timeErrorContainer = document.getElementById('timeErrorContainer');
+  const timeErrorText = document.getElementById('timeErrorText');
+  const validateTime = () => {
+    if (startTimeInput && endTimeInput && startTimeInput.value && endTimeInput.value) {
+      if (endTimeInput.value <= startTimeInput.value) {
+        timeErrorContainer.classList.remove('hidden');
+        timeErrorContainer.classList.add('flex');
+        timeErrorText.textContent = 'End time must be after start time.';
+        return false;
+      } else {
+        timeErrorContainer.classList.add('hidden');
+        timeErrorContainer.classList.remove('flex');
+        return true;
+      }
+    }
+    return true;
+  };
+
+  if (startTimeInput) startTimeInput.addEventListener('change', validateTime);
+  if (endTimeInput) endTimeInput.addEventListener('change', validateTime);
 
   function updatePurpose() {
     if (!purposeInput || purposeEdited) return;
@@ -175,6 +203,11 @@ document.addEventListener('DOMContentLoaded', () => {
         showCollisionError('Please provide a room, date, start time, and end time for the reservation.');
         return;
       }
+      
+      if (!validateTime()) {
+        showCollisionError('Please fix the time selection errors.');
+        return;
+      }
 
       if (!purpose) {
         showCollisionError('Please specify the academic purpose for this facility reservation.');
@@ -231,8 +264,8 @@ document.addEventListener('DOMContentLoaded', () => {
             tomorrow.setDate(tomorrow.getDate() + 1);
             resDateInput.value = tomorrow.toISOString().split('T')[0];
           }
-          if (startTimeInput) startTimeInput.value = '08:00';
-          if (endTimeInput) endTimeInput.value = '10:00';
+          if (startTimeInput) startTimeInput.value = '';
+          if (endTimeInput) endTimeInput.value = '';
         }
       })
       .catch(err => {
