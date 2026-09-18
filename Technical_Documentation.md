@@ -1,58 +1,67 @@
-# CampusRoom: Technical Documentation
+# Phase 3 – Required Student Submission: CampusRoom
 
-## 1. Project Overview
-CampusRoom is a web-based facility reservation system for Buenavista Polytechnic University (BPU). It is designed to streamline the booking of instructional spaces, labs, and equipment. The system features role-based access control (RBAC) ensuring that Customers (Students/Faculty), Staff, and Administrators have customized workflows for managing facility usage securely and efficiently.
+## 1. Project Overview & Requirements Met
 
-## 2. Team Contributions
+| Requirement | How We Met It |
+|-------------|---------------|
+| **1. Responsive Interface** | The entire CampusRoom facility gateway is built with responsive Tailwind CSS utilities, adapting properly to desktop, tablet, and mobile views. |
+| **2. JavaScript Functionality** | We have comprehensive JS files (`app.js`, `rooms.js`, `reservations.js`, `booking.js`) demonstrating interactive modals, dynamic room rendering, pagination, and role-based navigation. |
+| **3. API Integration** | The frontend acts as a Single Page Application (SPA)-style interface that communicates with our custom PHP backend REST API endpoints to fetch rooms, reservations, and submit bookings. |
+| **4. AJAX / Fetch** | All data retrieval, form submissions, and status updates (like cancelling a reservation or approving a booking) are done via JavaScript `fetch()` without reloading the page. |
+| **5. Form Validation** | Booking forms prevent scheduling errors (like end-time before start-time), check for required fields, and show dynamic error banners before submission. |
+| **6. Search / Filter** | The Rooms page and Reservations page both feature dynamic search bars and multi-select filters (e.g., filtering by Floor, Room Type, or Status) that update the UI instantly. |
 
-| Team Member Name | Role / Responsibility | Key Contributions |
-|------------------|-----------------------|-------------------|
-| **[Member 1 Name]** | **Project Manager** | Oversaw project timeline, coordinated tasks, ensured alignment with requirements, and managed team communication. |
-| **[Member 2 Name]** | **Frontend Developer** | Designed and implemented the UI using HTML/CSS/JS, integrated responsive layouts, pagination, and dynamic views. |
-| **[Member 3 Name]** | **Backend Developer** | Developed the PHP backend, created the RESTful API endpoints, handled routing, and integrated business logic. |
-| **[Member 4 Name]** | **Database Manager** | Designed the MySQL database schema, wrote SQL queries/triggers, and managed data seeding and CSV imports. |
-| **[Member 5 Name]** | **Security Checker** | Implemented password hashing, managed OTP email verification logic, secured API endpoints, and sanitized inputs. |
+## 2. API Documentation / Notes
 
-## 3. System Architecture
-The application follows a standard Client-Server architecture designed for high performance and low overhead:
-- **Frontend**: Vanilla JavaScript, HTML5, and CSS (Tailwind tokens).
-- **Backend**: PHP (Custom lightweight MVC-style framework).
-- **Database**: MySQL.
+- **API Used**: CampusRoom Internal REST API (Custom PHP Backend)
+- **API Purpose**: To handle authentication, serve facility/room data, and manage reservation creation/approval securely.
+- **API Endpoint(s)**:
+  - `GET /api/rooms` - Fetches all reservable rooms.
+  - `GET /api/reservations/mine` - Retrieves bookings for the logged-in user.
+  - `POST /api/reservations/book` - Submits a new room reservation.
+  - `PATCH /api/reservations/{id}/cancel` - Cancels a pending reservation.
+- **Data retrieved from the API**: JSON payloads containing arrays of room objects (id, name, floor, type, capacity, status) and reservation objects (schedule, purpose, status).
+- **How the API is integrated into the website**: The frontend uses native `fetch()` calls in JavaScript files (e.g., `rooms.js`). Responses are parsed as JSON, and DOM elements are dynamically created to render the grid of rooms and tables of reservations.
 
-## 4. Key Features & Screenshots
+## 3. Screenshots
 
-### 4.1. Authentication & OTP Verification
-Secure login system requiring an email and password, followed by a One-Time Password (OTP) verification sent via email.
-![Login Screen Placeholder](path/to/screenshot_login.png)
-*(Placeholder: Insert screenshot of the Login and OTP screens here)*
+*(Placeholder: Insert images here showing the major features below)*
 
-### 4.2. Dashboard & User Roles
-Role-specific dashboards providing customized metrics and quick actions for Customers (My Reservations), Staff (Staff Queue), and Admin (Admin Governance).
-![Dashboard Placeholder](path/to/screenshot_dashboard.png)
-*(Placeholder: Insert screenshot of the Dashboard here)*
+### Desktop and Mobile Views
+![Desktop & Mobile Views Placeholder](path/to/screenshot_responsive.png)
 
-### 4.3. Room Browsing & Pagination
-Users can browse available spaces, filter by floor/room type, and see real-time availability. The grid is dynamically paginated for performance.
-![Rooms Placeholder](path/to/screenshot_rooms.png)
-*(Placeholder: Insert screenshot of the paginated Rooms page here)*
+### API-Generated Content (Room Grid)
+![API Rooms Placeholder](path/to/screenshot_api_rooms.png)
 
-### 4.4. Facility Reservation
-A seamless booking process that prevents overlapping reservations using MySQL database triggers and backend time validation.
-![Booking Form Placeholder](path/to/screenshot_booking.png)
-*(Placeholder: Insert screenshot of the Booking form here)*
+### Form Validation / Error Messages
+![Form Validation Placeholder](path/to/screenshot_validation.png)
 
-### 4.5. Reservation Management
-Users can track their bookings and instantly cancel pending requests. Staff can review, approve, or reject requests from a centralized queue.
-![Management Placeholder](path/to/screenshot_management.png)
-*(Placeholder: Insert screenshot of the Reservations/Staff Queue page here)*
+### Search / Filter Results
+![Search Filter Placeholder](path/to/screenshot_search_filter.png)
 
-## 5. Database Schema Highlights
-- **`Users`**: Stores credentials, roles (`admin`, `staff`, `customer`), and verification data.
-- **`Rooms`**: Contains facility details, capacities, floor numbers, and room types.
-- **`Reservations`**: Tracks bookings, start/end times, and status (`Pending`, `Approved`, `Rejected`, `Cancelled`, `Completed`).
+## 4. Members Ratings and Contribution
 
-![ER Diagram Placeholder](path/to/screenshot_er_diagram.png)
-*(Placeholder: Insert an Entity-Relationship (ER) Diagram here)*
+*(To be filled by Leader / Asst Leader)*
 
----
-*Document prepared for project submission. Please replace all bracketed names and placeholder image paths before finalizing.*
+| Team Member Name | Role / Responsibility | Contribution Details | Peer Rating (1-10) |
+|------------------|-----------------------|----------------------|--------------------|
+| **[Name 1]**     | Project Manager       | Managed timeline, requirements, and team tasks. | [ / 10] |
+| **[Name 2]**     | Frontend Developer    | Built the UI, responsive design, and JS interactivity. | [ / 10] |
+| **[Name 3]**     | Backend Developer     | Created the API endpoints and routing logic. | [ / 10] |
+| **[Name 4]**     | Database Manager      | Designed the schema, wrote queries, and seeded data. | [ / 10] |
+| **[Name 5]**     | Security Checker      | Handled authentication, input sanitization, and OTP logic. | [ / 10] |
+
+## 5. Suggested Submission Checklist
+
+- [ ] Responsive interface works on different screen sizes
+- [ ] JavaScript features are functional
+- [ ] API is successfully connected
+- [ ] AJAX/Fetch is implemented
+- [ ] Form validation works correctly
+- [ ] Search/filter works correctly
+- [ ] All pages and navigation links work
+- [ ] No broken images or missing files
+- [ ] Project folder is complete and organized
+- [ ] API documentation is included
+- [ ] Screenshots are included
+- [ ] Project is ready for presentation/checking
