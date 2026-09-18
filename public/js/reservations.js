@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderReservations() {
     if (!reservationList) return;
 
-    reservationList.innerHTML = allReservations.map(reservation => {
+    reservationList.innerHTML = allReservations.filter(r => r.status !== 'Cancelled').map(reservation => {
       const date = formatDate(reservation.start_time);
       // Determine strictly if it's past
       const isPast = new Date(reservation.end_time) < new Date();

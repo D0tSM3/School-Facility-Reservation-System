@@ -135,6 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="p-space-md pl-[calc(1rem+4px)] pt-0">
           ${status === 'Maintenance' 
             ? `<button class="w-full py-2 px-space-sm bg-surface-container-high text-on-tertiary-container cursor-not-allowed font-label-lg text-label-lg rounded flex items-center justify-center gap-1" disabled type="button"><span class="material-symbols-outlined text-[18px]">block</span><span>Unavailable</span></button>`
+            : status === 'Occupied'
+            ? `<button class="w-full py-2 px-space-sm bg-surface-container-high text-on-tertiary-container cursor-not-allowed font-label-lg text-label-lg rounded flex items-center justify-center gap-1" disabled type="button"><span class="material-symbols-outlined text-[18px]">event_busy</span><span>Currently Booked</span></button>`
             : `<a href="book-room.html?room_id=${r.room_id}" class="w-full py-2 px-space-sm bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg rounded transition-colors flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[18px]">calendar_today</span><span>Book This Room</span></a>`
           }
         </div>
