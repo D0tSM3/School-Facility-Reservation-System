@@ -253,4 +253,173 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(() => showToast('Network error fetching logs'));
     });
   }
+
+  // --- Move Requests Logic ---
+  const tabMoves = document.getElementById('tab-moves');
+  const viewMoves = document.getElementById('view-moves');
+  const moveBadgeCount = document.getElementById('move-badge-count');
+  
+  let currentMoveRequestId = null;
+  const moveReviewModalOverlay = document.getElementById('moveReviewModalOverlay');
+  const moveReviewComment = document.getElementById('moveReviewComment');
+  const moveReviewErrorMsg = document.getElementById('moveReviewErrorMsg');
+
+  function openMoveModal(reqId) {
+    currentMoveRequestId = reqId;
+    if (moveReviewComment) moveReviewComment.value = '';
+    if (moveReviewErrorMsg) moveReviewErrorMsg.classList.add('hidden');
+    if (moveReviewModalOverlay) moveReviewModalOverlay.classList.remove('opacity-0', 'pointer-events-none');
+  }
+
+  function closeMoveModal() {
+    currentMoveRequestId = null;
+    if (moveReviewModalOverlay) moveReviewModalOverlay.classList.add('opacity-0', 'pointer-events-none');
+  }
+
+  const moveReviewCloseIcon = document.getElementById('moveReviewCloseIcon');
+  if (moveReviewCloseIcon) moveReviewCloseIcon.addEventListener('click', closeMoveModal);
+  const moveReviewCancelBtn = document.getElementById('moveReviewCancelBtn');
+  if (moveReviewCancelBtn) moveReviewCancelBtn.addEventListener('click', closeMoveModal);
+
+  function submitMoveReview(status) {
+    if (!currentMoveRequestId) return;
+    const comment = (moveReviewComment ? moveReviewComment.value : '').trim();
+    if (status === 'Rejected' && !comment) {
+      if (moveReviewErrorMsg) {
+        moveReviewErrorMsg.textContent = 'A comment is required for rejection.';
+        moveReviewErrorMsg.classList.remove('hidden');
+      }
+      return;
+    }
+
+    fetch(`${BASE}api/reservations/move-requests/${currentMoveRequestId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, comment })
+    })
+    .then(res => res.json())
+    .then(json => {
+      if (json.success) {
+        closeMoveModal();
+        showToast(`Move Request ${status}`);
+        loadMoveRequests();
+      } else {
+        if (moveReviewErrorMsg) {
+          moveReviewErrorMsg.textContent = json.error || `Failed to ${status} move request.`;
+          moveReviewErrorMsg.classList.remove('hidden');
+        }
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      if (moveReviewErrorMsg) {
+        moveReviewErrorMsg.textContent = 'Network error.';
+        moveReviewErrorMsg.classList.remove('hidden');
+      }
+    });
+  }
+
+  const moveReviewRejectBtn = document.getElementById('moveReviewRejectBtn');
+  if (moveReviewRejectBtn) moveReviewRejectBtn.addEventListener('click', () => submitMoveReview('Rejected'));
+  const moveReviewApproveBtn = document.getElementById('moveReviewApproveBtn');
+  if (moveReviewApproveBtn) moveReviewApproveBtn.addEventListener('click', () => submitMoveReview('Approved'));
+
+  function formatDateTime(val) {
+    const d = new Date(val);
+    if (Number.isNaN(d.getTime())) return '---';
+    return d.toLocaleDateString('en-US', {month:'short', day:'2-digit'}) + ' ' + 
+           d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+  }
+
+  function renderMoveRequests(requests) {
+    if (!viewMoves) return;
+    viewMoves.innerHTML = '';
+    if (requests.length === 0) {
+      viewMoves.innerHTML = '<p class="text-on-surface-variant p-space-md text-center bg-surface-container-lowest rounded-lg shadow-sm">No pending move requests.</p>';
+      return;
+    }
+
+    viewMoves.innerHTML = requests.map(req => `
+      <div class="relative bg-surface-container-lowest rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md">
+        <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-500"></div>
+        <div class="p-space-md pl-space-lg flex flex-col xl:flex-row xl:items-center justify-between gap-space-md">
+          <div class="space-y-2 flex-1">
+            <div class="flex items-center gap-space-xs">
+              <span class="px-space-xs py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm">REQ-${req.reservation_id.substring(0,8)}</span>
+              <span class="px-space-xs py-1 rounded bg-amber-100 text-amber-800 font-label-sm">MOVE REQUEST</span>
+            </div>
+            <div class="text-on-surface text-body-md font-body-md">
+              <span class="font-semibold text-primary">Original Time:</span> ${formatDateTime(req.old_start_time)} - ${formatDateTime(req.old_end_time)}
+            </div>
+            <div class="text-on-surface text-body-md font-body-md">
+              <span class="font-semibold text-secondary">Requested Time:</span> ${formatDateTime(req.requested_start_time)} - ${formatDateTime(req.requested_end_time)}
+            </div>
+          </div>
+          <div class="flex items-center gap-space-xs justify-end flex-shrink-0 pt-space-xs xl:pt-0">
+            <button class="btn-review-move flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-container-highest shadow-sm font-label-lg transition-all" data-id="${req.request_id}">
+              <span class="material-symbols-outlined text-[18px]">rate_review</span>
+              <span>Review Request</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    document.querySelectorAll('.btn-review-move').forEach(btn => {
+      btn.addEventListener('click', () => {
+        openMoveModal(btn.getAttribute('data-id'));
+      });
+    });
+  }
+
+  function loadMoveRequests() {
+    fetch(`${BASE}api/reservations/move-requests`)
+      .then(res => res.json())
+      .then(json => {
+        if (json.success) {
+          const reqs = json.data;
+          if (moveBadgeCount) moveBadgeCount.textContent = `${reqs.length} Requests`;
+          renderMoveRequests(reqs);
+        }
+      })
+      .catch(console.error);
+  }
+
+  if (tabMoves) {
+    tabMoves.addEventListener('click', () => {
+      switchQueueTab('moves');
+    });
+  }
+  
+  // Need to modify switchQueueTab
+  const originalSwitch = switchQueueTab;
+  switchQueueTab = function(tab) {
+    const allTabs = [tabPending, tabMaintenance, tabMoves];
+    const allViews = [viewPending, viewMaintenance, viewMoves];
+    
+    allTabs.forEach(t => {
+      if (t) {
+        t.classList.remove('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+        t.classList.add('text-on-surface-variant');
+      }
+    });
+    
+    allViews.forEach(v => {
+      if (v) v.classList.add('hidden');
+    });
+
+    let activeTab = null, activeView = null;
+    if (tab === 'pending') { activeTab = tabPending; activeView = viewPending; }
+    else if (tab === 'maintenance') { activeTab = tabMaintenance; activeView = viewMaintenance; }
+    else if (tab === 'moves') { activeTab = tabMoves; activeView = viewMoves; }
+
+    if (activeTab) {
+      activeTab.classList.add('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+      activeTab.classList.remove('text-on-surface-variant');
+    }
+    if (activeView) activeView.classList.remove('hidden');
+  };
+
+  loadMoveRequests();
+
 });

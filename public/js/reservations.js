@@ -116,9 +116,23 @@ document.addEventListener('DOMContentLoaded', () => {
             ? 'check_circle'
             : 'schedule';
             
-      const action = canCancel
-        ? `<button class="px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm cancel-trigger" data-id="${escapeHtml(reservation.reservation_id)}" data-permit="${escapeHtml(reservation.reservation_id)}"><span class="material-symbols-outlined text-[16px]">cancel</span><span>Cancel Booking</span></button>`
-        : `<span class="p-space-sm text-on-surface-variant" title="Reservation details"><span class="material-symbols-outlined text-[20px]">visibility</span></span>`;
+      let moveStatusBadge = '';
+      if (reservation.move_status === 'Pending') {
+         moveStatusBadge = `<div class="mt-2 text-label-sm font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">Move Request Pending review.</div>`;
+      } else if (reservation.move_status === 'Rejected' && reservation.move_comment) {
+         moveStatusBadge = `<div class="mt-2 text-label-sm font-medium text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200">Move Request Rejected: ${escapeHtml(reservation.move_comment)}</div>`;
+      }
+
+      let action = '';
+      if (canCancel) {
+        action += `<button class="px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm cancel-trigger" data-id="${escapeHtml(reservation.reservation_id)}" data-permit="${escapeHtml(reservation.reservation_id)}"><span class="material-symbols-outlined text-[16px]">cancel</span><span>Cancel Booking</span></button>`;
+      }
+      if ((reservation.status === 'Pending' || reservation.status === 'Approved') && reservation.move_status !== 'Pending') {
+        action += `<button class="px-space-md py-space-sm bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm move-trigger ml-2" data-id="${escapeHtml(reservation.reservation_id)}"><span class="material-symbols-outlined text-[16px]">edit_calendar</span><span>Request to Move</span></button>`;
+      }
+      if (!action) {
+        action = `<span class="p-space-sm text-on-surface-variant" title="Reservation details"><span class="material-symbols-outlined text-[20px]">visibility</span></span>`;
+      }
 
       // Define filter status
       let filterStatus = reservation.status.toLowerCase();
@@ -143,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant flex-wrap">
                 <span class="flex items-center gap-1 font-medium text-on-surface"><span class="material-symbols-outlined text-[16px] text-secondary">meeting_room</span>${escapeHtml(reservation.room_name || reservation.room_id)}</span>
               </div>
+              ${moveStatusBadge}
             </div>
           </div>
           <div class="flex items-center gap-space-xs shrink-0 self-end md:self-center">${action}</div>
@@ -164,6 +179,19 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTargetCard = btn.closest('.reservation-card');
         currentTargetReservationId = id;
         if (modal) modal.classList.remove('hidden');
+      });
+    });
+
+    document.querySelectorAll('.move-trigger').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentTargetReservationId = btn.getAttribute('data-id');
+        const moveModalOverlay = document.getElementById('moveModalOverlay');
+        const moveErrorMsg = document.getElementById('moveErrorMsg');
+        if (moveErrorMsg) moveErrorMsg.classList.add('hidden');
+        if (moveModalOverlay) {
+          moveModalOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        }
       });
     });
   }
@@ -246,10 +274,61 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modal) modal.classList.add('hidden');
     currentTargetCard = null;
     currentTargetReservationId = null;
+    
+    const moveModalOverlay = document.getElementById('moveModalOverlay');
+    if (moveModalOverlay) moveModalOverlay.classList.add('opacity-0', 'pointer-events-none');
+    const moveForm = document.getElementById('moveForm');
+    if (moveForm) moveForm.reset();
   }
 
   if (modalClose) modalClose.addEventListener('click', closeModal);
   if (modalDismiss) modalDismiss.addEventListener('click', closeModal);
+  
+  const moveModalCloseIcon = document.getElementById('moveModalCloseIcon');
+  if (moveModalCloseIcon) moveModalCloseIcon.addEventListener('click', closeModal);
+  const moveModalCancelBtn = document.getElementById('moveModalCancelBtn');
+  if (moveModalCancelBtn) moveModalCancelBtn.addEventListener('click', closeModal);
+
+  const moveForm = document.getElementById('moveForm');
+  if (moveForm) {
+    moveForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const moveDate = document.getElementById('moveDate').value;
+      const moveStartTime = document.getElementById('moveStartTime').value;
+      const moveEndTime = document.getElementById('moveEndTime').value;
+      const moveErrorMsg = document.getElementById('moveErrorMsg');
+
+      if (!currentTargetReservationId || !moveDate || !moveStartTime || !moveEndTime) return;
+
+      const requestedStart = `${moveDate} ${moveStartTime}:00`;
+      const requestedEnd = `${moveDate} ${moveEndTime}:00`;
+
+      fetch(`${BASE}api/reservations/${currentTargetReservationId}/move-request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requested_start_time: requestedStart,
+          requested_end_time: requestedEnd
+        })
+      })
+      .then(res => res.json())
+      .then(json => {
+        if (json.success) {
+          fetchReservations(); // reload to show pending badge
+          closeModal();
+        } else {
+          moveErrorMsg.textContent = json.error || 'Failed to submit move request.';
+          moveErrorMsg.classList.remove('hidden');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        moveErrorMsg.textContent = 'Network error.';
+        moveErrorMsg.classList.remove('hidden');
+      });
+    });
+  }
 
   if (modalConfirm) {
     modalConfirm.addEventListener('click', () => {
@@ -259,8 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(res => res.json())
         .then(json => {
-           if (json.success) {
-             fetchReservations(currentEndpoint); // reload entirely
+           if (json.reservation_id || json.success) { // Handle both cases
+             fetchReservations(); // reload entirely
            } else {
              alert(json.error || 'Failed to cancel reservation');
            }

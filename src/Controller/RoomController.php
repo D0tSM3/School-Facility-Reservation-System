@@ -115,6 +115,35 @@ class RoomController
     }
 
     // ---------------------------------------------------------------
+    // Customer: GET /api/rooms/{id}/calendar
+    // ---------------------------------------------------------------
+
+    public function getCalendar(string $roomId): never
+    {
+        // Allow any logged-in role to view the calendar
+        Auth::requireRole(['Customer', 'Staff', 'Admin']);
+        
+        $start = $_GET['start'] ?? null;
+        $end   = $_GET['end']   ?? null;
+        
+        if (!$start || !$end) {
+            Response::error('start and end query parameters are required.', 400);
+        }
+
+        // Validate date formats roughly
+        if (!strtotime($start) || !strtotime($end)) {
+            Response::error('Invalid date format. Use YYYY-MM-DD.', 400);
+        }
+
+        if (!$this->rooms->findById($roomId)) {
+            Response::error('Room not found.', 404);
+        }
+
+        $calendarData = $this->rooms->getRoomCalendar($roomId, $start, $end);
+        Response::json($calendarData);
+    }
+
+    // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------
 

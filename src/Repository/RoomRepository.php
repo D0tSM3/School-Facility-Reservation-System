@@ -127,4 +127,59 @@ class RoomRepository
         $this->db->query($sql, $params);
         return $this->findById($roomId);
     }
+
+    /**
+     * Get the calendar data for a room in a specific date range.
+     * Includes Reservations, ClassSchedules, and Holidays.
+     */
+    public function getRoomCalendar(string $roomId, string $startDate, string $endDate): array
+    {
+        // 1. Fetch Reservations (Pending and Approved only, overlapping the date range)
+        $reservationsStmt = $this->db->query(
+            "SELECT r.reservation_id,
+                    u.name AS customer_name,
+                    r.purpose, r.start_time, r.end_time, r.status
+               FROM Reservations r
+               JOIN Users u ON u.user_id = r.customer_id
+              WHERE r.room_id = :room_id
+                AND r.status IN ('Pending', 'Approved')
+                AND r.start_time < :end_date
+                AND r.end_time > :start_date
+              ORDER BY r.start_time",
+            [
+                ':room_id'    => $roomId,
+                ':start_date' => $startDate . ' 00:00:00',
+                ':end_date'   => $endDate . ' 23:59:59'
+            ]
+        );
+        $reservations = $reservationsStmt->fetchAll();
+
+        // 2. Fetch Class Schedules (All recurring for this room)
+        $classSchedulesStmt = $this->db->query(
+            "SELECT schedule_id, course_code, section, day_of_week, start_time, end_time
+               FROM ClassSchedules
+              WHERE room_id = :room_id",
+            [':room_id' => $roomId]
+        );
+        $classSchedules = $classSchedulesStmt->fetchAll();
+
+        // 3. Fetch Holidays in the range
+        $holidaysStmt = $this->db->query(
+            "SELECT holiday_date, name, type
+               FROM Holidays
+              WHERE holiday_date >= :start_date
+                AND holiday_date <= :end_date",
+            [
+                ':start_date' => $startDate,
+                ':end_date'   => $endDate
+            ]
+        );
+        $holidays = $holidaysStmt->fetchAll();
+
+        return [
+            'reservations'    => $reservations,
+            'class_schedules' => $classSchedules,
+            'holidays'        => $holidays
+        ];
+    }
 }

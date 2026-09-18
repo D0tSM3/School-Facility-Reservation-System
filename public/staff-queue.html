@@ -487,6 +487,18 @@
               </button>
               <button
                 class="flex items-center gap-space-xs px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-label-lg transition-all duration-150"
+                id="tab-moves"
+              >
+                <span class="material-symbols-outlined text-[18px]">edit_calendar</span>
+                <span>Move Requests</span>
+                <span
+                  class="ml-1 px-1.5 py-0.5 rounded text-label-sm font-semibold bg-surface-container-highest text-on-surface-variant"
+                  id="move-badge-count"
+                  >0 Requests</span
+                >
+              </button>
+              <button
+                class="flex items-center gap-space-xs px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-label-lg transition-all duration-150"
                 id="tab-maintenance"
               >
                 <span class="material-symbols-outlined text-[18px]"
@@ -1091,6 +1103,10 @@
               </div>
             </div>
           </div>
+          <!-- Tab Move Requests Viewport -->
+          <div class="hidden space-y-space-sm mb-space-lg" id="view-moves">
+            <!-- Move request cards will be dynamically injected here -->
+          </div>
           <!-- Tab 2 Viewport: Facility State & Maintenance Toggle (Hidden on start) -->
           <div
             class="hidden space-y-space-md mb-space-lg"
@@ -1314,6 +1330,31 @@
               <span>Registrar Desk: Ext. 4021</span>
               <span class="text-outline-variant">•</span>
               <span>BPU Facilities Helpdesk: 24/7</span>
+            </div>
+          </div>
+        </div>
+        <!-- Move Request Review Modal -->
+        <div id="moveReviewModalOverlay" class="fixed inset-0 bg-[#000000] bg-opacity-40 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-200" aria-hidden="true">
+          <div id="moveReviewModal" class="bg-surface w-[90%] max-w-md rounded-xl shadow-xl overflow-hidden transform scale-95 transition-transform duration-200 flex flex-col" role="dialog" aria-modal="true" aria-labelledby="moveReviewTitle">
+            <div class="px-space-md py-space-sm border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+              <h2 id="moveReviewTitle" class="font-title-lg text-title-lg font-semibold text-on-surface">Review Move Request</h2>
+              <button id="moveReviewCloseIcon" class="text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none rounded-full p-1" aria-label="Close modal">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            <div class="p-space-md flex-1 overflow-y-auto">
+              <form id="moveReviewForm" class="space-y-space-md">
+                <div>
+                  <label for="moveReviewComment" class="block font-label-md text-label-md font-medium text-on-surface mb-space-xs">Staff Comment</label>
+                  <textarea id="moveReviewComment" rows="3" class="w-full bg-surface-container-lowest border border-outline text-on-surface rounded px-space-sm py-space-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow" placeholder="Optional for approval, required for rejection..."></textarea>
+                </div>
+                <div id="moveReviewErrorMsg" class="hidden p-space-sm bg-error-container text-on-error-container text-body-sm rounded"></div>
+              </form>
+            </div>
+            <div class="px-space-md py-space-sm border-t border-outline-variant bg-surface-container-low flex justify-end gap-space-sm">
+              <button type="button" id="moveReviewCancelBtn" class="px-space-md py-space-sm text-on-surface font-label-md font-medium rounded hover:bg-surface-container-highest transition-colors">Cancel</button>
+              <button type="button" id="moveReviewRejectBtn" class="px-space-md py-space-sm bg-error hover:bg-[#93000A] text-on-error font-label-md font-medium rounded shadow transition-colors focus:outline-none">Reject</button>
+              <button type="button" id="moveReviewApproveBtn" class="px-space-md py-space-sm bg-[#15803D] hover:bg-[#166534] text-[#FFFFFF] font-label-md font-medium rounded shadow transition-colors focus:outline-none">Approve</button>
             </div>
           </div>
         </div>

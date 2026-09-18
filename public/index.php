@@ -28,6 +28,8 @@ use CampusRoom\Core\Auth;
 use CampusRoom\Controller\AuthController;
 use CampusRoom\Controller\RoomController;
 use CampusRoom\Controller\ReservationController;
+use CampusRoom\Controller\ClassScheduleController;
+use CampusRoom\Controller\HolidayController;
 use CampusRoom\Controller\UserController;
 
 // Load .env (immutable so it never overwrites real server env vars).
@@ -78,8 +80,9 @@ $routes = [
     ['POST', '#^/api/auth/logout$#',      fn() => (new AuthController())->logout()],
 
     // Rooms — Customer (GET) + Admin (POST / PATCH)
-    ['GET',   '#^/api/rooms$#',                      fn() => (new RoomController())->index()],
-    ['POST',  '#^/api/rooms$#',                      fn() => (new RoomController())->store()],
+    ['GET',   '#^/api/rooms$#',                    fn() => (new RoomController())->index()],
+    ['GET',   '#^/api/rooms/(?P<id>[^/]+)/calendar$#', fn(string $id) => (new RoomController())->getCalendar($id)],
+    ['POST',  '#^/api/rooms$#',                    fn() => (new RoomController())->store()],
     ['PATCH', '#^/api/rooms/(?P<id>[^/]+)$#',        fn(string $id) => (new RoomController())->update($id)],
 
     // Reservations
@@ -90,9 +93,24 @@ $routes = [
     ['PATCH', '#^/api/reservations/(?P<id>[^/]+)/cancel$#', fn(string $id) => (new ReservationController())->cancel($id)],
     ['PATCH', '#^/api/reservations/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->update($id)],
 
+    // Move Requests
+    ['POST',  '#^/api/reservations/(?P<id>[^/]+)/move-request$#', fn(string $id) => (new ReservationController())->requestMove($id)],
+    ['GET',   '#^/api/reservations/move-requests$#',              fn() => (new ReservationController())->getMoveRequests()],
+    ['PATCH', '#^/api/reservations/move-requests/(?P<id>[^/]+)$#',fn(string $id) => (new ReservationController())->resolveMoveRequest($id)],
+
     // Users (Admin)
     ['GET',   '#^/api/users$#',                      fn() => (new UserController())->index()],
     ['PATCH', '#^/api/users/(?P<id>[^/]+)/role$#',   fn(string $id) => (new UserController())->updateRole($id)],
+
+    // Class Schedules (Admin)
+    ['GET',    '#^/api/classes$#',                   fn() => (new ClassScheduleController())->index()],
+    ['POST',   '#^/api/classes$#',                   fn() => (new ClassScheduleController())->store()],
+    ['DELETE', '#^/api/classes/(?P<id>[^/]+)$#',     fn(string $id) => (new ClassScheduleController())->destroy($id)],
+
+    // Holidays (Admin)
+    ['GET',    '#^/api/holidays$#',                  fn() => (new HolidayController())->index()],
+    ['POST',   '#^/api/holidays$#',                  fn() => (new HolidayController())->store()],
+    ['DELETE', '#^/api/holidays/(?P<id>[^/]+)$#',    fn(string $id) => (new HolidayController())->destroy($id)],
 
     // Logs (Admin)
     ['GET',   '#^/api/logs$#',                       fn() => (new UserController())->logs()],

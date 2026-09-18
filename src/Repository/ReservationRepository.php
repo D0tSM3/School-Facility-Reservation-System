@@ -69,9 +69,15 @@ class ReservationRepository
                     res.end_time,
                     res.status,
                     res.processed_by,
-                    res.created_at
+                    res.created_at,
+                    mr.status AS move_status,
+                    mr.staff_comment AS move_comment
                FROM Reservations res
                JOIN Rooms r ON r.room_id = res.room_id
+               LEFT JOIN (
+                   SELECT m1.* FROM ReservationMoveRequests m1
+                    WHERE m1.created_at = (SELECT MAX(created_at) FROM ReservationMoveRequests m2 WHERE m2.reservation_id = m1.reservation_id)
+               ) mr ON mr.reservation_id = res.reservation_id
               WHERE res.customer_id = :customer_id
            ORDER BY res.created_at DESC',
             [':customer_id' => $customerId]
@@ -229,5 +235,100 @@ class ReservationRepository
            ORDER BY sl.timestamp DESC'
         );
         return $stmt->fetchAll();
+    }
+
+    // ---------------------------------------------------------------
+    // Move Requests
+    // ---------------------------------------------------------------
+
+    public function createMoveRequest(string $reservationId, string $requestedStart, string $requestedEnd): array
+    {
+        $this->db->query(
+            'INSERT INTO ReservationMoveRequests (reservation_id, requested_start_time, requested_end_time)
+             VALUES (:reservation_id, :requested_start_time, :requested_end_time)',
+            [
+                ':reservation_id'       => $reservationId,
+                ':requested_start_time' => $requestedStart,
+                ':requested_end_time'   => $requestedEnd,
+            ]
+        );
+        
+        $stmt = $this->db->query(
+            'SELECT * FROM ReservationMoveRequests WHERE reservation_id = :reservation_id ORDER BY created_at DESC LIMIT 1',
+            [':reservation_id' => $reservationId]
+        );
+        return $stmt->fetch();
+    }
+
+    public function findMoveRequests(?string $status = null): array
+    {
+        $sql = "
+            SELECT mr.*, 
+                   r.customer_id, r.room_id, r.start_time AS original_start_time, r.end_time AS original_end_time,
+                   rm.name AS room_name,
+                   c.name AS customer_name, c.email AS customer_email
+              FROM ReservationMoveRequests mr
+              JOIN Reservations r ON r.reservation_id = mr.reservation_id
+              JOIN Rooms rm ON rm.room_id = r.room_id
+              JOIN Users c ON c.user_id = r.customer_id
+        ";
+        
+        $params = [];
+        if ($status !== null) {
+            $sql .= " WHERE mr.status = :status";
+            $params[':status'] = $status;
+        }
+        
+        $sql .= " ORDER BY mr.created_at ASC";
+        
+        $stmt = $this->db->query($sql, $params);
+        return $stmt->fetchAll();
+    }
+
+    public function findMoveRequestById(string $requestId): ?array
+    {
+        $stmt = $this->db->query(
+            "SELECT mr.*, r.room_id, r.customer_id
+               FROM ReservationMoveRequests mr
+               JOIN Reservations r ON r.reservation_id = mr.reservation_id
+              WHERE mr.request_id = :request_id
+              LIMIT 1",
+            [':request_id' => $requestId]
+        );
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
+    public function updateMoveRequestStatus(string $requestId, string $status, string $processedBy, ?string $staffComment): ?array
+    {
+        $this->db->query(
+            'UPDATE ReservationMoveRequests
+                SET status = :status,
+                    processed_by = :processed_by,
+                    staff_comment = :staff_comment
+              WHERE request_id = :request_id',
+            [
+                ':status'        => $status,
+                ':processed_by'  => $processedBy,
+                ':staff_comment' => $staffComment,
+                ':request_id'    => $requestId,
+            ]
+        );
+        return $this->findMoveRequestById($requestId);
+    }
+    
+    public function updateTimes(string $reservationId, string $startTime, string $endTime): void
+    {
+        $this->db->query(
+            'UPDATE Reservations
+                SET start_time = :start_time,
+                    end_time = :end_time
+              WHERE reservation_id = :reservation_id',
+            [
+                ':start_time'     => $startTime,
+                ':end_time'       => $endTime,
+                ':reservation_id' => $reservationId,
+            ]
+        );
     }
 }

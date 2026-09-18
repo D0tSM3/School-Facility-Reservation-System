@@ -80,14 +80,100 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!roomSelect.value && roomSelect.options.length > 0) {
           roomSelect.selectedIndex = 0;
         }
+        
+        // Initialize calendar with the selected room
+        if (typeof updateCalendar === 'function' && roomSelect.value) {
+            updateCalendar(roomSelect.value);
+        }
+        updatePurpose();
       })
       .catch(err => console.error('Error fetching rooms:', err));
+  }
+
+  // --- Room Calendar Integration ---
+  let calendarInstance = null;
+  function updateCalendar(roomId) {
+    if (!roomId) return;
+    const container = document.getElementById('room-calendar-container');
+    if (container) {
+      if (typeof RoomCalendar !== 'undefined') {
+        calendarInstance = new RoomCalendar({
+          containerId: 'room-calendar-container',
+          roomId: roomId
+        });
+      }
+    }
+  }
+
+  if (roomSelect) {
+    roomSelect.addEventListener('change', (e) => {
+      updateCalendar(e.target.value);
+      updatePurpose();
+    });
+  }
+  
+  if (preselectedRoom) {
+    updateCalendar(preselectedRoom);
   }
 
   if (resDateInput && !resDateInput.value) {
     const today = new Date();
     today.setDate(today.getDate() + 1);
     resDateInput.value = localDateInputValue(today);
+  }
+
+  if (resDateInput) {
+    resDateInput.addEventListener('change', () => {
+      const selectedDate = new Date(resDateInput.value);
+      if (selectedDate.getDay() === 0) {
+        showCollisionError('Sundays are not available for reservation.');
+        resDateInput.value = '';
+      } else {
+        hideCollisionError();
+      }
+      updatePurpose();
+    });
+  }
+
+  let purposeEdited = false;
+  if (purposeInput) {
+    purposeInput.addEventListener('input', () => {
+      purposeEdited = true;
+    });
+  }
+
+  const timeErrorContainer = document.getElementById('timeErrorContainer');
+  const timeErrorText = document.getElementById('timeErrorText');
+  const validateTime = () => {
+    if (startTimeInput && endTimeInput && startTimeInput.value && endTimeInput.value) {
+      if (endTimeInput.value <= startTimeInput.value) {
+        timeErrorContainer.classList.remove('hidden');
+        timeErrorContainer.classList.add('flex');
+        timeErrorText.textContent = 'End time must be after start time.';
+        return false;
+      } else {
+        timeErrorContainer.classList.add('hidden');
+        timeErrorContainer.classList.remove('flex');
+        return true;
+      }
+    }
+    return true;
+  };
+
+  if (startTimeInput) startTimeInput.addEventListener('change', validateTime);
+  if (endTimeInput) endTimeInput.addEventListener('change', validateTime);
+
+  function updatePurpose() {
+    if (!purposeInput || purposeEdited) return;
+    const date = resDateInput ? resDateInput.value : '';
+    let roomName = '';
+    if (roomSelect && roomSelect.options.length > 0 && roomSelect.selectedIndex >= 0) {
+      roomName = roomSelect.options[roomSelect.selectedIndex].text;
+      // Remove any tags like "[Under Maintenance]" or "[Unavailable]" if we just want the base room name, but for now we take the full text
+    }
+    if (roomName && date) {
+      purposeInput.value = `${roomName} - ${date}`;
+    }
   }
 
   function showCollisionError(message) {
@@ -142,6 +228,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!roomId || !dateVal || !startVal || !endVal) {
         showCollisionError('Please provide a room, date, start time, and end time for the reservation.');
+        return;
+      }
+      
+      if (!validateTime()) {
+        showCollisionError('Please fix the time selection errors.');
         return;
       }
 
@@ -201,8 +292,8 @@ document.addEventListener('DOMContentLoaded', () => {
             tomorrow.setDate(tomorrow.getDate() + 1);
             resDateInput.value = localDateInputValue(tomorrow);
           }
-          if (startTimeInput) startTimeInput.value = '08:00';
-          if (endTimeInput) endTimeInput.value = '10:00';
+          if (startTimeInput) startTimeInput.value = '';
+          if (endTimeInput) endTimeInput.value = '';
         }
       })
       .catch(err => {
