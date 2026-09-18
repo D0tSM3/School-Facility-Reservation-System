@@ -6,6 +6,7 @@ namespace CampusRoom\Controller;
 
 use CampusRoom\Core\Auth;
 use CampusRoom\Core\Response;
+use CampusRoom\Core\ReservationValidator;
 use CampusRoom\Repository\ReservationRepository;
 use PDOException;
 
@@ -73,12 +74,14 @@ class ReservationController
             Response::error('room_id, purpose, start_time, and end_time are required.', 422);
         }
 
-        // Basic timestamp sanity — Postgres will enforce the constraint too.
+        // Basic timestamp sanity
         if (strtotime($startTime) === false || strtotime($endTime) === false) {
             Response::error('start_time and end_time must be valid timestamps.', 422);
         }
-        if (strtotime($startTime) >= strtotime($endTime)) {
-            Response::error('end_time must be after start_time.', 422);
+
+        $error = ReservationValidator::check($roomId, $startTime, $endTime);
+        if ($error !== null) {
+            Response::error($error, 409);
         }
 
         try {
@@ -90,7 +93,7 @@ class ReservationController
                 $endTime
             );
         } catch (PDOException $e) {
-            // SQLSTATE 45000 = MySQL SIGNAL SQLSTATE (our trigger)
+            // Fallback in case of race condition caught by the DB trigger
             if ($e->getCode() === '45000') {
                 Response::error(
                     'Scheduling Collision: Room is already booked or pending during this time window.',
