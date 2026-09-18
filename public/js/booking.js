@@ -20,6 +20,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const successBannerText = document.getElementById('bookingSuccessText');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const cancelModalBtn = document.getElementById('cancelModalBtn');
+  const bookingHeading = document.querySelector('[data-booking-heading]');
+  const durationValidationMessage = document.getElementById('durationValidationMessage');
+  const invalidTimeOrderLabel = document.getElementById('invalidTimeOrderLabel');
+  const invalidTimeOrderIcon = document.getElementById('invalidTimeOrderIcon');
+
+  function localDateInputValue(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 
   function navigateBack() {
     if (window.history.length > 1) {
@@ -55,6 +66,15 @@ document.addEventListener('DOMContentLoaded', () => {
             opt.selected = true;
           }
           roomSelect.appendChild(opt);
+        });
+
+        const selectedRoom = rooms.find(room => room.room_id === roomSelect.value);
+        if (bookingHeading && selectedRoom) {
+          bookingHeading.textContent = `Reserve Academic Space - ${selectedRoom.name}`;
+        }
+        roomSelect.addEventListener('change', () => {
+          const room = rooms.find(item => item.room_id === roomSelect.value);
+          if (bookingHeading && room) bookingHeading.textContent = `Reserve Academic Space - ${room.name}`;
         });
 
         if (!roomSelect.value && roomSelect.options.length > 0) {
@@ -99,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (resDateInput && !resDateInput.value) {
     const today = new Date();
     today.setDate(today.getDate() + 1);
-    resDateInput.value = today.toISOString().split('T')[0];
+    resDateInput.value = localDateInputValue(today);
   }
 
   if (resDateInput) {
@@ -178,6 +198,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function setDurationValidationVisible(visible) {
+    [durationValidationMessage, invalidTimeOrderLabel, invalidTimeOrderIcon].forEach(element => {
+      if (element) element.classList.toggle('hidden', !visible);
+    });
+  }
+
   function showSuccess(message) {
     if (successBanner) {
       if (successBannerText) successBannerText.textContent = message;
@@ -192,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       hideCollisionError();
+      setDurationValidationVisible(false);
 
       const roomId = roomSelect ? roomSelect.value : '';
       const dateVal = resDateInput ? resDateInput.value : '';
@@ -221,6 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const endDate = new Date(endDateTimeStr);
 
       if (endDate <= startDate) {
+        setDurationValidationVisible(true);
         showCollisionError('Invalid Schedule: End time must be strictly after the start time.');
         if (endTimeInput) endTimeInput.focus();
         return;
@@ -262,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (resDateInput) {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
-            resDateInput.value = tomorrow.toISOString().split('T')[0];
+            resDateInput.value = localDateInputValue(tomorrow);
           }
           if (startTimeInput) startTimeInput.value = '';
           if (endTimeInput) endTimeInput.value = '';

@@ -11,23 +11,43 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalConfirm = document.getElementById('modalConfirmBtn');
   const newReservationBtn = document.getElementById('newReservationBtn');
   const exportSlipBtn = document.getElementById('exportSlipBtn');
+  const newReservationButton = document.getElementById('newReservationBtn');
+  const allReservationsCount = document.getElementById('allReservationsCount');
+  const pendingReservationsCount = document.getElementById('pendingReservationsCount');
+  const approvedReservationsCount = document.getElementById('approvedReservationsCount');
+  const historyReservationsCount = document.getElementById('historyReservationsCount');
+  const pageTitle = document.querySelector('main h1');
+  const pageDescription = pageTitle ? pageTitle.parentElement.querySelector('p') : null;
 
   let currentTargetCard = null;
   let currentTargetReservationId = null;
   let activeFilter = 'all';
   let allReservations = [];
+  let currentEndpoint = '';
 
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
 
-  function fetchReservations() {
-    fetch(BASE + 'api/reservations/mine')
+  function parseLocalDateTime(value) {
+    if (!value) return new Date(NaN);
+    return new Date(String(value).replace(' ', 'T'));
+  }
+
+  function fetchReservations(endpoint) {
+    currentEndpoint = endpoint;
+    fetch(BASE + endpoint, { credentials: 'include' })
       .then(res => res.json())
       .then(json => {
-        if (json.success && json.data) {
-          allReservations = json.data;
-          renderReservations();
-          applyFilters();
+        if (!json.success || !json.data) {
+          console.error('Error fetching reservations:', json.error || 'Request failed');
+          if (reservationList) {
+            reservationList.innerHTML = `<div class="p-space-lg text-center text-error">${escapeHtml(json.error || 'Unable to load reservations.')}</div>`;
+          }
+          return;
         }
+
+        allReservations = json.data;
+        renderReservations();
+        applyFilters();
       })
       .catch(err => console.error('Error fetching reservations:', err));
   }
@@ -43,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function formatDate(value) {
-    const date = new Date(value);
+    const date = parseLocalDateTime(value);
     return Number.isNaN(date.getTime())
       ? { month: '---', day: '--' }
       : {
@@ -53,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function formatTime(value) {
-    const date = new Date(value);
+    const date = parseLocalDateTime(value);
     return Number.isNaN(date.getTime())
       ? 'Time unavailable'
       : date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -62,12 +82,25 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderReservations() {
     if (!reservationList) return;
 
-    reservationList.innerHTML = allReservations.filter(r => r.status !== 'Cancelled').map(reservation => {
+    const activeReservations = allReservations.filter(r => r.status !== 'Cancelled');
+    const pendingCount = activeReservations.filter(r => r.status === 'Pending').length;
+    const approvedCount = activeReservations.filter(r => r.status === 'Approved').length;
+    const historyCount = activeReservations.filter(r => {
+      const isPast = parseLocalDateTime(r.end_time) < new Date();
+      return isPast || ['Completed', 'Rejected'].includes(r.status);
+    }).length;
+
+    if (allReservationsCount) allReservationsCount.textContent = activeReservations.length;
+    if (pendingReservationsCount) pendingReservationsCount.textContent = pendingCount;
+    if (approvedReservationsCount) approvedReservationsCount.textContent = approvedCount;
+    if (historyReservationsCount) historyReservationsCount.textContent = historyCount;
+
+    reservationList.innerHTML = activeReservations.map(reservation => {
       const date = formatDate(reservation.start_time);
       // Determine strictly if it's past
-      const isPast = new Date(reservation.end_time) < new Date();
+      const isPast = parseLocalDateTime(reservation.end_time) < new Date();
       
-      const canCancel = reservation.status === 'Pending';
+      const canCancel = currentRole === 'customer' && reservation.status === 'Pending';
       const statusClass = reservation.status === 'Approved'
         ? 'bg-[#DCFCE7] text-[#15803D]'
         : reservation.status === 'Rejected' || reservation.status === 'Cancelled'
@@ -131,6 +164,10 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       </div>`;
     }).join('');
+
+    if (activeReservations.length === 0) {
+      reservationList.innerHTML = '<div class="p-space-lg text-center text-on-surface-variant">No reservations found.</div>';
+    }
 
     // Reattach listeners
     document.querySelectorAll('.cancel-trigger').forEach(btn => {
@@ -316,5 +353,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  fetchReservations();
+  let currentRole = 'customer';
+  if (reservationList) {
+    reservationList.innerHTML = '<div class="p-space-lg text-center text-on-surface-variant">Loading reservations...</div>';
+  }
+  fetch(BASE + 'api/auth/me', { credentials: 'include' })
+    .then(res => res.json())
+    .then(json => {
+      const user = json.success ? json.data : null;
+      if (!user) return;
+
+      currentRole = String(user.role || '').toLowerCase();
+      const isCustomer = currentRole === 'customer';
+      if (newReservationButton) {
+        newReservationButton.hidden = !isCustomer;
+        newReservationButton.style.display = isCustomer ? 'inline-flex' : 'none';
+      }
+      if (!isCustomer) {
+        if (pageTitle) pageTitle.textContent = 'Reservations';
+        if (pageDescription) pageDescription.textContent = 'View facility reservations and their current approval status.';
+      }
+
+      fetchReservations(isCustomer ? 'api/reservations/mine' : 'api/reservations');
+    })
+    .catch(err => {
+      console.error('Error fetching user session:', err);
+      if (reservationList) {
+        reservationList.innerHTML = '<div class="p-space-lg text-center text-error">Unable to verify your session. Please sign in again.</div>';
+      }
+    });
 });
