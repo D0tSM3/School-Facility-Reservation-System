@@ -193,6 +193,109 @@ class ReservationController
     }
 
     // ---------------------------------------------------------------
+    // Move Requests
+    // ---------------------------------------------------------------
+
+    public function requestMove(string $reservationId): never
+    {
+        Auth::requireRole(['Customer']);
+
+        $existing = $this->reservations->findById($reservationId);
+        if ($existing === null) {
+            Response::error('Reservation not found.', 404);
+        }
+
+        if ($existing['customer_id'] !== Auth::userId()) {
+            Response::error('Forbidden.', 403);
+        }
+
+        if (!in_array($existing['status'], ['Pending', 'Approved'])) {
+            Response::error('Only pending or approved reservations can be rescheduled.', 422);
+        }
+
+        $body = $this->jsonBody();
+        $startTime = trim($body['requested_start_time'] ?? '');
+        $endTime = trim($body['requested_end_time'] ?? '');
+
+        if ($startTime === '' || $endTime === '') {
+            Response::error('requested_start_time and requested_end_time are required.', 422);
+        }
+
+        $request = $this->reservations->createMoveRequest($reservationId, $startTime, $endTime);
+        
+        $this->reservations->insertLog(
+            Auth::userId(),
+            "Move request submitted for reservation {$reservationId}"
+        );
+
+        Response::json($request, 201);
+    }
+
+    public function getMoveRequests(): never
+    {
+        Auth::requireRole(['Staff', 'Admin']);
+        $status = $_GET['status'] ?? null;
+        $list = $this->reservations->findMoveRequests($status);
+        Response::json($list);
+    }
+
+    public function resolveMoveRequest(string $requestId): never
+    {
+        Auth::requireRole(['Staff', 'Admin']);
+
+        $body = $this->jsonBody();
+        $status = trim($body['status'] ?? '');
+        $staffComment = trim($body['staff_comment'] ?? '');
+
+        if (!in_array($status, ['Approved', 'Rejected'], true)) {
+            Response::error('status must be Approved or Rejected', 422);
+        }
+
+        $existing = $this->reservations->findMoveRequestById($requestId);
+        if ($existing === null) {
+            Response::error('Move request not found.', 404);
+        }
+
+        if ($existing['status'] !== 'Pending') {
+            Response::error('Move request is already resolved.', 422);
+        }
+
+        if ($status === 'Approved') {
+            // Run validator
+            $error = ReservationValidator::check(
+                $existing['room_id'],
+                $existing['requested_start_time'],
+                $existing['requested_end_time'],
+                $existing['reservation_id']
+            );
+            if ($error !== null) {
+                Response::error($error, 409);
+            }
+            
+            // Update actual reservation times
+            $this->reservations->updateTimes(
+                $existing['reservation_id'], 
+                $existing['requested_start_time'], 
+                $existing['requested_end_time']
+            );
+        }
+
+        $request = $this->reservations->updateMoveRequestStatus(
+            $requestId,
+            $status,
+            Auth::userId(),
+            $staffComment === '' ? null : $staffComment
+        );
+
+        $this->reservations->insertLog(
+            Auth::userId(),
+            "Move request {$requestId} {$status}"
+        );
+
+        Response::json($request);
+    }
+
+    // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------
 

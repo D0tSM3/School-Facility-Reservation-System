@@ -127,4 +127,56 @@ class RoomRepository
         $this->db->query($sql, $params);
         return $this->findById($roomId);
     }
+
+    /**
+     * Get the calendar data for a room in a specific date range.
+     * Includes Reservations, ClassSchedules, and Holidays.
+     */
+    public function getRoomCalendar(string $roomId, string $startDate, string $endDate): array
+    {
+        // 1. Fetch Reservations (Pending and Approved only, overlapping the date range)
+        $reservationsStmt = $this->db->query(
+            "SELECT reservation_id, customer_name, purpose, start_time, end_time, status
+               FROM Reservations
+              WHERE room_id = :room_id
+                AND status IN ('Pending', 'Approved')
+                AND start_time < :end_date
+                AND end_time > :start_date
+              ORDER BY start_time",
+            [
+                ':room_id'    => $roomId,
+                ':start_date' => $startDate . ' 00:00:00',
+                ':end_date'   => $endDate . ' 23:59:59'
+            ]
+        );
+        $reservations = $reservationsStmt->fetchAll();
+
+        // 2. Fetch Class Schedules (All recurring for this room)
+        $classSchedulesStmt = $this->db->query(
+            "SELECT schedule_id, course_code, section, day_of_week, start_time, end_time
+               FROM ClassSchedules
+              WHERE room_id = :room_id",
+            [':room_id' => $roomId]
+        );
+        $classSchedules = $classSchedulesStmt->fetchAll();
+
+        // 3. Fetch Holidays in the range
+        $holidaysStmt = $this->db->query(
+            "SELECT holiday_date, name, type
+               FROM Holidays
+              WHERE holiday_date >= :start_date
+                AND holiday_date <= :end_date",
+            [
+                ':start_date' => $startDate,
+                ':end_date'   => $endDate
+            ]
+        );
+        $holidays = $holidaysStmt->fetchAll();
+
+        return [
+            'reservations'    => $reservations,
+            'class_schedules' => $classSchedules,
+            'holidays'        => $holidays
+        ];
+    }
 }

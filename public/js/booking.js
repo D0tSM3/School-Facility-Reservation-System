@@ -60,14 +60,72 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!roomSelect.value && roomSelect.options.length > 0) {
           roomSelect.selectedIndex = 0;
         }
+        
+        // Initialize calendar with the selected room
+        if (typeof updateCalendar === 'function' && roomSelect.value) {
+            updateCalendar(roomSelect.value);
+        }
+        updatePurpose();
       })
       .catch(err => console.error('Error fetching rooms:', err));
+  }
+
+  // --- Room Calendar Integration ---
+  let calendarInstance = null;
+  function updateCalendar(roomId) {
+    if (!roomId) return;
+    const container = document.getElementById('room-calendar-container');
+    if (container) {
+      if (typeof RoomCalendar !== 'undefined') {
+        calendarInstance = new RoomCalendar({
+          containerId: 'room-calendar-container',
+          roomId: roomId
+        });
+      }
+    }
+  }
+
+  if (roomSelect) {
+    roomSelect.addEventListener('change', (e) => {
+      updateCalendar(e.target.value);
+      updatePurpose();
+    });
+  }
+  
+  if (preselectedRoom) {
+    updateCalendar(preselectedRoom);
   }
 
   if (resDateInput && !resDateInput.value) {
     const today = new Date();
     today.setDate(today.getDate() + 1);
     resDateInput.value = today.toISOString().split('T')[0];
+  }
+
+  if (resDateInput) {
+    resDateInput.addEventListener('change', () => {
+      updatePurpose();
+    });
+  }
+
+  let purposeEdited = false;
+  if (purposeInput) {
+    purposeInput.addEventListener('input', () => {
+      purposeEdited = true;
+    });
+  }
+
+  function updatePurpose() {
+    if (!purposeInput || purposeEdited) return;
+    const date = resDateInput ? resDateInput.value : '';
+    let roomName = '';
+    if (roomSelect && roomSelect.options.length > 0 && roomSelect.selectedIndex >= 0) {
+      roomName = roomSelect.options[roomSelect.selectedIndex].text;
+      // Remove any tags like "[Under Maintenance]" or "[Unavailable]" if we just want the base room name, but for now we take the full text
+    }
+    if (roomName && date) {
+      purposeInput.value = `${roomName} - ${date}`;
+    }
   }
 
   function showCollisionError(message) {

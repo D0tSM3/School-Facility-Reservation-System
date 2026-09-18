@@ -373,53 +373,25 @@
                     data-filter="all"
                   >
                     <span>All Reservations</span>
-                    <span
-                      class="px-1.5 py-0.5 rounded-full text-[10px] bg-secondary-container text-on-secondary-fixed"
-                      >8</span
-                    >
                   </button>
                   <button
                     class="filter-tab px-space-md py-space-sm rounded font-label-md text-label-md transition-colors text-on-surface-variant hover:text-on-surface hover:bg-surface-container flex items-center gap-space-xs"
                     data-filter="pending"
                   >
                     <span>Pending Review</span>
-                    <span
-                      class="px-1.5 py-0.5 rounded-full text-[10px] bg-surface-container-highest text-on-surface"
-                      >2</span
-                    >
                   </button>
                   <button
                     class="filter-tab px-space-md py-space-sm rounded font-label-md text-label-md transition-colors text-on-surface-variant hover:text-on-surface hover:bg-surface-container flex items-center gap-space-xs"
                     data-filter="approved"
                   >
                     <span>Approved &amp; Upcoming</span>
-                    <span
-                      class="px-1.5 py-0.5 rounded-full text-[10px] bg-surface-container-highest text-on-surface"
-                      >3</span
-                    >
                   </button>
                   <button
                     class="filter-tab px-space-md py-space-sm rounded font-label-md text-label-md transition-colors text-on-surface-variant hover:text-on-surface hover:bg-surface-container flex items-center gap-space-xs"
                     data-filter="history"
                   >
                     <span>Past / History</span>
-                    <span
-                      class="px-1.5 py-0.5 rounded-full text-[10px] bg-surface-container-highest text-on-surface"
-                      >3</span
-                    >
                   </button>
-                </div>
-                <div class="flex items-center gap-space-xs px-space-sm py-1">
-                  <span
-                    class="material-symbols-outlined text-outline text-[18px]"
-                    >search</span
-                  >
-                  <input
-                    class="text-body-sm font-body-sm bg-surface-container-low text-on-surface px-space-sm py-1 rounded placeholder-outline focus:outline-none focus:ring-1 focus:ring-primary w-44"
-                    id="reservationSearch"
-                    placeholder="Search reference or venue..."
-                    type="text"
-                  />
                 </div>
               </div>
               <div class="flex flex-col space-y-space-sm" id="reservationList">
@@ -1002,6 +974,120 @@
                   Confirm Cancellation
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+        <!-- Move Request Modal -->
+        <div
+          id="moveModalOverlay"
+          class="fixed inset-0 bg-[#000000] bg-opacity-40 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-200"
+          aria-hidden="true"
+        >
+          <div
+            id="moveModal"
+            class="bg-surface w-[90%] max-w-md rounded-xl shadow-xl overflow-hidden transform scale-95 transition-transform duration-200 flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="moveModalTitle"
+          >
+            <!-- Modal Header -->
+            <div
+              class="px-space-md py-space-sm border-b border-outline-variant flex justify-between items-center bg-surface-container-low"
+            >
+              <h2
+                id="moveModalTitle"
+                class="font-title-lg text-title-lg font-semibold text-on-surface"
+              >
+                Request to Move Reservation
+              </h2>
+              <button
+                id="moveModalCloseIcon"
+                class="text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-full p-1"
+                aria-label="Close modal"
+              >
+                <span class="material-symbols-outlined text-[20px]"
+                  >close</span
+                >
+              </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-space-md flex-1 overflow-y-auto">
+              <p class="text-body-md text-on-surface-variant mb-space-md">
+                Please select the new date and time you would like to move this reservation to. Your request will be reviewed by staff.
+              </p>
+
+              <!-- Move Request Form -->
+              <form id="moveForm" class="space-y-space-md">
+                <!-- Date -->
+                <div>
+                  <label
+                    for="moveDate"
+                    class="block font-label-md text-label-md font-medium text-on-surface mb-space-xs"
+                    >New Date *</label
+                  >
+                  <input
+                    type="date"
+                    id="moveDate"
+                    required
+                    class="w-full bg-surface-container-lowest border border-outline text-on-surface rounded px-space-sm py-space-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow"
+                  />
+                </div>
+
+                <!-- Time Grid -->
+                <div class="grid grid-cols-2 gap-space-md">
+                  <div>
+                    <label
+                      for="moveStartTime"
+                      class="block font-label-md text-label-md font-medium text-on-surface mb-space-xs"
+                      >New Start Time *</label
+                    >
+                    <input
+                      type="time"
+                      id="moveStartTime"
+                      required
+                      class="w-full bg-surface-container-lowest border border-outline text-on-surface rounded px-space-sm py-space-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      for="moveEndTime"
+                      class="block font-label-md text-label-md font-medium text-on-surface mb-space-xs"
+                      >New End Time *</label
+                    >
+                    <input
+                      type="time"
+                      id="moveEndTime"
+                      required
+                      class="w-full bg-surface-container-lowest border border-outline text-on-surface rounded px-space-sm py-space-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow"
+                    />
+                  </div>
+                </div>
+
+                <div
+                  id="moveErrorMsg"
+                  class="hidden p-space-sm bg-error-container text-on-error-container text-body-sm rounded"
+                ></div>
+              </form>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-space-md py-space-sm border-t border-outline-variant bg-surface-container-low flex justify-end gap-space-sm">
+              <button
+                type="button"
+                id="moveModalCancelBtn"
+                class="px-space-md py-space-sm text-on-surface font-label-md font-medium rounded hover:bg-surface-container-highest transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="moveForm"
+                id="moveModalSubmitBtn"
+                class="px-space-md py-space-sm bg-primary text-on-primary font-label-md font-medium rounded shadow hover:bg-[#720B20] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              >
+                Submit Request
+              </button>
             </div>
           </div>
         </div>
