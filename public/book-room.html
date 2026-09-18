@@ -213,8 +213,8 @@
           ><span>Dashboard</span></a
         ><a
           class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="rooms"
-          href="book-room.html"
+            data-path="rooms"
+            href="rooms.html"
           ><span class="material-symbols-outlined text-[20px]"
             >meeting_room</span
           ><span>Rooms</span></a
@@ -234,7 +234,7 @@
         ><a
           class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
           data-path="admin-governance"
-          href="staff-queue.html"
+            href="admin-governance.html"
           ><span class="material-symbols-outlined text-[20px]"
             >admin_panel_settings</span
           ><span>Admin Governance</span></a
@@ -288,7 +288,7 @@
               >
             </div>
             <div
-              class="w-8 h-8 rounded-full bg-primary-container text-primary font-bold flex items-center justify-center text-sm shadow-[0_1px_8px_rgba(0,0,0,0.04)] header-initials"
+              class="w-8 h-8 rounded-full bg-primary-container text-secondary-container font-bold flex items-center justify-center text-sm shadow-[0_1px_8px_rgba(0,0,0,0.04)] header-initials"
             >EV</div>
           </div>
         </div>
@@ -386,13 +386,14 @@
                       <span class="text-primary-fixed-dim text-xs">•</span>
                       <span
                         class="font-label-sm text-label-sm text-primary-fixed"
-                        >Form AR-204</span
+                        >Reservation Request</span
                       >
                     </div>
                     <h2
+                      data-booking-heading
                       class="font-headline-sm text-headline-sm text-on-primary tracking-tight"
                     >
-                      Reserve Academic Space — Tech Hall North (Room 204)
+                      Reserve Academic Space
                     </h2>
                   </div>
                 </div>
@@ -613,7 +614,8 @@
                       >
                     </div>
                     <span
-                      class="font-label-sm text-label-sm uppercase tracking-wider text-error font-bold flex items-center gap-1"
+                      class="hidden font-label-sm text-label-sm uppercase tracking-wider text-error font-bold flex items-center gap-1"
+                      id="timingAnomalyLabel"
                     >
                       <span class="w-2 h-2 rounded-full bg-error"></span> Timing
                       Anomaly
@@ -649,17 +651,18 @@
                     <!-- End Time with Explicit Inline Validation Alert -->
                     <div class="flex flex-col space-y-space-xs">
                       <label
-                        class="font-label-sm text-label-sm text-error font-bold flex items-center justify-between"
+                        class="font-label-sm text-label-sm text-on-surface font-bold flex items-center justify-between"
                         for="endTime"
                       >
                         <span>End Time <span class="text-error">*</span></span>
-                        <span class="text-error text-xs font-semibold"
+                        <span class="hidden text-error text-xs font-semibold"
+                          id="invalidTimeOrderLabel"
                           >Invalid Time Order</span
                         >
                       </label>
                       <div class="relative">
                         <span
-                          class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-error"
+                          class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-on-surface-variant"
                           >logout</span
                         >
                         <!-- Highlighting with error container background and solid red visual indicator -->
@@ -671,13 +674,15 @@
                           required
                         />
                         <span
-                          class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-error text-[18px]"
+                          class="hidden absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-error text-[18px]"
+                          id="invalidTimeOrderIcon"
                           >error</span
                         >
                       </div>
                       <!-- EXPLICIT VALIDATION REQUIREMENT: Highlighted under end-time with red text and visual indicator -->
                       <div
-                        class="flex items-start gap-space-xs p-space-xs px-space-sm bg-error-container/60 rounded text-error"
+                        class="hidden flex items-start gap-space-xs p-space-xs px-space-sm bg-error-container/60 rounded text-error"
+                        id="durationValidationMessage"
                       >
                         <span
                           class="material-symbols-outlined text-[16px] shrink-0 mt-0.5"

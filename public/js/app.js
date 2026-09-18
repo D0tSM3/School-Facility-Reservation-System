@@ -7,18 +7,60 @@ document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
+  const pageName = window.location.pathname.split('/').pop().toLowerCase() || 'dashboard.html';
+  const accessRules = {
+    'dashboard.html': ['customer'],
+    'rooms.html': ['customer', 'staff', 'admin'],
+    'book-room.html': ['customer'],
+    'my-reservations.html': ['customer', 'staff', 'admin'],
+    'staff-queue.html': ['staff', 'admin'],
+    'admin-governance.html': ['admin']
+  };
+  const landingPages = {
+    customer: 'dashboard.html',
+    staff: 'staff-queue.html',
+    admin: 'admin-governance.html'
+  };
+
+  function redirectForRole(role) {
+    const normalizedRole = String(role || '').toLowerCase();
+    const allowedRoles = accessRules[pageName];
+
+    if (!allowedRoles || allowedRoles.includes(normalizedRole)) return true;
+
+    window.location.replace(landingPages[normalizedRole] || 'index.html');
+    return false;
+  }
 
   // 1. Fetch real session info
   fetch(BASE + 'api/auth/me', { credentials: 'include' })
     .then(res => res.json())
     .then(json => {
       const currentUser = json.success ? json.data : null;
-      if (!currentUser) return; // Not logged in or error
+      if (!currentUser) {
+        window.location.replace('index.html');
+        return;
+      }
 
       const role = String(currentUser.role || '').toLowerCase();
+      if (!redirectForRole(role)) return;
       
       const staffLink = document.querySelector('aside nav a[data-path="staff-queue"]');
       const adminLink = document.querySelector('aside nav a[data-path="admin-governance"]');
+      const dashboardLink = document.querySelector('aside nav a[data-path="customer-dashboard"]');
+      const roomsLink = document.querySelector('aside nav a[data-path="rooms"]');
+
+      if (roomsLink) {
+        const canViewRooms = role === 'customer';
+        roomsLink.hidden = !canViewRooms;
+        roomsLink.style.setProperty('display', canViewRooms ? 'flex' : 'none', 'important');
+      }
+
+      if (dashboardLink) {
+        const canViewCustomerDashboard = role === 'customer';
+        dashboardLink.hidden = !canViewCustomerDashboard;
+        dashboardLink.style.setProperty('display', canViewCustomerDashboard ? 'flex' : 'none', 'important');
+      }
 
       if (staffLink) {
         const canViewStaffQueue = role === 'staff' || role === 'admin';
@@ -30,6 +72,18 @@ document.addEventListener('DOMContentLoaded', () => {
         adminLink.hidden = !canViewAdminGovernance;
         adminLink.style.setProperty('display', canViewAdminGovernance ? 'flex' : 'none', 'important');
       }
+
+      const roleLinks = {
+        'customer-dashboard': 'dashboard.html',
+        rooms: 'rooms.html',
+        'my-reservations': 'my-reservations.html',
+        'staff-queue': 'staff-queue.html',
+        'admin-governance': 'admin-governance.html'
+      };
+      document.querySelectorAll('aside nav a[data-path]').forEach(link => {
+        const destination = roleLinks[link.dataset.path];
+        if (destination) link.href = destination;
+      });
 
       // 2. Update Profile Header if present
       const headerUserName = document.querySelector('header .font-label-md.text-on-surface');
@@ -55,19 +109,12 @@ document.addEventListener('DOMContentLoaded', () => {
     })
     .catch(err => console.error('Failed to fetch user session', err));
 
-  // 3. Highlight Active Navigation Link & Ensure Correct Relative URLs
+  // 3. Highlight Active Navigation Link
   const currentPath = window.location.pathname.toLowerCase();
   const navLinks = document.querySelectorAll('aside nav a');
 
   navLinks.forEach(link => {
     const dataPath = link.getAttribute('data-path') || '';
-
-    // Fix relative links if not already set
-    if (dataPath === 'customer-dashboard') {
-      link.setAttribute('href', 'dashboard.html');
-    } else if (dataPath === 'rooms') {
-      link.setAttribute('href', 'rooms.html');
-    }
 
     const href = link.getAttribute('href');
     if (!href || href === '#') return;

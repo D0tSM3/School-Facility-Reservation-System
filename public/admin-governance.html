@@ -193,17 +193,8 @@
         <img
           alt="CampusRoom Maroon &amp; Gold Logo"
           class="h-8 w-auto object-contain"
-          src="https://lh3.googleusercontent.com/aida/AEtjO1WFGnm34vHHRpWglGzteAXRyfFRuoi8Syt8Wg-vzGn_wNq22Q8eoUDQ3dxiXlqtGEYI2wIgtejxw5CdRnVIdbeDN0NyGT1b23dyWa0sc-RdMZ86o4dHQ1aIATeuu8Ie5BX3Ul_Kxn3xhpNMP-Vj_nlxcXZLFiQgtTaI7eje_ljKeW9Ur_ZHOPbrDZNaxs26VlFrjKzWKO3vjBrk1V-vUXl4W5q9NwnA_V6quGKjDI8wZYa5NXqYvCdaGOk"
+          src="assets/logo.svg"
         />
-        <div class="flex flex-col">
-          <span
-            class="font-headline-sm text-headline-sm text-on-tertiary tracking-tight"
-            >CampusRoom</span
-          ><span
-            class="font-label-sm text-label-sm text-tertiary-fixed-dim uppercase tracking-wider"
-            >Buenavista Poly</span
-          >
-        </div>
       </div>
       <div class="px-space-md py-space-sm">
         <div
@@ -217,41 +208,55 @@
         data-active-classes="bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
       >
         <a
-          aria-current="page"
-          class="flex items-center gap-space-sm px-space-md py-space-sm rounded transition-colors bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
           data-path="customer-dashboard"
-          href="#"
+          href="dashboard.html"
           ><span class="material-symbols-outlined text-[20px]">dashboard</span
           ><span>Dashboard</span></a
         ><a
           class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
           data-path="rooms"
-          href="#"
+          href="rooms.html"
           ><span class="material-symbols-outlined text-[20px]"
             >meeting_room</span
           ><span>Rooms</span></a
         ><a
           class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
           data-path="my-reservations"
-          href="#"
+          href="my-reservations.html"
           ><span class="material-symbols-outlined text-[20px]"
             >event_available</span
           ><span>Reservations</span></a
         ><a
           class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
           data-path="staff-queue"
-          href="#"
+          href="staff-queue.html"
           ><span class="material-symbols-outlined text-[20px]">assignment</span
           ><span>Staff Queue</span></a
         ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="admin-governance" aria-current="page" class="flex items-center gap-space-sm px-space-md py-space-sm rounded transition-colors bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg" href="admin-governance.html"><span class="material-symbols-outlined text-[20px]"
+          aria-current="page"
+          class="flex items-center gap-space-sm px-space-md py-space-sm rounded transition-colors bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
+          data-path="admin-governance"
+          href="admin-governance.html"
+          ><span class="material-symbols-outlined text-[20px]"
             >admin_panel_settings</span
           ><span>Admin Governance</span></a
         >
       </nav>
       <div class="p-space-md bg-tertiary-container/40" id="sidebarUserFooter">
-        <!-- populated by app.js -->
+        <div class="flex items-center justify-between">
+          <div class="flex flex-col">
+            <span class="font-label-sm text-label-sm text-tertiary-fixed-dim"
+              >Registrar Desk</span
+            ><span class="font-body-sm text-body-sm text-on-tertiary"
+              >Ext. 4021 / 4022</span
+            >
+          </div>
+          <span
+            class="material-symbols-outlined text-secondary-container text-[18px]"
+            >verified</span
+          >
+        </div>
       </div>
     </aside>
     <div class="pl-[250px]">
@@ -262,7 +267,7 @@
           <img
             alt="CampusRoom Maroon &amp; Gold Logo"
             class="h-8 w-auto object-contain"
-            src="https://lh3.googleusercontent.com/aida/AEtjO1WFGnm34vHHRpWglGzteAXRyfFRuoi8Syt8Wg-vzGn_wNq22Q8eoUDQ3dxiXlqtGEYI2wIgtejxw5CdRnVIdbeDN0NyGT1b23dyWa0sc-RdMZ86o4dHQ1aIATeuu8Ie5BX3Ul_Kxn3xhpNMP-Vj_nlxcXZLFiQgtTaI7eje_ljKeW9Ur_ZHOPbrDZNaxs26VlFrjKzWKO3vjBrk1V-vUXl4W5q9NwnA_V6quGKjDI8wZYa5NXqYvCdaGOk"
+            src="assets/logo.svg"
           />
         </div>
         <div class="flex items-center gap-space-md">
@@ -271,7 +276,10 @@
               <span class="font-label-md text-label-md text-on-surface" data-user-name>Loading…</span>
               <span class="font-label-sm text-label-sm text-primary font-bold" data-user-role></span>
             </div>
-            <span data-user-avatar></span>
+            <span
+              class="w-8 h-8 rounded-full bg-primary-container text-secondary-container font-bold flex items-center justify-center text-sm shadow-[0_1px_8px_rgba(0,0,0,0.04)] header-initials"
+              data-user-avatar
+            ></span>
           </div>
         </div>
       </header>
@@ -382,10 +390,15 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadUsers() {
         try {
             const res = await fetch(BASE + 'api/users', { credentials: 'same-origin' });
-            if (!res.ok) return alert('Cannot load users.');
-            const data = await res.json();
+            const payload = await res.json();
+            if (!res.ok || !payload.success) return alert(payload.error || 'Cannot load users.');
+            const data = Array.isArray(payload.data) ? payload.data : [];
             const tbody = document.getElementById('usersTableBody');
             tbody.innerHTML = '';
+            if (data.length === 0) {
+              tbody.innerHTML = '<tr><td class="p-2 text-on-surface-variant" colspan="4">No users found.</td></tr>';
+              return;
+            }
             data.forEach(u => {
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-surface-variant";
@@ -427,10 +440,15 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadRooms() {
         try {
             const res = await fetch(BASE + 'api/rooms', { credentials: 'same-origin' });
-            if (!res.ok) return alert('Cannot load rooms.');
-            const data = await res.json();
+            const payload = await res.json();
+            if (!res.ok || !payload.success) return alert(payload.error || 'Cannot load rooms.');
+            const data = Array.isArray(payload.data) ? payload.data : [];
             const tbody = document.getElementById('roomsTableBody');
             tbody.innerHTML = '';
+            if (data.length === 0) {
+              tbody.innerHTML = '<tr><td class="p-2 text-on-surface-variant" colspan="4">No rooms found.</td></tr>';
+              return;
+            }
             data.forEach(r => {
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-surface-variant";
@@ -487,10 +505,15 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadLogs() {
         try {
             const res = await fetch(BASE + 'api/logs', { credentials: 'same-origin' });
-            if (!res.ok) return alert('Cannot load logs.');
-            const data = await res.json();
+            const payload = await res.json();
+            if (!res.ok || !payload.success) return alert(payload.error || 'Cannot load logs.');
+            const data = Array.isArray(payload.data) ? payload.data : [];
             const tbody = document.getElementById('logsTableBody');
             tbody.innerHTML = '';
+            if (data.length === 0) {
+              tbody.innerHTML = '<tr><td class="p-2 text-on-surface-variant" colspan="3">No system logs found.</td></tr>';
+              return;
+            }
             data.forEach(l => {
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-surface-variant";
@@ -510,13 +533,6 @@ document.addEventListener('DOMContentLoaded', () => {
       window.APP_ALLOWED_ROLES = ["Admin"];
       window.APP_ACTIVE_NAV   = 'admin-governance';
     </script>
-    <script>
-      (function() {
-        var base = window.location.pathname.replace(/[^\/]*$/, '');
-        var s = document.createElement('script');
-        s.src = base + 'js/app.js';
-        document.head.appendChild(s);
-      })();
-    </script>
+    <script src="js/app.js"></script>
   </body>
 </html>

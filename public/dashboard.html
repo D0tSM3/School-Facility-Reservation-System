@@ -219,8 +219,8 @@
           ><span>Dashboard</span></a
         ><a
           class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="rooms"
-          href="book-room.html"
+            data-path="rooms"
+            href="rooms.html"
           ><span class="material-symbols-outlined text-[20px]"
             >meeting_room</span
           ><span>Rooms</span></a
@@ -240,7 +240,7 @@
         ><a
           class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
           data-path="admin-governance"
-          href="staff-queue.html"
+            href="admin-governance.html"
           ><span class="material-symbols-outlined text-[20px]"
             >admin_panel_settings</span
           ><span>Admin Governance</span></a
@@ -294,7 +294,7 @@
               >
             </div>
             <div
-              class="w-8 h-8 rounded-full bg-primary-container text-primary font-bold flex items-center justify-center text-sm shadow-[0_1px_8px_rgba(0,0,0,0.04)] header-initials"
+              class="w-8 h-8 rounded-full bg-primary-container text-secondary-container font-bold flex items-center justify-center text-sm shadow-[0_1px_8px_rgba(0,0,0,0.04)] header-initials"
             >EV</div>
           </div>
         </div>
@@ -372,7 +372,7 @@
             <div class="lg:col-span-4 xl:col-span-3 flex flex-col gap-space-lg">
               <!-- Campus Overview & Tasks Card -->
               <div
-                class="hidden bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-md"
+                class="bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-md"
               >
                 <div
                   class="flex items-center justify-between pb-space-xs border-b border-surface-container"
@@ -414,7 +414,7 @@
                     </div>
                     <span
                       class="px-2 py-0.5 bg-[#ffc641] text-[#261a00] font-label-sm text-label-sm font-bold rounded"
-                      >4 Requests</span
+                      ><span id="dashboardPendingRequests">0</span> Requests</span
                     >
                   </div>
                   <!-- Rooms Under Maintenance -->
@@ -439,7 +439,7 @@
                     </div>
                     <span
                       class="px-2 py-0.5 bg-surface-container-high text-[#1b1c1c] font-label-sm text-label-sm font-bold rounded"
-                      >3 Rooms</span
+                      ><span id="dashboardMaintenanceRooms">0</span> Rooms</span
                     >
                   </div>
                   <!-- Today's Bookings -->
@@ -464,7 +464,7 @@
                     </div>
                     <span
                       class="px-2 py-0.5 bg-primary-container text-on-primary font-label-sm text-label-sm font-bold rounded"
-                      >48 Scheduled</span
+                      ><span id="dashboardTodayBookings">0</span> Scheduled</span
                     >
                   </div>
                 </div>
@@ -478,7 +478,7 @@
                     <span class="text-on-surface-variant font-medium"
                       >Campus Capacity Utilization</span
                     >
-                    <span class="text-primary font-bold">78% Peak</span>
+                    <span class="text-primary font-bold" id="dashboardPeakUtilization">--</span>
                   </div>
                   <div class="w-full h-12 flex items-end pt-2">
                     <svg
@@ -528,11 +528,11 @@
                     <div class="flex items-center justify-between">
                       <span
                         class="font-headline-sm text-headline-sm text-on-surface"
-                        >Tech Hall North 204</span
+                        ><span id="dashboardNextRoom">No upcoming reservation</span></span
                       >
                       <span
                         class="px-2 py-0.5 bg-primary-container text-on-primary text-[10px] font-bold rounded uppercase tracking-wider"
-                        >Confirmed</span
+                        ><span id="dashboardNextStatus">--</span></span
                       >
                     </div>
                     <div
@@ -542,27 +542,26 @@
                         class="material-symbols-outlined text-primary text-[18px]"
                         >calendar_clock</span
                       >
-                      <span>Today at 2:00 PM – 3:30 PM</span>
+                      <span id="dashboardNextTime">No upcoming reservation</span>
                     </div>
                     <p
                       class="font-body-sm text-body-sm text-on-surface-variant"
                     >
-                      Faculty Council Prep &amp; Curriculum Review with Dept
-                      Chairs.
+                      <span id="dashboardNextPurpose">Create a reservation to see your next booking here.</span>
                     </p>
                     <div class="pt-2 flex items-center justify-between">
                       <a
                         class="text-primary hover:text-primary-container font-label-sm text-label-sm font-semibold flex items-center gap-0.5"
                         href="#"
                       >
-                        <span>Manage Permit</span>
+                        <span id="dashboardNextLinkText">View Reservations</span>
                         <span class="material-symbols-outlined text-[14px]"
                           >arrow_forward</span
                         >
                       </a>
                       <span
                         class="text-[11px] text-on-tertiary-container font-mono"
-                        >ID: #RES-9402</span
+                        ><span id="dashboardNextId">--</span></span
                       >
                     </div>
                   </div>
