@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // down and rebuilding the whole component (which also resets the
     // student back to the current week if they had navigated elsewhere).
     if (calendarInstance && calendarInstance.roomId === roomId) {
-      calendarInstance.loadData();
+      calendarInstance.goToDate(resDateInput ? resDateInput.value : '', true);
       return;
     }
     const container = document.getElementById('room-calendar-container');
@@ -170,7 +170,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof RoomCalendar !== 'undefined') {
         calendarInstance = new RoomCalendar({
           containerId: 'room-calendar-container',
-          roomId: roomId
+          roomId: roomId,
+          initialDate: resDateInput ? resDateInput.value : '',
+          minDate: resDateInput ? resDateInput.min : ''
         });
       }
     }
@@ -206,15 +208,51 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  const dateError = document.getElementById('dateError');
+
+  function setDateError(message) {
+    if (dateError) {
+      dateError.textContent = message;
+      dateError.classList.toggle('hidden', !message);
+    }
+    if (resDateInput) resDateInput.setAttribute('aria-invalid', message ? 'true' : 'false');
+  }
+
+  /** '' when the date can be booked, otherwise the reason it can't. */
+  function dateProblem(value) {
+    if (!value) return '';
+    if (new Date(value + 'T00:00:00').getDay() === 0) {          // local, not UTC
+      return 'Sundays are not available for reservation. Please pick another day.';
+    }
+    if (resDateInput && resDateInput.min && value < resDateInput.min) {
+      return 'Bookings open starting tomorrow. Please pick a later date.';
+    }
+    return '';
+  }
+
+  // While a date is being typed the browser fires "change" for every valid
+  // intermediate value (year 0002, 0020, 0202, then 2026). Only act on a real year.
+  function isRealDate(value) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number(value.slice(0, 4)) >= 2000;
+  }
+
   if (resDateInput) {
     resDateInput.addEventListener('change', () => {
-      if (!resDateInput.value) return;
-      const selected = new Date(resDateInput.value + 'T00:00:00');   // local, not UTC
-      if (selected.getDay() === 0) {
-        showCollisionError('Sundays are not available for reservation.', 'Date unavailable');
-        resDateInput.value = '';
-      } else {
-        hideCollisionError();
+      const value = resDateInput.value;
+      if (!isRealDate(value)) { setDateError(''); return; }
+      setDateError(dateProblem(value));                 // message only; never wipe what they typed
+      if (calendarInstance) calendarInstance.goToDate(value);
+      markTakenSlots();
+    });
+  }
+
+  // The visible calendar button (the browser's own icon is hidden in components.css).
+  const openPickerBtn = document.getElementById('openDatePickerBtn');
+  if (openPickerBtn && resDateInput) {
+    openPickerBtn.addEventListener('click', () => {
+      resDateInput.focus();
+      if (typeof resDateInput.showPicker === 'function') {
+        try { resDateInput.showPicker(); } catch (_) { /* no user gesture; focus() is the fallback */ }
       }
     });
   }
@@ -280,14 +318,16 @@ document.addEventListener('DOMContentLoaded', () => {
     Array.from(startTimeInput.options).forEach(o => { o.dataset.label = o.textContent; });
   }
 
+  let takenSeq = 0;
   async function markTakenSlots() {
     if (!startTimeInput || !roomSelect || !resDateInput) return;
     const roomId = roomSelect.value, d = resDateInput.value;
-    if (!roomId || !d) return;
+    if (!roomId || !isRealDate(d)) return;
+    const seq = ++takenSeq;
     try {
       const res = await fetch(`${BASE}api/rooms/${encodeURIComponent(roomId)}/calendar?start=${d}&end=${d}`, { credentials: 'include' });
       const json = await res.json();
-      if (!json.success) return;
+      if (seq !== takenSeq || !json.success) return;          // stale response or error
       const { reservations, class_schedules, holidays } = json.data;
 
       const dayName = new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
@@ -307,10 +347,16 @@ document.addEventListener('DOMContentLoaded', () => {
         opt.disabled = taken;
         opt.textContent = opt.dataset.label + (taken ? ' — unavailable' : '');
       });
+
+      // A start time that was valid for the previous date may be taken on this one.
+      const chosen = startTimeInput.selectedOptions[0];
+      if (chosen && chosen.disabled) {
+        startTimeInput.value = '';
+        syncEndOptions();
+      }
     } catch (_) { /* non-fatal; the server still validates */ }
   }
 
-  if (resDateInput) resDateInput.addEventListener('change', markTakenSlots);
   if (roomSelect) roomSelect.addEventListener('change', markTakenSlots);
 
   function showCollisionError(message, title = 'Unable to submit request') {
@@ -571,6 +617,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!roomId || !dateVal || !startVal || !endVal) {
         return showCollisionError('Please choose a room, date, start time and end time.', 'Missing information');
+      }
+      const problem = dateProblem(dateVal);
+      if (problem) {
+        setDateError(problem);
+        return showCollisionError(problem, 'Invalid date');
       }
       if (resDateInput && resDateInput.min && dateVal < resDateInput.min) {
         return showCollisionError('Please choose a date that is not in the past.', 'Invalid date');

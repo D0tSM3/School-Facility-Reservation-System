@@ -362,7 +362,7 @@
           >
             <!-- Active Modal Container -->
             <div
-              class="relative w-full max-w-3xl my-auto bg-surface-container-lowest rounded shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+              class="relative w-full max-w-5xl my-auto bg-surface-container-lowest rounded shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
             >
               <!-- Top Brand Accent Strip -->
               <div class="h-1.5 w-full bg-secondary-container"></div>
@@ -459,6 +459,7 @@
               <form
                 class="p-space-lg space-y-space-lg max-h-[calc(88vh-130px)] overflow-y-auto"
                 id="roomReservationForm"
+                novalidate
               >
                 <!-- Room Calendar Integration -->
                 <div id="room-calendar-container" class="mb-space-lg w-full"></div>
@@ -584,7 +585,7 @@
                   <div class="md:col-span-6 flex flex-col space-y-space-xs">
                     <label
                       class="font-label-md text-label-md text-on-surface"
-                      for="reservationDate"
+                      for="resDate"
                     >
                       <span
                         >Reservation Date
@@ -597,12 +598,13 @@
                         >calendar_today</span
                       >
                       <input
-                        class="w-full pl-9 pr-3 py-2 bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded shadow-sm focus:outline-none focus:bg-surface-container-low"
+                        class="w-full pl-9 pr-10 py-2 bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded shadow-sm focus:outline-none focus:bg-surface-container-low"
                         id="resDate"
                         type="date"
                         required
                       />
                       <button
+                        id="openDatePickerBtn"
                         aria-label="Open mini calendar picker"
                         class="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary"
                         type="button"
@@ -617,6 +619,11 @@
                     >
                       Bookings open starting tomorrow. Sundays are not available.
                     </p>
+                    <p
+                      id="dateError"
+                      role="alert"
+                      class="hidden font-body-sm text-body-sm text-error font-semibold"
+                    ></p>
                   </div>
                 </div>
                 <!-- Field 3: Time Slot Fields with EXPLICIT VALIDATION REQUIREMENT -->
@@ -720,7 +727,7 @@
                     class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-space-xs"
                   >
                     <!-- Option 1 -->
-                    <label class="cursor-pointer">
+                    <label class="relative cursor-pointer">
                       <input
                         class="peer sr-only"
                         name="reservation_purpose"
@@ -741,7 +748,7 @@
                       </div>
                     </label>
                     <!-- Option 2 (Selected) -->
-                    <label class="cursor-pointer">
+                    <label class="relative cursor-pointer">
                       <input
                         class="peer sr-only"
                         name="reservation_purpose"
@@ -763,7 +770,7 @@
                       </div>
                     </label>
                     <!-- Option 3 -->
-                    <label class="cursor-pointer">
+                    <label class="relative cursor-pointer">
                       <input
                         class="peer sr-only"
                         name="reservation_purpose"
@@ -784,7 +791,7 @@
                       </div>
                     </label>
                     <!-- Option 4 -->
-                    <label class="cursor-pointer">
+                    <label class="relative cursor-pointer">
                       <input
                         class="peer sr-only"
                         name="reservation_purpose"
@@ -805,7 +812,7 @@
                       </div>
                     </label>
                     <!-- Option 5 -->
-                    <label class="cursor-pointer col-span-2 sm:col-span-1">
+                    <label class="relative cursor-pointer col-span-2 sm:col-span-1">
                       <input
                         class="peer sr-only"
                         name="reservation_purpose"

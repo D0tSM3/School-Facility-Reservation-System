@@ -96,3 +96,9 @@
   transform: translateX(-50%);
   z-index: 60;
 }
+
+/* Reservation date: booking.js draws its own calendar button, so hide the
+   browser's built-in picker icon (otherwise the two overlap). */
+#resDate::-webkit-calendar-picker-indicator {
+  display: none;
+}
