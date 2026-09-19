@@ -115,9 +115,22 @@ class RoomCalendar {
           this.renderGrid(dates, json.data);
         } else {
           console.error("Calendar fetch error:", json.error);
+          this.showLoadError();
         }
       })
-      .catch(console.error);
+      .catch(err => {
+        console.error("Calendar fetch error:", err);
+        this.showLoadError();
+      });
+  }
+
+  // Fix Guide 4.5: a failed/empty fetch used to leave the grid blank, which
+  // reads as "everything is free". Show an explicit message instead.
+  showLoadError() {
+    const tbody = this.container.querySelector('#calendarBody');
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-error">Couldn\u2019t load this room\u2019s schedule. Please try again.</td></tr>';
+    }
   }
 
   timeToPercent(timeStr) {
@@ -142,6 +155,9 @@ class RoomCalendar {
     const headerRow = this.container.querySelector('#calendarHeaderRow');
     if (!headerRow) return;
     
+    // Table structure only — no user-controlled data here, safe to build with innerHTML.
+    const esc = (v) => window.CampusRoomUtil.escapeHtml(v);
+
     headerRow.innerHTML = '<th class="p-2 border border-outline-variant font-label-sm font-semibold w-24">Time</th>';
     
     dates.forEach((date, i) => {
@@ -184,29 +200,39 @@ class RoomCalendar {
         if (holiday) {
           td.innerHTML = `<div class="bg-gray-100 text-on-surface-variant p-1 text-center h-full flex flex-col justify-center rounded">
             <span class="material-symbols-outlined text-[16px] mb-1">celebration</span>
-            <span class="font-bold">${holiday.name}</span>
+            <span class="font-bold">${esc(holiday.name)}</span>
           </div>`;
           tr.appendChild(td);
           return;
         }
 
+        // Fix Guide 4.1: place items by *overlap* with this block instead of
+        // by start time, so a booking/class spanning more than one block
+        // shows in every block it covers rather than only its first.
+        const blockEnd = nextBlock ? nextBlock.start : '21:00';
+        const overlaps = (s, e) => s < blockEnd && e > block.start;
+
         // Classes
-        const classes = data.class_schedules.filter(c => c.day_of_week === dayName && c.start_time.startsWith(block.start));
+        const classes = data.class_schedules.filter(c =>
+          c.day_of_week === dayName &&
+          overlaps(c.start_time.slice(0, 5), c.end_time.slice(0, 5)));
         classes.forEach(c => {
           const div = document.createElement('div');
           div.className = 'bg-blue-50 border border-blue-200 text-blue-800 rounded p-1 mb-1 shadow-sm';
-          div.innerHTML = `<div class="font-bold">${c.course_code}</div><div>${c.section}</div>`;
+          div.innerHTML = `<div class="font-bold">${esc(c.course_code)}</div><div>${esc(c.section)}</div>`;
           td.appendChild(div);
         });
 
         // Reservations
-        const resList = data.reservations.filter(r => r.start_time.startsWith(dateYMD) && r.start_time.split(' ')[1].startsWith(block.start));
+        const resList = data.reservations.filter(r =>
+          r.start_time.startsWith(dateYMD) &&
+          overlaps(r.start_time.slice(11, 16), r.end_time.slice(11, 16)));
         resList.forEach(r => {
           const isPending = r.status === 'Pending';
           const bgClass = isPending ? 'bg-amber-50 border-amber-200 text-amber-800 border-dashed' : 'bg-[#DCFCE7] border-[#86EFAC] text-[#15803D]';
           const div = document.createElement('div');
           div.className = `border rounded p-1 mb-1 shadow-sm ${bgClass}`;
-          div.innerHTML = `<div class="font-bold truncate" title="${r.purpose}">${r.purpose}</div><div class="truncate">${r.customer_name}</div>`;
+          div.innerHTML = `<div class="font-bold truncate" title="${esc(r.purpose)}">${esc(r.purpose)}</div><div class="truncate">${esc(r.customer_name)}</div>`;
           td.appendChild(div);
         });
         

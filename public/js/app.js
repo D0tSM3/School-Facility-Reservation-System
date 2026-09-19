@@ -13,12 +13,24 @@ document.addEventListener('DOMContentLoaded', () => {
     .then(res => res.json())
     .then(json => {
       const currentUser = json.success ? json.data : null;
-      if (!currentUser) return; // Not logged in or error
+      if (!currentUser) {
+        // Fix Guide 5.3: app.js isn't loaded by index.html/verify.html, so
+        // landing here with no session means the student needs to log in
+        // rather than sit on a form that will fail on submit.
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // Fix Guide 5.4: let page scripts (e.g. booking.js) react to the
+      // logged-in user's role without each one re-fetching /api/auth/me.
+      window.currentUser = currentUser;
+      document.dispatchEvent(new CustomEvent('campusroom:user', { detail: currentUser }));
 
       const role = String(currentUser.role || '').toLowerCase();
       
       const staffLink = document.querySelector('aside nav a[data-path="staff-queue"]');
       const adminLink = document.querySelector('aside nav a[data-path="admin-governance"]');
+      const myReservationsLink = document.querySelector('aside nav a[data-path="my-reservations"]');
 
       if (staffLink) {
         const canViewStaffQueue = role === 'staff' || role === 'admin';
@@ -30,6 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
         adminLink.hidden = !canViewAdminGovernance;
         adminLink.style.setProperty('display', canViewAdminGovernance ? 'flex' : 'none', 'important');
       }
+      if (myReservationsLink) {
+        const canViewMyReservations = role === 'customer';
+        myReservationsLink.hidden = !canViewMyReservations;
+        myReservationsLink.style.setProperty('display', canViewMyReservations ? 'flex' : 'none', 'important');
+      }
 
       // 2. Update Profile Header if present
       const headerUserName = document.querySelector('header .font-label-md.text-on-surface');
@@ -40,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (headerUserRole) {
           headerUserRole.textContent = currentUser.role === 'Staff' || currentUser.role === 'Admin'
             ? `${currentUser.role} / Registrar`
-            : 'Faculty / Academic';
+            : 'Student';
         }
         
         // Update initials
@@ -58,6 +75,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // 3. Highlight Active Navigation Link & Ensure Correct Relative URLs
   const currentPath = window.location.pathname.toLowerCase();
   const navLinks = document.querySelectorAll('aside nav a');
+
+  // Fix Guide 5.2: the Rooms link points to rooms.html, but the booking page
+  // is book-room.html, so a plain currentPath.includes(href) check never
+  // highlights "Rooms" while a student is actually booking a room.
+  const ACTIVE_ALIASES = { rooms: ['rooms.html', 'book-room.html'] };
 
   navLinks.forEach(link => {
     const dataPath = link.getAttribute('data-path') || '';
@@ -77,8 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (dataPath === 'customer-dashboard' && isDashboard) {
       isActive = true;
-    } else if (dataPath !== 'customer-dashboard' && href !== 'dashboard.html' && currentPath.includes(href.toLowerCase())) {
-      isActive = true;
+    } else if (dataPath !== 'customer-dashboard' && href !== 'dashboard.html') {
+      const targets = ACTIVE_ALIASES[dataPath] || [href.toLowerCase()];
+      isActive = targets.some(t => currentPath.includes(t));
     }
 
     if (isActive) {

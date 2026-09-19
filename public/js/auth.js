@@ -199,16 +199,18 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: fullName, email, password })
       })
-      .then(res => res.json().then(data => ({ status: res.status, data })))
-      .then(({ status, data }) => {
+      .then(res => res.json().then(json => ({ status: res.status, json })))
+      .then(({ status, json }) => {
+        // Response::json() nests the payload under `data`; errors are top-level.
+        const payload = json.data || {};
         if (status === 201) {
-          sessionStorage.setItem('otp_email', data.email);
-          if (data.dev_otp) {
-            sessionStorage.setItem('dev_otp', data.dev_otp);
+          sessionStorage.setItem('otp_email', payload.email || email);
+          if (payload.dev_otp) {
+            sessionStorage.setItem('dev_otp', payload.dev_otp);
           }
           window.location.href = 'verify.html';
         } else {
-          showRegisterError(data.error || 'An error occurred during account registration.');
+          showRegisterError(json.error || 'An error occurred during account registration.');
         }
       })
       .catch(err => {

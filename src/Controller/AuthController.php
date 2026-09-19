@@ -48,7 +48,69 @@ class AuthController
     // POST /api/auth/register
     // ---------------------------------------------------------------
 
+    public function register(): never
+    {
+        $body = $this->jsonBody();
 
+        $name     = trim((string) ($body['name']     ?? ''));
+        $email    = strtolower(trim((string) ($body['email'] ?? '')));
+        $password = (string) ($body['password'] ?? '');
+
+        if ($name === '' || $email === '' || $password === '') {
+            Response::error('name, email and password are required.', 422);
+        }
+        if (mb_strlen($name) > 150) {
+            Response::error('Name must be 150 characters or fewer.', 422);
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 255) {
+            Response::error('Please enter a valid email address.', 422);
+        }
+
+        // Optional institutional-domain lock. Set ALLOWED_EMAIL_DOMAIN=bpu.edu.ph
+        // in .env to restrict signup; leave it blank to allow any address.
+        $domain = strtolower(trim($_ENV['ALLOWED_EMAIL_DOMAIN'] ?? ''));
+        if ($domain !== '' && !str_ends_with($email, '@' . ltrim($domain, '@'))) {
+            Response::error('Please register with your @' . ltrim($domain, '@') . ' email address.', 422);
+        }
+
+        if (strlen($password) < 8) {
+            Response::error('Password must be at least 8 characters.', 422);
+        }
+        // bcrypt silently ignores everything past 72 bytes.
+        if (strlen($password) > 72) {
+            Response::error('Password must be 72 characters or fewer.', 422);
+        }
+
+        if ($this->users->findByEmail($email) !== null) {
+            Response::error('An account with this email already exists.', 409);
+        }
+
+        try {
+            // Role is fixed: the request body never chooses it.
+            $user = $this->users->create($name, $email, password_hash($password, PASSWORD_DEFAULT), 'Customer');
+        } catch (PDOException $e) {
+            // Lost the race between findByEmail() and INSERT (UNIQUE on email).
+            if ($e->getCode() === '23000') {
+                Response::error('An account with this email already exists.', 409);
+            }
+            throw $e;
+        }
+
+        $otp  = $this->issueOtp($user['user_id']);
+        $sent = Mailer::sendOtp($email, $user['name'], $otp);
+
+        $payload = [
+            'email'   => $email,
+            'message' => 'Account created. Enter the verification code we sent to your email.',
+        ];
+
+        if (!$sent || empty($_ENV['SMTP_HOST'] ?? '') || empty($_ENV['SMTP_USER'] ?? '')) {
+            $payload['dev_otp']  = $otp;
+            $payload['dev_note'] = 'SMTP not configured — OTP returned for development use only.';
+        }
+
+        Response::json($payload, 201);
+    }
 
     // ---------------------------------------------------------------
     // POST /api/auth/login

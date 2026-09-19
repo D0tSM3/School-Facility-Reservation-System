@@ -40,6 +40,14 @@ class Database
             // Never leak connection details to the caller.
             throw new RuntimeException('Database connection failed: ' . $e->getMessage());
         }
+
+        // Put MySQL's clock on the same zone as PHP's date_default_timezone_set()
+        // (done in index.php before this connection is opened). NOW() drives
+        // live_status, getNextAvailableSlot() and the maintenance warning, and
+        // compares against wall-clock DATETIME columns, so the two clocks must
+        // agree. A numeric offset is used on purpose: named zones such as
+        // 'Asia/Manila' need MySQL's time-zone tables, which a stock XAMPP lacks.
+        $this->pdo->exec("SET time_zone = '" . (new \DateTimeImmutable('now'))->format('P') . "'");
     }
 
     /** Singleton — one PDO connection per PHP process lifetime. */

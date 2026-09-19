@@ -24,6 +24,27 @@ class ReservationValidator
      */
     public static function check(string $roomId, string $startTime, string $endTime, ?string $excludeReservationId = null): ?string
     {
+        $pdo = Database::getInstance()->getPdo();
+
+        // 0. Room availability check — a room flagged Maintenance or
+        // deactivated should never be bookable, no matter how clean the
+        // requested time window is. This used to be missing entirely, so
+        // ReservationValidator::check() would happily approve a booking
+        // for a room nobody can actually use.
+        $stmtRoom = $pdo->prepare('SELECT status, is_active FROM Rooms WHERE room_id = ?');
+        $stmtRoom->execute([$roomId]);
+        $room = $stmtRoom->fetch(PDO::FETCH_ASSOC);
+
+        if ($room === false) {
+            return "The selected room does not exist.";
+        }
+        if ((int) $room['is_active'] === 0) {
+            return "This room is no longer in service.";
+        }
+        if ($room['status'] === 'Maintenance') {
+            return "This room is currently under maintenance and cannot be booked.";
+        }
+
         $start = strtotime($startTime);
         $end = strtotime($endTime);
 
@@ -52,8 +73,6 @@ class ReservationValidator
         if ($start < $startOfDay || $end > $endOfDay) {
             return "Reservations must be within business hours (07:30 - 21:00).";
         }
-
-        $pdo = Database::getInstance()->getPdo();
 
         // 4. Holiday Check
         $stmt = $pdo->prepare("SELECT name FROM Holidays WHERE holiday_date = ?");
@@ -106,11 +125,16 @@ class ReservationValidator
               )
         ";
         
+        // Canonical strings built from the timestamps parsed above, so this
+        // query never depends on which shape the caller happened to pass in.
+        $startSql = date('Y-m-d H:i:s', $start);
+        $endSql   = date('Y-m-d H:i:s', $end);
+
         $params = [
             $roomId,
-            $startTime, $startTime,
-            $endTime, $endTime,
-            $startTime, $endTime
+            $startSql, $startSql,
+            $endSql, $endSql,
+            $startSql, $endSql
         ];
 
         if ($excludeReservationId !== null) {

@@ -19,6 +19,27 @@ class RoomRepository
     }
 
     /**
+     * Generate a random UUIDv4 for explicit primary-key inserts.
+     * See ReservationRepository::uuidv4() for why this replaces the
+     * re-fetch-by-natural-key pattern.
+     */
+    private static function uuidv4(): string
+    {
+        $data = random_bytes(16);
+        $data[6] = chr((ord($data[6]) & 0x0f) | 0x40); // version 4
+        $data[8] = chr((ord($data[8]) & 0x3f) | 0x80); // variant
+        $hex = bin2hex($data);
+        return sprintf(
+            '%s-%s-%s-%s-%s',
+            substr($hex, 0, 8),
+            substr($hex, 8, 4),
+            substr($hex, 12, 4),
+            substr($hex, 16, 4),
+            substr($hex, 20, 12)
+        );
+    }
+
+    /**
      * Return all active rooms (Customer-visible).
      * "Occupied" is derived at query time per the schema's design note.
      */
@@ -68,10 +89,12 @@ class RoomRepository
      */
     public function create(string $name, int $capacity, string $status = 'Available', ?int $floor = null, ?string $roomType = null): array
     {
+        $roomId = self::uuidv4();
         $this->db->query(
-            'INSERT INTO Rooms (name, floor, room_type, capacity, status)
-             VALUES (:name, :floor, :room_type, :capacity, :status)',
+            'INSERT INTO Rooms (room_id, name, floor, room_type, capacity, status)
+             VALUES (:room_id, :name, :floor, :room_type, :capacity, :status)',
             [
+                ':room_id'   => $roomId,
                 ':name'      => $name,
                 ':floor'     => $floor,
                 ':room_type' => $roomType,
@@ -79,8 +102,7 @@ class RoomRepository
                 ':status'    => $status,
             ]
         );
-        // UUID PKs: lastInsertId() returns empty string; re-fetch by name.
-        return $this->findByName($name) ?? [];
+        return $this->findById($roomId) ?? [];
     }
 
     /** Find a room by name (used after INSERT to retrieve UUID PK). */
@@ -129,6 +151,23 @@ class RoomRepository
     }
 
     /**
+     * Count Pending/Approved reservations that have not ended yet.
+     * Used to warn the operator when a room is taken out of service.
+     */
+    public function countUpcomingActiveReservations(string $roomId): int
+    {
+        $stmt = $this->db->query(
+            "SELECT COUNT(*)
+               FROM Reservations
+              WHERE room_id = :room_id
+                AND status IN ('Pending', 'Approved')
+                AND end_time > NOW()",
+            [':room_id' => $roomId]
+        );
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
      * Get the calendar data for a room in a specific date range.
      * Includes Reservations, ClassSchedules, and Holidays.
      */
@@ -137,6 +176,7 @@ class RoomRepository
         // 1. Fetch Reservations (Pending and Approved only, overlapping the date range)
         $reservationsStmt = $this->db->query(
             "SELECT r.reservation_id,
+                    r.customer_id,
                     u.name AS customer_name,
                     r.purpose, r.start_time, r.end_time, r.status
                FROM Reservations r

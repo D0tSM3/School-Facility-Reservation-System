@@ -36,7 +36,9 @@ use CampusRoom\Controller\UserController;
 $dotenv = Dotenv::createImmutable(BASE_DIR);
 $dotenv->load();
 $dotenv->required(['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD']);
-$dotenv->required(['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI']);
+
+// One timezone for PHP date()/strtotime(), the MySQL session and the Manila-formatted UI.
+date_default_timezone_set($_ENV['APP_TIMEZONE'] ?? 'Asia/Manila');
 
 // Start session once here so every controller can rely on it.
 Auth::startSession();
@@ -72,6 +74,7 @@ $uri = rtrim($uri, '/') ?: '/';
 
 $routes = [
     // Auth — login
+    ['POST', '#^/api/auth/register$#',    fn() => (new AuthController())->register()],
     ['POST', '#^/api/auth/login$#',       fn() => (new AuthController())->login()],
     ['POST', '#^/api/auth/verify-otp$#',  fn() => (new AuthController())->verifyOtp()],
     ['POST', '#^/api/auth/resend-otp$#',  fn() => (new AuthController())->resendOtp()],
@@ -86,16 +89,21 @@ $routes = [
     ['PATCH', '#^/api/rooms/(?P<id>[^/]+)$#',        fn(string $id) => (new RoomController())->update($id)],
 
     // Reservations
-    // NOTE: /mine must be listed BEFORE /{id} so it is tested first.
+    // NOTE: the literal GET routes /mine and /move-requests MUST stay above GET /{id},
+    // or the {id} pattern swallows them (this router is a linear first-match list).
     ['GET',   '#^/api/reservations/mine$#',          fn() => (new ReservationController())->mine()],
+    ['GET',   '#^/api/reservations/move-requests$#', fn() => (new ReservationController())->getMoveRequests()],
+    ['GET',   '#^/api/reservations/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->show($id)],
     ['GET',   '#^/api/reservations$#',               fn() => (new ReservationController())->index()],
     ['POST',  '#^/api/reservations$#',               fn() => (new ReservationController())->store()],
     ['PATCH', '#^/api/reservations/(?P<id>[^/]+)/cancel$#', fn(string $id) => (new ReservationController())->cancel($id)],
     ['PATCH', '#^/api/reservations/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->update($id)],
 
     // Move Requests
+    ['POST',  '#^/api/reservations/(?P<id>[^/]+)/rebook$#', fn(string $id) => (new ReservationController())->rebook($id)],
+    // Two path segments after /reservations/, so it cannot collide with the single-segment GET /{id} above.
+    ['GET',   '#^/api/reservations/(?P<id>[^/]+)/logs$#', fn(string $id) => (new ReservationController())->logs($id)],
     ['POST',  '#^/api/reservations/(?P<id>[^/]+)/move-request$#', fn(string $id) => (new ReservationController())->requestMove($id)],
-    ['GET',   '#^/api/reservations/move-requests$#',              fn() => (new ReservationController())->getMoveRequests()],
     ['PATCH', '#^/api/reservations/move-requests/(?P<id>[^/]+)$#',fn(string $id) => (new ReservationController())->resolveMoveRequest($id)],
 
     // Users (Admin)

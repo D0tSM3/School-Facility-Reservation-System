@@ -229,12 +229,14 @@
           class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
           data-path="staff-queue"
           href="staff-queue.html"
+          style="display:none"
           ><span class="material-symbols-outlined text-[20px]">assignment</span
           ><span>Staff Queue</span></a
         ><a
           class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
           data-path="admin-governance"
-          href="staff-queue.html"
+          href="admin-governance.html"
+          style="display:none"
           ><span class="material-symbols-outlined text-[20px]"
             >admin_panel_settings</span
           ><span>Admin Governance</span></a
@@ -272,9 +274,9 @@
             <span class="material-symbols-outlined text-secondary text-[16px]"
               >school</span
             ><span
+              id="ayChip"
               class="font-label-sm text-label-sm text-on-surface-variant font-semibold"
-              >AY 2024-2025 • First Semester</span
-            >
+            ></span>
           </div>
         </div>
         <div class="flex items-center gap-space-md">
@@ -282,14 +284,13 @@
           <div class="flex items-center gap-space-sm pl-space-sm">
             <div class="flex flex-col text-right hidden sm:flex">
               <span class="font-label-md text-label-md text-on-surface"
-                >Dr. Edgardo Valderama</span
+                >Loading…</span
               ><span class="font-label-sm text-label-sm text-primary font-bold bg-primary-container/20 px-2 py-0.5 rounded"
-                >Faculty / Staff</span
-              >
+                ></span>
             </div>
             <div
               class="w-8 h-8 rounded-full bg-primary-container text-primary font-bold flex items-center justify-center text-sm shadow-[0_1px_8px_rgba(0,0,0,0.04)] header-initials"
-            >EV</div>
+            ></div>
           </div>
         </div>
       </header>
@@ -390,9 +391,10 @@
                       >
                     </div>
                     <h2
+                      id="roomHeading"
                       class="font-headline-sm text-headline-sm text-on-primary tracking-tight"
                     >
-                      Reserve Academic Space — Tech Hall North (Room 204)
+                      Reserve Academic Space
                     </h2>
                   </div>
                 </div>
@@ -423,7 +425,7 @@
                     class="inline-flex items-center gap-space-xs px-space-sm py-0.5 rounded bg-surface-container-lowest text-on-surface shadow-sm font-label-md text-label-md"
                   >
                     <span class="w-2 h-2 rounded-full bg-[#16A34A]"></span>
-                    Room 204
+                    <span id="roomPillName"></span>
                   </span>
                   <span
                     class="inline-flex items-center gap-space-xs px-space-sm py-0.5 rounded bg-surface-container-lowest text-on-surface shadow-sm font-label-md text-label-md"
@@ -432,7 +434,7 @@
                       class="material-symbols-outlined text-[15px] text-on-surface-variant"
                       >groups</span
                     >
-                    35 seats
+                    <span id="roomPillSeats"></span>
                   </span>
                   <span
                     class="inline-flex items-center gap-space-xs px-space-sm py-0.5 rounded bg-secondary-fixed/50 text-on-secondary-fixed font-label-md text-label-md"
@@ -440,7 +442,7 @@
                     <span class="material-symbols-outlined text-[15px]"
                       >co_present</span
                     >
-                    Lecture &amp; Seminar Setup
+                    <span id="roomPillType"></span>
                   </span>
                 </div>
                 <div
@@ -448,9 +450,9 @@
                 >
                   <span
                     class="material-symbols-outlined text-[16px] text-secondary"
-                    >domain</span
+                    >layers</span
                   >
-                  <span>College of Engineering</span>
+                  <span id="roomFloor"></span>
                 </div>
               </div>
               <!-- Scrollable Form Body -->
@@ -460,6 +462,39 @@
               >
                 <!-- Room Calendar Integration -->
                 <div id="room-calendar-container" class="mb-space-lg w-full"></div>
+
+                <!-- Re-booking notice (Section 14) — shown by booking.js when the
+                     page is opened as book-room.html?rebook={reservation_id} -->
+                <div
+                  id="rebookNoticeBanner"
+                  class="hidden items-start gap-space-xs p-space-sm bg-secondary-container text-on-secondary-container rounded mb-space-md border-l-4 border-secondary shadow-sm"
+                >
+                  <span
+                    class="material-symbols-outlined text-secondary shrink-0 text-[20px] mt-0.5"
+                    >sync</span
+                  >
+                  <div class="flex flex-col flex-1">
+                    <span
+                      class="font-label-md text-label-md font-bold"
+                      id="rebookNoticeTitle"
+                      >Re-booking</span
+                    >
+                    <p
+                      id="rebookNoticeText"
+                      class="font-body-sm text-body-sm leading-tight mt-0.5"
+                    >
+                      Pick a new date and time.
+                    </p>
+                  </div>
+                  <button
+                    class="shrink-0 p-1 rounded hover:bg-secondary-fixed transition-colors"
+                    id="rebookNoticeDismiss"
+                    type="button"
+                    aria-label="Dismiss re-booking notice"
+                  >
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                  </button>
+                </div>
 
                 <!-- Dynamic Schedule Collision (MySQL Trigger Emulation) Banner -->
                 <div
@@ -472,9 +507,9 @@
                   >
                   <div class="flex flex-col">
                     <span
+                      id="collisionErrorTitle"
                       class="font-label-md text-label-md font-bold text-error"
-                      >Database Scheduling Collision (Trigger SQLSTATE
-                      45000)</span
+                      >Unable to submit request</span
                     >
                     <p
                       id="collisionErrorText"
@@ -519,12 +554,12 @@
                       for="roomSelect"
                     >
                       <span
-                        >Assigned Facility
+                        >Selected Facility
                         <span class="text-error">*</span></span
                       >
                       <span
                         class="font-body-sm text-body-sm text-on-surface-variant"
-                        >Fixed for this request</span
+                        >You can switch rooms</span
                       >
                     </label>
                     <div class="relative">
@@ -535,43 +570,25 @@
                       <select
                         class="w-full pl-9 pr-8 py-2 bg-surface-container-low text-on-surface font-label-md text-label-md rounded appearance-none focus:outline-none focus:bg-surface-container-lowest cursor-default"
                         id="roomSelect"
-                        readonly=""
+                        required
                       >
-                        <option selected="" value="THN-204">
-                          Tech Hall North - Room 204 (Audiovisual Tiered)
-                        </option>
-                        <option disabled="" value="THN-205">
-                          Tech Hall North - Room 205 (Full Lab)
-                        </option>
-                        <option disabled="" value="AGH-101">
-                          Agri-Science Hall - 101
-                        </option>
+                        <option value="">Loading rooms…</option>
                       </select>
-                      <span
-                        class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-on-surface-variant pointer-events-none"
-                        >lock</span
-                      >
                     </div>
                     <p
+                      id="capacityHint"
                       class="font-body-sm text-body-sm text-on-surface-variant"
-                    >
-                      Equipped with central acoustics &amp; dual presentation
-                      screens.
-                    </p>
+                    ></p>
                   </div>
                   <!-- Field 2: Reservation Date Picker -->
                   <div class="md:col-span-6 flex flex-col space-y-space-xs">
                     <label
-                      class="font-label-md text-label-md text-on-surface flex items-center justify-between"
+                      class="font-label-md text-label-md text-on-surface"
                       for="reservationDate"
                     >
                       <span
                         >Reservation Date
                         <span class="text-error">*</span></span
-                      >
-                      <span
-                        class="font-label-sm text-label-sm text-secondary font-semibold"
-                        >Term Calendar Active</span
                       >
                     </label>
                     <div class="relative">
@@ -598,7 +615,7 @@
                     <p
                       class="font-body-sm text-body-sm text-on-surface-variant"
                     >
-                      Regular instructional period (Midterm Assessment Week).
+                      Bookings open starting tomorrow. Sundays are not available.
                     </p>
                   </div>
                 </div>
@@ -617,7 +634,7 @@
                     </div>
                     <span
                       class="font-label-sm text-label-sm uppercase tracking-wider text-error font-bold flex items-center gap-1"
-                    </h3>
+                    ></span>
                   </div>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
                     <!-- Start Time -->
@@ -709,6 +726,8 @@
                         name="reservation_purpose"
                         type="radio"
                         value="lecture"
+                        data-label="Academic Lecture"
+                        required
                       />
                       <div
                         class="h-full px-space-sm py-2 rounded bg-surface-container-low text-on-surface-variant text-center transition-all peer-checked:bg-primary-container peer-checked:text-on-primary flex flex-col items-center justify-center gap-1 shadow-sm"
@@ -724,11 +743,12 @@
                     <!-- Option 2 (Selected) -->
                     <label class="cursor-pointer">
                       <input
-                        checked=""
                         class="peer sr-only"
                         name="reservation_purpose"
                         type="radio"
                         value="defense"
+                        data-label="Faculty Defense"
+                        required
                       />
                       <div
                         class="h-full px-space-sm py-2 rounded bg-surface-container-low text-on-surface-variant text-center transition-all peer-checked:bg-primary-container peer-checked:text-on-primary flex flex-col items-center justify-center gap-1 shadow-sm"
@@ -749,6 +769,8 @@
                         name="reservation_purpose"
                         type="radio"
                         value="student_org"
+                        data-label="Student Org Meeting"
+                        required
                       />
                       <div
                         class="h-full px-space-sm py-2 rounded bg-surface-container-low text-on-surface-variant text-center transition-all peer-checked:bg-primary-container peer-checked:text-on-primary flex flex-col items-center justify-center gap-1 shadow-sm"
@@ -768,6 +790,8 @@
                         name="reservation_purpose"
                         type="radio"
                         value="workshop"
+                        data-label="Dept Workshop"
+                        required
                       />
                       <div
                         class="h-full px-space-sm py-2 rounded bg-surface-container-low text-on-surface-variant text-center transition-all peer-checked:bg-primary-container peer-checked:text-on-primary flex flex-col items-center justify-center gap-1 shadow-sm"
@@ -787,6 +811,8 @@
                         name="reservation_purpose"
                         type="radio"
                         value="exam"
+                        data-label="Exam / Quiz"
+                        required
                       />
                       <div
                         class="h-full px-space-sm py-2 rounded bg-surface-container-low text-on-surface-variant text-center transition-all peer-checked:bg-primary-container peer-checked:text-on-primary flex flex-col items-center justify-center gap-1 shadow-sm"
@@ -801,13 +827,13 @@
                     </label>
                   </div>
                 </div>
-                <!-- Field 5 & Field 6 Grid: Detailed Description & Expected Attendees -->
+                <!-- Field 5: Detailed Description -->
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
                   <!-- Field 5: Detailed Purpose Description Textarea -->
-                  <div class="md:col-span-8 flex flex-col space-y-space-xs">
+                  <div class="md:col-span-12 flex flex-col space-y-space-xs">
                     <label
                       class="font-label-md text-label-md text-on-surface flex items-center justify-between"
-                      for="purposeDescription"
+                      for="purpose"
                     >
                       <span
                         >Detailed Purpose Description
@@ -822,6 +848,9 @@
                       class="w-full p-space-sm bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded shadow-sm focus:outline-none focus:bg-surface-container-low leading-relaxed"
                       id="purpose"
                       rows="3"
+                      maxlength="200"
+                      required
+                      placeholder="e.g. Weekly officers' meeting — agenda review and budget planning"
                     ></textarea>
                     <span
                       class="font-body-sm text-body-sm text-on-surface-variant"
@@ -829,62 +858,9 @@
                       technical rigging needs.</span
                     >
                   </div>
-                  <!-- Field 6: Expected Attendees Counter -->
-                  <div
-                    class="md:col-span-4 flex flex-col justify-between space-y-space-xs"
-                  >
-                    <div>
-                      <label
-                        class="font-label-md text-label-md text-on-surface"
-                        for="attendeeInput"
-                        >Expected Attendees</label
-                      >
-                      <p
-                        class="font-body-sm text-body-sm text-on-surface-variant"
-                      >
-                        Within 35 seat facility cap
-                      </p>
-                    </div>
-                    <div
-                      class="bg-surface-container-low p-space-sm rounded space-y-space-xs shadow-sm"
-                    >
-                      <div class="flex items-center justify-between">
-                        <button
-                          aria-label="Decrease attendees"
-                          class="w-8 h-8 rounded bg-surface-container-lowest hover:bg-surface-container-high text-on-surface flex items-center justify-center font-bold shadow-sm active:scale-95 transition-transform"
-                          type="button"
-                        >
-                          <span class="material-symbols-outlined text-[16px]"
-                            >remove</span
-                          >
-                        </button>
-                        <div class="text-center">
-                          <span
-                            class="font-headline-sm text-headline-sm font-bold text-primary"
-                            >21</span
-                          >
-                          <span
-                            class="font-label-sm text-label-sm text-on-surface-variant block"
-                            >Total Headcount</span
-                          >
-                        </div>
-                        <button
-                          aria-label="Increase attendees"
-                          class="w-8 h-8 rounded bg-surface-container-lowest hover:bg-surface-container-high text-on-surface flex items-center justify-center font-bold shadow-sm active:scale-95 transition-transform"
-                          type="button"
-                        >
-                          <span class="material-symbols-outlined text-[16px]"
-                            >add</span
-                          >
-                        </button>
-                      </div>
-                      <div
-                        class="text-center px-space-xs py-1 rounded bg-surface-container-lowest font-label-sm text-label-sm text-on-surface font-medium"
-                      >
-                        21 attendees (18 students &amp; 3 faculty panel)
-                      </div>
-                    </div>
-                  </div>
+                  <!-- Field 6 (Expected Attendees) removed: it was never sent
+                       or validated against room capacity — see Fix Guide 1.3.
+                       Re-add once the backend supports attendee_count. -->
                 </div>
                 <!-- Field 7: Special Equipment Checklist -->
                 <div class="space-y-space-xs">
@@ -898,7 +874,7 @@
                       >Audiovisual Services Desk</span
                     >
                   </div>
-                  <div class="grid grid-cols-1 md:grid-cols-3 gap-space-sm">
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-space-sm" id="equipmentOptions">
                     <!-- Checkbox 1 (Checked) -->
                     <label
                       class="flex items-start gap-space-sm p-space-sm bg-surface-container-low rounded cursor-pointer hover:bg-surface-container transition-colors shadow-sm"
@@ -906,6 +882,7 @@
                       <input
                         checked=""
                         class="mt-0.5 rounded text-primary-container focus:ring-0 w-4 h-4 accent-primary"
+                        data-equipment="Wireless Lapel Mic"
                         type="checkbox"
                       />
                       <div class="flex flex-col">
@@ -926,6 +903,7 @@
                       <input
                         checked=""
                         class="mt-0.5 rounded text-primary-container focus:ring-0 w-4 h-4 accent-primary"
+                        data-equipment="HDMI Cable Kit"
                         type="checkbox"
                       />
                       <div class="flex flex-col">
@@ -945,6 +923,7 @@
                     >
                       <input
                         class="mt-0.5 rounded text-primary-container focus:ring-0 w-4 h-4 accent-primary"
+                        data-equipment="Archival Recording Pod"
                         type="checkbox"
                       />
                       <div class="flex flex-col">
@@ -964,9 +943,10 @@
                 <div class="p-space-md bg-secondary-fixed/20 rounded shadow-sm">
                   <label class="flex items-start gap-space-sm cursor-pointer">
                     <input
-                      checked=""
                       class="mt-0.5 rounded text-primary-container focus:ring-0 w-4 h-4 accent-primary shrink-0"
+                      id="policyAcknowledgement"
                       type="checkbox"
+                      required
                     />
                     <div class="flex flex-col">
                       <span
@@ -994,12 +974,12 @@
                 <div
                   class="flex items-center gap-space-xs text-on-surface-variant"
                 >
-                  <span class="material-symbols-outlined text-[18px] text-error"
+                  <span class="material-symbols-outlined text-[18px] text-secondary"
                     >info</span
                   >
                   <span class="font-body-sm text-body-sm"
-                    >Resolve timing conflict above prior to dispatching
-                    request.</span
+                    >Requests are reviewed by the Registrar before
+                    approval.</span
                   >
                 </div>
                 <div
@@ -1037,6 +1017,7 @@
       </main>
     </div>
 
+    <script src="js/util.js"></script>
     <script src="js/app.js"></script>
     <script src="js/roomCalendar.js"></script>
     <script src="js/booking.js"></script>

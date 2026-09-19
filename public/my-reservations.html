@@ -245,7 +245,7 @@
         ><a
           class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
           data-path="admin-governance"
-          href="staff-queue.html"
+          href="admin-governance.html"
           ><span class="material-symbols-outlined text-[20px]"
             >admin_panel_settings</span
           ><span>Admin Governance</span></a
@@ -394,544 +394,66 @@
                   </button>
                 </div>
               </div>
-              <div class="flex flex-col space-y-space-sm" id="reservationList">
-                <div
-                  data-status="pending"
-                  class="reservation-card status-border-pending bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md"
-                >
-                  <div
-                    class="flex flex-col md:flex-row md:items-center justify-between gap-space-md"
+              <div
+                class="hidden mb-space-md p-space-sm bg-surface-container-highest text-on-surface rounded-lg shadow-sm items-center justify-between transition-opacity"
+                id="action-toast"
+              >
+                <div class="flex items-center gap-space-sm">
+                  <span
+                    class="material-symbols-outlined text-secondary"
+                    id="action-toast-icon"
+                    >info</span
                   >
-                    <div class="flex items-start gap-space-md">
-                      <div
-                        class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center"
-                      >
-                        <span
-                          class="font-label-sm text-label-sm text-secondary font-bold uppercase"
-                          >OCT</span
-                        >
-                        <span
-                          class="font-headline-md text-headline-md text-on-surface font-bold leading-none"
-                          >25</span
-                        >
-                      </div>
-                      <div class="flex flex-col space-y-space-xs">
-                        <div class="flex items-center gap-space-sm flex-wrap">
-                          <span
-                            class="font-label-md text-label-md text-primary font-bold"
-                            >#BPU-8902</span
-                          >
-                          <span
-                            class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold bg-[#FEF3C7] text-[#B45309] flex items-center gap-1"
-                          >
-                            <span
-                              class="inline-block w-1.5 h-1.5 rounded-full bg-[#D97706]"
-                            ></span>
-                            Pending Staff Review
-                          </span>
-                          <span
-                            class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1"
-                          >
-                            <span class="material-symbols-outlined text-[14px]"
-                              >schedule</span
-                            >
-                            2:00 PM – 4:00 PM
-                          </span>
-                        </div>
-                        <div
-                          class="font-headline-sm text-headline-sm text-on-surface font-semibold"
-                        >
-                          Faculty Thesis Prep
-                        </div>
-                        <div
-                          class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant"
-                        >
-                          <span
-                            class="flex items-center gap-1 font-medium text-on-surface"
-                          >
-                            <span
-                              class="material-symbols-outlined text-[16px] text-secondary"
-                              >domain</span
-                            >
-                            Tech Hall North Room 204
-                          </span>
-                          <span>•</span>
-                          <span>Capacity: 45 pax</span>
-                          <span>•</span>
-                          <span class="text-secondary font-semibold"
-                            >AV Lectern Requested</span
-                          >
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      class="flex items-center md:flex-col lg:flex-row gap-space-xs shrink-0 self-end md:self-center"
-                    >
-                      <button
-                        class="px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm cancel-trigger"
-                        data-permit="#BPU-8902"
-                      >
-                        <span class="material-symbols-outlined text-[16px]"
-                          >cancel</span
-                        >
-                        <span>Cancel Booking</span>
-                      </button>
-                      <button
-                        class="p-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded transition-colors"
-                        title="Permit details"
-                      >
-                        <span class="material-symbols-outlined text-[20px]"
-                          >more_vert</span
-                        >
-                      </button>
-                    </div>
-                  </div>
+                  <span
+                    class="font-body-md text-body-md font-semibold"
+                    id="action-toast-text"
+                  ></span>
                 </div>
-                <div
-                  data-status="pending"
-                  class="reservation-card status-border-pending bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md"
+                <button
+                  type="button"
+                  class="p-1 text-on-surface-variant hover:text-on-surface rounded"
+                  id="btn-dismiss-toast"
+                  aria-label="Dismiss notification"
                 >
-                  <div
-                    class="flex flex-col md:flex-row md:items-center justify-between gap-space-md"
-                  >
-                    <div class="flex items-start gap-space-md">
-                      <div
-                        class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center"
-                      >
-                        <span
-                          class="font-label-sm text-label-sm text-secondary font-bold uppercase"
-                          >OCT</span
-                        >
-                        <span
-                          class="font-headline-md text-headline-md text-on-surface font-bold leading-none"
-                          >28</span
-                        >
-                      </div>
-                      <div class="flex flex-col space-y-space-xs">
-                        <div class="flex items-center gap-space-sm flex-wrap">
-                          <span
-                            class="font-label-md text-label-md text-primary font-bold"
-                            >#BPU-8841</span
-                          >
-                          <span
-                            class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold bg-[#FEF3C7] text-[#B45309] flex items-center gap-1"
-                          >
-                            <span
-                              class="inline-block w-1.5 h-1.5 rounded-full bg-[#D97706]"
-                            ></span>
-                            Pending Dept Clearance
-                          </span>
-                          <span
-                            class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1"
-                          >
-                            <span class="material-symbols-outlined text-[14px]"
-                              >schedule</span
-                            >
-                            9:00 AM – 11:00 AM
-                          </span>
-                        </div>
-                        <div
-                          class="font-headline-sm text-headline-sm text-on-surface font-semibold"
-                        >
-                          AI Workshop
-                        </div>
-                        <div
-                          class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant"
-                        >
-                          <span
-                            class="flex items-center gap-1 font-medium text-on-surface"
-                          >
-                            <span
-                              class="material-symbols-outlined text-[16px] text-secondary"
-                              >science</span
-                            >
-                            Science Complex Lab 102
-                          </span>
-                          <span>•</span>
-                          <span>Workstations: 32 high-spec</span>
-                          <span>•</span>
-                          <span class="text-on-surface-variant"
-                            >Dept: Computing Studies</span
-                          >
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      class="flex items-center md:flex-col lg:flex-row gap-space-xs shrink-0 self-end md:self-center"
-                    >
-                      <button
-                        class="px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm cancel-trigger"
-                        data-permit="#BPU-8841"
-                      >
-                        <span class="material-symbols-outlined text-[16px]"
-                          >cancel</span
-                        >
-                        <span>Cancel Booking</span>
-                      </button>
-                      <button
-                        class="p-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded transition-colors"
-                        title="Permit details"
-                      >
-                        <span class="material-symbols-outlined text-[20px]"
-                          >more_vert</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div
-                  data-status="approved"
-                  class="reservation-card status-border-approved bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md"
+                  <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              </div>
+              <div
+                class="flex flex-col space-y-space-sm"
+                id="reservationList"
+                aria-busy="true"
+              ></div>
+              <div
+                id="reservationListEmpty"
+                class="hidden flex flex-col items-center justify-center text-center gap-space-xs py-space-xl text-on-surface-variant"
+              >
+                <span class="material-symbols-outlined text-[40px]"
+                  >event_busy</span
                 >
-                  <div
-                    class="flex flex-col md:flex-row md:items-center justify-between gap-space-md"
-                  >
-                    <div class="flex items-start gap-space-md">
-                      <div
-                        class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center"
-                      >
-                        <span
-                          class="font-label-sm text-label-sm text-primary font-bold uppercase"
-                          >NOV</span
-                        >
-                        <span
-                          class="font-headline-md text-headline-md text-on-surface font-bold leading-none"
-                          >02</span
-                        >
-                      </div>
-                      <div class="flex flex-col space-y-space-xs">
-                        <div class="flex items-center gap-space-sm flex-wrap">
-                          <span
-                            class="font-label-md text-label-md text-primary font-bold"
-                            >#BPU-8720</span
-                          >
-                          <span
-                            class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold bg-[#DCFCE7] text-[#15803D] flex items-center gap-1"
-                          >
-                            <span class="material-symbols-outlined text-[14px]"
-                              >lock_open</span
-                            >
-                            Approved (Passcode: #4912)
-                          </span>
-                          <span
-                            class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1"
-                          >
-                            <span class="material-symbols-outlined text-[14px]"
-                              >schedule</span
-                            >
-                            1:00 PM – 3:00 PM
-                          </span>
-                        </div>
-                        <div
-                          class="font-headline-sm text-headline-sm text-on-surface font-semibold"
-                        >
-                          Midterm Exam
-                        </div>
-                        <div
-                          class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant"
-                        >
-                          <span
-                            class="flex items-center gap-1 font-medium text-on-surface"
-                          >
-                            <span
-                              class="material-symbols-outlined text-[16px] text-secondary"
-                              >meeting_room</span
-                            >
-                            Main Quad Hall A
-                          </span>
-                          <span>•</span>
-                          <span>Seating Layout: Amphitheater (120)</span>
-                          <span>•</span>
-                          <span class="text-[#15803D] font-semibold"
-                            >Facilities Verified</span
-                          >
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      class="flex items-center gap-space-xs shrink-0 self-end md:self-center"
-                    >
-                      <button
-                        class="px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1"
-                      >
-                        <span class="material-symbols-outlined text-[16px]"
-                          >receipt_long</span
-                        >
-                        <span>View Confirmation Slip</span>
-                      </button>
-                      <button
-                        class="p-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded transition-colors"
-                        title="Permit options"
-                      >
-                        <span class="material-symbols-outlined text-[20px]"
-                          >more_vert</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div
-                  data-status="approved"
-                  class="reservation-card status-border-approved bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md"
+                <p class="font-body-md text-body-md">No reservations yet.</p>
+                <button
+                  class="mt-space-xs px-space-md py-space-sm bg-primary text-on-primary font-label-sm text-label-sm font-semibold rounded transition-colors"
+                  onclick="window.location.href='rooms.html'"
                 >
-                  <div
-                    class="flex flex-col md:flex-row md:items-center justify-between gap-space-md"
-                  >
-                    <div class="flex items-start gap-space-md">
-                      <div
-                        class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center"
-                      >
-                        <span
-                          class="font-label-sm text-label-sm text-primary font-bold uppercase"
-                          >NOV</span
-                        >
-                        <span
-                          class="font-headline-md text-headline-md text-on-surface font-bold leading-none"
-                          >06</span
-                        >
-                      </div>
-                      <div class="flex flex-col space-y-space-xs">
-                        <div class="flex items-center gap-space-sm flex-wrap">
-                          <span
-                            class="font-label-md text-label-md text-primary font-bold"
-                            >#BPU-8715</span
-                          >
-                          <span
-                            class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold bg-[#DCFCE7] text-[#15803D] flex items-center gap-1"
-                          >
-                            <span class="material-symbols-outlined text-[14px]"
-                              >lock_open</span
-                            >
-                            Approved (Passcode: #8129)
-                          </span>
-                          <span
-                            class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1"
-                          >
-                            <span class="material-symbols-outlined text-[14px]"
-                              >schedule</span
-                            >
-                            10:00 AM – 12:00 PM
-                          </span>
-                        </div>
-                        <div
-                          class="font-headline-sm text-headline-sm text-on-surface font-semibold"
-                        >
-                          Curriculum Committee
-                        </div>
-                        <div
-                          class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant"
-                        >
-                          <span
-                            class="flex items-center gap-1 font-medium text-on-surface"
-                          >
-                            <span
-                              class="material-symbols-outlined text-[16px] text-secondary"
-                              >groups</span
-                            >
-                            Humanities Room 312
-                          </span>
-                          <span>•</span>
-                          <span>Boardroom Table (20 pax)</span>
-                          <span>•</span>
-                          <span class="text-[#15803D] font-semibold"
-                            >Smartboard Active</span
-                          >
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      class="flex items-center gap-space-xs shrink-0 self-end md:self-center"
-                    >
-                      <button
-                        class="px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1"
-                      >
-                        <span class="material-symbols-outlined text-[16px]"
-                          >receipt_long</span
-                        >
-                        <span>View Confirmation Slip</span>
-                      </button>
-                      <button
-                        class="p-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded transition-colors"
-                        title="Permit options"
-                      >
-                        <span class="material-symbols-outlined text-[20px]"
-                          >more_vert</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div
-                  data-status="history"
-                  class="reservation-card status-border-rejected bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md"
+                  Book a room
+                </button>
+              </div>
+              <div
+                id="reservationListError"
+                class="hidden flex flex-col items-center justify-center text-center gap-space-xs py-space-xl text-on-surface-variant"
+              >
+                <span class="material-symbols-outlined text-[40px] text-[#DC2626]"
+                  >error</span
                 >
-                  <div
-                    class="flex flex-col md:flex-row md:items-center justify-between gap-space-md"
-                  >
-                    <div class="flex items-start gap-space-md">
-                      <div
-                        class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center opacity-75"
-                      >
-                        <span
-                          class="font-label-sm text-label-sm text-outline font-bold uppercase"
-                          >OCT</span
-                        >
-                        <span
-                          class="font-headline-md text-headline-md text-on-surface font-bold leading-none"
-                          >14</span
-                        >
-                      </div>
-                      <div class="flex flex-col space-y-space-xs">
-                        <div class="flex items-center gap-space-sm flex-wrap">
-                          <span
-                            class="font-label-md text-label-md text-outline font-bold"
-                            >#BPU-8601</span
-                          >
-                          <span
-                            class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold bg-[#FEE2E2] text-[#B91C1C] flex items-center gap-1"
-                          >
-                            <span class="material-symbols-outlined text-[14px]"
-                              >error</span
-                            >
-                            Rejected: Dean's Office Conflict
-                          </span>
-                          <span
-                            class="text-body-sm font-body-sm text-on-surface-variant"
-                            >Archived Slip</span
-                          >
-                        </div>
-                        <div
-                          class="font-headline-sm text-headline-sm text-on-surface font-semibold line-through text-on-surface-variant"
-                        >
-                          Research Advisory Meeting
-                        </div>
-                        <div
-                          class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant"
-                        >
-                          <span
-                            class="flex items-center gap-1 text-on-surface-variant"
-                          >
-                            <span class="material-symbols-outlined text-[16px]"
-                              >meeting_room</span
-                            >
-                            Conference Room C
-                          </span>
-                          <span>•</span>
-                          <span class="text-[#DC2626] font-medium"
-                            >Overridden by Vice-Chancellor Cabinet Booking</span
-                          >
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      class="flex items-center gap-space-xs shrink-0 self-end md:self-center"
-                    >
-                      <button
-                        class="px-space-md py-space-sm bg-secondary-container hover:bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm"
-                      >
-                        <span class="material-symbols-outlined text-[16px]"
-                          >sync</span
-                        >
-                        <span>Re-book Space</span>
-                      </button>
-                      <button
-                        class="p-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded transition-colors"
-                        title="Audit details"
-                      >
-                        <span class="material-symbols-outlined text-[20px]"
-                          >info</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div
-                  data-status="history"
-                  class="reservation-card status-border-rejected bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md"
+                <p class="font-body-md text-body-md" id="reservationListErrorText">
+                  Could not load your reservations.
+                </p>
+                <button
+                  id="reservationListRetry"
+                  class="mt-space-xs px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-semibold rounded transition-colors"
                 >
-                  <div
-                    class="flex flex-col md:flex-row md:items-center justify-between gap-space-md"
-                  >
-                    <div class="flex items-start gap-space-md">
-                      <div
-                        class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center"
-                      >
-                        <span
-                          class="font-label-sm text-label-sm text-outline font-bold uppercase"
-                          >OCT</span
-                        >
-                        <span
-                          class="font-headline-md text-headline-md text-on-surface font-bold leading-none"
-                          >15</span
-                        >
-                      </div>
-                      <div class="flex flex-col space-y-space-xs">
-                        <div class="flex items-center gap-space-sm flex-wrap">
-                          <span
-                            class="font-label-md text-label-md text-outline font-bold"
-                            >#BPU-8552</span
-                          >
-                          <span
-                            class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold bg-[#F1F5F9] text-[#475569] flex items-center gap-1"
-                          >
-                            <span class="material-symbols-outlined text-[14px]"
-                              >check_circle</span
-                            >
-                            Completed &amp; Logged
-                          </span>
-                          <span
-                            class="text-body-sm font-body-sm text-on-surface-variant"
-                            >Archived Slip</span
-                          >
-                        </div>
-                        <div
-                          class="font-headline-sm text-headline-sm text-on-surface font-semibold"
-                        >
-                          Fall Student Review
-                        </div>
-                        <div
-                          class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant"
-                        >
-                          <span
-                            class="flex items-center gap-1 font-medium text-on-surface"
-                          >
-                            <span
-                              class="material-symbols-outlined text-[16px] text-secondary"
-                              >class</span
-                            >
-                            Room 310
-                          </span>
-                          <span>•</span>
-                          <span>Attendance: 28 recorded</span>
-                          <span>•</span>
-                          <span class="text-on-surface-variant"
-                            >Key Returned: 11:32 AM</span
-                          >
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      class="flex items-center gap-space-xs shrink-0 self-end md:self-center"
-                    >
-                      <button
-                        class="px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1"
-                      >
-                        <span class="material-symbols-outlined text-[16px]"
-                          >folder_open</span
-                        >
-                        <span>View Log Archive</span>
-                      </button>
-                      <button
-                        class="p-space-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded transition-colors"
-                        title="Audit details"
-                      >
-                        <span class="material-symbols-outlined text-[20px]"
-                          >more_vert</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                  Retry
+                </button>
               </div>
             </div>
           </div>
@@ -958,6 +480,20 @@
                 >? This slot will immediately be made available to other
                 academic departments.
               </p>
+              <div class="flex flex-col space-y-space-xs">
+                <label
+                  for="cancelReasonInput"
+                  class="font-label-sm text-label-sm text-on-surface-variant"
+                  >Reason (optional)</label
+                >
+                <textarea
+                  id="cancelReasonInput"
+                  rows="2"
+                  maxlength="500"
+                  placeholder="Let us know why you're cancelling"
+                  class="w-full px-space-sm py-space-xs rounded border border-outline-variant bg-surface font-body-sm text-body-sm text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                ></textarea>
+              </div>
               <div
                 class="flex items-center justify-end gap-space-sm pt-space-xs"
               >
@@ -1095,6 +631,10 @@
     </div>
 
     <script src="js/app.js"></script>
+    <script src="js/util.js"></script>
+    <script src="js/slip.js"></script>
+    <script src="js/logArchive.js"></script>
+    <script src="js/rebook.js"></script>
     <script src="js/reservations.js"></script>
   </body>
 </html>

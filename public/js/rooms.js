@@ -20,9 +20,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
   let allRooms = [];
-  
+  let currentRole = null;
+
   const ITEMS_PER_PAGE = 8;
   let currentPage = 1;
+
+  function fetchCurrentRole() {
+    return fetch(BASE + 'api/auth/me', { credentials: 'include' })
+      .then(res => res.json())
+      .then(json => {
+        const currentUser = json.success ? json.data : null;
+        currentRole = String(currentUser && currentUser.role || '').toLowerCase();
+      })
+      .catch(err => {
+        console.error('Error fetching session role:', err);
+        currentRole = null;
+      });
+  }
 
   function fetchRooms() {
     fetch(BASE + 'api/rooms')
@@ -137,6 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ? `<button class="w-full py-2 px-space-sm bg-surface-container-high text-on-tertiary-container cursor-not-allowed font-label-lg text-label-lg rounded flex items-center justify-center gap-1" disabled type="button"><span class="material-symbols-outlined text-[18px]">block</span><span>Unavailable</span></button>`
             : status === 'Occupied'
             ? `<button class="w-full py-2 px-space-sm bg-surface-container-high text-on-tertiary-container cursor-not-allowed font-label-lg text-label-lg rounded flex items-center justify-center gap-1" disabled type="button"><span class="material-symbols-outlined text-[18px]">event_busy</span><span>Currently Booked</span></button>`
+            : (currentRole === 'staff' || currentRole === 'admin')
+            ? `<div class="w-full py-2 px-space-sm bg-surface-container text-on-surface-variant font-label-lg text-label-lg rounded flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[18px]">visibility</span><span>View Only</span></div>`
             : `<a href="book-room.html?room_id=${r.room_id}" class="w-full py-2 px-space-sm bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg rounded transition-colors flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[18px]">calendar_today</span><span>Book This Room</span></a>`
           }
         </div>
@@ -209,5 +225,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  fetchRooms();
+  fetchCurrentRole().then(fetchRooms);
 });
