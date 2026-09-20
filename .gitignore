@@ -2,3 +2,7 @@
 /.env
 /composer.phar
 *.zip
+
+# Secret-bearing scratch files. The reCAPTCHA secret key belongs in .env only;
+# captcha.txt is where it arrived, not where it should live.
+/captcha.txt

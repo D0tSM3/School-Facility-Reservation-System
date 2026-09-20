@@ -245,6 +245,13 @@
             >admin_panel_settings</span
           ><span>Admin Governance</span></a
         >
+        <a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="handbook"
+          href="handbook.html"
+          ><span class="material-symbols-outlined text-[20px]">menu_book</span
+          ><span>Handbook</span></a
+        >
       </nav>
       <div class="p-space-md bg-tertiary-container/40">
         <div class="flex items-center justify-between">
@@ -329,6 +336,15 @@
                   </p>
                 </div>
                 <div class="flex items-center gap-space-sm shrink-0">
+                  <a
+                    class="inline-flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container-high text-on-surface font-label-lg text-label-lg rounded shadow-sm hover:bg-surface-container-highest transition-all"
+                    href="handbook.html"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >menu_book</span
+                    >
+                    <span>Handbook</span>
+                  </a>
                   <a
                     class="inline-flex items-center gap-space-xs px-space-md py-space-sm bg-secondary-container text-on-secondary-container font-label-lg text-label-lg rounded shadow-sm hover:opacity-95 transition-all"
                     href="rooms.html"
@@ -629,7 +645,7 @@
                 >
                 <a
                   class="p-space-sm rounded bg-surface-container-low hover:bg-surface-container text-on-surface flex items-center justify-between transition-colors"
-                  href="#"
+                  href="handbook.html"
                 >
                   <span class="flex items-center gap-2">
                     <span
@@ -642,27 +658,37 @@
                   </span>
                   <span
                     class="material-symbols-outlined text-on-surface-variant text-[18px]"
-                    >open_in_new</span
+                    >arrow_forward</span
                   >
                 </a>
-                <a
-                  class="p-space-sm rounded bg-surface-container-low hover:bg-surface-container text-on-surface flex items-center justify-between transition-colors"
-                  href="#"
+                <!--
+                  Replaces the old "Facility Emergency Hotline" row. Deliberately
+                  a plain notice, not a link or a form: in an emergency the
+                  number has to be readable at a glance.
+
+                  >>> SET THE REAL NUMBER in #campusSecurityPhone below. <<<
+                  The project holds no Campus Security number ("Ext. 4021 / 4022"
+                  elsewhere is the Registrar Desk), so it is left as a visible
+                  placeholder rather than an invented one.
+                -->
+                <div
+                  id="campusSecurityNotice"
+                  role="note"
+                  class="mt-space-xs p-space-md rounded bg-error-container text-on-error-container border-l-4 border-error flex items-start gap-space-sm"
                 >
-                  <span class="flex items-center gap-2">
-                    <span
-                      class="material-symbols-outlined text-error text-[20px]"
-                      >emergency</span
-                    >
-                    <span class="font-label-md text-label-md font-semibold"
-                      >Facility Emergency Hotline</span
-                    >
-                  </span>
                   <span
-                    class="material-symbols-outlined text-on-surface-variant text-[18px]"
-                    >call</span
+                    class="material-symbols-outlined text-error text-[30px] shrink-0"
+                    aria-hidden="true"
+                    >emergency</span
                   >
-                </a>
+                  <p class="font-headline-sm text-headline-sm font-bold leading-snug">
+                    For immediate emergencies or immediate assistance with your
+                    reservation, please call Campus Security directly at
+                    <span id="campusSecurityPhone" class="underline decoration-2 underline-offset-2"
+                      >[Phone Number]</span
+                    >.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

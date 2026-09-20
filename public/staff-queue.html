@@ -239,6 +239,12 @@
           ><span class="material-symbols-outlined text-[20px]"
             >admin_panel_settings</span
           ><span>Admin Governance</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="handbook"
+          href="handbook.html"
+          ><span class="material-symbols-outlined text-[20px]">menu_book</span
+          ><span>Handbook</span></a
         >
       </nav>
       <div class="p-space-md bg-tertiary-container/40">
@@ -527,6 +533,21 @@
               <button
                 type="button"
                 class="flex items-center gap-space-xs px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-label-lg transition-all duration-150"
+                id="tab-cancels"
+              >
+                <span class="material-symbols-outlined text-[18px]"
+                  >assignment_return</span
+                >
+                <span>Cancellations</span>
+                <span
+                  class="ml-1 px-1.5 py-0.5 rounded text-label-sm font-semibold bg-surface-container-highest text-on-surface-variant"
+                  id="cancel-badge-count"
+                  >—</span
+                >
+              </button>
+              <button
+                type="button"
+                class="flex items-center gap-space-xs px-space-md py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-label-lg transition-all duration-150"
                 id="tab-all"
               >
                 <span class="material-symbols-outlined text-[18px]"
@@ -636,6 +657,9 @@
             </div>
           </div>
           <!-- Tab 3 Viewport: All Requests, every status (rendered from the same /api/reservations fetch as the Pending tab) -->
+          <!-- Cancellation requests: an approved booking whose requester has
+               asked for it to be released. Approving one cancels the booking. -->
+          <div class="hidden space-y-space-sm mb-space-lg" id="view-cancels"></div>
           <div class="hidden space-y-space-sm mb-space-lg" id="view-all">
             <div class="flex items-center justify-end gap-space-xs mb-space-xs">
               <label
@@ -883,6 +907,96 @@
             </div>
           </div>
         </div>
+        <!-- Cancellation Request Review Modal -->
+        <div
+          id="cancelReviewModalOverlay"
+          class="fixed inset-0 bg-[#000000] bg-opacity-40 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-200"
+          aria-hidden="true"
+        >
+          <div
+            id="cancelReviewModal"
+            class="bg-surface w-[90%] max-w-md rounded-xl shadow-xl overflow-hidden transform transition-transform duration-200 flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancelReviewTitle"
+          >
+            <div
+              class="px-space-md py-space-sm border-b border-outline-variant flex justify-between items-center bg-surface-container-low"
+            >
+              <h2
+                id="cancelReviewTitle"
+                class="font-headline-sm text-headline-sm font-semibold text-on-surface"
+              >
+                Review Cancellation Request
+              </h2>
+              <button
+                type="button"
+                id="cancelReviewCloseIcon"
+                class="text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none rounded-full p-1"
+                aria-label="Close modal"
+              >
+                <span class="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            <div class="p-space-md flex-1 overflow-y-auto">
+              <div
+                id="cancelReviewSummary"
+                class="mb-space-md space-y-1 text-body-sm font-body-sm text-on-surface-variant"
+              ></div>
+              <p
+                class="mb-space-md p-space-sm rounded bg-surface-container-low text-body-sm font-body-sm text-on-surface-variant"
+              >
+                Approving releases the room and sets the booking to Cancelled.
+                Rejecting leaves the booking approved and standing.
+              </p>
+              <form id="cancelReviewForm" class="space-y-space-md">
+                <div>
+                  <label
+                    for="cancelReviewComment"
+                    class="block font-label-md text-label-md font-medium text-on-surface mb-space-xs"
+                    >Staff Comment</label
+                  >
+                  <textarea
+                    id="cancelReviewComment"
+                    rows="3"
+                    maxlength="500"
+                    class="w-full bg-surface-container-lowest border border-outline text-on-surface rounded px-space-sm py-space-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow"
+                    placeholder="Optional for approval, required for rejection..."
+                  ></textarea>
+                </div>
+                <div
+                  id="cancelReviewErrorMsg"
+                  class="hidden p-space-sm bg-error-container text-on-error-container text-body-sm rounded"
+                ></div>
+              </form>
+            </div>
+            <div
+              class="px-space-md py-space-sm border-t border-outline-variant bg-surface-container-low flex justify-end gap-space-sm"
+            >
+              <button
+                type="button"
+                id="cancelReviewCancelBtn"
+                class="px-space-md py-space-sm text-on-surface font-label-md font-medium rounded hover:bg-surface-container-highest transition-colors"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                id="cancelReviewRejectBtn"
+                class="px-space-md py-space-sm bg-error hover:bg-[#93000A] text-on-error font-label-md font-medium rounded shadow transition-colors focus:outline-none disabled:opacity-50"
+              >
+                Reject
+              </button>
+              <button
+                type="button"
+                id="cancelReviewApproveBtn"
+                class="px-space-md py-space-sm bg-[#15803D] hover:bg-[#166534] text-[#FFFFFF] font-label-md font-medium rounded shadow transition-colors focus:outline-none disabled:opacity-50"
+              >
+                Approve
+              </button>
+            </div>
+          </div>
+        </div>
         <!-- Application Inspection Modal -->
         <div
           id="detailModalOverlay"
@@ -1007,6 +1121,7 @@
 
     <script src="js/app.js"></script>
     <script src="js/util.js"></script>
+    <script src="js/schedule.js"></script>
     <script src="js/slip.js"></script>
     <script src="js/logArchive.js"></script>
     <script src="js/rebook.js"></script>

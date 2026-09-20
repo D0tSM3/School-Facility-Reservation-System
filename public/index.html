@@ -221,31 +221,6 @@
                   Access lecture halls, laboratories, and seminar spaces.
                 </p>
               </div>
-              <!-- Quick Demo Evaluation Shortcuts -->
-              <div
-                class="mb-space-sm p-space-xs bg-surface-container-low rounded border border-outline-variant/40 flex flex-col gap-1"
-              >
-                <span
-                  class="text-[11px] font-label-sm text-on-surface-variant text-center font-semibold"
-                  >Quick Evaluation Credentials</span
-                >
-                <div class="flex gap-1.5">
-                  <button
-                    id="demoCustomerLogin"
-                    type="button"
-                    class="flex-1 py-1 px-2 text-xs bg-surface-container hover:bg-surface-container-high text-primary font-semibold rounded transition-colors text-center"
-                  >
-                    Faculty (Valderama)
-                  </button>
-                  <button
-                    id="demoStaffLogin"
-                    type="button"
-                    class="flex-1 py-1 px-2 text-xs bg-surface-container hover:bg-surface-container-high text-secondary font-semibold rounded transition-colors text-center"
-                  >
-                    Staff Desk (Lin)
-                  </button>
-                </div>
-              </div>
               <form id="loginForm" class="flex flex-col gap-space-sm">
                 <div>
                   <label
@@ -260,7 +235,7 @@
                       id="bpu-email"
                       placeholder="id@bpu.edu.ph"
                       type="email"
-                      value="customer@bpu.edu.ph"
+                      autocomplete="username"
                     />
                     <span
                       class="absolute right-3 top-2.5 text-on-surface-variant material-symbols-outlined text-[18px]"
@@ -289,7 +264,8 @@
                       class="w-full bg-surface-container-low rounded-lg px-3 py-2 text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest focus:outline-none transition-colors tracking-widest"
                       id="bpu-password"
                       type="password"
-                      value="••••••••••••"
+                      placeholder="Enter your password"
+                      autocomplete="current-password"
                     />
                     <span
                       class="absolute right-3 top-2.5 text-on-surface-variant material-symbols-outlined text-[18px]"
@@ -326,6 +302,12 @@
                     Remember my device on BPU campus network
                   </span>
                 </label>
+                <!--
+                  reCAPTCHA mounts here. auth.js renders it only when
+                  GET /api/config reports it enabled, so with the checks
+                  switched off this stays empty and the form is unchanged.
+                -->
+                <div id="loginRecaptcha" class="flex justify-center mt-1"></div>
                 <button
                   class="w-full bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg py-2.5 px-4 rounded-lg shadow-sm flex items-center justify-center gap-2 transition-colors group mt-1"
                   type="submit"

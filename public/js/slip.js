@@ -200,6 +200,7 @@
       row('Details', roomDetails(r) || '—'));
 
     const booking = section('Booking',
+      row('Category', textOrDash(r.category)) +
       row('Purpose', textOrDash(r.purpose)) +
       (has(r.equipment_notes) ? row('Equipment notes', escapeHtml(r.equipment_notes)) : '') +
       row('Starts', escapeHtml(formatLong(r.start_time))) +

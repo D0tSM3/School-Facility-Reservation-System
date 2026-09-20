@@ -277,9 +277,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (endTimeInput) endTimeInput.addEventListener('change', validateTime);
 
+  // The chosen room's schedule for the chosen date, from the last successful
+  // calendar fetch (see markTakenSlots). null until it arrives, and whenever it
+  // is for a different room/date than the form now shows.
+  let dayData = null;   // { roomId, date, data }
+
+  /**
+   * Conflicts for the whole range [start, end): a class, another reservation
+   * or a holiday that shares any minute with it. Empty when the range is free
+   * OR when the schedule isn't loaded yet — the server re-checks either way.
+   */
+  function rangeConflicts(start, end) {
+    if (!dayData || !start || !end) return [];
+    if (!roomSelect || !resDateInput) return [];
+    if (dayData.roomId !== roomSelect.value || dayData.date !== resDateInput.value) return [];
+    return window.CampusSchedule.findConflicts(dayData.data, dayData.date, start, end);
+  }
+
   // ---------------------------------------------------------------
   // 3.1: end-time options depend on the chosen start time, so a student
-  // can't pick an end that's already before/equal to the start.
+  // can't pick an end that's already before/equal to the start, or one that
+  // would stretch the booking across a class or another reservation.
   // ---------------------------------------------------------------
   let syncEndOptions = () => {};
   if (startTimeInput && endTimeInput) {
@@ -297,9 +315,19 @@ document.addEventListener('DOMContentLoaded', () => {
           const opt = document.createElement('option');
           opt.value = o.value;
           opt.textContent = o.text;
+          // Start is free, but is [start, this end) free? A 07:30 start is fine
+          // while a class at 10:30 makes every end after 10:30 unusable.
+          const clash = rangeConflicts(start, o.value);
+          if (clash.length) {
+            opt.disabled = true;
+            opt.textContent = o.text + ' — unavailable';
+            opt.title = window.CampusSchedule.describe(clash, start, o.value);
+          }
           endTimeInput.appendChild(opt);
         });
-      if (previous && previous > start) endTimeInput.value = previous;
+      // Keep the previous end only if it is still offered AND still usable.
+      const keep = Array.from(endTimeInput.options).find(o => o.value === previous);
+      if (previous && previous > start && keep && !keep.disabled) endTimeInput.value = previous;
     };
 
     startTimeInput.addEventListener('change', () => { syncEndOptions(); validateTime(); });
@@ -318,43 +346,51 @@ document.addEventListener('DOMContentLoaded', () => {
     Array.from(startTimeInput.options).forEach(o => { o.dataset.label = o.textContent; });
   }
 
+  function resetStartOptions() {
+    Array.from(startTimeInput.options).forEach(opt => {
+      if (!opt.value) return;
+      opt.disabled = false;
+      opt.textContent = opt.dataset.label;
+    });
+  }
+
   let takenSeq = 0;
   async function markTakenSlots() {
     if (!startTimeInput || !roomSelect || !resDateInput) return;
     const roomId = roomSelect.value, d = resDateInput.value;
     if (!roomId || !isRealDate(d)) return;
     const seq = ++takenSeq;
-    try {
-      const res = await fetch(`${BASE}api/rooms/${encodeURIComponent(roomId)}/calendar?start=${d}&end=${d}`, { credentials: 'include' });
-      const json = await res.json();
-      if (seq !== takenSeq || !json.success) return;          // stale response or error
-      const { reservations, class_schedules, holidays } = json.data;
+    dayData = null;   // whatever we knew belongs to the previous room/date
 
-      const dayName = new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
-      const busy = [
-        ...reservations.filter(r => r.start_time.startsWith(d))
-                       .map(r => [r.start_time.slice(11, 16), r.end_time.slice(11, 16)]),
-        ...class_schedules.filter(c => c.day_of_week === dayName)
-                          .map(c => [c.start_time.slice(0, 5), c.end_time.slice(0, 5)])
-      ];
-      const isHoliday = holidays.some(h => h.holiday_date === d);
+    // null = couldn't load. Never treat that as "free": clear the greying so
+    // nothing stale stays on screen and let the server decide.
+    const data = await window.CampusSchedule.fetchDay(BASE, roomId, d);
+    if (seq !== takenSeq) return;                              // a newer request superseded this one
+    if (!data) {
+      resetStartOptions();
+      syncEndOptions();
+      return;
+    }
+    dayData = { roomId, date: d, data };
 
-      Array.from(startTimeInput.options).forEach(opt => {
-        if (!opt.value) return;
-        const i = BLOCKS.indexOf(opt.value);
-        const [bs, be] = [BLOCKS[i], BLOCKS[i + 1] || '21:00'];
-        const taken = isHoliday || busy.some(([s, e]) => bs < e && be > s);   // overlap test
-        opt.disabled = taken;
-        opt.textContent = opt.dataset.label + (taken ? ' — unavailable' : '');
-      });
+    // A start block is only usable if the block itself is free (the shortest
+    // booking is one block); which END times stay usable is decided in
+    // syncEndOptions() once a start is chosen.
+    Array.from(startTimeInput.options).forEach(opt => {
+      if (!opt.value) return;
+      const i = BLOCKS.indexOf(opt.value);
+      const [bs, be] = [BLOCKS[i], BLOCKS[i + 1] || '21:00'];
+      const taken = window.CampusSchedule.findConflicts(data, d, bs, be).length > 0;
+      opt.disabled = taken;
+      opt.textContent = opt.dataset.label + (taken ? ' — unavailable' : '');
+    });
 
-      // A start time that was valid for the previous date may be taken on this one.
-      const chosen = startTimeInput.selectedOptions[0];
-      if (chosen && chosen.disabled) {
-        startTimeInput.value = '';
-        syncEndOptions();
-      }
-    } catch (_) { /* non-fatal; the server still validates */ }
+    // A start time that was valid for the previous date may be taken on this one.
+    const chosen = startTimeInput.selectedOptions[0];
+    if (chosen && chosen.disabled) startTimeInput.value = '';
+
+    // Re-derive the end options for the (possibly cleared) start against this day.
+    syncEndOptions();
   }
 
   if (roomSelect) roomSelect.addEventListener('change', markTakenSlots);
@@ -442,24 +478,42 @@ document.addEventListener('DOMContentLoaded', () => {
   // Reservation classification (Fix Guide 1.3)
   // ---------------------------------------------------------------
 
+  // These strings are the Reservations.category ENUM verbatim — they are sent
+  // as the `category` field, not glued onto `purpose` as they once were.
   const PURPOSE_LABELS = {
     lecture: 'Academic Lecture',
     defense: 'Faculty Defense',
     student_org: 'Student Org Meeting',
     workshop: 'Dept Workshop',
-    exam: 'Exam / Quiz'
+    exam: 'Exam/Quiz'
   };
 
+  // The prefixes the form used to write into `purpose` before `category`
+  // existed. The migration strips these, but a re-book of a row that predates
+  // it would otherwise carry the prefix back in. Note the old "Exam / Quiz"
+  // spacing, which the ENUM does not use.
+  const LEGACY_PREFIXES = { ...PURPOSE_LABELS, exam_legacy: 'Exam / Quiz' };
+
+  function radioFor(categoryValue) {
+    return form && form.querySelector(`input[name="reservation_purpose"][value="${categoryValue}"]`);
+  }
+
   /**
-   * Split a stored "<Classification>: <description>" purpose back into its
-   * radio selection and free-text description, so re-book prefill doesn't
-   * double the prefix when the form is submitted again.
+   * Prefill the classification radio and the description for a re-booking.
+   * Prefers the source's own `category` column; falls back to parsing a legacy
+   * inline prefix, and strips it so submitting again cannot double it up.
    */
-  function applyPurpose(stored) {
+  function applyPurpose(stored, category) {
+    if (category) {
+      const entry = Object.entries(PURPOSE_LABELS).find(([, label]) => label === category);
+      const radio = entry && radioFor(entry[0]);
+      if (radio) radio.checked = true;
+    }
+
     const text = String(stored || '');
-    for (const [value, label] of Object.entries(PURPOSE_LABELS)) {
+    for (const [key, label] of Object.entries(LEGACY_PREFIXES)) {
       if (text.startsWith(label + ': ')) {
-        const radio = form && form.querySelector(`input[name="reservation_purpose"][value="${value}"]`);
+        const radio = radioFor(key === 'exam_legacy' ? 'exam' : key);
         if (radio) radio.checked = true;
         return text.slice(label.length + 2);
       }
@@ -512,7 +566,9 @@ document.addEventListener('DOMContentLoaded', () => {
         rebookSource = json.data;
 
         // Purpose and duration. Date is left blank on purpose.
-        if (purposeInput && rebookSource.purpose) purposeInput.value = applyPurpose(rebookSource.purpose);
+        if (purposeInput && rebookSource.purpose) {
+          purposeInput.value = applyPurpose(rebookSource.purpose, rebookSource.category);
+        }
 
         // startTime/endTime are <select>s pinned to the 90-minute block grid,
         // not free-text time inputs. A booking made outside that grid (staff
@@ -629,6 +685,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!validateTime()) {
         return showCollisionError('End time must be after the start time.', 'Invalid time');
       }
+      // The whole range must be free, not just its first block. (Only checked
+      // once the schedule has loaded; otherwise the server's 409 says the same.)
+      const clash = rangeConflicts(startVal, endVal);
+      if (clash.length) {
+        return showCollisionError(window.CampusSchedule.describe(clash, startVal, endVal), 'Scheduling conflict');
+      }
       if (!picked) {
         return showCollisionError('Please choose a reservation classification.', 'Missing information');
       }
@@ -641,7 +703,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const payload = {
         room_id: roomId,
-        purpose: `${PURPOSE_LABELS[picked.value]}: ${description}`,
+        // `purpose` is now the requester's description only; the classification
+        // travels in its own column instead of being glued to the front.
+        purpose: description,
+        category: PURPOSE_LABELS[picked.value],
         start_time: `${dateVal}T${startVal}:00`,
         end_time: `${dateVal}T${endVal}:00`,
         equipment_notes: collectEquipmentNotes() || 'Standard Academic Setup'

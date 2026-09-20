@@ -46,17 +46,25 @@ class ReservationRepository
      * The prevent_double_booking_insert MySQL trigger fires here;
      * callers must catch PDOException with SQLSTATE 45000.
      */
-    public function create(string $customerId, string $roomId, string $purpose, string $startTime, string $endTime, ?string $equipmentNotes = null): array
-    {
+    public function create(
+        string $customerId,
+        string $roomId,
+        string $purpose,
+        string $startTime,
+        string $endTime,
+        ?string $equipmentNotes = null,
+        string $category = 'Academic Lecture'
+    ): array {
         $reservationId = self::uuidv4();
         $this->db->query(
-            'INSERT INTO Reservations (reservation_id, customer_id, room_id, purpose, equipment_notes, start_time, end_time)
-             VALUES (:reservation_id, :customer_id, :room_id, :purpose, :equipment_notes, :start_time, :end_time)',
+            'INSERT INTO Reservations (reservation_id, customer_id, room_id, purpose, category, equipment_notes, start_time, end_time)
+             VALUES (:reservation_id, :customer_id, :room_id, :purpose, :category, :equipment_notes, :start_time, :end_time)',
             [
                 ':reservation_id'  => $reservationId,
                 ':customer_id'     => $customerId,
                 ':room_id'         => $roomId,
                 ':purpose'         => $purpose,
+                ':category'        => $category,
                 ':equipment_notes' => $equipmentNotes,
                 ':start_time'      => $startTime,
                 ':end_time'        => $endTime,
@@ -77,6 +85,17 @@ class ReservationRepository
                ) mr ON mr.reservation_id = res.reservation_id';
 
     /**
+     * The same idiom for cancellation requests: the newest one per reservation.
+     * Drives the customer's "Cancellation request pending review" badge and
+     * stops the UI offering a second request while one is still open.
+     */
+    private const LATEST_CANCEL_JOIN = '
+               LEFT JOIN (
+                   SELECT c1.* FROM ReservationCancellationRequests c1
+                    WHERE c1.created_at = (SELECT MAX(created_at) FROM ReservationCancellationRequests c2 WHERE c2.reservation_id = c1.reservation_id)
+               ) cr ON cr.reservation_id = res.reservation_id';
+
+    /**
      * All reservations belonging to a specific customer.
      */
     public function findByCustomer(string $customerId): array
@@ -90,6 +109,7 @@ class ReservationRepository
                     r.room_type     AS room_type,
                     r.capacity      AS capacity,
                     res.purpose,
+                    res.category,
                     res.start_time,
                     res.end_time,
                     res.status,
@@ -97,16 +117,37 @@ class ReservationRepository
                     p.name          AS processed_by_name,
                     res.created_at,
                     mr.status AS move_status,
-                    mr.staff_comment AS move_comment
+                    mr.staff_comment AS move_comment,
+                    cr.status AS cancel_status,
+                    cr.staff_comment AS cancel_comment,
+                    cr.reason AS cancel_reason
                FROM Reservations res
                JOIN Rooms r ON r.room_id = res.room_id
           LEFT JOIN Users p ON p.user_id = res.processed_by'
-               . self::LATEST_MOVE_JOIN . '
+               . self::LATEST_MOVE_JOIN
+               . self::LATEST_CANCEL_JOIN . '
               WHERE res.customer_id = :customer_id
+                AND res.customer_hidden = 0
            ORDER BY res.created_at DESC',
             [':customer_id' => $customerId]
         );
         return $stmt->fetchAll();
+    }
+
+    /**
+     * The customer's "Remove": drop the booking out of their list without
+     * deleting anything. Staff, the room calendar and the audit log are
+     * unaffected, so the row can still be explained later.
+     *
+     * Removing something still Pending must CANCEL it first (the caller does
+     * that) or the room would stay blocked by a booking nobody can see.
+     */
+    public function hideFromCustomer(string $reservationId): void
+    {
+        $this->db->query(
+            'UPDATE Reservations SET customer_hidden = 1 WHERE reservation_id = :reservation_id',
+            [':reservation_id' => $reservationId]
+        );
     }
 
     /**
@@ -140,6 +181,7 @@ class ReservationRepository
                     r.capacity      AS capacity,
                     r.status        AS room_status,
                     res.purpose,
+                    res.category,
                     res.start_time,
                     res.end_time,
                     res.status,
@@ -149,12 +191,14 @@ class ReservationRepository
                     res.created_at,
                     mr.status       AS move_status,
                     mr.requested_start_time,
-                    mr.requested_end_time
+                    mr.requested_end_time,
+                    cr.status       AS cancel_status
                FROM Reservations res
                JOIN Users u ON u.user_id = res.customer_id
                JOIN Rooms r ON r.room_id = res.room_id
           LEFT JOIN Users p ON p.user_id = res.processed_by"
-               . self::LATEST_MOVE_JOIN . "
+               . self::LATEST_MOVE_JOIN
+               . self::LATEST_CANCEL_JOIN . "
                $where
            ORDER BY res.created_at DESC, res.reservation_id DESC
               LIMIT $limit OFFSET $offset",
@@ -182,6 +226,7 @@ class ReservationRepository
                     r.capacity      AS capacity,
                     r.status        AS room_status,
                     res.purpose,
+                    res.category,
                     res.equipment_notes,
                     res.start_time,
                     res.end_time,
@@ -234,7 +279,7 @@ class ReservationRepository
     public function findById(string $reservationId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT reservation_id, customer_id, room_id, purpose, equipment_notes,
+            'SELECT reservation_id, customer_id, room_id, purpose, category, equipment_notes,
                     start_time, end_time, status, processed_by, processed_at,
                     cancellation_reason, cancelled_by, created_at
                FROM Reservations
@@ -520,6 +565,25 @@ class ReservationRepository
         return $stmt->fetch() ?: [];
     }
 
+    /**
+     * True while this booking has a move request still awaiting staff.
+     *
+     * Business rule: a reservation may have at most one open Move Request.
+     * The customer's card hides the button, but that is a courtesy — a stale
+     * tab or a direct API call would otherwise stack duplicates, leaving staff
+     * with two competing proposals for the same booking.
+     */
+    public function hasPendingMoveRequest(string $reservationId): bool
+    {
+        $stmt = $this->db->query(
+            "SELECT 1 FROM ReservationMoveRequests
+              WHERE reservation_id = :reservation_id AND status = 'Pending'
+              LIMIT 1",
+            [':reservation_id' => $reservationId]
+        );
+        return (bool) $stmt->fetchColumn();
+    }
+
     public function findMoveRequests(?string $status = null): array
     {
         $sql = "
@@ -577,6 +641,106 @@ class ReservationRepository
         return $this->findMoveRequestById($requestId);
     }
     
+    // ---------------------------------------------------------------
+    // Cancellation Requests
+    //
+    // An Approved booking is not cancelled by its customer directly. They file
+    // a request with a reason; approving it is what performs the cancellation.
+    // Same shape as the move-request methods above.
+    // ---------------------------------------------------------------
+
+    public function createCancelRequest(string $reservationId, string $reason): array
+    {
+        $requestId = self::uuidv4();
+        $this->db->query(
+            'INSERT INTO ReservationCancellationRequests (request_id, reservation_id, reason)
+             VALUES (:request_id, :reservation_id, :reason)',
+            [
+                ':request_id'     => $requestId,
+                ':reservation_id' => $reservationId,
+                ':reason'         => $reason,
+            ]
+        );
+
+        $stmt = $this->db->query(
+            'SELECT * FROM ReservationCancellationRequests WHERE request_id = :request_id LIMIT 1',
+            [':request_id' => $requestId]
+        );
+        return $stmt->fetch() ?: [];
+    }
+
+    /** True while this booking has a cancellation request still awaiting staff. */
+    public function hasPendingCancelRequest(string $reservationId): bool
+    {
+        $stmt = $this->db->query(
+            "SELECT 1 FROM ReservationCancellationRequests
+              WHERE reservation_id = :reservation_id AND status = 'Pending'
+              LIMIT 1",
+            [':reservation_id' => $reservationId]
+        );
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /** The staff queue's cancellation tab. Oldest first, like findMoveRequests(). */
+    public function findCancelRequests(?string $status = null): array
+    {
+        $sql = "
+            SELECT cr.*,
+                   r.customer_id, r.room_id, r.purpose,
+                   r.start_time, r.end_time, r.status AS reservation_status,
+                   rm.name AS room_name,
+                   c.name  AS customer_name, c.email AS customer_email,
+                   p.name  AS processed_by_name
+              FROM ReservationCancellationRequests cr
+              JOIN Reservations r ON r.reservation_id = cr.reservation_id
+              JOIN Rooms rm ON rm.room_id = r.room_id
+              JOIN Users c ON c.user_id = r.customer_id
+         LEFT JOIN Users p ON p.user_id = cr.processed_by
+        ";
+
+        $params = [];
+        if ($status !== null) {
+            $sql .= ' WHERE cr.status = :status';
+            $params[':status'] = $status;
+        }
+
+        $sql .= ' ORDER BY cr.created_at ASC';
+
+        return $this->db->query($sql, $params)->fetchAll();
+    }
+
+    public function findCancelRequestById(string $requestId): ?array
+    {
+        $stmt = $this->db->query(
+            'SELECT cr.*, r.room_id, r.customer_id, r.status AS reservation_status
+               FROM ReservationCancellationRequests cr
+               JOIN Reservations r ON r.reservation_id = cr.reservation_id
+              WHERE cr.request_id = :request_id
+              LIMIT 1',
+            [':request_id' => $requestId]
+        );
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
+    public function updateCancelRequestStatus(string $requestId, string $status, string $processedBy, ?string $staffComment): ?array
+    {
+        $this->db->query(
+            'UPDATE ReservationCancellationRequests
+                SET status = :status,
+                    processed_by = :processed_by,
+                    staff_comment = :staff_comment
+              WHERE request_id = :request_id',
+            [
+                ':status'        => $status,
+                ':processed_by'  => $processedBy,
+                ':staff_comment' => $staffComment,
+                ':request_id'    => $requestId,
+            ]
+        );
+        return $this->findCancelRequestById($requestId);
+    }
+
     public function updateTimes(string $reservationId, string $startTime, string $endTime): void
     {
         $this->db->query(

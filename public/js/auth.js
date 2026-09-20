@@ -6,7 +6,102 @@
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
+  const BASE_URI = window.location.pathname.replace(/[^\/]*$/, '');
 
+  // ==========================================
+  // 0. reCAPTCHA bootstrap
+  //
+  // The site key comes from GET /api/config rather than being hardcoded here,
+  // so .env stays the single source for it. When the server reports it
+  // disabled — which is how the test suites and an unconfigured clone run —
+  // nothing is loaded and every form behaves exactly as it did before.
+  // ==========================================
+  const captcha = {
+    enabled: false,
+    ready: false,
+    widgets: {}   // containerId -> widget id, for precise reset()
+  };
+
+  /** The solved token for a container, or '' when reCAPTCHA is off. */
+  function captchaToken(containerId) {
+    if (!captcha.ready || !window.grecaptcha) return '';
+    const id = captcha.widgets[containerId];
+    return id === undefined ? '' : (window.grecaptcha.getResponse(id) || '');
+  }
+
+  /**
+   * Clear a solved checkbox. A token is single-use, so any rejected submit
+   * must reset it — otherwise the next attempt fails on a stale token and the
+   * user is told "verification failed" when they have fixed the real problem.
+   */
+  function captchaReset(containerId) {
+    if (!captcha.ready || !window.grecaptcha) return;
+    const id = captcha.widgets[containerId];
+    if (id !== undefined) window.grecaptcha.reset(id);
+  }
+
+  /** A visible placeholder, so the space is never silently blank. */
+  function captchaNotice(el, text, isError) {
+    el.innerHTML =
+      '<div class="w-full text-center text-[11px] rounded border px-2 py-2 ' +
+      (isError
+        ? 'border-[#f3c9c6] bg-[#fdf4f3] text-[#93000a]'
+        : 'border-outline-variant/50 bg-surface-container-low text-on-surface-variant') +
+      '">' + text + '</div>';
+  }
+
+  function initCaptcha(containerIds) {
+    const present = containerIds.filter(id => document.getElementById(id));
+    if (!present.length) return;
+
+    fetch(BASE_URI + 'api/config', { credentials: 'same-origin' })
+      .then(res => res.json())
+      .then(json => {
+        const cfg = (json && json.data) || {};
+        if (!cfg.recaptcha_enabled || !cfg.recaptcha_site_key) return;
+
+        captcha.enabled = true;
+        present.forEach(id => captchaNotice(document.getElementById(id), 'Loading verification…', false));
+
+        window.onCampusRoomCaptchaLoad = () => {
+          present.forEach(id => {
+            const el = document.getElementById(id);
+            el.innerHTML = '';                       // clear the placeholder
+            try {
+              captcha.widgets[id] = window.grecaptcha.render(id, { sitekey: cfg.recaptcha_site_key });
+            } catch (err) {
+              console.error('[captcha] render failed for #' + id, err);
+              captchaNotice(el, 'Verification could not load. Check that this site’s domain is registered for the reCAPTCHA key.', true);
+            }
+          });
+          captcha.ready = true;
+        };
+
+        const script = document.createElement('script');
+        script.src = 'https://www.google.com/recaptcha/api.js?onload=onCampusRoomCaptchaLoad&render=explicit';
+        script.async = true;
+        script.defer = true;
+        // The server REQUIRES a token, so a checkbox that never appears is a
+        // silent lockout. Say so rather than leaving a blank gap.
+        script.onerror = () => present.forEach(id =>
+          captchaNotice(document.getElementById(id),
+            'Could not reach Google to load the robot check. You may be offline.', true));
+        document.head.appendChild(script);
+
+        window.setTimeout(() => {
+          if (captcha.ready) return;
+          present.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && !el.querySelector('iframe')) {
+              captchaNotice(el, 'The robot check did not load. Try refreshing; if it persists, contact the facilities desk.', true);
+            }
+          });
+        }, 8000);
+      })
+      .catch(() => { /* config unreachable: leave the forms as they are */ });
+  }
+
+  initCaptcha(['loginRecaptcha', 'registerRecaptcha']);
 
   // ==========================================
   // 1. Sign In Page Logic
@@ -29,11 +124,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      // Caught here so the user is told to tick the box before a round trip.
+      if (captcha.enabled && captcha.ready && !captchaToken('loginRecaptcha')) {
+        showLoginError('Please confirm you are not a robot.');
+        return;
+      }
+
       const BASE = window.location.pathname.replace(/[^\/]*$/, '');
       fetch(BASE + 'api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, recaptcha_token: captchaToken('loginRecaptcha') })
       })
       .then(res => res.json().then(json => ({ status: res.status, json })))
       .then(({ status, json }) => {
@@ -54,10 +155,13 @@ document.addEventListener('DOMContentLoaded', () => {
           if (payload.dev_otp) sessionStorage.setItem('dev_otp', payload.dev_otp);
           window.location.href = 'verify.html';
         } else {
+          // Single-use token: clear it so a retry starts from a fresh tick.
+          captchaReset('loginRecaptcha');
           showLoginError(payload.error || json.error || 'Authentication failed: Invalid credentials provided.');
         }
       })
       .catch((err) => {
+        captchaReset('loginRecaptcha');
         showLoginError('Network error. Please try again later.');
       });
     });
@@ -77,28 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Quick Demo Sign-In Buttons (Customer & Staff)
-    const demoCustomerBtn = document.getElementById('demoCustomerLogin');
-    if (demoCustomerBtn) {
-      demoCustomerBtn.addEventListener('click', () => {
-        const emailInput = document.getElementById('bpu-email');
-        const passwordInput = document.getElementById('bpu-password');
-        if (emailInput) emailInput.value = 'customer@bpu.edu.ph';
-        if (passwordInput) passwordInput.value = 'password123';
-        loginForm.dispatchEvent(new Event('submit'));
-      });
-    }
-
-    const demoStaffBtn = document.getElementById('demoStaffLogin');
-    if (demoStaffBtn) {
-      demoStaffBtn.addEventListener('click', () => {
-        const emailInput = document.getElementById('bpu-email');
-        const passwordInput = document.getElementById('bpu-password');
-        if (emailInput) emailInput.value = 'staff@bpu.edu.ph';
-        if (passwordInput) passwordInput.value = 'password123';
-        loginForm.dispatchEvent(new Event('submit'));
-      });
-    }
   }
 
   // ==========================================
@@ -193,11 +275,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      if (captcha.enabled && captcha.ready && !captchaToken('registerRecaptcha')) {
+        showRegisterError('Please confirm you are not a robot.');
+        return;
+      }
+
       const BASE = window.location.pathname.replace(/[^\/]*$/, '');
       fetch(BASE + 'api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: fullName, email, password })
+        body: JSON.stringify({
+          name: fullName, email, password,
+          recaptcha_token: captchaToken('registerRecaptcha')
+        })
       })
       .then(res => res.json().then(json => ({ status: res.status, json })))
       .then(({ status, json }) => {
@@ -210,6 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           window.location.href = 'verify.html';
         } else {
+          captchaReset('registerRecaptcha');
           showRegisterError(json.error || 'An error occurred during account registration.');
         }
       })

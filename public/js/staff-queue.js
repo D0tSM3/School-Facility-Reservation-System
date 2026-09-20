@@ -31,10 +31,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const tabPending      = el('tab-pending');
   const tabMoves        = el('tab-moves');
+  const tabCancels      = el('tab-cancels');
   const tabAll          = el('tab-all');
   const tabMaintenance  = el('tab-maintenance');
   const viewPending     = el('view-pending');
   const viewMoves       = el('view-moves');
+  const viewCancels     = el('view-cancels');
   const viewAll         = el('view-all');
   const viewAllList     = el('view-all-list');
   const viewMaintenance = el('view-maintenance');
@@ -42,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const pendingBadge     = el('pending-badge-count');
   const moveBadge        = el('move-badge-count');
+  const cancelReqBadge   = el('cancel-badge-count');
   const allBadge         = el('all-badge-count');
   const maintenanceBadge = el('maintenance-badge-count');
   const kpiPending       = el('kpi-pending-count');
@@ -82,6 +85,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const moveApproveBtn = el('moveReviewApproveBtn');
   const moveRejectBtn  = el('moveReviewRejectBtn');
 
+  // Cancellation request review modal
+  const cancelReqOverlay    = el('cancelReviewModalOverlay');
+  const cancelReqSummary    = el('cancelReviewSummary');
+  const cancelReqComment    = el('cancelReviewComment');
+  const cancelReqError      = el('cancelReviewErrorMsg');
+  const cancelReqApproveBtn = el('cancelReviewApproveBtn');
+  const cancelReqRejectBtn  = el('cancelReviewRejectBtn');
+
   // Detail modal
   const detailOverlay = el('detailModalOverlay');
   const detailBody    = el('detailModalBody');
@@ -103,10 +114,12 @@ document.addEventListener('DOMContentLoaded', () => {
     reservations: [],
     rooms: [],
     moveRequests: [],
+    cancelRequests: [],
     activeTab: 'pending',
     wingFilter: 'all',
     allStatusFilter: 'all',
     currentMoveId: null,
+    currentCancelReqId: null,
     currentCancelId: null,
     loading: false
   };
@@ -273,6 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pairs = [
       ['pending', tabPending, viewPending],
       ['moves', tabMoves, viewMoves],
+      ['cancels', tabCancels, viewCancels],
       ['all', tabAll, viewAll],
       ['maintenance', tabMaintenance, viewMaintenance]
     ];
@@ -295,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (tabPending) tabPending.addEventListener('click', () => switchTab('pending'));
   if (tabMoves) tabMoves.addEventListener('click', () => switchTab('moves'));
+  if (tabCancels) tabCancels.addEventListener('click', () => switchTab('cancels'));
   if (tabAll) tabAll.addEventListener('click', () => switchTab('all'));
   if (tabMaintenance) tabMaintenance.addEventListener('click', () => switchTab('maintenance'));
 
@@ -353,6 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   <span class="material-symbols-outlined text-[16px] text-tertiary">category</span>
                   <span>Purpose:</span>
                   <span class="font-semibold text-on-surface">${escapeHtml(reservation.purpose || '—')}</span>
+                  ${reservation.category ? `<span class="ml-1 px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm font-semibold">${escapeHtml(reservation.category)}</span>` : ''}
                 </div>
               </div>
               <div class="pt-space-xs flex flex-wrap items-center gap-space-xs font-body-sm text-body-sm text-on-surface-variant">
@@ -471,6 +487,58 @@ document.addEventListener('DOMContentLoaded', () => {
     if (moveBadge) moveBadge.textContent = `${state.moveRequests.length} Requests`;
   }
 
+  /**
+   * A cancellation request: the requester wants an already-approved booking
+   * released. The reason is theirs, in their words, so it is shown verbatim —
+   * it is the whole basis for the decision.
+   */
+  function cancelRequestCard(request) {
+    const id = escapeHtml(request.request_id);
+    return `
+      <div class="relative bg-surface-container-lowest rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md">
+        <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-error"></div>
+        <div class="p-space-md pl-space-lg flex flex-col xl:flex-row xl:items-center justify-between gap-space-md">
+          <div class="space-y-1 flex-1">
+            <div class="flex flex-wrap items-center gap-space-xs">
+              <span class="px-space-xs py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm tracking-wide">#${shortId(request.reservation_id)}</span>
+              <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(request.customer_name || request.customer_email || 'Requester')}</h3>
+              <span class="px-space-xs py-0.5 rounded bg-error-container text-on-error-container font-label-sm font-semibold">CANCELLATION REQUEST</span>
+            </div>
+            <div class="flex items-center gap-1 pt-space-xs font-body-sm text-body-sm text-on-surface-variant">
+              <span class="material-symbols-outlined text-[16px] text-primary">meeting_room</span>
+              <span class="font-semibold text-on-surface">${escapeHtml(request.room_name || 'Room')}</span>
+            </div>
+            <div class="font-body-md text-body-md text-on-surface">
+              <span class="font-semibold text-on-surface-variant">Booked:</span>
+              ${escapeHtml(formatDateTime(request.start_time))} – ${escapeHtml(formatTime(request.end_time))}
+            </div>
+            <div class="font-body-md text-body-md text-on-surface">
+              <span class="font-semibold text-error">Reason:</span>
+              ${escapeHtml(request.reason || '—')}
+            </div>
+          </div>
+          <div class="flex items-center gap-space-xs justify-end flex-shrink-0 pt-space-xs xl:pt-0">
+            <button type="button"
+                    class="btn-review-cancel flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-container-highest shadow-sm font-label-lg transition-all"
+                    data-id="${id}">
+              <span class="material-symbols-outlined text-[18px]">rate_review</span>
+              <span>Review Request</span>
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderCancelRequests() {
+    if (!viewCancels) return;
+
+    viewCancels.innerHTML = state.cancelRequests.length
+      ? state.cancelRequests.map(cancelRequestCard).join('')
+      : emptyState('No pending cancellation requests.', 'assignment_turned_in');
+
+    if (cancelReqBadge) cancelReqBadge.textContent = `${state.cancelRequests.length} Requests`;
+  }
+
   function facilityCard(room) {
     const offline = room.status === 'Maintenance';
     const occupied = room.live_status === 'Occupied';
@@ -583,6 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderAll() {
     renderPending();
     renderMoves();
+    renderCancelRequests();
     renderAllRequests();
     renderFacilityFilter();
     renderFacilities();
@@ -620,21 +689,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (refreshIcon) refreshIcon.classList.add('animate-spin');
     if (syncIndicator) syncIndicator.classList.add('animate-pulse');
 
-    const [reservations, rooms, moves] = await Promise.all([
+    const [reservations, rooms, moves, cancels] = await Promise.all([
       api('api/reservations'),
       api('api/rooms'),
-      api('api/reservations/move-requests?status=Pending')
+      api('api/reservations/move-requests?status=Pending'),
+      api('api/reservations/cancel-requests?status=Pending')
     ]);
 
     state.loading = false;
     if (refreshIcon) refreshIcon.classList.remove('animate-spin');
 
-    const failed = [reservations, rooms, moves].find((r) => !r.ok);
+    const failed = [reservations, rooms, moves, cancels].find((r) => !r.ok);
     if (failed && handleAuthFailure(failed)) return;
 
     if (reservations.ok) state.reservations = reservations.data || [];
     if (rooms.ok) state.rooms = rooms.data || [];
     if (moves.ok) state.moveRequests = moves.data || [];
+    if (cancels.ok) state.cancelRequests = cancels.data || [];
 
     renderAll();
 
@@ -678,6 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (accessText) accessText.textContent = message;
     if (viewPending) viewPending.innerHTML = emptyState('Queue unavailable.', 'lock');
     if (viewMoves) viewMoves.innerHTML = '';
+    if (viewCancels) viewCancels.innerHTML = '';
     if (facilityGrid) facilityGrid.innerHTML = '';
     [batchApproveBtn, refreshBtn, exportLogBtn].forEach((btn) => {
       if (btn) btn.disabled = true;
@@ -777,6 +849,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const reviewBtn = event.target.closest('.btn-review-move');
     if (reviewBtn) {
       openMoveModal(reviewBtn.dataset.id);
+      return;
+    }
+
+    const cancelReviewBtn = event.target.closest('.btn-review-cancel');
+    if (cancelReviewBtn) {
+      openCancelRequestModal(cancelReviewBtn.dataset.id);
       return;
     }
 
@@ -941,6 +1019,7 @@ document.addEventListener('DOMContentLoaded', () => {
       detailRow('Email', reservation.customer_email || '—') +
       detailRow('Room', reservation.room_name || '—') +
       detailRow('Room Details', roomMeta(reservation)) +
+      detailRow('Category', reservation.category || '—') +
       detailRow('Purpose', reservation.purpose || '—') +
       detailRow('Start', formatDateTime(reservation.start_time)) +
       detailRow('End', formatDateTime(reservation.end_time)) +
@@ -1282,10 +1361,107 @@ document.addEventListener('DOMContentLoaded', () => {
   if (moveApproveBtn) moveApproveBtn.addEventListener('click', () => submitMoveReview('Approved'));
   if (moveRejectBtn) moveRejectBtn.addEventListener('click', () => submitMoveReview('Rejected'));
 
+  // ---------------------------------------------------------------
+  // Cancellation request review modal
+  // ---------------------------------------------------------------
+
+  function openCancelRequestModal(requestId) {
+    const request = state.cancelRequests.find((r) => r.request_id === requestId);
+    state.currentCancelReqId = requestId;
+
+    if (cancelReqComment) cancelReqComment.value = '';
+    if (cancelReqError) cancelReqError.classList.add('hidden');
+
+    if (cancelReqSummary) {
+      cancelReqSummary.innerHTML = request
+        ? `
+          <div><span class="font-semibold text-on-surface">Requester:</span> ${escapeHtml(request.customer_name || request.customer_email || '—')}</div>
+          <div><span class="font-semibold text-on-surface">Room:</span> ${escapeHtml(request.room_name || '—')}</div>
+          <div><span class="font-semibold text-on-surface">Booked:</span> ${escapeHtml(formatDateTime(request.start_time))} – ${escapeHtml(formatTime(request.end_time))}</div>
+          <div><span class="font-semibold text-on-surface">Purpose:</span> ${escapeHtml(request.purpose || '—')}</div>
+          <div><span class="font-semibold text-error">Reason given:</span> ${escapeHtml(request.reason || '—')}</div>`
+        : '';
+    }
+
+    if (cancelReqOverlay) {
+      cancelReqOverlay.classList.remove('opacity-0', 'pointer-events-none');
+      cancelReqOverlay.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  function closeCancelRequestModal() {
+    state.currentCancelReqId = null;
+    if (cancelReqOverlay) {
+      cancelReqOverlay.classList.add('opacity-0', 'pointer-events-none');
+      cancelReqOverlay.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  const cancelReqCloseIcon = el('cancelReviewCloseIcon');
+  const cancelReqCancelBtn = el('cancelReviewCancelBtn');
+  if (cancelReqCloseIcon) cancelReqCloseIcon.addEventListener('click', closeCancelRequestModal);
+  if (cancelReqCancelBtn) cancelReqCancelBtn.addEventListener('click', closeCancelRequestModal);
+  if (cancelReqOverlay) {
+    cancelReqOverlay.addEventListener('click', (event) => {
+      if (event.target === cancelReqOverlay) closeCancelRequestModal();
+    });
+  }
+
+  async function submitCancelReview(status) {
+    if (!state.currentCancelReqId) return;
+
+    const comment = cancelReqComment ? cancelReqComment.value.trim() : '';
+
+    // The booking stands after a rejection, so the requester is owed a why.
+    if (status === 'Rejected' && !comment) {
+      if (cancelReqError) {
+        cancelReqError.textContent = 'A comment is required for rejection.';
+        cancelReqError.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (cancelReqApproveBtn) cancelReqApproveBtn.disabled = true;
+    if (cancelReqRejectBtn) cancelReqRejectBtn.disabled = true;
+
+    const result = await api(
+      `api/reservations/cancel-requests/${encodeURIComponent(state.currentCancelReqId)}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ status, staff_comment: comment })
+      }
+    );
+
+    if (cancelReqApproveBtn) cancelReqApproveBtn.disabled = false;
+    if (cancelReqRejectBtn) cancelReqRejectBtn.disabled = false;
+
+    if (!result.ok) {
+      if (handleAuthFailure(result)) return;
+      if (cancelReqError) {
+        cancelReqError.textContent = result.error;
+        cancelReqError.classList.remove('hidden');
+      }
+      return;
+    }
+
+    closeCancelRequestModal();
+    showToast(
+      status === 'Approved'
+        ? 'Cancellation approved. The room has been released.'
+        : 'Cancellation rejected. The booking still stands.',
+      'success'
+    );
+    await loadAll();
+  }
+
+  if (cancelReqApproveBtn) cancelReqApproveBtn.addEventListener('click', () => submitCancelReview('Approved'));
+  if (cancelReqRejectBtn) cancelReqRejectBtn.addEventListener('click', () => submitCancelReview('Rejected'));
+
   // Escape closes whichever modal (or the action menu) is open.
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
     closeMoveModal();
+    closeCancelRequestModal();
     closeDetailModal();
     closeActionMenu();
     closeStaffCancelModal();

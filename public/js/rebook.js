@@ -70,6 +70,7 @@
     rooms: [],          // bookable rooms only
     submitting: false,
     hintTicket: 0,
+    dayData: null,      // { roomId, date, data } — the schedule the availability hint is showing
     onSuccess: null,
     returnFocusTo: null
   };
@@ -367,7 +368,9 @@
     // Date is deliberately left blank — picking a new one is the whole point.
     if (dateInput) dateInput.addEventListener('change', () => { clearError(); loadHint(); });
     if (roomSelect) roomSelect.addEventListener('change', () => { clearError(); loadHint(); });
-    if (startInput) startInput.addEventListener('change', shiftEndWithStart);
+    if (startInput) startInput.addEventListener('change', () => { clearError(); shiftEndWithStart(); liveRangeCheck(); });
+    const endInput = bodyEl.querySelector('#crRebookEnd');
+    if (endInput) endInput.addEventListener('change', () => { clearError(); liveRangeCheck(); });
 
     if (dateInput && !noRooms) dateInput.focus();
   }
@@ -416,6 +419,7 @@
     }
 
     const ticket = ++state.hintTicket;
+    state.dayData = null;   // the previous room/date's schedule no longer applies
     hintEl.innerHTML = hintHeader() + '<p class="cr-rebook-hint-empty">Checking that day…</p>';
 
     const result = await api(
@@ -431,7 +435,49 @@
       return;
     }
 
+    state.dayData = { roomId, date, data: result.data };
     hintEl.innerHTML = hintHeader() + hintBody(result.data, date);
+
+    // The times may already be filled in (carried over from the source
+    // booking), so tell the operator right away if they don't fit this day.
+    liveRangeCheck();
+  }
+
+  // ---------------------------------------------------------------
+  // Range check — the requested start..end must be free for its WHOLE length
+  // ---------------------------------------------------------------
+
+  /**
+   * '' when the selected range is free (or can't be checked yet), otherwise a
+   * sentence naming the class / reservation / holiday it runs into. Uses the
+   * schedule the availability hint already fetched; a convenience only, the
+   * server's 409 remains the authority.
+   */
+  function rangeClash() {
+    const Schedule = window.CampusSchedule;
+    if (!Schedule || !state.dayData) return '';
+
+    const roomId = value('#crRebookRoom');
+    const date = value('#crRebookDate');
+    if (state.dayData.roomId !== roomId || state.dayData.date !== date) return '';
+
+    const startTime = value('#crRebookStart');
+    const endTime = value('#crRebookEnd');
+    const startMin = toMinutes(startTime);
+    const endMin = toMinutes(endTime);
+    if (startMin === null || endMin === null || endMin <= startMin) return '';
+
+    return Schedule.describe(Schedule.findConflicts(state.dayData.data, date, startTime, endTime), startTime, endTime);
+  }
+
+  /**
+   * Surface a range clash, never clear one: callers clear first when the
+   * operator changes a field. (loadHint() also calls this after a failed
+   * submit, and must not wipe the server's message when the range is fine.)
+   */
+  function liveRangeCheck() {
+    const clash = rangeClash();
+    if (clash) showError(clash);
   }
 
   function hintHeader() {
@@ -535,6 +581,8 @@
     if (startMin < toMinutes(DAY_OPENS) || endMin > toMinutes(DAY_CLOSES)) {
       return showError(`Reservations must be within business hours (${DAY_OPENS} – ${DAY_CLOSES}).`);
     }
+    const clash = rangeClash();
+    if (clash) return showError(clash);
     if (!purpose) return showError('Give the booking a purpose.');
 
     setSubmitting(true);
@@ -786,6 +834,7 @@
     if (footer) footer.innerHTML = '';
     state.source = null;
     state.rooms = [];
+    state.dayData = null;
     state.submitting = false;
     if (state.returnFocusTo && typeof state.returnFocusTo.focus === 'function') {
       state.returnFocusTo.focus();

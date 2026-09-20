@@ -249,6 +249,12 @@
           ><span class="material-symbols-outlined text-[20px]"
             >admin_panel_settings</span
           ><span>Admin Governance</span></a
+        ><a
+          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
+          data-path="handbook"
+          href="handbook.html"
+          ><span class="material-symbols-outlined text-[20px]">menu_book</span
+          ><span>Handbook</span></a
         >
       </nav>
       <div class="p-space-md bg-tertiary-container/40">
@@ -457,6 +463,8 @@
               </div>
             </div>
           </div>
+          <!-- Remove Modal — clears a Pending / Rejected / Cancelled booking
+               out of this list. Nothing is deleted; staff keep the record. -->
           <div
             class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center hidden"
             id="cancelModal"
@@ -466,34 +474,19 @@
             >
               <div class="flex items-center gap-space-sm text-[#DC2626]">
                 <span class="material-symbols-outlined text-[28px]"
-                  >warning</span
+                  >delete_sweep</span
                 >
                 <h3
                   class="font-headline-sm text-headline-sm font-bold text-on-surface"
+                  id="removeModalTitle"
                 >
-                  Cancel Pending Slip?
+                  Remove this booking?
                 </h3>
               </div>
-              <p class="font-body-md text-body-md text-on-surface-variant">
-                Are you sure you wish to withdraw reservation
-                <span class="font-bold text-primary" id="modalPermitCode"></span
-                >? This slot will immediately be made available to other
-                academic departments.
-              </p>
-              <div class="flex flex-col space-y-space-xs">
-                <label
-                  for="cancelReasonInput"
-                  class="font-label-sm text-label-sm text-on-surface-variant"
-                  >Reason (optional)</label
-                >
-                <textarea
-                  id="cancelReasonInput"
-                  rows="2"
-                  maxlength="500"
-                  placeholder="Let us know why you're cancelling"
-                  class="w-full px-space-sm py-space-xs rounded border border-outline-variant bg-surface font-body-sm text-body-sm text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                ></textarea>
-              </div>
+              <p
+                class="font-body-md text-body-md text-on-surface-variant"
+                id="removeModalText"
+              ></p>
               <div
                 class="flex items-center justify-end gap-space-sm pt-space-xs"
               >
@@ -501,13 +494,80 @@
                   class="px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold rounded transition-colors"
                   id="modalCloseBtn"
                 >
-                  Dismiss
+                  Keep It
                 </button>
                 <button
                   class="px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-md text-label-md font-semibold rounded transition-colors shadow-sm"
                   id="modalConfirmBtn"
                 >
-                  Confirm Cancellation
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cancellation Request Modal — an approved booking can only be
+               cancelled by asking staff, and never on the day it takes place. -->
+          <div
+            class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center hidden"
+            id="cancelRequestModal"
+          >
+            <div
+              class="bg-surface-container-lowest p-space-lg rounded max-w-md w-full mx-space-md shadow-xl flex flex-col space-y-space-md border border-surface-container"
+            >
+              <div class="flex items-center gap-space-sm text-secondary">
+                <span class="material-symbols-outlined text-[28px]"
+                  >assignment_return</span
+                >
+                <h3
+                  class="font-headline-sm text-headline-sm font-bold text-on-surface"
+                >
+                  Request Cancellation
+                </h3>
+              </div>
+              <p class="font-body-md text-body-md text-on-surface-variant">
+                Reservation
+                <span
+                  class="font-bold text-primary"
+                  id="cancelRequestPermitCode"
+                ></span>
+                is already approved, so the room is held for you. Staff will
+                review this request and release the room only once they approve
+                it. Your booking stands until then.
+              </p>
+              <form id="cancelRequestForm" class="flex flex-col space-y-space-xs">
+                <label
+                  for="cancelRequestReason"
+                  class="font-label-sm text-label-sm text-on-surface-variant"
+                  >Reason *</label
+                >
+                <textarea
+                  id="cancelRequestReason"
+                  rows="3"
+                  maxlength="500"
+                  required
+                  placeholder="Why does this booking need to be cancelled?"
+                  class="w-full px-space-sm py-space-xs rounded border border-outline-variant bg-surface font-body-sm text-body-sm text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                ></textarea>
+                <div
+                  id="cancelRequestError"
+                  class="hidden p-space-sm bg-error-container text-on-error-container text-body-sm rounded"
+                ></div>
+              </form>
+              <div
+                class="flex items-center justify-end gap-space-sm pt-space-xs"
+              >
+                <button
+                  class="px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold rounded transition-colors"
+                  id="cancelRequestDismiss"
+                >
+                  Never Mind
+                </button>
+                <button
+                  class="px-space-md py-space-sm bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md font-semibold rounded transition-colors shadow-sm"
+                  id="cancelRequestSubmit"
+                >
+                  Submit Request
                 </button>
               </div>
             </div>
@@ -632,6 +692,7 @@
 
     <script src="js/app.js"></script>
     <script src="js/util.js"></script>
+    <script src="js/schedule.js"></script>
     <script src="js/slip.js"></script>
     <script src="js/logArchive.js"></script>
     <script src="js/rebook.js"></script>

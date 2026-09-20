@@ -73,6 +73,11 @@ $uri = rtrim($uri, '/') ?: '/';
 // Named captures (?P<name>...) are passed to the callable as arguments.
 
 $routes = [
+    // Public bootstrap — the login screen reads the reCAPTCHA site key from
+    // here so .env stays the single source for it. No auth: it must answer
+    // before anyone can log in, and it returns only public values.
+    ['GET',  '#^/api/config$#',           fn() => (new AuthController())->config()],
+
     // Auth — login
     ['POST', '#^/api/auth/register$#',    fn() => (new AuthController())->register()],
     ['POST', '#^/api/auth/login$#',       fn() => (new AuthController())->login()],
@@ -93,11 +98,14 @@ $routes = [
     // or the {id} pattern swallows them (this router is a linear first-match list).
     ['GET',   '#^/api/reservations/mine$#',          fn() => (new ReservationController())->mine()],
     ['GET',   '#^/api/reservations/move-requests$#', fn() => (new ReservationController())->getMoveRequests()],
+    ['GET',   '#^/api/reservations/cancel-requests$#', fn() => (new ReservationController())->getCancelRequests()],
     ['GET',   '#^/api/reservations/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->show($id)],
     ['GET',   '#^/api/reservations$#',               fn() => (new ReservationController())->index()],
     ['POST',  '#^/api/reservations$#',               fn() => (new ReservationController())->store()],
     ['PATCH', '#^/api/reservations/(?P<id>[^/]+)/cancel$#', fn(string $id) => (new ReservationController())->cancel($id)],
     ['PATCH', '#^/api/reservations/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->update($id)],
+    // Customer "Remove" — a soft hide, not a DELETE of the row.
+    ['DELETE', '#^/api/reservations/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->remove($id)],
 
     // Move Requests
     ['POST',  '#^/api/reservations/(?P<id>[^/]+)/rebook$#', fn(string $id) => (new ReservationController())->rebook($id)],
@@ -105,6 +113,10 @@ $routes = [
     ['GET',   '#^/api/reservations/(?P<id>[^/]+)/logs$#', fn(string $id) => (new ReservationController())->logs($id)],
     ['POST',  '#^/api/reservations/(?P<id>[^/]+)/move-request$#', fn(string $id) => (new ReservationController())->requestMove($id)],
     ['PATCH', '#^/api/reservations/move-requests/(?P<id>[^/]+)$#',fn(string $id) => (new ReservationController())->resolveMoveRequest($id)],
+
+    // Cancellation Requests (approved bookings)
+    ['POST',  '#^/api/reservations/(?P<id>[^/]+)/cancel-request$#', fn(string $id) => (new ReservationController())->requestCancel($id)],
+    ['PATCH', '#^/api/reservations/cancel-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->resolveCancelRequest($id)],
 
     // Users (Admin)
     ['GET',   '#^/api/users$#',                      fn() => (new UserController())->index()],

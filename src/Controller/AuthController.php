@@ -6,6 +6,7 @@ namespace CampusRoom\Controller;
 
 use CampusRoom\Core\Auth;
 use CampusRoom\Core\Mailer;
+use CampusRoom\Core\Recaptcha;
 use CampusRoom\Core\Response;
 use CampusRoom\Repository\UserRepository;
 use PDOException;
@@ -13,6 +14,11 @@ use PDOException;
 /**
  * AuthController — handles email/password auth and OTP verification.
  * Google OAuth has been removed in favour of a native signup/login flow.
+ *
+ * The three unauthenticated routes here — register, login and resend-otp —
+ * are the system's only doors that open without a session, so each one runs a
+ * reCAPTCHA check first. Everything else in the application sits behind
+ * Auth::requireRole(), where the session is the gate.
  */
 class AuthController
 {
@@ -21,6 +27,44 @@ class AuthController
     public function __construct()
     {
         $this->users = new UserRepository();
+    }
+
+    /**
+     * Run the bot check, or end the request with 400.
+     *
+     * 400 rather than 422 on purpose: 422 means "your fields are wrong" here
+     * and the client maps it to field-level messages. A failed bot check is
+     * not a field error.
+     *
+     * $failOpen applies ONLY to Google being unreachable, never to a rejected
+     * token. See Recaptcha::check().
+     */
+    private function requireHuman(array $body, bool $failOpen = false): void
+    {
+        $error = Recaptcha::check(
+            $body['recaptcha_token'] ?? null,
+            $_SERVER['REMOTE_ADDR'] ?? null,
+            $failOpen
+        );
+        if ($error !== null) {
+            Response::error($error, 400);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // GET /api/config — public bootstrap values for the login screen
+    //
+    // Exists so the site key has exactly one home (.env). index.html is static
+    // and cannot render it server-side, and hardcoding it in the markup would
+    // mean two places to change it. Only ever returns PUBLIC values.
+    // ---------------------------------------------------------------
+
+    public function config(): never
+    {
+        Response::json([
+            'recaptcha_enabled'  => Recaptcha::enabled(),
+            'recaptcha_site_key' => Recaptcha::enabled() ? Recaptcha::siteKey() : '',
+        ]);
     }
 
     // ---------------------------------------------------------------
@@ -51,6 +95,11 @@ class AuthController
     public function register(): never
     {
         $body = $this->jsonBody();
+
+        // Before any validation, hashing or database work — the point is to
+        // turn a bot away cheaply. Fails CLOSED: creating accounts is costly
+        // enough that a Google outage is the better thing to lose.
+        $this->requireHuman($body);
 
         $name     = trim((string) ($body['name']     ?? ''));
         $email    = strtolower(trim((string) ($body['email'] ?? '')));
@@ -119,6 +168,12 @@ class AuthController
     public function login(): never
     {
         $body = $this->jsonBody();
+
+        // Fails OPEN: if Google is unreachable, a password is still required,
+        // and locking every student out of the system over someone else's
+        // outage is the worse failure. A token that is present and REJECTED
+        // still fails here.
+        $this->requireHuman($body, true);
 
         $email    = trim($body['email']    ?? '');
         $password = trim($body['password'] ?? '');
@@ -211,7 +266,14 @@ class AuthController
 
     public function resendOtp(): never
     {
-        $body  = $this->jsonBody();
+        $body = $this->jsonBody();
+
+        // Fails CLOSED. This route sends a real email through the University's
+        // SMTP account, so an unchecked caller can use it to mail-bomb any
+        // address they know. The 30-second cooldown on verify.html is a
+        // client-side courtesy and stops nobody who skips the page.
+        $this->requireHuman($body);
+
         $email = trim($body['email'] ?? '');
 
         if ($email === '') {

@@ -103,6 +103,12 @@
               class="text-primary text-xs font-semibold hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
         Resend Code <span id="resendCountdown" class="text-on-surface-variant font-normal"></span>
       </button>
+      <!--
+        Resending sends a real email, so it is bot-checked. The widget is
+        rendered only when GET /api/config reports reCAPTCHA enabled; with it
+        off this stays empty and Resend behaves as before.
+      -->
+      <div id="resendRecaptcha" class="flex justify-center mt-3"></div>
     </div>
 
     <p class="mt-5 text-center text-xs text-on-surface-variant">
@@ -237,15 +243,56 @@
     }, 1000);
   }
 
+  // --- reCAPTCHA for the resend button -------------------------------------
+  // Site key comes from the server so .env stays its only home.
+  var captchaWidget = null;
+  var captchaOn = false;
+
+  function resendToken() {
+    if (captchaWidget === null || !window.grecaptcha) return '';
+    return window.grecaptcha.getResponse(captchaWidget) || '';
+  }
+  function resetResendCaptcha() {
+    if (captchaWidget !== null && window.grecaptcha) window.grecaptcha.reset(captchaWidget);
+  }
+
+  fetch(BASE + 'api/config', {credentials: 'same-origin'})
+    .then(function(res){ return res.json(); })
+    .then(function(json){
+      var cfg = (json && json.data) || {};
+      if (!cfg.recaptcha_enabled || !cfg.recaptcha_site_key) return;
+      captchaOn = true;
+      window.onVerifyCaptchaLoad = function(){
+        captchaWidget = window.grecaptcha.render('resendRecaptcha', {sitekey: cfg.recaptcha_site_key});
+      };
+      var s = document.createElement('script');
+      s.src = 'https://www.google.com/recaptcha/api.js?onload=onVerifyCaptchaLoad&render=explicit';
+      s.async = true; s.defer = true;
+      document.head.appendChild(s);
+    })
+    .catch(function(){ /* config unreachable: leave Resend as it is */ });
+
   resendBtn.addEventListener('click', function(){
+    if (captchaOn && captchaWidget !== null && !resendToken()) {
+      showError('Please confirm you are not a robot before resending.');
+      return;
+    }
+
     fetch(BASE + 'api/auth/resend-otp', {
       method: 'POST',
       credentials: 'same-origin',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email: email}),
+      body: JSON.stringify({email: email, recaptcha_token: resendToken()}),
     })
     .then(function(res){ return res.json().then(function(d){ return {status: res.status, data: d}; }); })
     .then(function(r){
+      // The token is spent either way, so clear it before anything else.
+      resetResendCaptcha();
+
+      if (r.status !== 200) {
+        showError((r.data && r.data.error) || 'Could not resend code. Please try again.');
+        return;
+      }
       var payload = r.data.data || {};
       if (payload.dev_otp) {
         sessionStorage.setItem('dev_otp', payload.dev_otp);
@@ -254,7 +301,10 @@
       }
       startCooldown();
     })
-    .catch(function(){ showError('Could not resend code. Please try again.'); });
+    .catch(function(){
+      resetResendCaptcha();
+      showError('Could not resend code. Please try again.');
+    });
   });
 
   // Auto-focus first digit on load

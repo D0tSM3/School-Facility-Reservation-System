@@ -2,6 +2,7 @@
 -- Converted from PostgreSQL (Supabase) to MySQL (XAMPP)
 
 -- Drop in reverse dependency order
+DROP TABLE IF EXISTS ReservationCancellationRequests;
 DROP TABLE IF EXISTS ReservationMoveRequests;
 DROP TABLE IF EXISTS System_Logs;
 DROP TABLE IF EXISTS Reservations;
@@ -41,11 +42,19 @@ CREATE TABLE Reservations (
     customer_id        CHAR(36)     NOT NULL,
     room_id            CHAR(36)     NOT NULL,
     purpose            VARCHAR(255) NOT NULL,
+    -- Section 2: the booking's category. Promoted out of a text prefix inside
+    -- `purpose`, so it can be filtered and reported on rather than parsed.
+    category           ENUM('Academic Lecture','Faculty Defense','Student Org Meeting','Dept Workshop','Exam/Quiz')
+                       NOT NULL DEFAULT 'Academic Lecture',
     equipment_notes    VARCHAR(500) NULL DEFAULT NULL,
     start_time         DATETIME     NOT NULL,
     end_time           DATETIME     NOT NULL,
     status             ENUM('Pending','Approved','Rejected','Cancelled','Completed') NOT NULL DEFAULT 'Pending',
+    -- 1 once the customer "removes" the booking from My Reservations. A soft
+    -- hide: staff, the calendar and the audit log still see the row.
+    customer_hidden    TINYINT(1)   NOT NULL DEFAULT 0,
     processed_by       CHAR(36)     NULL DEFAULT NULL,
+    processed_at       DATETIME     NULL DEFAULT NULL,
     cancellation_reason VARCHAR(500) NULL DEFAULT NULL,
     cancelled_by       CHAR(36)     NULL DEFAULT NULL,
     created_at         TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -103,6 +112,22 @@ CREATE TABLE ReservationMoveRequests (
     CONSTRAINT fk_move_processor   FOREIGN KEY (processed_by)   REFERENCES Users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 7b. ReservationCancellationRequests Table
+-- An Approved booking cannot be cancelled by its customer directly; they file
+-- one of these and staff decide. Approving it is what sets the booking to
+-- Cancelled.
+CREATE TABLE ReservationCancellationRequests (
+    request_id     CHAR(36)     NOT NULL PRIMARY KEY DEFAULT (UUID()),
+    reservation_id CHAR(36)     NOT NULL,
+    reason         VARCHAR(500) NOT NULL,
+    status         ENUM('Pending','Approved','Rejected') NOT NULL DEFAULT 'Pending',
+    staff_comment  VARCHAR(500) NULL DEFAULT NULL,
+    processed_by   CHAR(36)     NULL DEFAULT NULL,
+    created_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_cancel_reservation FOREIGN KEY (reservation_id) REFERENCES Reservations(reservation_id) ON DELETE CASCADE,
+    CONSTRAINT fk_cancel_processor   FOREIGN KEY (processed_by)   REFERENCES Users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- 8. Indexes for the application's hot queries
 CREATE INDEX idx_res_customer_created ON Reservations (customer_id, created_at DESC);
 CREATE INDEX idx_res_created          ON Reservations (created_at DESC);
@@ -112,6 +137,9 @@ CREATE INDEX idx_logs_timestamp       ON System_Logs (timestamp DESC);
 CREATE INDEX idx_logs_reservation     ON System_Logs (reservation_id, timestamp DESC);
 CREATE INDEX idx_class_room_day       ON ClassSchedules (room_id, day_of_week);
 CREATE INDEX idx_move_reservation     ON ReservationMoveRequests (reservation_id, created_at DESC);
+CREATE INDEX idx_res_customer_hidden  ON Reservations (customer_id, customer_hidden);
+CREATE INDEX idx_cancelreq_reservation ON ReservationCancellationRequests (reservation_id, created_at DESC);
+CREATE INDEX idx_cancelreq_status      ON ReservationCancellationRequests (status);
 
 -- 9. Concurrency Control: Overlap-Prevention Triggers
 DROP TRIGGER IF EXISTS prevent_double_booking_insert;
