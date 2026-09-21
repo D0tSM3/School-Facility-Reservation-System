@@ -4,7 +4,10 @@
   <head>
     <meta charset="utf-8" />
     <title>CampusRoom — Sign In | Buenavista Polytechnic University</title>
-    <meta name="description" content="Sign in to CampusRoom, the centralized facility reservation system for Buenavista Polytechnic University." />
+    <meta
+      name="description"
+      content="Sign in to CampusRoom, the centralized facility reservation system for Buenavista Polytechnic University."
+    />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap"
@@ -261,17 +264,25 @@
                   </div>
                   <div class="relative">
                     <input
-                      class="w-full bg-surface-container-low rounded-lg px-3 py-2 text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest focus:outline-none transition-colors tracking-widest"
+                      class="w-full bg-surface-container-low rounded-lg pl-3 pr-10 py-2 text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest focus:outline-none transition-colors tracking-widest"
                       id="bpu-password"
                       type="password"
                       placeholder="Enter your password"
                       autocomplete="current-password"
                     />
-                    <span
-                      class="absolute right-3 top-2.5 text-on-surface-variant material-symbols-outlined text-[18px]"
+                    <button
+                      type="button"
+                      id="toggle-password"
+                      class="absolute right-3 top-2.5 text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none flex items-center justify-center cursor-pointer"
+                      aria-label="Toggle password visibility"
                     >
-                      lock
-                    </span>
+                      <span
+                        id="toggle-password-icon"
+                        class="material-symbols-outlined text-[18px] select-none"
+                      >
+                        visibility_off
+                      </span>
+                    </button>
                   </div>
                 </div>
                 <div
