@@ -4,19 +4,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Shared helper (js/util.js). Declared up here so nothing can call it before it exists.
   const { escapeHtml } = window.CampusRoomUtil;
 
-  // Staff and Admin are not allowed on this page (Customer-only reservation history).
-  // Nav-hiding in app.js isn't enough on its own since a Staff/Admin user can still
-  // type this URL directly, so bounce them to the Staff Queue instead.
-  (function guardStaffAccess() {
+  let canViewAllReservations = false;
+
+  // Customers see their own history. Staff/Admin see the complete reservation
+  // register, but their cards are rendered without customer actions.
+  const sessionReady = (function loadReservationAccess() {
     const BASE = window.location.pathname.replace(/[^\/]*$/, '');
-    fetch(BASE + 'api/auth/me', { credentials: 'include' })
+    return fetch(BASE + 'api/auth/me', { credentials: 'include' })
       .then(res => res.json())
       .then(json => {
         const currentUser = json.success ? json.data : null;
         const role = String(currentUser && currentUser.role || '').toLowerCase();
-        if (role === 'staff' || role === 'admin') {
-          window.location.replace(BASE + 'staff-queue.html');
-        }
+        canViewAllReservations = role === 'staff' || role === 'admin';
+        if (!currentUser) window.location.href = 'index.html';
       })
       .catch(err => console.error('Error checking session role:', err));
   })();
@@ -125,7 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function fetchReservations() {
     setLoading(true);
-    fetch(BASE + 'api/reservations/mine', { credentials: 'same-origin' })
+    const endpoint = canViewAllReservations ? 'api/reservations' : 'api/reservations/mine';
+    fetch(BASE + endpoint, { credentials: 'same-origin' })
       .then(res => res.json().then(json => ({ status: res.status, json })))
       .then(({ status, json }) => {
         if (status === 401) {
@@ -217,6 +218,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // cancellable here: the room is committed, so it goes through a request.
   function buildActions(reservation) {
     const id = reservation.reservation_id;
+    if (canViewAllReservations) {
+      const buttons = [];
+      if (reservation.status === 'Approved' || reservation.status === 'Completed') {
+        buttons.push(actionButton('slip', id, 'View Confirmation Slip'));
+      }
+      buttons.push(actionButton('logs', id, 'View Log Archive'));
+      return buttons.join('');
+    }
+
     const canMove = reservation.move_status !== 'Pending';
     const buttons = [];
 
@@ -732,5 +742,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  fetchReservations();
+  sessionReady.then(fetchReservations);
 });

@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const captcha = {
     enabled: false,
     ready: false,
+    rendered: false,
     widgets: {}   // containerId -> widget id, for precise reset()
   };
 
@@ -66,15 +67,17 @@ document.addEventListener('DOMContentLoaded', () => {
         window.onCampusRoomCaptchaLoad = () => {
           present.forEach(id => {
             const el = document.getElementById(id);
+            if (!el) return;
             el.innerHTML = '';                       // clear the placeholder
             try {
               captcha.widgets[id] = window.grecaptcha.render(id, { sitekey: cfg.recaptcha_site_key });
+              captcha.rendered = true;
             } catch (err) {
               console.error('[captcha] render failed for #' + id, err);
-              captchaNotice(el, 'Verification could not load. Check that this site’s domain is registered for the reCAPTCHA key.', true);
+              captchaNotice(el, "Verification could not load. Check that this site's domain is registered for the reCAPTCHA key.", true);
             }
           });
-          captcha.ready = true;
+          captcha.ready = captcha.rendered;
         };
 
         const script = document.createElement('script');
@@ -125,7 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Caught here so the user is told to tick the box before a round trip.
-      if (captcha.enabled && captcha.ready && !captchaToken('loginRecaptcha')) {
+      if (captcha.enabled && !captcha.rendered) {
+        showLoginError('The robot check is not available. Refresh the page or check the reCAPTCHA site-key domain configuration.');
+        return;
+      }
+
+      if (captcha.enabled && !captchaToken('loginRecaptcha')) {
         showLoginError('Please confirm you are not a robot.');
         return;
       }
@@ -162,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .catch((err) => {
         captchaReset('loginRecaptcha');
-        showLoginError('Network error. Please try again later.');
+        showLoginError('Captcha error. Please try again later.');
       });
     });
 
@@ -275,7 +283,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      if (captcha.enabled && captcha.ready && !captchaToken('registerRecaptcha')) {
+      if (captcha.enabled && !captcha.rendered) {
+        showRegisterError('The robot check is not available. Refresh the page or check the reCAPTCHA site-key domain configuration.');
+        return;
+      }
+
+      if (captcha.enabled && !captchaToken('registerRecaptcha')) {
         showRegisterError('Please confirm you are not a robot.');
         return;
       }
