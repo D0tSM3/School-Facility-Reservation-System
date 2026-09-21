@@ -113,6 +113,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const errorAlert = document.getElementById('authErrorAlert');
   const errorAlertText = document.getElementById('authErrorAlertText');
 
+  // --- Password Visibility Toggle for Sign In ---
+  const toggleBtn = document.getElementById('toggle-password');
+  const passwordInput = document.getElementById('bpu-password');
+  const toggleIcon = document.getElementById('toggle-password-icon');
+
+  if (toggleBtn && passwordInput && toggleIcon) {
+    toggleBtn.addEventListener('click', () => {
+      const isPassword = passwordInput.type === 'password';
+      passwordInput.type = isPassword ? 'text' : 'password';
+      toggleIcon.textContent = isPassword ? 'visibility' : 'visibility_off';
+      passwordInput.classList.toggle('tracking-widest', !isPassword);
+    });
+  }
+
   if (loginForm) {
     loginForm.addEventListener('submit', (e) => {
       e.preventDefault();
