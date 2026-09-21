@@ -290,12 +290,23 @@
 
   function highlightVisible() {
     if (!root) return;
+    const marker = Math.max(HEADER_OFFSET + 24, window.innerHeight * 0.3);
     let current = null;
+    let nearest = null;
+    let nearestDistance = Infinity;
     root.querySelectorAll('.cr-hb-article').forEach(sec => {
       if (sec.hidden) return;
-      if (sec.getBoundingClientRect().top - HEADER_OFFSET - 12 <= 0) current = sec.dataset.article;
+      const rect = sec.getBoundingClientRect();
+      if (rect.top <= marker && rect.bottom > marker) {
+        current = sec.dataset.article;
+      }
+      const distance = Math.abs(rect.top - marker);
+      if (distance < nearestDistance) {
+        nearest = sec.dataset.article;
+        nearestDistance = distance;
+      }
     });
-    if (current) markActive(current);
+    if (current || nearest) markActive(current || nearest);
   }
 
   /**
@@ -477,7 +488,7 @@
     .cr-hb-icon:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
 
     .cr-hb-body { display: flex; align-items: flex-start; background: #fff;
-      border: 1px solid #e6e3e1; border-top: 0; border-radius: 0 0 10px 10px; overflow: hidden; }
+      border: 1px solid #e6e3e1; border-top: 0; border-radius: 0 0 10px 10px; overflow: visible; }
 
     .cr-hb-toc { width: 236px; flex-shrink: 0; border-right: 1px solid #e6e3e1; background: #faf9f8;
       padding: 12px 8px 24px; position: sticky; top: ${HEADER_OFFSET}px;

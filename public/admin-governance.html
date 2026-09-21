@@ -297,19 +297,22 @@
                         <th class="p-2">Name</th>
                         <th class="p-2">Email</th>
                         <th class="p-2">Role</th>
-                        <th class="p-2 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="usersTableBody"></tbody>
             </table>
         </div>
+          <div class="flex justify-end">
+            <button id="saveUsersBtn" type="button" class="px-space-md py-2 bg-primary text-on-primary rounded font-label-sm disabled:opacity-50 disabled:cursor-not-allowed">
+              Save User Changes
+            </button>
+          </div>
     </div>
 
     <!-- Rooms View (Hidden by default) -->
     <div id="viewRooms" class="hidden space-y-space-md">
         <div class="flex justify-between items-center">
             <h2 class="font-headline-sm text-headline-sm text-on-surface">Room Management</h2>
-            <button id="btnNewRoom" class="px-space-md py-1 bg-primary text-on-primary rounded font-label-sm">Add Room</button>
         </div>
         <div class="bg-surface-container-lowest p-space-md rounded shadow-sm overflow-x-auto">
             <table class="w-full text-left font-body-sm text-on-surface border-collapse">
@@ -318,12 +321,16 @@
                         <th class="p-2">Room Name</th>
                         <th class="p-2">Capacity</th>
                         <th class="p-2">Status</th>
-                        <th class="p-2 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="roomsTableBody"></tbody>
             </table>
         </div>
+          <div class="flex justify-end">
+            <button id="saveRoomsBtn" type="button" class="px-space-md py-2 bg-primary text-on-primary rounded font-label-sm disabled:opacity-50 disabled:cursor-not-allowed">
+              Save Room Changes
+            </button>
+          </div>
     </div>
 
     <!-- Logs View (Hidden by default) -->
@@ -398,33 +405,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="p-2">${escapeHtml(u.name)}</td>
                     <td class="p-2">${escapeHtml(u.email)}</td>
                     <td class="p-2">
-                        <select class="role-select p-1 bg-surface border rounded text-xs" data-id="${escapeHtml(u.user_id)}">
+                        <select class="role-select p-1 bg-surface border rounded text-xs" data-id="${escapeHtml(u.user_id)}" data-original="${escapeHtml(u.role)}">
                             <option value="Customer" ${u.role==='Customer'?'selected':''}>Customer</option>
                             <option value="Staff" ${u.role==='Staff'?'selected':''}>Staff</option>
                             <option value="Admin" ${u.role==='Admin'?'selected':''}>Admin</option>
                         </select>
                     </td>
-                    <td class="p-2 text-right">
-                        <button class="save-role text-primary font-bold text-xs" data-id="${escapeHtml(u.user_id)}">Save</button>
-                    </td>
                 `;
                 tbody.appendChild(tr);
-            });
-            
-            document.querySelectorAll('.save-role').forEach(b => {
-                b.addEventListener('click', async (e) => {
-                    const id = e.target.getAttribute('data-id');
-                    const sel = document.querySelector(`.role-select[data-id="${id}"]`);
-                    const role = sel.value;
-                    const resp = await fetch(BASE + 'api/users/' + id + '/role', {
-                        method: 'PATCH',
-                        credentials: 'same-origin',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({role})
-                    });
-                    if (resp.ok) alert('Saved!');
-                    else alert('Error saving role.');
-                });
             });
         } catch(err) { console.error(err); }
     }
@@ -442,62 +430,84 @@ document.addEventListener('DOMContentLoaded', () => {
             rooms.forEach(r => {
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-surface-variant";
-                // name is admin-supplied free text (the "New Room" prompt below), so
-                // it's escaped before going into innerHTML rather than trusted as markup.
+                // Room names are escaped before going into innerHTML.
                 tr.innerHTML = `
                     <td class="p-2 font-medium">${escapeHtml(r.name)}</td>
                     <td class="p-2">${escapeHtml(r.capacity)}</td>
                     <td class="p-2">
-                        <select class="status-select p-1 bg-surface border rounded text-xs" data-id="${escapeHtml(r.room_id)}">
+                        <select class="status-select p-1 bg-surface border rounded text-xs" data-id="${escapeHtml(r.room_id)}" data-original="${escapeHtml(r.status)}">
                             <option value="Available" ${r.status==='Available'?'selected':''}>Available</option>
                             <option value="Maintenance" ${r.status==='Maintenance'?'selected':''}>Maintenance</option>
                         </select>
                     </td>
-                    <td class="p-2 text-right">
-                        <button class="save-room text-primary font-bold text-xs" data-id="${escapeHtml(r.room_id)}">Save</button>
-                    </td>
                 `;
                 tbody.appendChild(tr);
             });
-            
-            document.querySelectorAll('.save-room').forEach(b => {
-                b.addEventListener('click', async (e) => {
-                    const id = e.target.getAttribute('data-id');
-                    const sel = document.querySelector(`.status-select[data-id="${id}"]`);
-                    const status = sel.value;
-                    const resp = await fetch(BASE + 'api/rooms/' + id, {
-                        method: 'PATCH',
-                        credentials: 'same-origin',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({status})
-                    });
-                    if (resp.ok) alert('Saved!');
-                    else alert('Error saving room.');
-                });
-            });
         } catch(err) { console.error(err); }
     }
-    
-    document.getElementById('btnNewRoom').addEventListener('click', async () => {
-        const name = prompt("Room Name:");
-        if (!name) return;
-        const capacity = prompt("Capacity (number):");
-        if (!capacity) return;
-        const floor = prompt("Floor (number):");
-        if (!floor) return;
-        const room_type = prompt("Room Type (e.g. Laboratory, AVR, Conference, Studio, Lecture Hall, Seminar Room, Gymnasium):");
-        if (!room_type) return;
-        
-        const resp = await fetch(BASE + 'api/rooms', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name, capacity: parseInt(capacity), status: 'Available', floor: parseInt(floor), room_type})
-        });
-        if (resp.ok) loadRooms();
-        else alert('Error adding room.');
-    });
 
+            async function saveBatch(type) {
+              const isUsers = type === 'users';
+              const selector = isUsers ? '.role-select' : '.status-select';
+              const selects = Array.from(document.querySelectorAll(selector));
+              const changed = selects.filter(select => select.value !== select.dataset.original);
+              const button = document.getElementById(isUsers ? 'saveUsersBtn' : 'saveRoomsBtn');
+
+              if (!changed.length) {
+                return;
+              }
+
+              button.disabled = true;
+              button.textContent = 'Saving...';
+
+              const results = await Promise.all(changed.map(async select => {
+                const id = select.dataset.id;
+                const endpoint = isUsers
+                  ? BASE + 'api/users/' + encodeURIComponent(id) + '/role'
+                  : BASE + 'api/rooms/' + encodeURIComponent(id);
+                const body = isUsers ? { role: select.value } : { status: select.value };
+
+                try {
+                  const response = await fetch(endpoint, {
+                    method: 'PATCH',
+                    credentials: 'same-origin',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)
+                  });
+                  if (response.ok) {
+                    select.dataset.original = select.value;
+                    return true;
+                  }
+                } catch (error) {
+                  console.error(error);
+                }
+                return false;
+              }));
+
+              const saved = results.filter(Boolean).length;
+              const failed = results.length - saved;
+              button.disabled = false;
+              button.textContent = isUsers ? 'Save User Changes' : 'Save Room Changes';
+              updateSaveButtons();
+              alert(failed ? `${saved} saved, ${failed} failed.` : `${saved} change${saved === 1 ? '' : 's'} saved.`);
+            }
+
+            function updateSaveButtons() {
+              const usersChanged = Array.from(document.querySelectorAll('.role-select'))
+                .some(select => select.value !== select.dataset.original);
+              const roomsChanged = Array.from(document.querySelectorAll('.status-select'))
+                .some(select => select.value !== select.dataset.original);
+              document.getElementById('saveUsersBtn').disabled = !usersChanged;
+              document.getElementById('saveRoomsBtn').disabled = !roomsChanged;
+            }
+
+            document.addEventListener('change', (event) => {
+              if (event.target.matches('.role-select, .status-select')) updateSaveButtons();
+            });
+            document.getElementById('saveUsersBtn').addEventListener('click', () => saveBatch('users'));
+            document.getElementById('saveRoomsBtn').addEventListener('click', () => saveBatch('rooms'));
+            updateSaveButtons();
+    
     async function loadLogs() {
         try {
             const res = await fetch(BASE + 'api/logs', { credentials: 'same-origin' });

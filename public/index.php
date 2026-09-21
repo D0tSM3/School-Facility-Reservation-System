@@ -90,7 +90,6 @@ $routes = [
     // Rooms — Customer (GET) + Admin (POST / PATCH)
     ['GET',   '#^/api/rooms$#',                    fn() => (new RoomController())->index()],
     ['GET',   '#^/api/rooms/(?P<id>[^/]+)/calendar$#', fn(string $id) => (new RoomController())->getCalendar($id)],
-    ['POST',  '#^/api/rooms$#',                    fn() => (new RoomController())->store()],
     ['PATCH', '#^/api/rooms/(?P<id>[^/]+)$#',        fn(string $id) => (new RoomController())->update($id)],
 
     // Reservations

@@ -88,6 +88,8 @@ Buenavista, Bohol
 
 **Section 3.** A Facility marked under Maintenance status, or otherwise deactivated, shall not be reservable under any circumstance, for any hour or date, until such time as an Admin account restores it to active, Available status.
 
+**Section 3-A.** The Rooms registry shall be populated through the University's database administration and deployment process. The CampusRoom interface provides no Add Room function because the system is intended to manage facilities already recognized by the University, rather than permit the creation of unverified rooms during routine administration. Staff and Admin accounts may instead change a room's operational status between Available and Maintenance, while an Admin may activate or deactivate an existing room as necessary.
+
 **Section 4.** No procedure exists within this system for the extension of operating hours, and no request for such extension shall be entertained, regardless of the classification, role, or urgency asserted.
 
 ---

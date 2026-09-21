@@ -43,9 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
         adminLink.style.setProperty('display', canViewAdminGovernance ? 'flex' : 'none', 'important');
       }
       if (myReservationsLink) {
-        const canViewMyReservations = role === 'customer';
-        myReservationsLink.hidden = !canViewMyReservations;
-        myReservationsLink.style.setProperty('display', canViewMyReservations ? 'flex' : 'none', 'important');
+        const canViewReservations = role === 'customer' || role === 'staff' || role === 'admin';
+        myReservationsLink.hidden = !canViewReservations;
+        myReservationsLink.style.setProperty('display', canViewReservations ? 'flex' : 'none', 'important');
       }
 
       // 2. Update Profile Header if present

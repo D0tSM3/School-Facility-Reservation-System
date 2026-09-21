@@ -42,49 +42,6 @@ class RoomController
     }
 
     // ---------------------------------------------------------------
-    // Admin: POST /api/rooms
-    // ---------------------------------------------------------------
-
-    public function store(): never
-    {
-        Auth::requireRole(['Admin']);
-
-        $body = $this->jsonBody();
-
-        $name     = trim($body['name']     ?? '');
-        $capacity = $body['capacity']       ?? null;
-        $status   = trim($body['status']   ?? 'Available');
-        $floor    = $body['floor']          ?? null;
-        $roomType = trim((string) ($body['room_type'] ?? ''));
-
-        if ($name === '') {
-            Response::error('name is required.', 422);
-        }
-        if (!is_numeric($capacity) || (int) $capacity <= 0) {
-            Response::error('capacity must be a positive integer.', 422);
-        }
-        if (!in_array($status, ['Available', 'Maintenance'], true)) {
-            Response::error('status must be Available or Maintenance.', 422);
-        }
-        if ($floor === null || $floor === '' || !is_numeric($floor)) {
-            Response::error('floor is required.', 422);
-        }
-        if ($roomType === '') {
-            Response::error('room_type is required.', 422);
-        }
-
-        $room = $this->rooms->create($name, (int) $capacity, $status, (int) $floor, $roomType);
-
-        // Audit log
-        $this->reservations->insertLog(
-            Auth::userId(),
-            "Admin created room '{$room['name']}' (ID: {$room['room_id']})"
-        );
-
-        Response::json($room, 201);
-    }
-
-    // ---------------------------------------------------------------
     // Staff/Admin: PATCH /api/rooms/{id}
     //   status    (Available|Maintenance) -> Staff or Admin
     //   is_active (decommission)          -> Admin only
