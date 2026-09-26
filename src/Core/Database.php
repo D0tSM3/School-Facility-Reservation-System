@@ -22,7 +22,7 @@ class Database
     private function __construct()
     {
         $dsn = sprintf(
-            'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
+            'pgsql:host=%s;port=%s;dbname=%s;sslmode=require',
             $_ENV['DB_HOST'],
             $_ENV['DB_PORT'],
             $_ENV['DB_NAME']
@@ -41,13 +41,14 @@ class Database
             throw new RuntimeException('Database connection failed: ' . $e->getMessage());
         }
 
-        // Put MySQL's clock on the same zone as PHP's date_default_timezone_set()
+        // Put PostgreSQL's clock on the same zone as PHP's date_default_timezone_set()
         // (done in index.php before this connection is opened). NOW() drives
         // live_status, getNextAvailableSlot() and the maintenance warning, and
         // compares against wall-clock DATETIME columns, so the two clocks must
         // agree. A numeric offset is used on purpose: named zones such as
-        // 'Asia/Manila' need MySQL's time-zone tables, which a stock XAMPP lacks.
-        $this->pdo->exec("SET time_zone = '" . (new \DateTimeImmutable('now'))->format('P') . "'");
+        // 'Asia/Manila' need PostgreSQL's time-zone tables, which a stock XAMPP lacks.
+        $offset = (new \DateTimeImmutable('now'))->format('P');
+        $this->pdo->exec("SET TIME ZONE '" . $offset . "'");
     }
 
     /** Singleton — one PDO connection per PHP process lifetime. */

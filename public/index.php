@@ -112,7 +112,7 @@ $routes = [
     // Two path segments after /reservations/, so it cannot collide with the single-segment GET /{id} above.
     ['GET',   '#^/api/reservations/(?P<id>[^/]+)/logs$#', fn(string $id) => (new ReservationController())->logs($id)],
     ['POST',  '#^/api/reservations/(?P<id>[^/]+)/move-request$#', fn(string $id) => (new ReservationController())->requestMove($id)],
-    ['PATCH', '#^/api/reservations/move-requests/(?P<id>[^/]+)$#',fn(string $id) => (new ReservationController())->resolveMoveRequest($id)],
+    ['PATCH', '#^/api/reservations/move-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->resolveMoveRequest($id)],
 
     // Cancellation Requests (approved bookings)
     ['POST',  '#^/api/reservations/(?P<id>[^/]+)/cancel-request$#', fn(string $id) => (new ReservationController())->requestCancel($id)],
