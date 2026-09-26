@@ -1,15 +1,4 @@
 <!doctype html>
-<style>
-  aside > div:first-child > div {
-    display: none;
-  }
-
-  #roomGrid .room-card {
-    border: 1px solid #e1e2e4;
-    box-sizing: border-box;
-  }
-</style>
-
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -17,11 +6,7 @@
     <meta name="description" content="View and book available academic facilities at Buenavista Polytechnic University in real time." />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
     <link
@@ -38,605 +23,245 @@
         theme: {
           extend: {
             colors: {
-              "on-tertiary-fixed-variant": "#474746",
-              "on-secondary-fixed": "#261a00",
-              "on-surface": "#191c1e",
-              surface: "#f8f9fb",
+              primary: "#5b0617",
+              "primary-container": "#7a1f2b",
               "on-primary": "#ffffff",
-              "on-primary-container": "#ff8b92",
-              "surface-dim": "#d9dadc",
-              "on-tertiary-container": "#afadac",
-              "on-primary-fixed": "#40000c",
-              "surface-container-high": "#e7e8ea",
-              "primary-fixed": "#ffdada",
-              "on-secondary-container": "#715300",
-              "tertiary-container": "#414141",
-              "surface-tint": "#a13c46",
-              "on-secondary": "#ffffff",
-              "surface-container": "#edeef0",
-              error: "#ba1a1a",
-              "on-primary-fixed-variant": "#822530",
-              "inverse-on-surface": "#f0f1f3",
-              "on-tertiary-fixed": "#1b1c1c",
-              "secondary-fixed-dim": "#f6be39",
-              "on-error-container": "#93000a",
-              "on-error": "#ffffff",
-              "on-secondary-fixed-variant": "#5c4300",
-              "on-background": "#191c1e",
-              "tertiary-fixed-dim": "#c8c6c5",
               secondary: "#795900",
               "secondary-container": "#ffc641",
-              "tertiary-fixed": "#e4e2e1",
-              "outline-variant": "#dcc0c0",
+              tertiary: "#1c1c1e",
               background: "#f8f9fb",
-              "inverse-surface": "#2e3132",
-              "surface-container-lowest": "#ffffff",
-              "primary-container": "#7a1f2b",
-              "error-container": "#ffdad6",
-              "surface-bright": "#f8f9fb",
+              surface: "#f8f9fb",
+              "on-surface": "#191c1e",
               "on-surface-variant": "#564242",
-              "surface-container-highest": "#e1e2e4",
-              "secondary-fixed": "#ffdfa0",
-              "primary-fixed-dim": "#ffb3b5",
-              outline: "#897172",
-              "inverse-primary": "#ffb3b5",
-              "surface-variant": "#e1e2e4",
-              "surface-container-low": "#f3f4f6",
-              primary: "#5b0617",
-              "on-tertiary": "#ffffff",
-              tertiary: "#2b2b2b",
-            },
-            borderRadius: {
-              DEFAULT: "0.125rem",
-              lg: "0.25rem",
-              xl: "0.5rem",
-              full: "0.75rem",
-            },
-            spacing: {
-              "space-sm": "0.5rem",
-              "space-xl": "2.25rem",
-              "space-lg": "1.5rem",
-              "space-md": "1rem",
-              margin: "2rem",
-              "margin-mobile": "1rem",
-              "gutter-mobile": "0.75rem",
-              gutter: "1.25rem",
-              "space-xs": "0.25rem",
             },
             fontFamily: {
-              "headline-lg": ["Inter"],
-              "body-md": ["Inter"],
-              "headline-lg-mobile": ["Inter"],
-              "label-lg": ["Inter"],
-              "headline-md": ["Inter"],
-              "headline-sm": ["Inter"],
-              "body-lg": ["Inter"],
-              "body-sm": ["Inter"],
-              "label-md": ["Inter"],
-              "label-sm": ["Inter"],
-            },
-            fontSize: {
-              "headline-lg": [
-                "30px",
-                {
-                  lineHeight: "38px",
-                  letterSpacing: "-0.02em",
-                  fontWeight: "700",
-                },
-              ],
-              "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
-              "headline-lg-mobile": [
-                "24px",
-                {
-                  lineHeight: "32px",
-                  letterSpacing: "-0.01em",
-                  fontWeight: "700",
-                },
-              ],
-              "label-lg": [
-                "14px",
-                {
-                  lineHeight: "20px",
-                  letterSpacing: "0.01em",
-                  fontWeight: "600",
-                },
-              ],
-              "headline-md": [
-                "22px",
-                {
-                  lineHeight: "28px",
-                  letterSpacing: "-0.01em",
-                  fontWeight: "600",
-                },
-              ],
-              "headline-sm": [
-                "18px",
-                { lineHeight: "24px", fontWeight: "600" },
-              ],
-              "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
-              "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
-              "label-md": [
-                "12px",
-                {
-                  lineHeight: "16px",
-                  letterSpacing: "0.02em",
-                  fontWeight: "600",
-                },
-              ],
-              "label-sm": [
-                "11px",
-                {
-                  lineHeight: "14px",
-                  letterSpacing: "0.04em",
-                  fontWeight: "700",
-                },
-              ],
+              sans: ["Inter", "sans-serif"],
             },
           },
         },
       };
     </script>
   </head>
-  <body
-    class="bg-background font-body-md text-on-surface antialiased min-h-screen"
-  >
+  <body class="bg-[#F8F9FA] font-sans text-gray-900 antialiased min-h-screen">
+    <!-- Left Sidebar -->
     <aside
-      class="fixed left-0 top-0 h-full w-[250px] bg-tertiary text-on-tertiary z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+      class="fixed left-0 top-0 h-full w-[250px] bg-[#1c1c1e] text-white z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
     >
-      <div class="h-16 px-space-md flex items-center gap-space-sm bg-tertiary">
-        <img
-          alt="CampusRoom Maroon &amp; Gold Logo"
-          class="h-8 w-auto object-contain"
-          src="assets/logo.svg"
-        />
-        <div class="flex flex-col">
-          <span
-            class="font-headline-sm text-headline-sm text-on-tertiary tracking-tight"
-            >CampusRoom</span
-          ><span
-            class="font-label-sm text-label-sm text-tertiary-fixed-dim uppercase tracking-wider"
-            >Buenavista Poly</span
-          >
-        </div>
-      </div>
-      <div class="px-space-md py-space-sm">
-        <div
-          class="font-label-sm text-label-sm text-on-tertiary-container uppercase tracking-wider mb-space-xs px-space-sm"
-        >
-          Intranet Core
-        </div>
-      </div>
-      <nav
-        class="flex-1 px-space-sm space-y-space-xs"
-        data-active-classes="bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
-      >
-        <a
-          aria-current="page"
-          class="flex items-center gap-space-sm px-space-md py-space-sm rounded transition-colors bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
-          data-path="customer-dashboard"
-          href="dashboard.html"
-          ><span class="material-symbols-outlined text-[20px]">dashboard</span
-          ><span>Dashboard</span></a
-        ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="rooms"
-          href="book-room.html"
-          ><span class="material-symbols-outlined text-[20px]"
-            >meeting_room</span
-          ><span>Rooms</span></a
-        ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="my-reservations"
-          href="my-reservations.html"
-          ><span class="material-symbols-outlined text-[20px]"
-            >event_available</span
-          ><span>Reservations</span></a
-        ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="staff-queue"
-          href="staff-queue.html"
-          ><span class="material-symbols-outlined text-[20px]">assignment</span
-          ><span>Staff Queue</span></a
-        ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="admin-governance"
-          href="admin-governance.html"
-          ><span class="material-symbols-outlined text-[20px]"
-            >admin_panel_settings</span
-          ><span>Admin Governance</span></a
-        >
-        <a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="handbook"
-          href="handbook.html"
-          ><span class="material-symbols-outlined text-[20px]">menu_book</span
-          ><span>Handbook</span></a
-        >
-      </nav>
-      <div class="p-space-md bg-tertiary-container/40">
-        <div class="flex items-center justify-between">
-          <div class="flex flex-col">
-            <span class="font-label-sm text-label-sm text-tertiary-fixed-dim"
-              >Registrar Desk</span
-            ><span class="font-body-sm text-body-sm text-on-tertiary"
-              >Ext. 4021 / 4022</span
-            >
-          </div>
-          <span
-            class="material-symbols-outlined text-secondary-container text-[18px]"
-            >verified</span
-          >
-        </div>
-      </div>
-    </aside>
-    <div class="pl-[250px]">
-      <header
-        class="fixed top-0 left-[250px] right-0 h-16 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"
-      >
-        <div class="flex items-center gap-space-md">
+      <!-- Upper Left Logo -->
+      <div class="h-16 px-6 flex items-center">
+        <a href="dashboard.html" class="flex items-center">
           <img
-            alt="CampusRoom Maroon &amp; Gold Logo"
-            class="h-8 w-auto object-contain"
+            alt="CampusRoom Logo"
+            class="h-7 w-auto object-contain"
             src="assets/logo.svg"
           />
-          <div
-            class="hidden md:flex items-center gap-space-xs px-space-sm py-1 bg-surface-container rounded"
-          >
-            <span class="material-symbols-outlined text-secondary text-[16px]"
-              >school</span
-            ><span
-              class="font-label-sm text-label-sm text-on-surface-variant font-semibold"
-              >AY 2024-2025 • First Semester</span
-            >
-          </div>
+        </a>
+      </div>
+
+      <!-- WORKSPACE Section -->
+      <div class="px-5 pt-3 pb-2">
+        <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">WORKSPACE</span>
+      </div>
+      <nav class="px-3 space-y-1">
+        <a
+          aria-current="page"
+          class="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors bg-[#7a1f2b] text-white font-medium text-sm"
+          data-path="customer-dashboard"
+          href="dashboard.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">grid_view</span>
+          <span>Dashboard</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="rooms"
+          href="rooms.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">meeting_room</span>
+          <span>Rooms Directory</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="my-reservations"
+          href="my-reservations.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">event_available</span>
+          <span>My Reservations</span>
+        </a>
+        <a
+          class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="staff-queue"
+          href="staff-queue.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">assignment</span>
+          <span>Staff Queue</span>
+        </a>
+        <a
+          class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="admin-governance"
+          href="admin-governance.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+          <span>Admin Governance</span>
+        </a>
+      </nav>
+
+      <!-- RESOURCES Section -->
+      <div class="px-5 pt-6 pb-2">
+        <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">RESOURCES</span>
+      </div>
+      <nav class="px-3 space-y-1">
+        <a
+          class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="handbook"
+          href="handbook.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">menu_book</span>
+          <span>Policy Handbook</span>
+        </a>
+      </nav>
+
+      <!-- Sign Out Footer -->
+      <div id="logout-banner" class="mt-auto p-4 border-t border-white/5">
+        <button
+          id="logoutBtn"
+          class="flex items-center gap-2.5 text-sm text-gray-400 hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg"
+          type="button"
+        >
+          <span class="material-symbols-outlined text-[18px]">logout</span>
+          <span class="font-medium">Sign Out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="pl-[250px]">
+      <!-- Fixed Header -->
+      <header
+        class="fixed top-0 left-[250px] right-0 h-16 bg-white border-b border-gray-100 z-40 flex items-center justify-between px-8 shadow-[0_1px_8px_rgba(0,0,0,0.02)]"
+      >
+        <!-- Academic Year Badge -->
+        <div class="flex items-center gap-2 px-3 py-1 bg-gray-100/90 rounded-full text-gray-600 text-xs font-medium">
+          <span class="material-symbols-outlined text-[15px]">school</span>
+          <span>AY 2024-2025 • First Semester</span>
         </div>
-        <div class="flex items-center gap-space-md">
-          
-          <div class="flex items-center gap-space-sm pl-space-sm">
-            <div class="flex flex-col text-right hidden sm:flex">
-              <span class="font-label-md text-label-md text-on-surface"
-                >Dr. Edgardo Valderama</span
-              ><span class="font-label-sm text-label-sm text-primary font-bold bg-primary-container/20 px-2 py-0.5 rounded"
-                >Faculty / Staff</span
-              >
-            </div>
-            <div
-              class="w-8 h-8 rounded-full bg-primary-container text-primary font-bold flex items-center justify-center text-sm shadow-[0_1px_8px_rgba(0,0,0,0.04)] header-initials"
-            >EV</div>
+
+        <!-- User Profile -->
+        <div class="flex items-center gap-3">
+          <div class="flex flex-col text-right">
+            <span class="font-label-md text-on-surface font-semibold text-sm text-gray-800">Dr. Edgardo Valderama</span>
+            <span class="font-label-sm text-primary text-xs text-gray-500">Student</span>
+          </div>
+          <div
+            class="w-9 h-9 rounded-full bg-[#7a1f2b] text-white font-bold flex items-center justify-center text-xs shadow-sm header-initials"
+          >
+            EV
           </div>
         </div>
       </header>
-      <main
-        class="w-full pt-16 bg-background px-space-lg py-space-lg min-h-screen"
-      >
-        <div class="flex flex-col w-full">
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-            <!-- Main Content Area: Search, Filters & Live Room Grid -->
-            <div class="lg:col-span-8 xl:col-span-9 flex flex-col gap-space-lg">
-              <!-- Operational Header Banner with Micro Metrics -->
-              <div
-                class="bg-surface-container-lowest p-space-lg rounded shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-space-md"
-              >
-                <div>
-                  <div class="flex items-center gap-space-xs mb-1">
-                    <span
-                      class="inline-block w-2.5 h-2.5 rounded-full bg-[#16A34A] animate-pulse"
-                    ></span>
-                    <span
-                      class="font-label-sm text-label-sm uppercase tracking-wider text-secondary"
-                      >Academic Intranet Live Feed</span
-                    >
-                  </div>
-                  <p class="font-headline-md text-headline-md text-on-surface">
-                    Buenavista Facility Gateway
-                  </p>
-                  <p class="font-body-md text-body-md text-on-surface-variant">
-                    Real-time room allocation, specialized lab readiness, and
-                    immediate booking permits.
-                  </p>
-                </div>
-                <div class="flex items-center gap-space-sm shrink-0">
-                  <a
-                    class="inline-flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container-high text-on-surface font-label-lg text-label-lg rounded shadow-sm hover:bg-surface-container-highest transition-all"
-                    href="handbook.html"
-                  >
-                    <span class="material-symbols-outlined text-[18px]"
-                      >menu_book</span
-                    >
-                    <span>Handbook</span>
-                  </a>
-                  <a
-                    class="inline-flex items-center gap-space-xs px-space-md py-space-sm bg-secondary-container text-on-secondary-container font-label-lg text-label-lg rounded shadow-sm hover:opacity-95 transition-all"
-                    href="rooms.html"
-                  >
-                    <span class="material-symbols-outlined text-[18px]"
-                      >bolt</span
-                    >
-                    <span>Quick Reserve</span>
-                  </a>
-                  <a
-                    class="inline-flex items-center gap-space-xs px-space-md py-space-sm bg-primary-container text-on-primary font-label-lg text-label-lg rounded hover:bg-primary transition-all"
-                    href="rooms.html"
-                  >
-                    <span class="material-symbols-outlined text-[18px]"
-                      >add_circle</span
-                    >
-                    <span>New Request</span>
-                  </a>
-                </div>
-              </div>
-              <!-- Reservation Summary Cards -->
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter mt-space-md" id="dashboardSummary">
-                <div class="bg-surface-container-lowest p-space-lg rounded shadow-sm flex flex-col items-center justify-center text-center gap-space-sm">
-                  <span class="material-symbols-outlined text-[32px] text-primary">event</span>
-                  <p class="font-headline-md text-headline-md text-on-surface" id="summaryUpcoming">0</p>
-                  <p class="font-label-md text-label-md text-on-surface-variant">Upcoming Reservations</p>
-                </div>
-                <div class="bg-surface-container-lowest p-space-lg rounded shadow-sm flex flex-col items-center justify-center text-center gap-space-sm">
-                  <span class="material-symbols-outlined text-[32px] text-secondary">history</span>
-                  <p class="font-headline-md text-headline-md text-on-surface" id="summaryPast">0</p>
-                  <p class="font-label-md text-label-md text-on-surface-variant">Past Reservations</p>
-                </div>
-                <div class="bg-surface-container-lowest p-space-lg rounded shadow-sm flex flex-col items-center justify-center text-center gap-space-sm">
-                  <span class="material-symbols-outlined text-[32px] text-[#D97706]">pending_actions</span>
-                  <p class="font-headline-md text-headline-md text-on-surface" id="summaryPending">0</p>
-                  <p class="font-label-md text-label-md text-on-surface-variant">Pending Approvals</p>
-                </div>
-              </div>
-            </div>
-            <!-- Right-Hand Column: Notices/Announcement Panel -->
-            <div class="lg:col-span-4 xl:col-span-3 flex flex-col gap-space-lg">
-              <!-- Campus Overview & Tasks Card -->
-              <div
-                class="hidden bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-md"
-              >
-                <div
-                  class="flex items-center justify-between pb-space-xs border-b border-surface-container"
-                >
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="material-symbols-outlined text-primary text-[20px]"
-                      >task_alt</span
-                    >
-                    <h2
-                      class="font-headline-sm text-headline-sm text-on-surface"
-                    >
-                      Campus Overview &amp; Tasks
-                    </h2>
-                  </div>
-                  <span class="w-2 h-2 rounded-full bg-secondary"></span>
-                </div>
-                <!-- Metric Badges / Summary Counters -->
-                <div class="space-y-space-xs">
-                  <!-- Pending Approvals -->
-                  <div
-                    class="p-space-sm rounded bg-[#FEF3C7] text-on-secondary-fixed flex items-center justify-between transition-transform hover:translate-x-1"
-                  >
-                    <div class="flex items-center gap-space-xs">
-                      <span
-                        class="material-symbols-outlined text-[#D97706] text-[20px]"
-                        >hourglass_top</span
-                      >
-                      <div class="flex flex-col">
-                        <span
-                          class="font-label-md text-label-md text-[#715300] font-semibold"
-                          >Pending Approvals</span
-                        >
-                        <span
-                          class="font-body-sm text-body-sm text-on-secondary-fixed-variant"
-                          >Faculty reservation requests</span
-                        >
-                      </div>
-                    </div>
-                    <span
-                      class="px-2 py-0.5 bg-[#ffc641] text-[#261a00] font-label-sm text-label-sm font-bold rounded"
-                      >4 Requests</span
-                    >
-                  </div>
-                  <!-- Rooms Under Maintenance -->
-                  <div
-                    class="p-space-sm rounded bg-[#F1F5F9] text-on-tertiary-fixed flex items-center justify-between transition-transform hover:translate-x-1"
-                  >
-                    <div class="flex items-center gap-space-xs">
-                      <span
-                        class="material-symbols-outlined text-[#64748B] text-[20px]"
-                        >engineering</span
-                      >
-                      <div class="flex flex-col">
-                        <span
-                          class="font-label-md text-label-md text-[#475569] font-semibold"
-                          >Under Maintenance</span
-                        >
-                        <span
-                          class="font-body-sm text-body-sm text-on-tertiary-fixed-variant"
-                          >HVAC &amp; AV hardware sync</span
-                        >
-                      </div>
-                    </div>
-                    <span
-                      class="px-2 py-0.5 bg-surface-container-high text-[#1b1c1c] font-label-sm text-label-sm font-bold rounded"
-                      >3 Rooms</span
-                    >
-                  </div>
-                  <!-- Today's Bookings -->
-                  <div
-                    class="p-space-sm rounded bg-primary-fixed text-on-primary-fixed flex items-center justify-between transition-transform hover:translate-x-1"
-                  >
-                    <div class="flex items-center gap-space-xs">
-                      <span
-                        class="material-symbols-outlined text-primary-container text-[20px]"
-                        >event_note</span
-                      >
-                      <div class="flex flex-col">
-                        <span
-                          class="font-label-md text-label-md text-primary font-semibold"
-                          >Today's Bookings</span
-                        >
-                        <span
-                          class="font-body-sm text-body-sm text-on-primary-fixed-variant"
-                          >Campus-wide verified events</span
-                        >
-                      </div>
-                    </div>
-                    <span
-                      class="px-2 py-0.5 bg-primary-container text-on-primary font-label-sm text-label-sm font-bold rounded"
-                      >48 Scheduled</span
-                    >
-                  </div>
-                </div>
-                <!-- Inline Visual: Room Utilization SVG Sparkline Chart -->
-                <div
-                  class="p-space-sm bg-surface-container rounded flex flex-col gap-1 mt-1"
-                >
-                  <div
-                    class="flex items-center justify-between font-label-sm text-label-sm"
-                  >
-                    <span class="text-on-surface-variant font-medium"
-                      >Campus Capacity Utilization</span
-                    >
-                    <span class="text-primary font-bold">78% Peak</span>
-                  </div>
-                  <div class="w-full h-12 flex items-end pt-2">
-                    <svg
-                      class="w-full h-full text-primary-container"
-                      fill="none"
-                      preserveaspectratio="none"
-                      viewbox="0 0 200 40"
-                    >
-                      <path
-                        d="M0 35 Q 25 32, 50 20 T 100 12 T 150 6 T 200 18"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-linecap="round"
-                        stroke-width="2.5"
-                      ></path>
-                      <path
-                        d="M0 35 Q 25 32, 50 20 T 100 12 T 150 6 T 200 18 L 200 40 L 0 40 Z"
-                        fill="currentColor"
-                        fill-opacity="0.12"
-                      ></path>
-                      <circle
-                        class="fill-secondary stroke-white"
-                        cx="150"
-                        cy="6"
-                        r="3"
-                        stroke-width="1.5"
-                      ></circle>
-                    </svg>
-                  </div>
-                  <div
-                    class="flex justify-between text-[10px] text-on-tertiary-container font-medium px-1"
-                  >
-                    <span>08:00 AM</span>
-                    <span>12:00 PM (Peak)</span>
-                    <span>06:00 PM</span>
-                  </div>
-                </div>
-                <!-- Next Reservation Feature Mini Card -->
-                <div class="pt-space-xs">
-                  <span
-                    class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold block mb-space-xs"
-                    >My Next Reservation</span
-                  >
-                  <div
-                    class="p-space-md rounded bg-surface-container border-l-4 border-primary-container flex flex-col gap-space-xs"
-                  >
-                    <div class="flex items-center justify-between">
-                      <span
-                        class="font-headline-sm text-headline-sm text-on-surface"
-                        >Tech Hall North 204</span
-                      >
-                      <span
-                        class="px-2 py-0.5 bg-primary-container text-on-primary text-[10px] font-bold rounded uppercase tracking-wider"
-                        >Confirmed</span
-                      >
-                    </div>
-                    <div
-                      class="flex items-center gap-1.5 text-on-surface font-label-md text-label-md"
-                    >
-                      <span
-                        class="material-symbols-outlined text-primary text-[18px]"
-                        >calendar_clock</span
-                      >
-                      <span>Today at 2:00 PM – 3:30 PM</span>
-                    </div>
-                    <p
-                      class="font-body-sm text-body-sm text-on-surface-variant"
-                    >
-                      Faculty Council Prep &amp; Curriculum Review with Dept
-                      Chairs.
-                    </p>
-                    <div class="pt-2 flex items-center justify-between">
-                      <a
-                        class="text-primary hover:text-primary-container font-label-sm text-label-sm font-semibold flex items-center gap-0.5"
-                        href="#"
-                      >
-                        <span>Manage Permit</span>
-                        <span class="material-symbols-outlined text-[14px]"
-                          >arrow_forward</span
-                        >
-                      </a>
-                      <span
-                        class="text-[11px] text-on-tertiary-container font-mono"
-                        >ID: #RES-9402</span
-                      >
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <!-- Policy and assistance footer -->
-              <div class="policy-assistance-footer pt-space-xs flex flex-col gap-space-xs">
-                <span
-                  class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold"
-                  >Policy &amp; Assistance</span
-                >
-                <a
-                  class="p-space-sm rounded bg-surface-container-low hover:bg-surface-container text-on-surface flex items-center justify-between transition-colors"
-                  href="handbook.html"
-                >
-                  <span class="flex items-center gap-2">
-                    <span
-                      class="material-symbols-outlined text-secondary text-[20px]"
-                      >menu_book</span
-                    >
-                    <span class="font-label-md text-label-md font-semibold"
-                      >BPU Space Policy Handbook</span
-                    >
-                  </span>
-                  <span
-                    class="material-symbols-outlined text-on-surface-variant text-[18px]"
-                    >arrow_forward</span
-                  >
-                </a>
-                <!--
-                  Replaces the old "Facility Emergency Hotline" row. Deliberately
-                  a plain notice, not a link or a form: in an emergency the
-                  number has to be readable at a glance.
 
-                  >>> SET THE REAL NUMBER in #campusSecurityPhone below. <<<
-                  The project holds no Campus Security number ("Ext. 4021 / 4022"
-                  elsewhere is the Registrar Desk), so it is left as a visible
-                  placeholder rather than an invented one.
-                -->
-                <div
-                  id="campusSecurityNotice"
-                  role="note"
-                  class="mt-space-xs p-space-md rounded bg-error-container text-on-error-container border-l-4 border-error flex items-start gap-space-sm"
-                >
-                  <span
-                    class="material-symbols-outlined text-error text-[30px] shrink-0"
-                    aria-hidden="true"
-                    >emergency</span
-                  >
-                  <p class="font-headline-sm text-headline-sm font-bold leading-snug">
-                    For immediate emergencies or immediate assistance with your
-                    reservation, please call Campus Security directly at
-                    <span id="campusSecurityPhone" class="underline decoration-2 underline-offset-2"
-                      >+63 8173519892</span
-                    >.
-                  </p>
-                </div>
+      <!-- Dashboard Main View -->
+      <main class="w-full pt-20 px-8 pb-12 max-w-[1400px] mx-auto">
+        <!-- Operational Header Banner -->
+        <div
+          class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-7 mb-7 flex flex-col md:flex-row md:items-center justify-between gap-6"
+        >
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-600"
+                >Academic Intranet Live Feed</span
+              >
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+              Buenavista Facility Gateway
+            </h1>
+            <p class="text-sm text-gray-500 mt-1.5 leading-relaxed">
+              Real-time room allocation, specialized lab readiness, and immediate booking permits.
+            </p>
+          </div>
+          <div class="flex items-center gap-3 shrink-0">
+            <a
+              href="rooms.html"
+              class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#F59E0B] hover:bg-[#d97706] text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
+            >
+              <span class="material-symbols-outlined text-[18px]">bolt</span>
+              <span>Quick Reserve</span>
+            </a>
+            <a
+              href="rooms.html"
+              class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#7a1f2b] hover:bg-[#5e1821] text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
+            >
+              <span class="material-symbols-outlined text-[18px]">add</span>
+              <span>New Request</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 4-Column Cards Section -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" id="dashboardSummary">
+          <!-- Card 1: Upcoming Reservations -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center text-center h-[220px]"
+          >
+            <div class="w-12 h-12 rounded-xl bg-[#FDF2F4] flex items-center justify-center text-[#7a1f2b] mb-4">
+              <span class="material-symbols-outlined text-[24px]">calendar_month</span>
+            </div>
+            <p class="text-4xl font-extrabold text-gray-900 mb-2 leading-none" id="summaryUpcoming">0</p>
+            <p class="text-xs font-semibold text-gray-500">Upcoming Reservations</p>
+          </div>
+
+          <!-- Card 2: Past Reservations -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center text-center h-[220px]"
+          >
+            <div class="w-12 h-12 rounded-xl bg-[#FDF2F4] flex items-center justify-center text-[#7a1f2b] mb-4">
+              <span class="material-symbols-outlined text-[24px]">history</span>
+            </div>
+            <p class="text-4xl font-extrabold text-gray-900 mb-2 leading-none" id="summaryPast">0</p>
+            <p class="text-xs font-semibold text-gray-500">Past Reservations</p>
+          </div>
+
+          <!-- Card 3: Pending Approvals with Yellow Accent Border -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 border-b-4 border-b-amber-400 p-6 flex flex-col items-center justify-center text-center h-[220px]"
+          >
+            <div class="w-12 h-12 rounded-xl bg-[#FDF2F4] flex items-center justify-center text-[#7a1f2b] mb-4">
+              <span class="material-symbols-outlined text-[24px]">assignment</span>
+            </div>
+            <p class="text-4xl font-extrabold text-gray-900 mb-2 leading-none" id="summaryPending">0</p>
+            <p class="text-xs font-semibold text-gray-500">Pending Approvals</p>
+          </div>
+
+          <!-- Column 4: Policy & Assistance -->
+          <div class="flex flex-col">
+            <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">POLICY &amp; ASSISTANCE</span>
+            
+            <!-- Space Policy Handbook Link -->
+            <a
+              href="handbook.html"
+              class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center justify-between hover:shadow-md transition-shadow group cursor-pointer"
+            >
+              <div class="flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-amber-500 text-[20px]">menu_book</span>
+                <span class="text-sm font-semibold text-gray-800 group-hover:text-gray-900">BPU Space Policy Handbook</span>
               </div>
+              <span class="material-symbols-outlined text-gray-400 group-hover:text-gray-600 text-[18px]">arrow_forward</span>
+            </a>
+
+            <!-- Emergency Contact Box -->
+            <div
+              id="campusSecurityNotice"
+              role="note"
+              class="mt-3.5 bg-[#FFF5F5] border border-[#FFE3E3] rounded-2xl p-4 flex items-start gap-3"
+            >
+              <span class="material-symbols-outlined text-[#E53E3E] text-[20px] shrink-0 mt-0.5">error</span>
+              <p class="text-xs text-[#9B2C2C] leading-relaxed">
+                For immediate emergencies or assistance with your reservation, please call Campus Security directly at
+                <span id="campusSecurityPhone" class="font-bold underline decoration-1 underline-offset-2 text-[#E53E3E]"
+                  >+63 8173519892</span
+                >.
+              </p>
             </div>
           </div>
         </div>

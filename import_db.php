@@ -1,0 +1,1 @@
+<?php try { $pdo = new PDO('mysql:host=127.0.0.1;port=3306;dbname=campusroom', 'root', ''); $sql = file_get_contents('database_schema_mysql.sql'); $pdo->exec($sql); echo 'Imported'; } catch (Exception $e) { echo $e->getMessage(); }

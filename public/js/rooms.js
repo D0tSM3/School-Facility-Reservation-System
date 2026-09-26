@@ -10,7 +10,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const totalCount = document.getElementById('totalRoomsCount');
   const noResults = document.getElementById('noResultsNotice');
   const clearBtn = document.getElementById('clearAllFiltersBtn');
-  
+  const resetBtn = document.getElementById('resetFilters');
+
+  const listViewBtn = document.getElementById('listViewBtn');
+  const gridViewBtn = document.getElementById('gridViewBtn');
+
   const paginationControls = document.getElementById('paginationControls');
   const prevPageBtn = document.getElementById('prevPageBtn');
   const nextPageBtn = document.getElementById('nextPageBtn');
@@ -21,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
   let allRooms = [];
   let currentRole = null;
+  let currentView = 'list'; // Default list view matching reference image
 
   const ITEMS_PER_PAGE = 8;
   let currentPage = 1;
@@ -54,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function populateFilters() {
     const floors = new Set();
     const types = new Set();
-    
+
     allRooms.forEach(r => {
       if (r.floor !== null && r.floor !== undefined) floors.add(r.floor);
       if (r.room_type) types.add(r.room_type);
@@ -75,20 +80,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function getStatusColor(status) {
-    if (status === 'Available') return 'bg-[#16A34A]';
-    if (status === 'Occupied') return 'bg-[#D97706]';
-    return 'bg-[#64748B]'; 
+  function getRoomIcon(r) {
+    const name = (r.name || '').toLowerCase();
+    const type = (r.room_type || '').toLowerCase();
+    if (name.includes('audio-visual') || type.includes('avr') || name.includes('avr')) return 'smart_display';
+    if (name.includes('computer') || type.includes('computer') || name.includes('pc')) return 'desktop_windows';
+    if (name.includes('lecture') || type.includes('lecture') || name.includes('hall')) return 'chair';
+    if (name.includes('seminar') || type.includes('seminar') || name.includes('conference')) return 'groups';
+    if (name.includes('science') || type.includes('science') || name.includes('chem') || name.includes('lab')) return 'science';
+    if (name.includes('multimedia') || name.includes('hardware')) return 'build';
+    return 'meeting_room';
   }
 
-  function getStatusBadge(status) {
+  function getRoomFeatures(r) {
+    const name = (r.name || '').toLowerCase();
+    const type = r.room_type || 'General Space';
+    if (name.includes('105') || name.includes('audio-visual')) return `${type} • High-Definition Projector`;
+    if (name.includes('204') || name.includes('computer')) return `${type} • Windows Workstations`;
+    if (name.includes('301') || name.includes('lecture')) return `${type} • Tiered Seating`;
+    if (name.includes('402') || name.includes('seminar')) return `${type} • Modular Tables`;
+    if (name.includes('208') || name.includes('science')) return `${type} • Chemical Exhausts`;
+    if (name.includes('207') || name.includes('multimedia')) return `${type} • Hardware Diagnostics`;
+    return `${type} • Multimedia & AC`;
+  }
+
+  function getRoomLocation(r) {
+    const name = (r.name || '').toLowerCase();
+    const floor = (r.floor !== null && r.floor !== undefined) ? r.floor : 1;
+    if (name.includes('computer') || name.includes('204')) return `Floor ${floor}, IT Wing`;
+    if (name.includes('science') || name.includes('208')) return `Floor ${floor}, Science Wing`;
+    if (name.includes('seminar') || name.includes('402')) return `Floor ${floor}, Annex`;
+    return `Floor ${floor}, Main Bldg`;
+  }
+
+  function getStatusBadge(status, nextAvailable) {
     if (status === 'Available') {
-      return `<span class="px-space-xs py-0.5 rounded bg-[#DCFCE7] text-[#15803D] font-label-sm text-label-sm font-semibold flex items-center gap-1 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span>Available</span>`;
+      return `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Available</span>`;
     }
     if (status === 'Occupied') {
-      return `<span class="px-space-xs py-0.5 rounded bg-[#FEF3C7] text-[#B45309] font-label-sm text-label-sm font-semibold flex items-center gap-1 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span>Occupied</span>`;
+      let untilText = '';
+      if (nextAvailable && nextAvailable !== 'Available now') {
+        const d = new Date(nextAvailable);
+        if (!isNaN(d.getTime())) {
+          untilText = ` (Until ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })})`;
+        }
+      }
+      return `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>In Use${untilText}</span>`;
     }
-    return `<span class="px-space-xs py-0.5 rounded bg-[#F1F5F9] text-[#475569] font-label-sm text-label-sm font-semibold flex items-center gap-1 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-[#64748B]"></span>Maintenance</span>`;
+    return `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>Maintenance</span>`;
   }
 
   function renderRooms() {
@@ -103,7 +142,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (q && !r.name.toLowerCase().includes(q)) return false;
       if (fFloor !== 'all' && String(r.floor) !== fFloor) return false;
       if (fType !== 'all' && r.room_type !== fType) return false;
-      if (fStatus !== 'all' && status.toLowerCase() !== fStatus) return false;
+      if (fStatus !== 'all') {
+        if (fStatus === 'available' && status !== 'Available') return false;
+        if (fStatus === 'occupied' && status !== 'Occupied') return false;
+        if (fStatus === 'maintenance' && status !== 'Maintenance') return false;
+      }
       return true;
     });
 
@@ -117,47 +160,95 @@ document.addEventListener('DOMContentLoaded', () => {
 
     roomGrid.innerHTML = '';
 
+    if (currentView === 'list') {
+      roomGrid.className = 'flex flex-col gap-3.5';
+    } else {
+      roomGrid.className = 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5';
+    }
+
     paginatedRooms.forEach(r => {
       let status = r.live_status || r.status;
-      const nextAvailText = (r.next_available && r.next_available !== 'Available now') 
-        ? `<div class="p-2 rounded bg-surface-container font-body-sm text-body-sm text-on-surface"><div class="flex items-center gap-1 font-semibold text-secondary"><span class="material-symbols-outlined text-[16px]">schedule</span><span>Next available at: ${new Date(r.next_available).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div></div>`
-        : '';
-
-      const card = document.createElement('div');
-      card.className = `room-card group bg-surface-container-lowest rounded shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between ${status === 'Maintenance' ? 'opacity-90' : ''}`;
+      const isUnavailable = status === 'Maintenance' || status === 'Occupied';
       
-      card.innerHTML = `
-        <div class="absolute left-0 top-0 bottom-0 w-[4px] ${getStatusColor(status)}"></div>
-        <div class="p-space-md pl-[calc(1rem+4px)] flex flex-col gap-space-sm h-full">
-          <div class="flex items-start justify-between gap-space-xs">
-            <div>
-              <span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary">${r.room_type || 'General Space'}</span>
-              <p class="font-headline-sm text-headline-sm text-on-surface leading-tight">${r.name}</p>
+      let actionBtn = '';
+      if (isUnavailable) {
+        actionBtn = `<button disabled class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 rounded-lg bg-gray-100 text-gray-400 text-xs font-semibold cursor-not-allowed min-w-[100px]" type="button">Unavailable</button>`;
+      } else if (currentRole === 'staff' || currentRole === 'admin') {
+        actionBtn = `<div class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-semibold min-w-[100px]">View Only</div>`;
+      } else {
+        actionBtn = `<a href="book-room.html?room_id=${r.room_id}" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 rounded-lg bg-[#7A1F2B] hover:bg-[#5e1821] text-white text-xs font-semibold transition-colors shadow-xs min-w-[100px]">Reserve</a>`;
+      }
+
+      if (currentView === 'list') {
+        const row = document.createElement('div');
+        row.className = 'room-row bg-white rounded-2xl shadow-xs border border-gray-100/90 hover:shadow-sm transition-all p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4';
+        row.innerHTML = `
+          <!-- Left: Icon + Title + Features -->
+          <div class="flex items-center gap-4 min-w-[280px]">
+            <div class="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0 text-gray-500">
+              <span class="material-symbols-outlined text-[24px]">${getRoomIcon(r)}</span>
             </div>
-            ${getStatusBadge(status)}
+            <div class="flex flex-col">
+              <h3 class="text-base font-bold text-gray-900 leading-snug">${r.name}</h3>
+              <p class="text-xs text-gray-500 mt-0.5">${getRoomFeatures(r)}</p>
+            </div>
           </div>
-          ${nextAvailText}
-          <div class="flex items-center gap-space-sm text-on-surface-variant font-body-sm text-body-sm pt-1 mt-auto">
-            <span class="flex items-center gap-1 font-medium text-on-surface">
-              <span class="material-symbols-outlined text-[16px] text-secondary">group</span>
+
+          <!-- Middle: Capacity & Location -->
+          <div class="flex flex-col gap-1 min-w-[160px]">
+            <div class="flex items-center gap-1.5 text-xs text-gray-600 font-medium">
+              <span class="material-symbols-outlined text-[16px] text-gray-400">group</span>
+              <span>${r.capacity} Seats Capacity</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-xs text-gray-500">
+              <span class="material-symbols-outlined text-[16px] text-gray-400">location_on</span>
+              <span>${getRoomLocation(r)}</span>
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div class="flex items-center min-w-[140px]">
+            ${getStatusBadge(status, r.next_available)}
+          </div>
+
+          <!-- Action -->
+          <div class="flex items-center md:justify-end min-w-[120px]">
+            ${actionBtn}
+          </div>
+        `;
+        roomGrid.appendChild(row);
+      } else {
+        const card = document.createElement('div');
+        card.className = 'room-card bg-white rounded-2xl shadow-xs border border-gray-100/90 hover:shadow-sm transition-all p-5 flex flex-col justify-between h-full gap-4';
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0 text-gray-500">
+                <span class="material-symbols-outlined text-[22px]">${getRoomIcon(r)}</span>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-gray-900 leading-snug">${r.name}</h3>
+                <p class="text-xs text-gray-500 mt-0.5">${getRoomFeatures(r)}</p>
+              </div>
+            </div>
+            ${getStatusBadge(status, r.next_available)}
+          </div>
+          <div class="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-50">
+            <span class="flex items-center gap-1 text-gray-600 font-medium">
+              <span class="material-symbols-outlined text-[16px] text-gray-400">group</span>
               ${r.capacity} Seats
             </span>
-            <span>•</span>
-            <span class="truncate">Floor ${r.floor !== null ? r.floor : 'N/A'}</span>
+            <span class="flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px] text-gray-400">location_on</span>
+              ${getRoomLocation(r)}
+            </span>
           </div>
-        </div>
-        <div class="p-space-md pl-[calc(1rem+4px)] pt-0">
-          ${status === 'Maintenance' 
-            ? `<button class="w-full py-2 px-space-sm bg-surface-container-high text-on-tertiary-container cursor-not-allowed font-label-lg text-label-lg rounded flex items-center justify-center gap-1" disabled type="button"><span class="material-symbols-outlined text-[18px]">block</span><span>Unavailable</span></button>`
-            : status === 'Occupied'
-            ? `<button class="w-full py-2 px-space-sm bg-surface-container-high text-on-tertiary-container cursor-not-allowed font-label-lg text-label-lg rounded flex items-center justify-center gap-1" disabled type="button"><span class="material-symbols-outlined text-[18px]">event_busy</span><span>Currently Booked</span></button>`
-            : (currentRole === 'staff' || currentRole === 'admin')
-            ? `<div class="w-full py-2 px-space-sm bg-surface-container text-on-surface-variant font-label-lg text-label-lg rounded flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[18px]">visibility</span><span>View Only</span></div>`
-            : `<a href="book-room.html?room_id=${r.room_id}" class="w-full py-2 px-space-sm bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg rounded transition-colors flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[18px]">calendar_today</span><span>Book This Room</span></a>`
-          }
-        </div>
-      `;
-      roomGrid.appendChild(card);
+          <div class="pt-1">
+            ${actionBtn}
+          </div>
+        `;
+        roomGrid.appendChild(card);
+      }
     });
 
     if (visibleCount) visibleCount.textContent = filteredRooms.length;
@@ -177,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
         paginationControls.classList.remove('hidden');
         paginationControls.classList.add('flex');
         pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
-        
+
         prevPageBtn.disabled = currentPage === 1;
         nextPageBtn.disabled = currentPage === totalPages;
       } else {
@@ -196,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
   floorFilter.addEventListener('change', handleFilterChange);
   roomTypeFilter.addEventListener('change', handleFilterChange);
   statusFilter.addEventListener('change', handleFilterChange);
-  
+
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
       searchInput.value = '';
@@ -204,6 +295,31 @@ document.addEventListener('DOMContentLoaded', () => {
       roomTypeFilter.value = 'all';
       statusFilter.value = 'all';
       handleFilterChange();
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      floorFilter.value = 'all';
+      roomTypeFilter.value = 'all';
+      statusFilter.value = 'all';
+      handleFilterChange();
+    });
+  }
+
+  if (listViewBtn && gridViewBtn) {
+    listViewBtn.addEventListener('click', () => {
+      currentView = 'list';
+      listViewBtn.className = 'p-1.5 rounded-lg bg-white shadow-xs text-gray-800 flex items-center justify-center transition-all';
+      gridViewBtn.className = 'p-1.5 rounded-lg text-gray-400 hover:text-gray-700 flex items-center justify-center transition-all';
+      renderRooms();
+    });
+    gridViewBtn.addEventListener('click', () => {
+      currentView = 'grid';
+      gridViewBtn.className = 'p-1.5 rounded-lg bg-white shadow-xs text-gray-800 flex items-center justify-center transition-all';
+      listViewBtn.className = 'p-1.5 rounded-lg text-gray-400 hover:text-gray-700 flex items-center justify-center transition-all';
+      renderRooms();
     });
   }
 

@@ -106,10 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isActive) {
       link.setAttribute('aria-current', 'page');
-      link.className = 'flex items-center gap-space-sm px-space-md py-space-sm rounded transition-colors bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg';
+      link.className = 'flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors bg-[#7a1f2b] text-white font-medium text-sm';
     } else {
       link.removeAttribute('aria-current');
-      link.className = 'flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors';
+      link.className = 'flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors';
     }
   });
 
@@ -118,11 +118,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (aside && !document.getElementById('logout-banner')) {
     const logoutDiv = document.createElement('div');
     logoutDiv.id = 'logout-banner';
-    logoutDiv.className = 'p-space-sm bg-tertiary border-t border-white/10 text-xs flex justify-end';
+    logoutDiv.className = 'p-4 border-t border-white/5 mt-auto';
     
     const logoutBtn = document.createElement('button');
-    logoutBtn.className = 'py-1 px-2 rounded text-[11px] bg-red-900/60 hover:bg-red-800 text-white transition-colors flex items-center justify-center gap-1';
-    logoutBtn.innerHTML = '<span class="material-symbols-outlined text-[14px]">logout</span><span>Sign Out</span>';
+    logoutBtn.className = 'flex items-center gap-2.5 text-sm text-gray-400 hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg';
+    logoutBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">logout</span><span>Sign Out</span>';
     logoutBtn.title = 'Sign Out';
     logoutBtn.addEventListener('click', () => {
       fetch(BASE + 'api/auth/logout', { method: 'POST', credentials: 'include' })

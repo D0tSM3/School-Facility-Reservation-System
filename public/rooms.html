@@ -1,27 +1,12 @@
 <!doctype html>
-<style>
-  aside > div:first-child > div {
-    display: none;
-  }
-
-  #roomGrid .room-card {
-    border: 1px solid #e1e2e4;
-    box-sizing: border-box;
-  }
-</style>
-
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>CampusRoom — Rooms | BPU Facility Gateway</title>
+    <title>CampusRoom — Rooms Directory | BPU Facility Gateway</title>
     <meta name="description" content="View all academic facilities and their real-time availability." />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
     <link
@@ -38,533 +23,286 @@
         theme: {
           extend: {
             colors: {
-              "on-tertiary-fixed-variant": "#474746",
-              "on-secondary-fixed": "#261a00",
-              "on-surface": "#191c1e",
-              surface: "#f8f9fb",
+              primary: "#5b0617",
+              "primary-container": "#7a1f2b",
               "on-primary": "#ffffff",
-              "on-primary-container": "#ff8b92",
-              "surface-dim": "#d9dadc",
-              "on-tertiary-container": "#afadac",
-              "on-primary-fixed": "#40000c",
-              "surface-container-high": "#e7e8ea",
-              "primary-fixed": "#ffdada",
-              "on-secondary-container": "#715300",
-              "tertiary-container": "#414141",
-              "surface-tint": "#a13c46",
-              "on-secondary": "#ffffff",
-              "surface-container": "#edeef0",
-              error: "#ba1a1a",
-              "on-primary-fixed-variant": "#822530",
-              "inverse-on-surface": "#f0f1f3",
-              "on-tertiary-fixed": "#1b1c1c",
-              "secondary-fixed-dim": "#f6be39",
-              "on-error-container": "#93000a",
-              "on-error": "#ffffff",
-              "on-secondary-fixed-variant": "#5c4300",
-              "on-background": "#191c1e",
-              "tertiary-fixed-dim": "#c8c6c5",
               secondary: "#795900",
               "secondary-container": "#ffc641",
-              "tertiary-fixed": "#e4e2e1",
-              "outline-variant": "#dcc0c0",
+              tertiary: "#1c1c1e",
               background: "#f8f9fb",
-              "inverse-surface": "#2e3132",
-              "surface-container-lowest": "#ffffff",
-              "primary-container": "#7a1f2b",
-              "error-container": "#ffdad6",
-              "surface-bright": "#f8f9fb",
+              surface: "#f8f9fb",
+              "on-surface": "#191c1e",
               "on-surface-variant": "#564242",
-              "surface-container-highest": "#e1e2e4",
-              "secondary-fixed": "#ffdfa0",
-              "primary-fixed-dim": "#ffb3b5",
-              outline: "#897172",
-              "inverse-primary": "#ffb3b5",
-              "surface-variant": "#e1e2e4",
-              "surface-container-low": "#f3f4f6",
-              primary: "#5b0617",
-              "on-tertiary": "#ffffff",
-              tertiary: "#2b2b2b",
-            },
-            borderRadius: {
-              DEFAULT: "0.125rem",
-              lg: "0.25rem",
-              xl: "0.5rem",
-              full: "0.75rem",
-            },
-            spacing: {
-              "space-sm": "0.5rem",
-              "space-xl": "2.25rem",
-              "space-lg": "1.5rem",
-              "space-md": "1rem",
-              margin: "2rem",
-              "margin-mobile": "1rem",
-              "gutter-mobile": "0.75rem",
-              gutter: "1.25rem",
-              "space-xs": "0.25rem",
             },
             fontFamily: {
-              "headline-lg": ["Inter"],
-              "body-md": ["Inter"],
-              "headline-lg-mobile": ["Inter"],
-              "label-lg": ["Inter"],
-              "headline-md": ["Inter"],
-              "headline-sm": ["Inter"],
-              "body-lg": ["Inter"],
-              "body-sm": ["Inter"],
-              "label-md": ["Inter"],
-              "label-sm": ["Inter"],
-            },
-            fontSize: {
-              "headline-lg": [
-                "30px",
-                {
-                  lineHeight: "38px",
-                  letterSpacing: "-0.02em",
-                  fontWeight: "700",
-                },
-              ],
-              "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
-              "headline-lg-mobile": [
-                "24px",
-                {
-                  lineHeight: "32px",
-                  letterSpacing: "-0.01em",
-                  fontWeight: "700",
-                },
-              ],
-              "label-lg": [
-                "14px",
-                {
-                  lineHeight: "20px",
-                  letterSpacing: "0.01em",
-                  fontWeight: "600",
-                },
-              ],
-              "headline-md": [
-                "22px",
-                {
-                  lineHeight: "28px",
-                  letterSpacing: "-0.01em",
-                  fontWeight: "600",
-                },
-              ],
-              "headline-sm": [
-                "18px",
-                { lineHeight: "24px", fontWeight: "600" },
-              ],
-              "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
-              "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
-              "label-md": [
-                "12px",
-                {
-                  lineHeight: "16px",
-                  letterSpacing: "0.02em",
-                  fontWeight: "600",
-                },
-              ],
-              "label-sm": [
-                "11px",
-                {
-                  lineHeight: "14px",
-                  letterSpacing: "0.04em",
-                  fontWeight: "700",
-                },
-              ],
+              sans: ["Inter", "sans-serif"],
             },
           },
         },
       };
     </script>
   </head>
-  <body
-    class="bg-background font-body-md text-on-surface antialiased min-h-screen"
-  >
+  <body class="bg-[#F8F9FA] font-sans text-gray-900 antialiased min-h-screen">
+    <!-- Left Sidebar -->
     <aside
-      class="fixed left-0 top-0 h-full w-[250px] bg-tertiary text-on-tertiary z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+      class="fixed left-0 top-0 h-full w-[250px] bg-[#1c1c1e] text-white z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
     >
-      <div class="h-16 px-space-md flex items-center gap-space-sm bg-tertiary">
-        <img
-          alt="CampusRoom Maroon &amp; Gold Logo"
-          class="h-8 w-auto object-contain"
-          src="assets/logo.svg"
-        />
-        <div class="flex flex-col">
-          <span
-            class="font-headline-sm text-headline-sm text-on-tertiary tracking-tight"
-            >CampusRoom</span
-          ><span
-            class="font-label-sm text-label-sm text-tertiary-fixed-dim uppercase tracking-wider"
-            >Buenavista Poly</span
-          >
-        </div>
-      </div>
-      <div class="px-space-md py-space-sm">
-        <div
-          class="font-label-sm text-label-sm text-on-tertiary-container uppercase tracking-wider mb-space-xs px-space-sm"
-        >
-          Intranet Core
-        </div>
-      </div>
-      <nav
-        class="flex-1 px-space-sm space-y-space-xs"
-        data-active-classes="bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
-      >
-        <a
-          aria-current="page"
-          class="flex items-center gap-space-sm px-space-md py-space-sm rounded transition-colors bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
-          data-path="customer-dashboard"
-          href="dashboard.html"
-          ><span class="material-symbols-outlined text-[20px]">dashboard</span
-          ><span>Dashboard</span></a
-        ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="rooms"
-          href="book-room.html"
-          ><span class="material-symbols-outlined text-[20px]"
-            >meeting_room</span
-          ><span>Rooms</span></a
-        ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="my-reservations"
-          href="my-reservations.html"
-          ><span class="material-symbols-outlined text-[20px]"
-            >event_available</span
-          ><span>Reservations</span></a
-        ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="staff-queue"
-          href="staff-queue.html"
-          ><span class="material-symbols-outlined text-[20px]">assignment</span
-          ><span>Staff Queue</span></a
-        ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="admin-governance"
-          href="admin-governance.html"
-          ><span class="material-symbols-outlined text-[20px]"
-            >admin_panel_settings</span
-          ><span>Admin Governance</span></a
-        ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="handbook"
-          href="handbook.html"
-          ><span class="material-symbols-outlined text-[20px]">menu_book</span
-          ><span>Handbook</span></a
-        >
-      </nav>
-      <div class="p-space-md bg-tertiary-container/40">
-        <div class="flex items-center justify-between">
-          <div class="flex flex-col">
-            <span class="font-label-sm text-label-sm text-tertiary-fixed-dim"
-              >Registrar Desk</span
-            ><span class="font-body-sm text-body-sm text-on-tertiary"
-              >Ext. 4021 / 4022</span
-            >
-          </div>
-          <span
-            class="material-symbols-outlined text-secondary-container text-[18px]"
-            >verified</span
-          >
-        </div>
-      </div>
-    </aside>
-    <div class="pl-[250px]">
-      <header
-        class="fixed top-0 left-[250px] right-0 h-16 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"
-      >
-        <div class="flex items-center gap-space-md">
+      <!-- Upper Left Logo -->
+      <div class="h-16 px-6 flex items-center">
+        <a href="dashboard.html" class="flex items-center">
           <img
-            alt="CampusRoom Maroon &amp; Gold Logo"
-            class="h-8 w-auto object-contain"
+            alt="CampusRoom Logo"
+            class="h-7 w-auto object-contain"
             src="assets/logo.svg"
           />
-          <div
-            class="hidden md:flex items-center gap-space-xs px-space-sm py-1 bg-surface-container rounded"
-          >
-            <span class="material-symbols-outlined text-secondary text-[16px]"
-              >school</span
-            ><span
-              class="font-label-sm text-label-sm text-on-surface-variant font-semibold"
-              >AY 2024-2025 • First Semester</span
-            >
-          </div>
+        </a>
+      </div>
+
+      <!-- WORKSPACE Section -->
+      <div class="px-5 pt-3 pb-2">
+        <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">WORKSPACE</span>
+      </div>
+      <nav class="px-3 space-y-1">
+        <a
+          class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="customer-dashboard"
+          href="dashboard.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">grid_view</span>
+          <span>Dashboard</span>
+        </a>
+        <a
+          aria-current="page"
+          class="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors bg-[#7a1f2b] text-white font-medium text-sm"
+          data-path="rooms"
+          href="rooms.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">meeting_room</span>
+          <span>Rooms Directory</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="my-reservations"
+          href="my-reservations.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">event_available</span>
+          <span>My Reservations</span>
+        </a>
+        <a
+          class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="staff-queue"
+          href="staff-queue.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">assignment</span>
+          <span>Staff Queue</span>
+        </a>
+        <a
+          class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="admin-governance"
+          href="admin-governance.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+          <span>Admin Governance</span>
+        </a>
+      </nav>
+
+      <!-- RESOURCES Section -->
+      <div class="px-5 pt-6 pb-2">
+        <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">RESOURCES</span>
+      </div>
+      <nav class="px-3 space-y-1">
+        <a
+          class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="handbook"
+          href="handbook.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">menu_book</span>
+          <span>Policy Handbook</span>
+        </a>
+      </nav>
+
+      <!-- Sign Out Footer -->
+      <div id="logout-banner" class="mt-auto p-4 border-t border-white/5">
+        <button
+          id="logoutBtn"
+          class="flex items-center gap-2.5 text-sm text-gray-400 hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg"
+          type="button"
+        >
+          <span class="material-symbols-outlined text-[18px]">logout</span>
+          <span class="font-medium">Sign Out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="pl-[250px]">
+      <!-- Fixed Header -->
+      <header
+        class="fixed top-0 left-[250px] right-0 h-16 bg-white border-b border-gray-100 z-40 flex items-center justify-between px-8 shadow-[0_1px_8px_rgba(0,0,0,0.02)]"
+      >
+        <!-- Academic Year Badge -->
+        <div class="flex items-center gap-2 px-3 py-1 bg-gray-100/90 rounded-full text-gray-600 text-xs font-medium">
+          <span class="material-symbols-outlined text-[15px]">school</span>
+          <span>AY 2026-2027 • First Semester</span>
         </div>
-        <div class="flex items-center gap-space-md">
-          
-          <div class="flex items-center gap-space-sm pl-space-sm">
-            <div class="flex flex-col text-right hidden sm:flex">
-              <span class="font-label-md text-label-md text-on-surface"
-                >Dr. Edgardo Valderama</span
-              ><span class="font-label-sm text-label-sm text-primary font-bold bg-primary-container/20 px-2 py-0.5 rounded"
-                >Faculty / Staff</span
-              >
-            </div>
-            <div
-              class="w-8 h-8 rounded-full bg-primary-container text-primary font-bold flex items-center justify-center text-sm shadow-[0_1px_8px_rgba(0,0,0,0.04)] header-initials"
-            >EV</div>
+
+        <!-- User Profile -->
+        <div class="flex items-center gap-3">
+          <div class="flex flex-col text-right">
+            <span class="font-label-md text-on-surface font-semibold text-sm text-gray-800">Dr. Edgardo Valderama</span>
+            <span class="font-label-sm text-primary text-xs text-gray-500">Student</span>
+          </div>
+          <div
+            class="w-9 h-9 rounded-full bg-[#7a1f2b] text-white font-bold flex items-center justify-center text-xs shadow-sm header-initials"
+          >
+            EV
           </div>
         </div>
       </header>
-      <main
-        class="w-full pt-16 bg-background px-space-lg py-space-lg min-h-screen"
-      >
-        <div class="flex flex-col w-full">
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-            <div class="lg:col-span-12 xl:col-span-12 flex flex-col gap-space-lg">
-              <!-- Operational Header Banner with Micro Metrics -->
-              <div
-                class="bg-surface-container-lowest p-space-lg rounded shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-space-md"
-              >
-                <div>
-                  <div class="flex items-center gap-space-xs mb-1">
-                    <span
-                      class="inline-block w-2.5 h-2.5 rounded-full bg-[#16A34A] animate-pulse"
-                    ></span>
-                    <span
-                      class="font-label-sm text-label-sm uppercase tracking-wider text-secondary"
-                      >Academic Intranet Live Feed</span
-                    >
-                  </div>
-                  <p class="font-headline-md text-headline-md text-on-surface">
-                    Buenavista Facility Gateway
-                  </p>
-                  <p class="font-body-md text-body-md text-on-surface-variant">
-                    Real-time room allocation, specialized lab readiness, and
-                    immediate booking permits.
-                  </p>
-                </div>
-              </div>
-              <!-- Search & Structured Filter Bar -->
-              <div
-                class="bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-md"
-              >
-                <!-- Main Search Input -->
-                <div class="relative w-full">
-                  <span
-                    class="material-symbols-outlined absolute left-space-md top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]"
-                    >search</span
-                  >
-                  <input
-                    class="w-full pl-10 pr-space-md py-space-sm bg-surface-container-low text-on-surface placeholder:text-on-tertiary-container font-body-md text-body-md rounded focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-secondary transition-all"
-                    id="roomSearchInput"
-                    placeholder="Search rooms by hall, room number, or equipment: e.g. 4K Projector, Lab benches..."
-                    type="text"
-                  />
-                </div>
-                <!-- Facet Dropdowns and Counter Indicator -->
-                <div
-                  class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-space-sm items-center"
-                >
-                  <div class="relative">
-                    <label class="sr-only" for="floorFilter">Filter Floor</label>
-                    <select
-                      class="w-full bg-surface-container-low py-space-xs px-space-sm text-on-surface font-label-md text-label-md rounded focus:outline-none focus:ring-2 focus:ring-primary-container appearance-none pr-8"
-                      id="floorFilter"
-                    >
-                      <option value="all">All Floors</option>
-                      <!-- Dynamically populated -->
-                    </select>
-                    <span
-                      class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]"
-                      >expand_more</span
-                    >
-                  </div>
-                  <div class="relative">
-                    <label class="sr-only" for="roomTypeFilter">Filter Room Type</label>
-                    <select
-                      class="w-full bg-surface-container-low py-space-xs px-space-sm text-on-surface font-label-md text-label-md rounded focus:outline-none focus:ring-2 focus:ring-primary-container appearance-none pr-8"
-                      id="roomTypeFilter"
-                    >
-                      <option value="all">Any Room Type</option>
-                      <!-- Dynamically populated -->
-                    </select>
-                    <span
-                      class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]"
-                      >expand_more</span
-                    >
-                  </div>
-                  <div class="relative">
-                    <label class="sr-only" for="statusFilter">Filter Status</label>
-                    <select
-                      class="w-full bg-surface-container-low py-space-xs px-space-sm text-on-surface font-label-md text-label-md rounded focus:outline-none focus:ring-2 focus:ring-primary-container appearance-none pr-8"
-                      id="statusFilter"
-                    >
-                      <option value="all">All Statuses</option>
-                      <option value="available">Available Now</option>
-                      <option value="occupied">Occupied</option>
-                      <option value="maintenance">Under Maintenance</option>
-                    </select>
-                    <span
-                      class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]"
-                      >expand_more</span
-                    >
-                  </div>
-                  <div
-                    class="flex items-center justify-between sm:justify-end gap-space-xs px-space-xs"
-                  >
-                    <span
-                      class="font-label-sm text-label-sm text-on-surface-variant"
-                      >Showing
-                      <strong class="text-on-surface" id="visibleRoomsCount"
-                        >6</strong
-                      >
-                      of <strong class="text-on-surface" id="totalRoomsCount">6</strong> rooms</span
-                    >
-                    <button
-                      class="text-secondary hover:text-primary font-label-sm text-label-sm underline ml-1"
-                      id="resetFilters"
-                      type="button"
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <!-- Live Room Availability Grid -->
-              <div
-                class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-gutter"
-                id="roomGrid"
-              >
-                <!-- Dynamically populated by JS -->
-              </div>
-              
-              <!-- Pagination Controls -->
-              <div class="hidden flex-wrap items-center justify-center gap-space-sm mt-space-md w-full" id="paginationControls">
-                <button
-                  class="px-space-md py-space-sm bg-surface-container hover:bg-surface-dim text-on-surface font-label-md rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  id="prevPageBtn"
-                  type="button"
-                >
-                  <span class="material-symbols-outlined align-middle text-[18px]">chevron_left</span> Previous
-                </button>
-                <span class="font-label-md text-on-surface-variant mx-space-sm" id="pageIndicator">Page 1 of 1</span>
-                <button
-                  class="px-space-md py-space-sm bg-surface-container hover:bg-surface-dim text-on-surface font-label-md rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  id="nextPageBtn"
-                  type="button"
-                >
-                  Next <span class="material-symbols-outlined align-middle text-[18px]">chevron_right</span>
-                </button>
-              </div>
-              <!-- No match fallback state (hidden by default) -->
-              <div
-                class="hidden bg-surface-container-lowest p-space-xl rounded text-center shadow-sm flex-col items-center justify-center gap-space-sm"
-                id="noResultsNotice"
-              >
-                <span class="material-symbols-outlined text-[48px] text-outline"
-                  >search_off</span
-                >
-                <p class="font-headline-sm text-headline-sm text-on-surface">
-                  No Facilities Match Your Filter Criteria
-                </p>
-                <p
-                  class="font-body-md text-body-md text-on-surface-variant max-w-md"
-                >
-                  Try expanding capacity boundaries, clearing specific building
-                  tags, or searching with broader keywords.
-                </p>
-                <button
-                  class="px-space-md py-space-sm bg-primary-container text-on-primary font-label-lg text-label-lg rounded mt-space-xs"
-                  btn-book-room
-                  id="clearAllFiltersBtn"
-                  type="button"
-                >
-                  Clear All Filters
-                </button>
-              </div>
+
+      <!-- Rooms Directory View -->
+      <main class="w-full pt-20 px-8 pb-12 max-w-[1400px] mx-auto">
+        <!-- Search & Filter Bar -->
+        <div
+          class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6 flex flex-wrap items-center justify-between gap-3"
+        >
+          <!-- Left / Filters -->
+          <div class="flex flex-wrap items-center gap-3 flex-1">
+            <!-- Search Input -->
+            <div class="relative flex-1 min-w-[260px] max-w-md">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
+                search
+              </span>
+              <input
+                id="roomSearchInput"
+                type="text"
+                placeholder="Search rooms by hall, room number, or equipment"
+                class="w-full bg-[#f8f9fb] border border-gray-200/80 rounded-xl pl-9 pr-4 py-2 text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] transition-all"
+              />
             </div>
-            <!-- Right-Hand Column: Notices/Announcement Panel -->
-            <div class="lg:col-span-4 xl:col-span-3 flex flex-col gap-space-lg">
-              <!-- Campus Overview & Tasks Card -->
-              <div
-                class="hidden bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-md"
+
+            <!-- Floor Filter -->
+            <div class="relative">
+              <select
+                id="floorFilter"
+                class="bg-[#f8f9fb] border border-gray-200/80 rounded-xl px-3 py-2 pr-8 text-xs sm:text-sm text-gray-700 font-medium appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] transition-all"
               >
-                <div
-                  class="flex items-center justify-between pb-space-xs border-b border-surface-container"
-                >
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="material-symbols-outlined text-primary text-[20px]"
-                      >task_alt</span
-                    >
-                    <h2
-                      class="font-headline-sm text-headline-sm text-on-surface"
-                    >
-                      Campus Overview &amp; Tasks
-                    </h2>
-                  </div>
-                  <span class="w-2 h-2 rounded-full bg-secondary"></span>
-                </div>
-                <!-- Metric Badges / Summary Counters -->
-                <div class="space-y-space-xs">
-                  <!-- Pending Approvals -->
-                  <div
-                    class="p-space-sm rounded bg-[#FEF3C7] text-on-secondary-fixed flex items-center justify-between transition-transform hover:translate-x-1"
-                  >
-                    <div class="flex items-center gap-space-xs">
-                      <span
-                        class="material-symbols-outlined text-[#D97706] text-[20px]"
-                        >hourglass_top</span
-                      >
-                      <div class="flex flex-col">
-                        <span
-                          class="font-label-md text-label-md text-[#715300] font-semibold"
-                          >Pending Approvals</span
-                        >
-                        <span
-                          class="font-body-sm text-body-sm text-on-secondary-fixed-variant"
-                          >Faculty reservation requests</span
-                        >
-                      </div>
-                    </div>
-                    <span
-                      class="px-2 py-0.5 bg-[#ffc641] text-[#261a00] font-label-sm text-label-sm font-bold rounded"
-                      >4 Requests</span
-                    >
-                  </div>
-                  <!-- Rooms Under Maintenance -->
-                  <div
-                    class="p-space-sm rounded bg-[#F1F5F9] text-on-tertiary-fixed flex items-center justify-between transition-transform hover:translate-x-1"
-                  >
-                    <div class="flex items-center gap-space-xs">
-                      <span
-                        class="material-symbols-outlined text-[#64748B] text-[20px]"
-                        >engineering</span
-                      >
-                      <div class="flex flex-col">
-                        <span
-                          class="font-label-md text-label-md text-[#475569] font-semibold"
-                          >Under Maintenance</span
-                        >
-                        <span
-                          class="font-body-sm text-body-sm text-on-tertiary-fixed-variant"
-                          >HVAC &amp; AV hardware sync</span
-                        >
-                      </div>
-                    </div>
-                    <span
-                      class="px-2 py-0.5 bg-surface-container-high text-[#1b1c1c] font-label-sm text-label-sm font-bold rounded"
-                      >3 Rooms</span
-                    >
-                  </div>
-                  <!-- Today's Bookings -->
-                  <div
-                    class="p-space-sm rounded bg-primary-fixed text-on-primary-fixed flex items-center justify-between transition-transform hover:translate-x-1"
-                  >
-                    <div class="flex items-center gap-space-xs">
-                      <span
-                        class="material-symbols-outlined text-primary-container text-[20px]"
-                        >event_note</span
-                      >
-                      <div class="flex flex-col">
-                        <span
-                          class="font-label-md text-label-md text-primary font-semibold"
-                          >Today's Bookings</span
-                        >
-                        <span
-                          class="font-body-sm text-body-sm text-on-primary-fixed-variant"
-                          >Campus-wide verified events</span
+                <option value="all">All Floors</option>
+              </select>
+              <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-[18px]">
+                expand_more
+              </span>
+            </div>
+
+            <!-- Room Type Filter -->
+            <div class="relative">
+              <select
+                id="roomTypeFilter"
+                class="bg-[#f8f9fb] border border-gray-200/80 rounded-xl px-3 py-2 pr-8 text-xs sm:text-sm text-gray-700 font-medium appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] transition-all"
+              >
+                <option value="all">Any Room Type</option>
+              </select>
+              <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-[18px]">
+                expand_more
+              </span>
+            </div>
+
+            <!-- Status Filter -->
+            <div class="relative">
+              <select
+                id="statusFilter"
+                class="bg-[#f8f9fb] border border-gray-200/80 rounded-xl px-3 py-2 pr-8 text-xs sm:text-sm text-gray-700 font-medium appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] transition-all"
+              >
+                <option value="all">All Statuses</option>
+                <option value="available">Available</option>
+                <option value="occupied">In Use</option>
+                <option value="maintenance">Maintenance</option>
+              </select>
+              <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-[18px]">
+                expand_more
+              </span>
+            </div>
           </div>
+
+          <!-- Right / Counter & Controls -->
+          <div class="flex items-center gap-4">
+            <div class="text-xs text-gray-500 whitespace-nowrap">
+              Showing <strong class="text-gray-800" id="visibleRoomsCount">0</strong> of
+              <strong class="text-gray-800" id="totalRoomsCount">0</strong> rooms
+              <button
+                id="resetFilters"
+                type="button"
+                class="text-gray-600 hover:text-gray-900 font-semibold underline ml-1 cursor-pointer"
+              >
+                Reset
+              </button>
+            </div>
+
+            <!-- View Segmented Buttons -->
+            <div class="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200/60">
+              <button
+                id="listViewBtn"
+                type="button"
+                title="List View"
+                class="p-1.5 rounded-lg bg-white shadow-xs text-gray-800 flex items-center justify-center transition-all"
+              >
+                <span class="material-symbols-outlined text-[18px]">format_list_bulleted</span>
+              </button>
+              <button
+                id="gridViewBtn"
+                type="button"
+                title="Grid View"
+                class="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 flex items-center justify-center transition-all"
+              >
+                <span class="material-symbols-outlined text-[18px]">grid_view</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Room Items Container -->
+        <div id="roomGrid" class="flex flex-col gap-3">
+          <!-- Dynamically populated by rooms.js -->
+        </div>
+
+        <!-- Pagination Controls -->
+        <div id="paginationControls" class="hidden flex-wrap items-center justify-center gap-3 mt-8 w-full">
+          <button
+            id="prevPageBtn"
+            type="button"
+            class="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-xl shadow-xs disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+          >
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span> Previous
+          </button>
+          <span id="pageIndicator" class="text-xs font-semibold text-gray-500 mx-2">Page 1 of 1</span>
+          <button
+            id="nextPageBtn"
+            type="button"
+            class="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-xl shadow-xs disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+          >
+            Next <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+          </button>
+        </div>
+
+        <!-- No Results Fallback -->
+        <div
+          id="noResultsNotice"
+          class="hidden bg-white border border-gray-100 p-12 rounded-2xl text-center shadow-xs flex-col items-center justify-center gap-3 mt-4"
+        >
+          <div class="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 mb-1">
+            <span class="material-symbols-outlined text-[28px]">search_off</span>
+          </div>
+          <h3 class="text-base font-bold text-gray-800">No Facilities Match Your Criteria</h3>
+          <p class="text-xs text-gray-500 max-w-sm leading-relaxed">
+            Try adjusting your search terms, changing floor or room type selections, or clearing filters.
+          </p>
+          <button
+            id="clearAllFiltersBtn"
+            type="button"
+            class="mt-2 px-5 py-2 bg-[#7a1f2b] hover:bg-[#5e1821] text-white text-xs font-semibold rounded-xl shadow-xs transition-colors"
+          >
+            Clear All Filters
+          </button>
         </div>
       </main>
     </div>

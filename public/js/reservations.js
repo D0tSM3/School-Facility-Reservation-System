@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------------------------------------------------------------
 
   function skeletonCardHtml() {
-    return `<div class="reservation-card bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden animate-pulse">
+    return `<div class="reservation-card bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden animate-pulse">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md">
         <div class="flex items-start gap-space-md w-full">
           <div class="rounded bg-surface-container min-w-[56px] h-[52px]"></div>
@@ -170,14 +170,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Same Tailwind class strings the six hand-written cards used, so the
   // action buttons look identical to before now that they're generated.
+  
   const ACTION_STYLES = {
-    cancel: 'px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm',
-    remove: 'px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm',
-    reqcancel: 'px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm',
-    move:   'px-space-md py-space-sm bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm',
-    slip:   'px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1',
-    rebook: 'px-space-md py-space-sm bg-secondary-container hover:bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1 shadow-sm',
-    logs:   'px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-semibold rounded transition-colors flex items-center gap-1'
+    cancel: 'px-3 py-1.5 bg-gray-50 hover:bg-red-50 text-gray-700 hover:text-red-700 border border-gray-200 hover:border-red-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 shadow-sm',
+    remove: 'px-3 py-1.5 bg-gray-50 hover:bg-red-50 text-gray-700 hover:text-red-700 border border-gray-200 hover:border-red-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 shadow-sm',
+    reqcancel: 'px-3 py-1.5 bg-gray-50 hover:bg-red-50 text-gray-700 hover:text-red-700 border border-gray-200 hover:border-red-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 shadow-sm',
+    move:   'px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 shadow-sm',
+    slip:   'px-3 py-1.5 bg-[#7a1f2b] hover:bg-[#5b0617] text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 shadow-sm',
+    rebook: 'px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 shadow-sm',
+    logs:   'px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 shadow-sm'
   };
   const ACTION_ICONS = {
     cancel: 'cancel', move: 'edit_calendar', slip: 'receipt_long', rebook: 'sync', logs: 'folder_open',
@@ -219,32 +220,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const id = reservation.reservation_id;
     const canMove = reservation.move_status !== 'Pending';
     const buttons = [];
+    const isPast = new Date(reservation.end_time) < new Date();
+
+    if (isPast && reservation.status !== 'Rejected' && reservation.status !== 'Cancelled') {
+      // Past / History: read-only
+      return '';
+    }
 
     switch (reservation.status) {
       case 'Pending':
-        buttons.push(actionButton('remove', id, 'Remove Booking'));
-        if (canMove) buttons.push(actionButton('move', id, 'Request to Move'));
-        buttons.push(actionButton('logs', id, 'View Log Archive'));
+        buttons.push(actionButton('remove', id, 'Withdraw Request'));
         break;
       case 'Approved':
-        buttons.push(actionButton('slip', id, 'View Confirmation Slip'));
-        buttons.push(actionButton('reqcancel', id, 'Request Cancellation', cancelRequestBlockedReason(reservation)));
-        if (canMove) buttons.push(actionButton('move', id, 'Request to Move'));
-        buttons.push(actionButton('logs', id, 'View Log Archive'));
-        break;
-      case 'Completed':
-        buttons.push(actionButton('slip', id, 'Archived Slip'));
-        buttons.push(actionButton('rebook', id, 'Re-book Space'));
-        buttons.push(actionButton('logs', id, 'View Log Archive'));
+        buttons.push(actionButton('reqcancel', id, 'Request Cancel', cancelRequestBlockedReason(reservation)));
+        if (canMove) buttons.push(actionButton('move', id, 'Request Move'));
+        buttons.push(actionButton('slip', id, 'Export Permit'));
         break;
       case 'Rejected':
       case 'Cancelled':
-        buttons.push(actionButton('rebook', id, 'Re-book Space'));
-        buttons.push(actionButton('remove', id, 'Remove'));
-        buttons.push(actionButton('logs', id, 'View Log Archive'));
+        buttons.push(actionButton('remove', id, 'Remove/Dismiss'));
         break;
-      default:
-        buttons.push(actionButton('logs', id, 'View Log Archive'));
     }
     return buttons.join('');
   }
@@ -258,35 +253,33 @@ document.addEventListener('DOMContentLoaded', () => {
       const date = formatDate(reservation.start_time);
       const isPast = new Date(reservation.end_time) < new Date();
 
-      const statusClass = reservation.status === 'Approved'
-        ? 'bg-[#DCFCE7] text-[#15803D]'
+      const statusBadge = reservation.status === 'Approved'
+        ? '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-green-50 text-green-700 text-xs font-semibold border border-green-200/60"><span class="material-symbols-outlined text-[12px]">check_circle</span>Approved</span>'
         : reservation.status === 'Rejected' || reservation.status === 'Cancelled'
-          ? 'bg-[#FEE2E2] text-[#B91C1C]'
+          ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-red-50 text-red-700 text-xs font-semibold border border-red-200/60"><span class="material-symbols-outlined text-[12px]">error</span>${escapeHtml(reservation.status)}</span>`
           : reservation.status === 'Completed'
-            ? 'bg-[#F1F5F9] text-[#475569]'
-            : 'bg-[#FEF3C7] text-[#B45309]';
-      const statusIcon = reservation.status === 'Approved'
-        ? 'check_circle'
+            ? '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-100 text-gray-700 text-xs font-semibold border border-gray-200/60"><span class="material-symbols-outlined text-[12px]">check_circle</span>Completed</span>'
+            : '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-200/60"><span class="material-symbols-outlined text-[12px]">schedule</span>Pending</span>';
+      
+      const borderColorClass = reservation.status === 'Approved'
+        ? 'border-l-[4px] border-l-green-500'
         : reservation.status === 'Rejected' || reservation.status === 'Cancelled'
-          ? 'error'
+          ? 'border-l-[4px] border-l-red-500'
           : reservation.status === 'Completed'
-            ? 'check_circle'
-            : 'schedule';
+            ? 'border-l-[4px] border-l-gray-400'
+            : 'border-l-[4px] border-l-amber-500';
 
       let moveStatusBadge = '';
       if (reservation.move_status === 'Pending') {
-        moveStatusBadge = `<div class="mt-2 text-label-sm font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">Move Request Pending review.</div>`;
+        moveStatusBadge = `<div class="mt-2 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200/60">Move Request Pending review.</div>`;
       } else if (reservation.move_status === 'Rejected' && reservation.move_comment) {
-        moveStatusBadge = `<div class="mt-2 text-label-sm font-medium text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200">Move Request Rejected: ${escapeHtml(reservation.move_comment)}</div>`;
+        moveStatusBadge = `<div class="mt-2 text-xs font-medium text-red-700 bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-200/60">Move Request Rejected: ${escapeHtml(reservation.move_comment)}</div>`;
       }
 
-      // Cancellation request state. Approved is deliberately not shown: the
-      // booking itself has already flipped to Cancelled, which the status
-      // chip says more clearly than a second badge would.
       if (reservation.cancel_status === 'Pending') {
-        moveStatusBadge += `<div class="mt-2 text-label-sm font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">Cancellation Request pending review. This booking still stands until staff decide.</div>`;
+        moveStatusBadge += `<div class="mt-2 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200/60">Cancellation Request pending review. Your booking stands until decided.</div>`;
       } else if (reservation.cancel_status === 'Rejected' && reservation.cancel_comment) {
-        moveStatusBadge += `<div class="mt-2 text-label-sm font-medium text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200">Cancellation Request Rejected: ${escapeHtml(reservation.cancel_comment)}</div>`;
+        moveStatusBadge += `<div class="mt-2 text-xs font-medium text-red-700 bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-200/60">Cancellation Request Rejected: ${escapeHtml(reservation.cancel_comment)}</div>`;
       }
 
       const action = buildActions(reservation);
@@ -296,28 +289,50 @@ document.addEventListener('DOMContentLoaded', () => {
         filterStatus = 'history';
       }
 
-      return `<div data-status="${escapeHtml(filterStatus)}" class="reservation-card bg-surface-container-lowest p-space-md rounded shadow-sm relative overflow-hidden transition-all duration-150 hover:shadow-md">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md">
-          <div class="flex items-start gap-space-md">
-            <div class="p-space-sm rounded bg-surface-container flex flex-col items-center justify-center min-w-[56px] text-center">
-              <span class="font-label-sm text-label-sm text-secondary font-bold uppercase">${date.month}</span>
-              <span class="font-headline-md text-headline-md text-on-surface font-bold leading-none">${date.day}</span>
+      return `<div data-status="${escapeHtml(filterStatus)}" class="reservation-card bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md hover:border-gray-300 transition-all ${borderColorClass}">
+        <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          
+          <div class="flex items-start gap-5">
+            <!-- Date block -->
+            <div class="flex flex-col items-center justify-center min-w-[56px] text-center border border-gray-100 rounded-xl overflow-hidden bg-white shadow-sm">
+              <span class="w-full bg-gray-50 py-1 text-[10px] text-gray-500 font-bold uppercase tracking-wider border-b border-gray-100">${date.month}</span>
+              <span class="py-1.5 text-lg text-gray-900 font-bold leading-none">${date.day}</span>
             </div>
-            <div class="flex flex-col space-y-space-xs">
-              <div class="flex items-center gap-space-sm flex-wrap">
-                <span class="font-label-md text-label-md text-primary font-bold">REQ-${escapeHtml(reservation.reservation_id).substring(0,8)}</span>
-                <span class="px-2 py-0.5 rounded font-label-sm text-label-sm font-bold ${statusClass} flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">${statusIcon}</span>${escapeHtml(reservation.status)}</span>
-                <span class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span>${formatTime(reservation.start_time)} - ${formatTime(reservation.end_time)}</span>
+            
+            <!-- Info block -->
+            <div class="flex flex-col space-y-1">
+              <div class="flex items-center gap-3 flex-wrap mb-1">
+                <span class="text-xs font-bold text-gray-400 font-mono tracking-wide">REQ-${escapeHtml(reservation.reservation_id).substring(0,8)}</span>
+                ${statusBadge}
+                <span class="text-xs font-medium text-gray-500 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px]">schedule</span>
+                  ${formatTime(reservation.start_time)} - ${formatTime(reservation.end_time)}
+                </span>
               </div>
-              <div class="font-headline-sm text-headline-sm text-on-surface font-semibold">${escapeHtml(reservation.purpose)}</div>
-              ${reservation.category ? `<div><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm font-semibold"><span class="material-symbols-outlined text-[14px]">category</span>${escapeHtml(reservation.category)}</span></div>` : ''}
-              <div class="flex items-center gap-space-md text-body-sm font-body-sm text-on-surface-variant flex-wrap">
-                <span class="flex items-center gap-1 font-medium text-on-surface"><span class="material-symbols-outlined text-[16px] text-secondary">meeting_room</span>${escapeHtml(reservation.room_name || reservation.room_id)}</span>
+              
+              <div class="text-base text-gray-900 font-semibold tracking-tight">${escapeHtml(reservation.purpose)}</div>
+              
+              <div class="flex items-center gap-4 text-xs font-medium text-gray-500 flex-wrap pt-1">
+                <span class="flex items-center gap-1.5 text-gray-700">
+                  <span class="material-symbols-outlined text-[16px] text-gray-400">meeting_room</span>
+                  ${escapeHtml(reservation.room_name || reservation.room_id)}
+                </span>
+                ${reservation.category ? `
+                <span class="flex items-center gap-1.5 text-gray-500">
+                  <span class="material-symbols-outlined text-[16px] text-gray-400">category</span>
+                  ${escapeHtml(reservation.category)}
+                </span>` : ''}
               </div>
+              
               ${moveStatusBadge}
             </div>
           </div>
-          <div class="flex items-center gap-space-xs shrink-0 self-end md:self-center">${action}</div>
+          
+          <!-- Actions -->
+          <div class="flex items-center gap-2 shrink-0 self-start md:self-center">
+            ${action}
+          </div>
+          
         </div>
       </div>`;
     }).join('');
@@ -515,12 +530,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      tabs.forEach(t => {
-        t.classList.remove('bg-primary', 'text-on-primary', 'font-semibold', 'shadow-sm');
-        t.classList.add('text-on-surface-variant', 'hover:text-on-surface', 'hover:bg-surface-container');
-      });
-      tab.classList.add('bg-primary', 'text-on-primary', 'font-semibold', 'shadow-sm');
-      tab.classList.remove('text-on-surface-variant', 'hover:text-on-surface', 'hover:bg-surface-container');
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
 
       activeFilter = tab.getAttribute('data-filter') || 'all';
       applyFilters();

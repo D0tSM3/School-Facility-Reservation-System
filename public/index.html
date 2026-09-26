@@ -169,187 +169,142 @@
   <body
     class="bg-background font-body-md text-on-surface antialiased min-h-screen flex items-center justify-center p-space-md"
   >
-    <main class="w-full max-w-md">
-      <div class="flex flex-col w-full">
-        <div
-          class="relative w-full rounded-xl overflow-hidden shadow-xl bg-tertiary"
-        >
-          <div class="absolute inset-0 auth-hero-bg"></div>
-          <div
-            class="absolute inset-0 bg-gradient-to-b from-primary/95 via-primary-container/90 to-tertiary/95 mix-blend-multiply"
-          ></div>
-          <div
-            class="absolute inset-0 bg-gradient-to-t from-tertiary via-tertiary/75 to-transparent"
-          ></div>
-          <div
-            class="relative z-10 w-full p-space-md sm:p-space-lg flex flex-col items-center"
-          >
-            <div class="text-center mb-space-md max-w-sm">
-              <span
-                class="inline-block font-label-sm text-label-sm text-secondary-container tracking-widest uppercase mb-space-xs font-semibold"
-              >
-                Buenavista Polytechnic University
-              </span>
-              <h1
-                class="font-headline-md text-headline-md text-on-primary font-bold tracking-tight mb-space-xs"
-              >
-                CampusRoom
-              </h1>
-              <p
-                class="font-body-sm text-body-sm text-surface-container-high leading-relaxed opacity-90"
-              >
-                Centralized Space Reservation System replacing logbooks with
-                streamlined academic facility scheduling.
-              </p>
-            </div>
-            <div
-              class="w-full bg-surface-container-lowest rounded-lg shadow-md p-space-md text-on-surface"
-            >
-              <div class="flex flex-col items-center mb-space-md text-center">
-                <div class="h-10 mb-space-xs flex items-center justify-center">
-                  <img
-                    alt="CampusRoom Logo"
-                    class="h-8 w-auto object-contain"
-                    src="assets/logo.svg"
-                  />
-                </div>
-                <h2
-                  class="font-headline-sm text-headline-sm text-primary font-semibold"
-                >
-                  Institutional Sign In
-                </h2>
-                <p
-                  class="font-body-sm text-body-sm text-on-surface-variant mt-0.5"
-                >
-                  Access lecture halls, laboratories, and seminar spaces.
+        <main class="w-full max-w-[950px]">
+      <div class="flex flex-col w-full shadow-2xl rounded-2xl overflow-hidden bg-white">
+        <div class="flex flex-col md:flex-row min-h-[600px]">
+          
+          <!-- Left side -->
+          <div class="relative w-full md:w-[45%] bg-[#1a1a1a] p-10 flex flex-col">
+            <div class="relative z-10 flex flex-col h-full">
+              <!-- Top Left Header -->
+              <div class="mb-auto">
+                <img alt="CampusRoom Logo" class="h-12 w-auto object-contain" src="assets/logo.svg" />
+              </div>
+              
+              <!-- Center Text -->
+              <div class="my-auto py-8">
+                <h1 class="text-white text-5xl font-extrabold tracking-tight mb-4">
+                  CampusRoom
+                </h1>
+                <p class="text-white text-[15px] leading-relaxed max-w-[280px]">
+                  Centralized Space Reservation System replacing logbooks with streamlined academic facility scheduling.
                 </p>
               </div>
-              <form id="loginForm" class="flex flex-col gap-space-sm">
-                <div>
-                  <label
-                    class="block font-label-md text-label-md text-on-surface mb-1"
-                    for="bpu-email"
-                  >
-                    University Email Address
-                  </label>
-                  <div class="relative">
-                    <input
-                      class="w-full bg-surface-container-low rounded-lg px-3 py-2 text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest focus:outline-none transition-colors"
-                      id="bpu-email"
-                      placeholder="id@bpu.edu.ph"
-                      type="email"
-                      autocomplete="username"
-                    />
-                    <span
-                      class="absolute right-3 top-2.5 text-on-surface-variant material-symbols-outlined text-[18px]"
-                    >
-                      school
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <div class="flex items-center justify-between mb-1">
-                    <label
-                      class="block font-label-md text-label-md text-on-surface"
-                      for="bpu-password"
-                    >
-                      Password
-                    </label>
-                    <a
-                      class="font-label-sm text-label-sm text-primary font-semibold hover:underline"
-                      href="#"
-                    >
-                      Forgot password?
-                    </a>
-                  </div>
-                  <div class="relative">
-                    <input
-                      class="w-full bg-surface-container-low rounded-lg pl-3 pr-10 py-2 text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest focus:outline-none transition-colors tracking-widest"
-                      id="bpu-password"
-                      type="password"
-                      placeholder="Enter your password"
-                      autocomplete="current-password"
-                    />
-                    <button
-                      type="button"
-                      id="toggle-password"
-                      class="absolute right-3 top-2.5 text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none flex items-center justify-center cursor-pointer"
-                      aria-label="Toggle password visibility"
-                    >
-                      <span
-                        id="toggle-password-icon"
-                        class="material-symbols-outlined text-[18px] select-none"
-                      >
-                        visibility_off
-                      </span>
-                    </button>
-                  </div>
-                </div>
-                <div
-                  id="authErrorAlert"
-                  class="bg-error-container text-on-error-container rounded-lg p-space-sm items-start gap-2 text-left hidden"
-                >
-                  <span
-                    class="material-symbols-outlined text-error shrink-0 text-[18px] mt-0.5"
-                    >error</span
-                  >
-                  <p
-                    id="authErrorAlertText"
-                    class="font-body-sm text-body-sm text-error leading-tight font-medium"
-                  >
-                    Authentication failed: Invalid credentials provided. Please
-                    verify your faculty/student institutional ID or password.
-                  </p>
-                </div>
-                <label
-                  class="flex items-center gap-2.5 cursor-pointer py-1 select-none"
-                >
-                  <input
-                    checked=""
-                    class="w-4 h-4 rounded text-primary-container bg-surface-container-high focus:ring-0 accent-primary-container cursor-pointer"
-                    type="checkbox"
-                  />
-                  <span class="font-body-sm text-body-sm text-on-surface">
-                    Remember my device on BPU campus network
-                  </span>
-                </label>
-                <!--
-                  reCAPTCHA mounts here. auth.js renders it only when
-                  GET /api/config reports it enabled, so with the checks
-                  switched off this stays empty and the form is unchanged.
-                -->
-                <div id="loginRecaptcha" class="flex justify-center mt-1"></div>
-                <button
-                  class="w-full bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg py-2.5 px-4 rounded-lg shadow-sm flex items-center justify-center gap-2 transition-colors group mt-1"
-                  type="submit"
-                >
-                  <span>Sign In to CampusRoom</span>
-                  <span
-                    class="material-symbols-outlined text-[18px] transition-transform group-hover:translate-x-1"
-                  >
-                    arrow_forward
-                  </span>
-                </button>
-              </form>
 
-              <div
-                class="mt-space-sm pt-space-xs flex items-center justify-center gap-1.5 text-on-surface-variant opacity-80"
-              >
-                <span class="material-symbols-outlined text-[14px]">
-                  verified_user
-                </span>
-                <span
-                  class="font-label-sm text-label-sm tracking-tight text-center"
-                >
-                  Secured by BPU Central ICT • SSO Active
-                </span>
+              <!-- Bottom Text -->
+              <div class="mt-auto">
+                <p class="text-[10px] text-[#a3a3a3] uppercase tracking-wider font-semibold leading-relaxed">
+                  &copy; 2024 Buenavista Polytechnic University.<br/>All rights reserved.
+                </p>
               </div>
             </div>
-            <div class="mt-space-md text-center">
-              <p class="font-label-sm text-label-sm text-tertiary-fixed-dim">
-                © 2024 Buenavista Polytechnic University. All rights reserved.
+          </div>
+
+          <!-- Right side -->
+          <div class="w-full md:w-[55%] p-10 md:p-14 flex flex-col justify-center bg-white">
+            
+            <div class="mb-8">
+              <h2 class="text-[32px] font-bold text-[#191c1e] mb-3 tracking-tight">
+                Institutional Sign In
+              </h2>
+              <p class="text-[#564242] text-[15px] leading-relaxed max-w-[340px]">
+                Access lecture halls, laboratories, and seminar spaces.
               </p>
             </div>
+
+            <form id="loginForm" class="flex flex-col gap-5">
+              <div>
+                <label class="block font-label-md text-[13px] font-semibold text-[#191c1e] mb-2" for="bpu-email">
+                  University Email Address
+                </label>
+                <div class="relative">
+                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#564242] material-symbols-outlined text-[20px] opacity-70">
+                    school
+                  </span>
+                  <input
+                    class="w-full bg-[#f8f9fb] border border-[#dcc0c0] rounded-lg pl-10 pr-3 py-2.5 text-[#191c1e] font-body-md text-[14px] focus:bg-white focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] focus:outline-none transition-all placeholder:text-[#897172]"
+                    id="bpu-email"
+                    placeholder="id@bpu.edu.ph"
+                    type="email"
+                    autocomplete="username"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label class="block font-label-md text-[13px] font-semibold text-[#191c1e] mb-2" for="bpu-password">
+                  Password
+                </label>
+                <div class="relative">
+                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#564242] material-symbols-outlined text-[20px] opacity-70">
+                    lock
+                  </span>
+                  <input
+                    class="w-full bg-[#f8f9fb] border border-[#dcc0c0] rounded-lg pl-10 pr-10 py-2.5 text-[#191c1e] font-body-md text-[14px] focus:bg-white focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] focus:outline-none transition-all placeholder:text-[#897172] tracking-wide"
+                    id="bpu-password"
+                    type="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    id="toggle-password"
+                    class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#564242] opacity-70 hover:opacity-100 transition-opacity focus:outline-none flex items-center justify-center cursor-pointer"
+                    aria-label="Toggle password visibility"
+                  >
+                    <span id="toggle-password-icon" class="material-symbols-outlined text-[20px] select-none">
+                      visibility_off
+                    </span>
+                  </button>
+                </div>
+                <div class="flex justify-end mt-2">
+                  <a class="font-label-sm text-[13px] text-[#7a1f2b] font-semibold hover:underline" href="#">
+                    Forgot password?
+                  </a>
+                </div>
+              </div>
+
+              <div id="authErrorAlert" class="bg-[#ffdad6] text-[#93000a] rounded-lg p-3 items-start gap-2 text-left hidden">
+                <span class="material-symbols-outlined text-[#ba1a1a] shrink-0 text-[18px] mt-0.5">error</span>
+                <p id="authErrorAlertText" class="font-body-sm text-[12px] text-[#ba1a1a] leading-tight font-medium">
+                  Authentication failed: Invalid credentials provided. Please verify your faculty/student institutional ID or password.
+                </p>
+              </div>
+
+              <!-- reCAPTCHA mounts here -->
+              <div id="loginRecaptcha" class="flex justify-start"></div>
+
+              <label class="flex items-center gap-3 cursor-pointer py-1 select-none">
+                <input
+                  checked=""
+                  class="w-[18px] h-[18px] rounded text-[#7a1f2b] bg-[#e7e8ea] border-none focus:ring-0 accent-[#7a1f2b] cursor-pointer"
+                  type="checkbox"
+                />
+                <span class="text-[14px] text-[#564242] font-medium">
+                  Remember my device on BPU campus network
+                </span>
+              </label>
+
+              <button
+                class="w-full bg-[#7a2839] hover:bg-[#5b1e2a] text-white font-label-lg text-[15px] py-3.5 px-4 rounded-lg shadow-sm flex items-center justify-center gap-2 transition-colors group mt-2"
+                type="submit"
+              >
+                <span>Sign In to CampusRoom</span>
+                <span class="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">
+                  arrow_forward
+                </span>
+              </button>
+            </form>
+
+            <div class="mt-8 flex items-center justify-center gap-1.5 text-on-surface-variant opacity-70">
+              <span class="material-symbols-outlined text-[16px]">
+                shield
+              </span>
+              <span class="text-[12px] font-medium tracking-tight">
+                Secured by BPU Central ICT &bull; SSO Active
+              </span>
+            </div>
+            
           </div>
         </div>
       </div>
@@ -358,3 +313,4 @@
     <script src="js/auth.js"></script>
   </body>
 </html>
+
