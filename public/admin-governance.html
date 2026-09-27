@@ -318,6 +318,7 @@
                         <th class="p-2">Room Name</th>
                         <th class="p-2">Capacity</th>
                         <th class="p-2">Status</th>
+                        <th class="p-2">Active</th>
                         <th class="p-2 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -440,21 +441,33 @@ document.addEventListener('DOMContentLoaded', () => {
             const tbody = document.getElementById('roomsTableBody');
             tbody.innerHTML = '';
             rooms.forEach(r => {
+                // is_active comes back as the normalized "0"/"1" shape (Section 6);
+                // coerce loosely since it may arrive as a string or a number.
+                const isActive = Number(r.is_active) !== 0;
+
                 const tr = document.createElement('tr');
-                tr.className = "border-b border-surface-variant";
+                tr.className = "border-b border-surface-variant" + (isActive ? '' : ' opacity-60');
                 // name is admin-supplied free text (the "New Room" prompt below), so
                 // it's escaped before going into innerHTML rather than trusted as markup.
                 tr.innerHTML = `
                     <td class="p-2 font-medium">${escapeHtml(r.name)}</td>
                     <td class="p-2">${escapeHtml(r.capacity)}</td>
                     <td class="p-2">
-                        <select class="status-select p-1 bg-surface border rounded text-xs" data-id="${escapeHtml(r.room_id)}">
+                        <select class="status-select p-1 bg-surface border rounded text-xs" data-id="${escapeHtml(r.room_id)}" ${isActive ? '' : 'disabled'}>
                             <option value="Available" ${r.status==='Available'?'selected':''}>Available</option>
                             <option value="Maintenance" ${r.status==='Maintenance'?'selected':''}>Maintenance</option>
                         </select>
                     </td>
-                    <td class="p-2 text-right">
-                        <button class="save-room text-primary font-bold text-xs" data-id="${escapeHtml(r.room_id)}">Save</button>
+                    <td class="p-2">
+                        ${isActive
+                            ? '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#DCFCE7] text-[#15803D]">ACTIVE</span>'
+                            : '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-surface-container-highest text-on-surface-variant">DECOMMISSIONED</span>'}
+                    </td>
+                    <td class="p-2 text-right space-x-2 whitespace-nowrap">
+                        <button class="save-room text-primary font-bold text-xs" data-id="${escapeHtml(r.room_id)}" ${isActive ? '' : 'disabled'}>Save</button>
+                        <button class="toggle-active font-bold text-xs ${isActive ? 'text-tertiary' : 'text-primary'}" data-id="${escapeHtml(r.room_id)}" data-next-active="${isActive ? 'false' : 'true'}">
+                            ${isActive ? 'Deactivate' : 'Reactivate'}
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -473,6 +486,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     if (resp.ok) alert('Saved!');
                     else alert('Error saving room.');
+                });
+            });
+
+            document.querySelectorAll('.toggle-active').forEach(b => {
+                b.addEventListener('click', async (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    const nextActive = e.target.getAttribute('data-next-active') === 'true';
+                    const verb = nextActive ? 'reactivate' : 'deactivate';
+                    if (!confirm(`Are you sure you want to ${verb} this room?`)) return;
+                    const resp = await fetch(BASE + 'api/rooms/' + id, {
+                        method: 'PATCH',
+                        credentials: 'same-origin',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({is_active: nextActive})
+                    });
+                    if (resp.ok) loadRooms();
+                    else alert('Error updating room status.');
                 });
             });
         } catch(err) { console.error(err); }

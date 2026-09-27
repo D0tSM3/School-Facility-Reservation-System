@@ -25,5 +25,19 @@
     return String(value ?? '').replace(/[&<>'"]/g, (character) => HTML_ESCAPES[character]);
   }
 
-  window.CampusRoomUtil = Object.freeze({ escapeHtml });
+  /**
+   * Parse a MySQL/Postgres DATETIME string ("2024-10-26 10:00:00") as local
+   * time. Lifted from staff-queue.js (Section 8): strict-spec browsers
+   * (Safari and others) refuse to parse the space-separated form that
+   * `new Date(value)` accepted on Chrome/Firefox, silently returning an
+   * Invalid Date and dropping reservations from Upcoming/Past tiles.
+   * Swapping the space for "T" makes it valid ISO 8601 everywhere.
+   */
+  function parseDate(value) {
+    if (!value) return null;
+    const date = new Date(String(value).replace(' ', 'T'));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  window.CampusRoomUtil = Object.freeze({ escapeHtml, parseDate });
 })();

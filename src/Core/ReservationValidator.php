@@ -31,7 +31,7 @@ class ReservationValidator
         // requested time window is. This used to be missing entirely, so
         // ReservationValidator::check() would happily approve a booking
         // for a room nobody can actually use.
-        $stmtRoom = $pdo->prepare('SELECT status, is_active FROM Rooms WHERE room_id = ?');
+        $stmtRoom = $pdo->prepare('SELECT status, is_active::int AS is_active FROM Rooms WHERE room_id = ?');
         $stmtRoom->execute([$roomId]);
         $room = $stmtRoom->fetch(PDO::FETCH_ASSOC);
 

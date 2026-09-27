@@ -34,6 +34,23 @@ class Auth
     public static function logout(): void
     {
         self::startSession();
+
+        // session_destroy() alone only wipes the server-side session data —
+        // the browser keeps sending the old PHPSESSID cookie afterwards.
+        // Expire it explicitly so a bfcache-restored page (or a reused tab)
+        // can't ride on a cookie that still looks "present" client-side.
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', [
+                'expires'  => time() - 42000,
+                'path'     => $params['path'],
+                'domain'   => $params['domain'],
+                'secure'   => $params['secure'],
+                'httponly' => $params['httponly'],
+                'samesite' => $params['samesite'],
+            ]);
+        }
+
         session_destroy();
     }
 

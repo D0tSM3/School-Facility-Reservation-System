@@ -32,7 +32,15 @@ class RoomController
     {
         Auth::requireRole(['Customer', 'Staff', 'Admin']);
 
-        $rooms = $this->rooms->findAllActive();
+        $role = (string) Auth::role();
+
+        // Staff/Admin manage the room inventory, so they need to see
+        // decommissioned rooms too (otherwise there's no way back short of
+        // a direct DB edit). Customers only ever see bookable rooms.
+        $rooms = in_array($role, ['Staff', 'Admin'], true)
+            ? $this->rooms->findAllForManagement()
+            : $this->rooms->findAllActive();
+
         foreach ($rooms as &$room) {
             $room['next_available'] = $this->reservations->getNextAvailableSlot($room['room_id']);
         }

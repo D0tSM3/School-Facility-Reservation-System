@@ -88,11 +88,17 @@ DB_PASSWORD=<your-supabase-db-password>
 ## 4 — Run locally
 
 ```bash
-php -S localhost:8000 -t public
+php -S localhost:8000 -t public router.php
 ```
 
-The `-t public` flag tells the built-in server to use `public/` as its
-document root, so `public/index.php` handles every request.
+The `router.php` argument is required: this app is a front-controller
+(every /api/... route is matched inside public/index.php's routing table,
+not served from real files), and PHP's built-in server only falls back to
+index.php for the exact document-root path without a router script.
+Without it, every /api/... request 404s directly and no role's dashboard
+loads any data. router.php lives at the project root, next to
+composer.json. (Apache/XAMPP doesn't need this — public/.htaccess
+already handles routing for that case.)
 
 ---
 

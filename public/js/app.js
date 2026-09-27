@@ -3,6 +3,20 @@
  * Handles session info, active links, header profiles, and logout with subfolder relative paths.
  */
 
+// -----------------------------------------------------------------------
+// 0. Guard against the back-forward cache (bfcache).
+//    After Sign Out redirects to index.html, hitting the browser's Back
+//    button can restore this page straight from bfcache without re-running
+//    any of the checks below — showing a "logged in" page even though the
+//    session was destroyed server-side. Forcing a reload on restore makes
+//    the DOMContentLoaded session check below run for real again.
+// -----------------------------------------------------------------------
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 

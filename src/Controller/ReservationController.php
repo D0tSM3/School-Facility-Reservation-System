@@ -704,6 +704,15 @@ class ReservationController
             Response::error('Only pending or approved reservations can be rescheduled.', 422);
         }
 
+        // The customer page hides the Move button once a booking's end_time
+        // has passed, but that is a courtesy only (isPastEnd() in
+        // reservations.js) — without this a stale tab or a direct API call
+        // could still file a move request against a booking that already
+        // happened.
+        if (strtotime($existing['end_time']) <= time()) {
+            Response::error('This booking has already passed and can no longer be moved.', 422);
+        }
+
         // At most one open Move Request per reservation. The card hides the
         // button once one is pending, but that is a courtesy only — without
         // this a stale tab or a direct API call stacks duplicates and leaves

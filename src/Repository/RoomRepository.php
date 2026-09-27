@@ -52,7 +52,7 @@ class RoomRepository
                     r.room_type,
                     r.capacity,
                     r.status,
-                    r.is_active,
+                    r.is_active::int AS is_active,
                     r.created_at,
                     CASE
                         WHEN EXISTS (
@@ -61,11 +61,43 @@ class RoomRepository
                                AND res.status = 'Approved'
                                AND NOW() BETWEEN res.start_time AND res.end_time
                         ) THEN 'Occupied'
-                        ELSE r.status
+                        ELSE r.status::text
                     END AS live_status
                FROM Rooms r
-              WHERE r.is_active = 1
+              WHERE r.is_active = true
            ORDER BY r.name"
+        );
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Return every room regardless of is_active state (Staff/Admin-only view).
+     * Customers only ever see findAllActive(); this is what lets Staff/Admin
+     * find a decommissioned room again in order to reactivate it.
+     */
+    public function findAllForManagement(): array
+    {
+        $stmt = $this->db->query(
+            "SELECT r.room_id,
+                    r.name,
+                    r.floor,
+                    r.room_type,
+                    r.capacity,
+                    r.status,
+                    r.is_active::int AS is_active,
+                    r.created_at,
+                    CASE
+                        WHEN r.is_active = false THEN 'Decommissioned'
+                        WHEN EXISTS (
+                            SELECT 1 FROM Reservations res
+                             WHERE res.room_id = r.room_id
+                               AND res.status = 'Approved'
+                               AND NOW() BETWEEN res.start_time AND res.end_time
+                        ) THEN 'Occupied'
+                        ELSE r.status::text
+                    END AS live_status
+               FROM Rooms r
+           ORDER BY r.is_active DESC, r.name"
         );
         return $stmt->fetchAll();
     }
@@ -74,7 +106,7 @@ class RoomRepository
     public function findById(string $roomId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT room_id, name, floor, room_type, capacity, status, is_active, created_at
+            'SELECT room_id, name, floor, room_type, capacity, status, is_active::int AS is_active, created_at
                FROM Rooms
               WHERE room_id = :room_id
               LIMIT 1',
@@ -109,7 +141,7 @@ class RoomRepository
     public function findByName(string $name): ?array
     {
         $stmt = $this->db->query(
-            'SELECT room_id, name, floor, room_type, capacity, status, is_active, created_at
+            'SELECT room_id, name, floor, room_type, capacity, status, is_active::int AS is_active, created_at
                FROM Rooms
               WHERE name = :name
               LIMIT 1',
@@ -136,7 +168,7 @@ class RoomRepository
         }
         if ($isActive !== null) {
             $sets[]             = 'is_active = :is_active';
-            $params[':is_active'] = $isActive ? 1 : 0;
+            $params[':is_active'] = $isActive;
         }
 
         if (empty($sets)) {

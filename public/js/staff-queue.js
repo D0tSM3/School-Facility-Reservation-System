@@ -20,8 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
 
-  // Shared helper (js/util.js). Declared up here so nothing can call it before it exists.
-  const { escapeHtml } = window.CampusRoomUtil;
+  // Shared helpers (js/util.js). Declared up here so nothing can call them before they exist.
+  const { escapeHtml, parseDate } = window.CampusRoomUtil;
 
   // ---------------------------------------------------------------
   // Element handles
@@ -128,12 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Helpers
   // ---------------------------------------------------------------
 
-  /** MySQL DATETIME ("2024-10-26 10:00:00") → Date, parsed as local time. */
-  function parseDate(value) {
-    if (!value) return null;
-    const date = new Date(String(value).replace(' ', 'T'));
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
+  /* parseDate() now lives in util.js (Section 8) — same helper reservations.js
+     and dashboard.js use, so a MySQL/Postgres DATETIME string parses the
+     same way (and doesn't silently fail on Safari) everywhere in the app. */
 
   function formatDay(value) {
     const date = parseDate(value);
@@ -540,17 +537,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function facilityCard(room) {
+    // Decommissioned rooms (is_active = false) now show up for Staff/Admin
+    // (see RoomController::index()) so there's a way back to reactivating
+    // them, but they're read-only here: is_active is an Admin-only toggle
+    // (admin-governance.html), so Staff just gets a clearly-marked, disabled card.
+    const decommissioned = room.live_status === 'Decommissioned' || Number(room.is_active) === 0;
     const offline = room.status === 'Maintenance';
     const occupied = room.live_status === 'Occupied';
 
-    const badge = offline
-      ? '<span class="px-2 py-0.5 rounded text-label-sm bg-surface-container-highest text-tertiary font-bold">MAINTENANCE</span>'
-      : occupied
-        ? '<span class="px-2 py-0.5 rounded text-label-sm bg-secondary-fixed text-on-secondary-fixed font-bold">OCCUPIED</span>'
-        : '<span class="px-2 py-0.5 rounded text-label-sm bg-[#DCFCE7] text-[#15803D] font-bold">AVAILABLE</span>';
+    const badge = decommissioned
+      ? '<span class="px-2 py-0.5 rounded text-label-sm bg-surface-container-highest text-on-surface-variant font-bold">DECOMMISSIONED</span>'
+      : offline
+        ? '<span class="px-2 py-0.5 rounded text-label-sm bg-surface-container-highest text-tertiary font-bold">MAINTENANCE</span>'
+        : occupied
+          ? '<span class="px-2 py-0.5 rounded text-label-sm bg-secondary-fixed text-on-secondary-fixed font-bold">OCCUPIED</span>'
+          : '<span class="px-2 py-0.5 rounded text-label-sm bg-[#DCFCE7] text-[#15803D] font-bold">AVAILABLE</span>';
 
     return `
-      <div class="p-space-md rounded-lg bg-surface-container flex flex-col justify-between space-y-space-sm">
+      <div class="p-space-md rounded-lg bg-surface-container flex flex-col justify-between space-y-space-sm ${decommissioned ? 'opacity-60' : ''}">
         <div class="flex items-start justify-between gap-space-xs">
           <div>
             <span class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(room.name)}</span>
@@ -559,7 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ${badge}
         </div>
         <div class="flex items-center justify-between pt-space-xs gap-space-xs">
-          <span class="font-label-sm text-label-sm text-on-surface-variant">Lockout Override</span>
+          <span class="font-label-sm text-label-sm text-on-surface-variant">${decommissioned ? 'Reactivate in Admin \u2192 Rooms' : 'Lockout Override'}</span>
           <button type="button"
                   class="btn-toggle-facility px-3 py-1 rounded font-label-md transition-colors disabled:opacity-40 disabled:pointer-events-none ${
                     offline
@@ -568,7 +572,8 @@ document.addEventListener('DOMContentLoaded', () => {
                   }"
                   data-room-id="${escapeHtml(room.room_id)}"
                   data-room-name="${escapeHtml(room.name)}"
-                  data-next-status="${offline ? 'Available' : 'Maintenance'}">
+                  data-next-status="${offline ? 'Available' : 'Maintenance'}"
+                  ${decommissioned ? 'disabled' : ''}>
             ${offline ? 'Set Available' : 'Set Maintenance'}
           </button>
         </div>
@@ -614,7 +619,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderMaintenanceAlert() {
     if (!alertBox || !alertBtn) return;
 
-    const offline = state.rooms.find((room) => room.status === 'Maintenance');
+    // Decommissioned rooms are already out of service and can only be
+    // brought back by an Admin (is_active), so they don't belong in the
+    // Staff "flip it back to Available" quick-action alert.
+    const offline = state.rooms.find((room) => room.status === 'Maintenance' && Number(room.is_active) !== 0);
 
     if (!offline) {
       alertBtn.dataset.roomId = '';
@@ -638,7 +646,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderKpis() {
     const pending = state.reservations.filter((r) => r.status === 'Pending').length;
-    const offline = state.rooms.filter((r) => r.status === 'Maintenance').length;
+    const offline = state.rooms.filter((r) => r.status === 'Maintenance' && Number(r.is_active) !== 0).length;
     const approvedToday = state.reservations.filter(
       (r) => r.status === 'Approved' && isToday(r.processed_at)
     ).length;

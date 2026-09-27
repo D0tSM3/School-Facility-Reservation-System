@@ -1,8 +1,21 @@
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
-  // Shared helper (js/util.js). Declared up here so nothing can call it before it exists.
-  const { escapeHtml } = window.CampusRoomUtil;
+  // Shared helpers (js/util.js). Declared up here so nothing can call them before they exist.
+  const { escapeHtml, parseDate: sharedParseDate } = window.CampusRoomUtil || {};
+  // Guard against a stale/older cached copy of util.js that predates
+  // parseDate() - without this, every render silently died with
+  // "parseDate is not a function" and got reported as a fake network error.
+  const parseDate = typeof sharedParseDate === 'function'
+    ? sharedParseDate
+    : function (value) {
+        if (!value) return null;
+        const date = new Date(String(value).replace(' ', 'T'));
+        return Number.isNaN(date.getTime()) ? null : date;
+      };
+  if (typeof sharedParseDate !== 'function') {
+    console.warn('[My Reservations] window.CampusRoomUtil.parseDate missing - using local fallback. util.js may be stale/cached.');
+  }
 
   // Staff and Admin are not allowed on this page (Customer-only reservation history).
   // Nav-hiding in app.js isn't enough on its own since a Staff/Admin user can still
@@ -126,7 +139,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function fetchReservations() {
     setLoading(true);
     fetch(BASE + 'api/reservations/mine', { credentials: 'same-origin' })
-      .then(res => res.json().then(json => ({ status: res.status, json })))
+      // Parse the body inside its own catch so a bad/non-JSON response is
+      // reported as a bad response, not confused with the request never
+      // reaching the server at all.
+      .then(res =>
+        res
+          .json()
+          .catch(() => {
+            throw new Error('Server returned an unreadable (non-JSON) response.');
+          })
+          .then(json => ({ status: res.status, json }))
+      )
       .then(({ status, json }) => {
         if (status === 401) {
           window.location.href = 'index.html';
@@ -141,7 +164,16 @@ document.addEventListener('DOMContentLoaded', () => {
         renderReservations();
         applyFilters();
       })
-      .catch(() => showListError('Network error. Check that the server is reachable.'))
+      .catch(err => {
+        // Log the real cause instead of silently swallowing it - this is
+        // what actually failed, whether that's a dropped connection, a bad
+        // response body, or a bug while rendering the data.
+        console.error('[My Reservations] failed to load:', err);
+        const message = (err instanceof TypeError)
+          ? 'Network error. Check that the server is reachable.'
+          : `Could not load your reservations (${err.message}).`;
+        showListError(message);
+      })
       .finally(() => setLoading(false));
   }
 
@@ -152,21 +184,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------------------------------------------------------------
 
   function formatDate(value) {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime())
-      ? { month: '---', day: '--', year: '----' }
-      : {
+    // parseDate() (js/util.js) swaps the space in "YYYY-MM-DD HH:MM:SS" for
+    // a "T" before handing it to `new Date()` — strict-spec browsers like
+    // Safari refuse to parse the space-separated form and silently return
+    // an Invalid Date, which is why reservations were vanishing from the
+    // Upcoming/Past tiles there.
+    const date = parseDate(value);
+    return date
+      ? {
           month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
           day: date.toLocaleDateString('en-US', { day: '2-digit' }),
           year: date.getFullYear()
-        };
+        }
+      : { month: '---', day: '--', year: '----' };
   }
 
   function formatTime(value) {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime())
-      ? 'Time unavailable'
-      : date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const date = parseDate(value);
+    return date
+      ? date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      : 'Time unavailable';
   }
 
   // Same Tailwind class strings the six hand-written cards used, so the
@@ -197,6 +234,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
+   * Whether a reservation's end_time is already in the past. Uses parseDate()
+   * rather than a bare `new Date(reservation.end_time) < new Date()` â€” on a
+   * strict-spec browser the bare form is an Invalid Date, and `Invalid < x`
+   * silently evaluates to false either way, so unparseable values fall back
+   * to "not past" here too rather than to whatever `null < new Date()` would do.
+   */
+  function isPastEnd(reservation) {
+    const end = parseDate(reservation.end_time);
+    return end ? end < new Date() : false;
+  }
+
+  /**
    * '' when a cancellation request may still be filed, otherwise why it can't.
    * Mirrors the server rule in ReservationController::requestCancel(); the
    * server is still the authority and repeats every one of these checks.
@@ -212,21 +261,34 @@ document.addEventListener('DOMContentLoaded', () => {
     return '';
   }
 
+  /**
+   * '' when a move request may still be filed, otherwise why it can't.
+   * Mirrors the server rule in ReservationController::requestMove(); the
+   * server is still the authority and repeats every one of these checks.
+   */
+  function moveRequestBlockedReason(reservation) {
+    if (reservation.move_status === 'Pending') {
+      return 'A move request for this booking is already awaiting staff review.';
+    }
+    if (isPastEnd(reservation)) {
+      return 'This booking has already passed and can no longer be moved.';
+    }
+    return '';
+  }
+
   // Which buttons show per status. An approved booking is deliberately NOT
   // cancellable here: the room is committed, so it goes through a request.
   function buildActions(reservation) {
     const id = reservation.reservation_id;
-    const canMove = reservation.move_status !== 'Pending';
     const buttons = [];
-    const isPast = new Date(reservation.end_time) < new Date();
 
     switch (reservation.status) {
       case 'Pending':
-        if (canMove) buttons.push(actionButton('move', id, 'Move'));
+        buttons.push(actionButton('move', id, 'Move', moveRequestBlockedReason(reservation)));
         buttons.push(actionButton('remove', id, 'Withdraw'));
         break;
       case 'Approved':
-        if (canMove) buttons.push(actionButton('move', id, 'Move'));
+        buttons.push(actionButton('move', id, 'Move', moveRequestBlockedReason(reservation)));
         buttons.push(actionButton('reqcancel', id, 'Cancel', cancelRequestBlockedReason(reservation)));
         buttons.push(actionButton('slip', id, 'View Slip'));
         break;
@@ -247,10 +309,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // existing 'history' tab filter (below) already accepts it.
     reservationList.innerHTML = allReservations.map(reservation => {
       const date = formatDate(reservation.start_time);
-      const isPast = new Date(reservation.end_time) < new Date();
+      const isPast = isPastEnd(reservation);
 
+      // Guard against a row with a missing/null status (e.g. bad data,
+      // a schema change) - throwing here would abort the whole list and
+      // get misreported upstream as a "network error".
+      const status = reservation.status || 'Unknown';
       let statusColor = 'bg-gray-100 text-gray-700';
-      let statusText = reservation.status.toUpperCase();
+      let statusText = status.toUpperCase();
       if (reservation.status === 'Approved') statusColor = 'bg-green-100 text-green-700';
       else if (reservation.status === 'Pending') statusColor = 'bg-yellow-100 text-yellow-700';
       else if (reservation.status === 'Cancelled' || reservation.status === 'Rejected') statusColor = 'bg-red-100 text-red-700';
@@ -270,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const action = buildActions(reservation);
 
-      let filterStatus = reservation.status.toLowerCase();
+      let filterStatus = status.toLowerCase();
       if (isPast && reservation.status !== 'Rejected' && reservation.status !== 'Cancelled') {
         filterStatus = 'history';
       }
@@ -387,10 +453,51 @@ document.addEventListener('DOMContentLoaded', () => {
     currentTargetReservationId = id;
     const moveModalOverlay = document.getElementById('moveModalOverlay');
     const moveErrorMsg = document.getElementById('moveErrorMsg');
+    const moveDateInput = document.getElementById('moveDate');
     if (moveErrorMsg) moveErrorMsg.classList.add('hidden');
+    // Can't pick a date before today at all; native browser UI enforces this.
+    if (moveDateInput) moveDateInput.min = todayYMD();
+    refreshMoveTimeOptions();
     if (moveModalOverlay) {
       moveModalOverlay.classList.remove('opacity-0', 'pointer-events-none');
     }
+  }
+
+  /**
+   * "HH:MM" for right now, local time — same wall-clock string format the
+   * start/end <option> values already use (see js/schedule.js).
+   */
+  function nowHHMM() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  /**
+   * When the chosen move date is today, disable every start/end time option
+   * that has already gone by, so a customer can't submit a "move" into a
+   * slot that's already started. Any other date re-enables the full list.
+   * The server repeats this check (requestMove()'s "must be in the future"
+   * rule); this is convenience only.
+   */
+  function refreshMoveTimeOptions() {
+    const dateInput = document.getElementById('moveDate');
+    const startSelect = document.getElementById('moveStartTime');
+    const endSelect = document.getElementById('moveEndTime');
+    if (!dateInput || !startSelect || !endSelect) return;
+
+    const isToday = dateInput.value === todayYMD();
+    const cutoff = isToday ? nowHHMM() : null;
+
+    [startSelect, endSelect].forEach(select => {
+      let clearedSelection = false;
+      Array.from(select.options).forEach(opt => {
+        if (!opt.value) return; // leave the blank placeholder alone
+        const isPastSlot = cutoff !== null && opt.value <= cutoff;
+        opt.disabled = isPastSlot;
+        if (isPastSlot && select.value === opt.value) clearedSelection = true;
+      });
+      if (clearedSelection) select.value = '';
+    });
   }
 
   // Confirmation slip (Section 12), log archive (Section 13) and re-book
@@ -620,44 +727,75 @@ document.addEventListener('DOMContentLoaded', () => {
       const input = document.getElementById(id);
       if (!input) return;
       input.addEventListener('change', async () => {
+        if (id === 'moveDate') refreshMoveTimeOptions();
         const seq = ++moveCheckSeq;
         const problem = await moveRangeProblem();
         if (seq === moveCheckSeq) showMoveError(problem);
       });
     });
 
+    const moveSubmitBtn = moveForm.querySelector('button[type="submit"]');
+
     moveForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      console.log('[Move] submit clicked'); // remove once confirmed fixed
 
       const moveDate = document.getElementById('moveDate').value;
       const moveStartTime = document.getElementById('moveStartTime').value;
       const moveEndTime = document.getElementById('moveEndTime').value;
       const moveErrorMsg = document.getElementById('moveErrorMsg');
 
-      if (!currentTargetReservationId || !moveDate || !moveStartTime || !moveEndTime) return;
-
-      moveCheckSeq++;   // any in-flight live check is now stale
-      const rangeProblem = await moveRangeProblem();
-      if (rangeProblem) {
-        showMoveError(rangeProblem);
+      // Previously a bare `return` here - with the form's `novalidate`
+      // attribute disabling native "please fill this field" prompts, a
+      // missing field made the button look completely dead. Now it says why.
+      if (!currentTargetReservationId) {
+        showMoveError('No reservation selected. Please close and reopen this dialog.');
+        return;
+      }
+      if (!moveDate || !moveStartTime || !moveEndTime) {
+        showMoveError('Please choose a date, start time and end time.');
         return;
       }
 
-      // Same shape booking.js sends. (The server accepts either; 'T' is used
-      // because new Date() parses it in every browser, the space form is not.)
-      const requestedStart = `${moveDate}T${moveStartTime}:00`;
-      const requestedEnd = `${moveDate}T${moveEndTime}:00`;
+      // Visible feedback the instant the click registers, so a slow
+      // pre-check or request never again looks like a dead button.
+      if (moveSubmitBtn) {
+        moveSubmitBtn.disabled = true;
+        moveSubmitBtn.textContent = 'Checking availability…';
+      }
 
-      fetch(`${BASE}api/reservations/${currentTargetReservationId}/move-request`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          requested_start_time: requestedStart,
-          requested_end_time: requestedEnd
-        })
-      })
-      .then(res => res.json())
-      .then(json => {
+      try {
+        moveCheckSeq++;   // any in-flight live check is now stale
+
+        // moveRangeProblem() calls out to the room-calendar endpoint with no
+        // timeout of its own; race it so a hung request can't leave the
+        // button stuck forever with no explanation.
+        const timeout = new Promise(resolve => setTimeout(() => resolve(undefined), 8000));
+        const rangeProblem = await Promise.race([moveRangeProblem(), timeout]);
+        if (rangeProblem === undefined) {
+          console.warn('[Move] availability pre-check timed out; submitting anyway, server will validate.');
+        } else if (rangeProblem) {
+          showMoveError(rangeProblem);
+          return;
+        }
+
+        // Same shape booking.js sends. (The server accepts either; 'T' is used
+        // because new Date() parses it in every browser, the space form is not.)
+        const requestedStart = `${moveDate}T${moveStartTime}:00`;
+        const requestedEnd = `${moveDate}T${moveEndTime}:00`;
+
+        if (moveSubmitBtn) moveSubmitBtn.textContent = 'Submitting…';
+
+        const res = await fetch(`${BASE}api/reservations/${currentTargetReservationId}/move-request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requested_start_time: requestedStart,
+            requested_end_time: requestedEnd
+          })
+        });
+        const json = await res.json();
+
         if (json.success) {
           fetchReservations(); // reload to show pending badge
           closeModal();
@@ -665,12 +803,16 @@ document.addEventListener('DOMContentLoaded', () => {
           moveErrorMsg.textContent = json.error || 'Failed to submit move request.';
           moveErrorMsg.classList.remove('hidden');
         }
-      })
-      .catch(err => {
-        console.error(err);
+      } catch (err) {
+        console.error('[Move] submit failed:', err);
         moveErrorMsg.textContent = 'Network error.';
         moveErrorMsg.classList.remove('hidden');
-      });
+      } finally {
+        if (moveSubmitBtn) {
+          moveSubmitBtn.disabled = false;
+          moveSubmitBtn.textContent = 'Submit Move';
+        }
+      }
     });
   }
 

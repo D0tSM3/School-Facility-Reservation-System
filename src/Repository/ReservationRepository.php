@@ -127,7 +127,7 @@ class ReservationRepository
                . self::LATEST_MOVE_JOIN
                . self::LATEST_CANCEL_JOIN . '
               WHERE res.customer_id = :customer_id
-                AND res.customer_hidden = 0
+                AND res.customer_hidden = false
            ORDER BY res.created_at DESC',
             [':customer_id' => $customerId]
         );
@@ -145,7 +145,7 @@ class ReservationRepository
     public function hideFromCustomer(string $reservationId): void
     {
         $this->db->query(
-            'UPDATE Reservations SET customer_hidden = 1 WHERE reservation_id = :reservation_id',
+            'UPDATE Reservations SET customer_hidden = true WHERE reservation_id = :reservation_id',
             [':reservation_id' => $reservationId]
         );
     }

@@ -139,7 +139,10 @@ class AuthController
             $user = $this->users->create($name, $email, password_hash($password, PASSWORD_DEFAULT), 'Customer');
         } catch (PDOException $e) {
             // Lost the race between findByEmail() and INSERT (UNIQUE on email).
-            if ($e->getCode() === '23000') {
+            // Postgres's unique_violation SQLSTATE is always '23505' (a fixed
+            // standard code, unlike the double-booking trigger's custom one) —
+            // '23000' is the MySQL/MariaDB code and never fires here.
+            if ($e->getCode() === '23505') {
                 Response::error('An account with this email already exists.', 409);
             }
             throw $e;

@@ -22,7 +22,7 @@ class Database
     private function __construct()
     {
         $dsn = sprintf(
-            'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
+            'pgsql:host=%s;port=%s;dbname=%s;sslmode=require',
             $_ENV['DB_HOST'],
             $_ENV['DB_PORT'],
             $_ENV['DB_NAME']
@@ -41,13 +41,22 @@ class Database
             throw new RuntimeException('Database connection failed: ' . $e->getMessage());
         }
 
-        // Put MySQL's clock on the same zone as PHP's date_default_timezone_set()
+        // Put PostgreSQL's clock on the same zone as PHP's date_default_timezone_set()
         // (done in index.php before this connection is opened). NOW() drives
         // live_status, getNextAvailableSlot() and the maintenance warning, and
-        // compares against wall-clock DATETIME columns, so the two clocks must
-        // agree. A numeric offset is used on purpose: named zones such as
-        // 'Asia/Manila' need MySQL's time-zone tables, which a stock XAMPP lacks.
-        $this->pdo->exec("SET time_zone = '" . (new \DateTimeImmutable('now'))->format('P') . "'");
+        // compares against wall-clock TIMESTAMP columns, so the two clocks must
+        // agree.
+        //
+        // IMPORTANT: pass the named IANA zone, not a computed numeric UTC
+        // offset. A bare offset string (e.g. "+08:00") is ambiguous in
+        // PostgreSQL's SET TIME ZONE — it can be parsed under the older
+        // SQL-standard/POSIX sign convention (positive = WEST of Greenwich),
+        // the opposite of the ISO-8601 convention PHP's format('P') produces.
+        // That silently turned "+08:00" (intended UTC+8 / Manila) into an
+        // effective UTC-8, an 8-hour flip (16-hour swing from the intended
+        // value) — the root cause of processed_at/created_at landing a day
+        // early. Named zones like 'Asia/Manila' have no such ambiguity.
+        $this->pdo->exec("SET TIME ZONE '" . ($_ENV['APP_TIMEZONE'] ?? 'Asia/Manila') . "'");
     }
 
     /** Singleton — one PDO connection per PHP process lifetime. */

@@ -1,6 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
+  // Shared helper (js/util.js). Declared up here so nothing can call it before it exists.
+  const { parseDate } = window.CampusRoomUtil;
+
   const summaryUpcoming = document.getElementById('summaryUpcoming');
   const summaryPast = document.getElementById('summaryPast');
   const summaryPending = document.getElementById('summaryPending');
@@ -21,8 +24,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
           reservations.forEach(r => {
             if (r.status === 'Pending') pendingCount++;
-            
-            const endTime = new Date(r.end_time);
+
+            // parseDate() (js/util.js): strict-spec browsers like Safari
+            // won't parse the space-separated "YYYY-MM-DD HH:MM:SS" form
+            // `new Date(value)` gets here, so this used to silently drop
+            // every reservation out of both the upcoming and past counts.
+            const endTime = parseDate(r.end_time);
+            if (!endTime) return; // unparseable: leave uncounted, same as before
+
             if (endTime > now && r.status !== 'Rejected' && r.status !== 'Cancelled') {
               upcomingCount++;
             } else if (endTime <= now && r.status !== 'Rejected' && r.status !== 'Cancelled') {
