@@ -53,6 +53,10 @@ window.initBookingForm = function() {
   const rebookNotice        = document.getElementById('rebookNoticeBanner');
   const rebookNoticeTitle   = document.getElementById('rebookNoticeTitle');
   const rebookNoticeText    = document.getElementById('rebookNoticeText');
+
+  if (isRebook && submitBtn) {
+    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">sync</span> Submit Re-book';
+  }
   const rebookNoticeDismiss = document.getElementById('rebookNoticeDismiss');
 
   function showRebookNotice(title, message) {

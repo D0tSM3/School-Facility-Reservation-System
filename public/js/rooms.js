@@ -380,4 +380,12 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('rebook') && typeof window.openBookingModal === 'function') {
+    // Delay slightly to ensure fetchRooms and initBookingForm are ready
+    setTimeout(() => {
+      window.openBookingModal('');
+    }, 100);
+  }
 });

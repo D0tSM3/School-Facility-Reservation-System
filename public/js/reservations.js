@@ -173,21 +173,31 @@ document.addEventListener('DOMContentLoaded', () => {
   // action buttons look identical to before now that they're generated.
   
   const ACTION_STYLES = {
-    cancel: 'px-4 py-1.5 bg-white text-red-600 border border-red-200 hover:bg-red-50 text-sm font-medium rounded transition-colors shadow-sm',
-    remove: 'px-4 py-1.5 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 text-sm font-medium rounded transition-colors shadow-sm',
-    reqcancel: 'px-4 py-1.5 bg-white text-red-600 border border-red-200 hover:bg-red-50 text-sm font-medium rounded transition-colors shadow-sm',
-    move:   'px-4 py-1.5 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 text-sm font-medium rounded transition-colors shadow-sm',
-    slip:   'px-4 py-1.5 bg-[#7a1f2b] text-white hover:bg-[#5b0617] border border-[#7a1f2b] text-sm font-medium rounded transition-colors shadow-sm',
-    rebook: 'px-4 py-1.5 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 text-sm font-medium rounded transition-colors shadow-sm',
-    logs:   'px-4 py-1.5 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 text-sm font-medium rounded transition-colors shadow-sm'
+    cancel:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    remove:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    reqcancel: 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    move:      'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-600 border border-gray-200 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    slip:      'inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#7a1f2b] text-white hover:bg-[#5e1821] border border-transparent text-xs font-semibold rounded-lg transition-all shadow-sm',
+    rebook:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-emerald-600 border border-gray-200 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    logs:      'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 text-xs font-semibold rounded-lg transition-all shadow-sm'
   };
-  const ACTION_ICONS = {};
+
+  const ACTION_ICONS = {
+    cancel: 'cancel',
+    remove: 'delete',
+    reqcancel: 'free_cancellation',
+    move: 'edit_calendar',
+    slip: 'receipt_long',
+    rebook: 'event_repeat',
+    logs: 'history'
+  };
 
   function actionButton(action, id, label, disabledReason) {
+    const icon = ACTION_ICONS[action] ? `<span class="material-symbols-outlined text-[14px]">${ACTION_ICONS[action]}</span>` : '';
     const off = disabledReason
       ? ` disabled title="${escapeHtml(disabledReason)}" class="${ACTION_STYLES[action]} opacity-50 cursor-not-allowed"`
       : ` class="${ACTION_STYLES[action]}"`;
-    return `<button${off} data-action="${action}" data-id="${escapeHtml(id)}">${label}</button>`;
+    return `<button${off} data-action="${action}" data-id="${escapeHtml(id)}">${icon}${label}</button>`;
   }
 
   /** Today as 'YYYY-MM-DD' in local time â€” never via toISOString(), which is UTC. */
@@ -383,6 +393,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cancelReqReason) cancelReqReason.focus();
   }
 
+  let moveCalendarInstance = null;
+
   function openMoveModal(id) {
     currentTargetReservationId = id;
     const moveModalOverlay = document.getElementById('moveModalOverlay');
@@ -390,6 +402,33 @@ document.addEventListener('DOMContentLoaded', () => {
     if (moveErrorMsg) moveErrorMsg.classList.add('hidden');
     if (moveModalOverlay) {
       moveModalOverlay.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    const target = allReservations.find(r => r.reservation_id === id);
+    if (target && typeof RoomCalendar !== 'undefined') {
+      const initDate = String(target.start_time).slice(0, 10);
+      const initStartTime = String(target.start_time).slice(11, 16);
+      const initEndTime = String(target.end_time).slice(11, 16);
+
+      const moveDate = document.getElementById('moveDate');
+      const moveStartTime = document.getElementById('moveStartTime');
+      const moveEndTime = document.getElementById('moveEndTime');
+
+      if (moveDate) moveDate.value = initDate;
+      if (moveStartTime) moveStartTime.value = initStartTime;
+      if (moveEndTime) moveEndTime.value = initEndTime;
+
+      if (moveCalendarInstance && moveCalendarInstance.roomId === target.room_id) {
+        moveCalendarInstance.goToDate(initDate, true);
+      } else {
+        moveCalendarInstance = new RoomCalendar({
+          containerId: 'move-room-calendar-container',
+          roomId: target.room_id,
+          initialDate: initDate
+        });
+      }
+      
+      moveCalendarInstance.setSelectionTimes(initStartTime, initEndTime);
     }
   }
 
@@ -698,6 +737,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const input = document.getElementById(id);
       if (!input) return;
       input.addEventListener('change', async () => {
+        if (moveCalendarInstance) {
+          if (id === 'moveDate') {
+            moveCalendarInstance.goToDate(document.getElementById('moveDate').value);
+          }
+          moveCalendarInstance.setSelectionTimes(
+            document.getElementById('moveStartTime').value,
+            document.getElementById('moveEndTime').value
+          );
+        }
+        
         const seq = ++moveCheckSeq;
         const problem = await moveRangeProblem();
         if (seq === moveCheckSeq) showMoveError(problem);
