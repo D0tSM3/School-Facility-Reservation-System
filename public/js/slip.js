@@ -276,19 +276,20 @@
   // ---------------------------------------------------------------
 
   const CSS = `
-    .cr-slip-root { display: none; position: fixed; inset: 0; z-index: 80; overflow-y: auto;
-      overscroll-behavior: contain; background: rgba(0,0,0,.45); padding: 24px 12px;
-      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1a1c1e; }
-    .cr-slip-root.is-open { display: block; }
+    .cr-slip-root { display: none; position: fixed; inset: 0; z-index: 200; overflow-y: auto;
+      overscroll-behavior: contain; background: rgba(17,24,39,.6); backdrop-filter: blur(4px); padding: 24px 12px;
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1a1c1e; display: none; justify-content: center; align-items: center; }
+    .cr-slip-root.is-open { display: flex; }
     .cr-slip-root *, .cr-slip-root *::before, .cr-slip-root *::after { box-sizing: border-box; }
-    .cr-slip-shell { max-width: 720px; margin: 0 auto; background: #fff; border-radius: 12px;
-      box-shadow: 0 20px 50px rgba(0,0,0,.3); overflow: hidden; }
+    .cr-slip-shell { position: relative; max-width: 720px; width: 100%; margin: auto; background: #fff; border-radius: 16px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1); overflow: hidden; }
     .cr-slip-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      padding: 10px 16px; background: #f3f4f6; border-bottom: 1px solid #e1e2e4; }
-    .cr-slip-toolbar-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; margin: 0; }
+      padding: 24px 24px 0 24px; background: #fff; border-bottom: none; }
+    .cr-slip-toolbar-title { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; margin: 0; color: #111827; }
+    .cr-slip-toolbar-title .material-symbols-outlined { background: #DBEAFE; color: #2563EB; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 20px; margin-right: 4px; }
     .cr-slip-toolbar-actions { display: flex; align-items: center; gap: 8px; }
     .cr-slip-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px;
-      font: 600 13px/1 Inter, system-ui, sans-serif; color: #1a1c1e; background: #e5e7eb; border: 0; border-radius: 6px;
+      font: 600 13px/1 Inter, system-ui, sans-serif; color: #1a1c1e; background: #e5e7eb; border: 0; border-radius: 8px;
       cursor: pointer; text-decoration: none; }
     .cr-slip-btn:hover { background: #d1d5db; }
     .cr-slip-btn:focus-visible { outline: 2px solid #7A1F2B; outline-offset: 2px; }
@@ -296,6 +297,9 @@
     .cr-slip-btn-primary { background: #7A1F2B; color: #fff; }
     .cr-slip-btn-primary:hover { background: #52131C; }
     .cr-slip-btn .material-symbols-outlined { font-size: 18px; }
+    .cr-slip-close { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+      border: 0; border-radius: 8px; background: transparent; cursor: pointer; color: #9CA3AF; flex-shrink: 0; }
+    .cr-slip-close:hover { color: #374151; background: #f3f4f6; }
 
     .cr-slip-body { padding: 24px; font-size: 14px; line-height: 1.45; }
     .cr-slip-paper { position: relative; overflow: hidden; }
@@ -307,7 +311,7 @@
     .cr-slip-ref-code { font-size: 20px; font-weight: 800; color: #7A1F2B; letter-spacing: .02em; }
     .cr-slip-uuid { font: 10px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #6b7280; word-break: break-all; }
     .cr-slip-titlebar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 14px 0 10px; }
-    .cr-slip-titlebar h2 { margin: 0; font-size: 18px; font-weight: 700; }
+    .cr-slip-titlebar h2 { margin: 0; font-size: 18px; font-weight: 700; color: #111827; }
     .cr-slip-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
     .cr-slip-banner { margin: 0 0 12px; padding: 8px 12px; border: 2px solid #B91C1C; border-radius: 6px;
       background: #FEE2E2; color: #B91C1C; font-weight: 800; letter-spacing: .04em; text-align: center; }
@@ -387,7 +391,7 @@
             <button type="button" class="cr-slip-btn cr-slip-btn-primary" data-cr-slip="print" disabled>
               <span class="material-symbols-outlined" aria-hidden="true">print</span><span>Print</span>
             </button>
-            <button type="button" class="cr-slip-btn" data-cr-slip="close" aria-label="Close confirmation slip">
+            <button type="button" class="cr-slip-close" data-cr-slip="close" aria-label="Close confirmation slip">
               <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
           </div>

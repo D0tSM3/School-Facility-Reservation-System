@@ -3,7 +3,7 @@
  * Enforces MySQL overlap-prevention trigger, field validation, and reservation dispatch.
  */
 
-document.addEventListener('DOMContentLoaded', () => {
+window.initBookingForm = function() {
   'use strict';
 
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
@@ -99,13 +99,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Only preselect a room that exists and is bookable.
-        const wanted = preselectedRoom && roomsById[preselectedRoom];
+        const wantedId = window.bookingModalTargetRoomId || preselectedRoom;
+        const wanted = wantedId && roomsById[wantedId];
         if (wanted && wanted.status !== 'Maintenance') {
-          roomSelect.value = preselectedRoom;
+          roomSelect.value = wantedId;
         }
 
         renderRoomSummary(roomSelect.value);
         if (roomSelect.value) updateCalendar(roomSelect.value);
+        updateCalendarSelection();
         syncEndOptions();
         markTakenSlots();
       })
@@ -156,6 +158,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Room Calendar Integration ---
   let calendarInstance = null;
+  function updateCalendarSelection() {
+    if (calendarInstance && startTimeInput && endTimeInput && typeof calendarInstance.setSelectionTimes === 'function') {
+      calendarInstance.setSelectionTimes(startTimeInput.value, endTimeInput.value);
+    }
+  }
   function updateCalendar(roomId) {
     if (!roomId) return;
     // Fix Guide 4.4: refresh in place for the same room instead of tearing
@@ -275,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return true;
   };
 
-  if (endTimeInput) endTimeInput.addEventListener('change', validateTime);
+  if (endTimeInput) endTimeInput.addEventListener('change', () => { validateTime(); updateCalendarSelection(); });
 
   // The chosen room's schedule for the chosen date, from the last successful
   // calendar fetch (see markTakenSlots). null until it arrives, and whenever it
@@ -330,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (previous && previous > start && keep && !keep.disabled) endTimeInput.value = previous;
     };
 
-    startTimeInput.addEventListener('change', () => { syncEndOptions(); validateTime(); });
+    startTimeInput.addEventListener('change', () => { syncEndOptions(); validateTime(); updateCalendarSelection(); });
   }
 
   // ---------------------------------------------------------------
@@ -744,4 +751,4 @@ document.addEventListener('DOMContentLoaded', () => {
         .finally(() => { if (!redirecting) setSubmitting(false); });
     });
   }
-});
+};

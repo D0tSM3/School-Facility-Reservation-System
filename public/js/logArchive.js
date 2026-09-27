@@ -565,24 +565,26 @@
   }
 
   const CSS = `
-    .cr-log-root { display: none; position: fixed; inset: 0; z-index: 85; overflow-y: auto;
-      overscroll-behavior: contain; background: rgba(0,0,0,.45); padding: 24px 12px;
-      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1a1c1e; }
-    .cr-log-root.is-open { display: block; }
+    .cr-log-root { display: none; position: fixed; inset: 0; z-index: 200; overflow-y: auto;
+      overscroll-behavior: contain; background: rgba(17,24,39,.6); backdrop-filter: blur(4px); padding: 24px 12px;
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1a1c1e; display: none; justify-content: center; align-items: center; }
+    .cr-log-root.is-open { display: flex; }
     .cr-log-root *, .cr-log-root *::before, .cr-log-root *::after { box-sizing: border-box; }
-    .cr-log-shell { position: relative; max-width: 880px; margin: 0 auto; background: #fff; border-radius: 12px;
-      box-shadow: 0 20px 50px rgba(0,0,0,.3); overflow: hidden; }
+    .cr-log-shell { position: relative; max-width: 880px; width: 100%; margin: auto; background: #fff; border-radius: 16px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1); overflow: hidden; }
     .cr-log-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
-      padding: 10px 16px; background: #f3f4f6; border-bottom: 1px solid #e1e2e4; }
-    .cr-log-toolbar-title { display: flex; flex-direction: column; gap: 1px; font-size: 15px; font-weight: 700; margin: 0; }
-    .cr-log-toolbar-title-row { display: flex; align-items: center; gap: 8px; }
-    .cr-log-title-sub { font-size: 12px; font-weight: 500; color: #6b7280; }
+      padding: 24px 24px 0 24px; background: #fff; border-bottom: none; }
+    .cr-log-toolbar-title { display: flex; flex-direction: column; gap: 4px; font-size: 16px; font-weight: 700; margin: 0; color: #111827; }
+    .cr-log-toolbar-title-row { display: flex; align-items: center; gap: 12px; }
+    .cr-log-toolbar-title-row .material-symbols-outlined { background: #DBEAFE; color: #2563EB; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 20px; }
+    #crLogTitleText { display: flex; flex-direction: column; gap: 2px; }
+    .cr-log-title-sub { font-size: 12px; font-weight: 500; color: #6b7280; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
     .cr-log-close { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px;
-      border: 0; border-radius: 6px; background: transparent; cursor: pointer; color: #374151; flex-shrink: 0; }
-    .cr-log-close:hover { background: #e5e7eb; }
+      border: 0; border-radius: 8px; background: transparent; cursor: pointer; color: #9CA3AF; flex-shrink: 0; }
+    .cr-log-close:hover { color: #374151; background: #f3f4f6; }
     .cr-log-close:focus-visible { outline: 2px solid #7A1F2B; outline-offset: 2px; }
 
-    .cr-log-body { padding: 20px; font-size: 14px; line-height: 1.45; max-height: 74vh; overflow-y: auto; }
+    .cr-log-body { padding: 24px; font-size: 14px; line-height: 1.45; max-height: 74vh; overflow-y: auto; }
 
     .cr-log-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 12px;
       font: 600 13px/1 Inter, system-ui, sans-serif; color: #1a1c1e; background: #e5e7eb; border: 0; border-radius: 6px;

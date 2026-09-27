@@ -489,9 +489,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Filtering / search
   // ---------------------------------------------------------------
 
+  // Pagination State
+  const ITEMS_PER_PAGE = 5;
+  let currentPage = 1;
+  const prevPageBtn = document.getElementById('prevPageBtn');
+  const nextPageBtn = document.getElementById('nextPageBtn');
+  const pageIndicator = document.getElementById('pageIndicator');
+  const resetResFilters = document.getElementById('resetResFilters');
+
   function applyFilters() {
     const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
-    const cards = document.querySelectorAll('.reservation-card');
+    const cards = Array.from(document.querySelectorAll('.reservation-card'));
+    
+    let visibleCards = [];
 
     cards.forEach(card => {
       const cardStatus = (card.getAttribute('data-status') || '').toLowerCase();
@@ -499,8 +509,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let matchesFilter = false;
       if (activeFilter === 'all') matchesFilter = true;
-      else if (activeFilter === 'history') {
-        matchesFilter = ['history', 'completed', 'rejected', 'cancelled'].includes(cardStatus);
+      else if (activeFilter === 'history' || activeFilter === 'past') {
+        matchesFilter = ['history', 'past', 'completed', 'rejected', 'cancelled'].includes(cardStatus);
       } else {
         matchesFilter = (cardStatus === activeFilter);
       }
@@ -508,6 +518,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const matchesSearch = !query || text.includes(query);
 
       if (matchesFilter && matchesSearch) {
+        visibleCards.push(card);
+      } else {
+        card.classList.add('hidden');
+        card.style.display = 'none';
+      }
+    });
+
+    const totalPages = Math.max(1, Math.ceil(visibleCards.length / ITEMS_PER_PAGE));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+
+    visibleCards.forEach((card, index) => {
+      if (index >= startIndex && index < endIndex) {
         card.classList.remove('hidden');
         card.style.display = 'block';
       } else {
@@ -515,20 +540,73 @@ document.addEventListener('DOMContentLoaded', () => {
         card.style.display = 'none';
       }
     });
+
+    if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
+    if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages;
+    if (pageIndicator) pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
+    
+    const countEl = document.getElementById('visibleResCount');
+    if (countEl) countEl.textContent = visibleCards.length;
+    
+    if (reservationListEmpty) {
+      reservationListEmpty.classList.toggle('hidden', visibleCards.length > 0);
+    }
   }
 
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
+      tabs.forEach(t => {
+        t.classList.remove('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+        t.classList.add('text-gray-500', 'hover:text-gray-700', 'font-medium');
+      });
+      tab.classList.remove('text-gray-500', 'hover:text-gray-700', 'font-medium');
+      tab.classList.add('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
 
       activeFilter = tab.getAttribute('data-filter') || 'all';
+      currentPage = 1;
       applyFilters();
     });
   });
 
   if (searchInput) {
-    searchInput.addEventListener('input', applyFilters);
+    searchInput.addEventListener('input', () => {
+      currentPage = 1;
+      applyFilters();
+    });
+  }
+  
+  if (prevPageBtn) {
+    prevPageBtn.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        applyFilters();
+      }
+    });
+  }
+  
+  if (nextPageBtn) {
+    nextPageBtn.addEventListener('click', () => {
+      currentPage++;
+      applyFilters();
+    });
+  }
+
+  if (resetResFilters) {
+    resetResFilters.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      activeFilter = 'all';
+      tabs.forEach(t => {
+        t.classList.remove('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+        t.classList.add('text-gray-500', 'hover:text-gray-700', 'font-medium');
+      });
+      const allTab = Array.from(tabs).find(t => t.getAttribute('data-filter') === 'all');
+      if (allTab) {
+        allTab.classList.remove('text-gray-500', 'hover:text-gray-700', 'font-medium');
+        allTab.classList.add('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+      }
+      currentPage = 1;
+      applyFilters();
+    });
   }
 
   // View-toggle (list / grid)
@@ -539,15 +617,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!reservationList) return;
     if (mode === 'grid') {
       reservationList.className = 'grid grid-cols-1 xl:grid-cols-2 gap-4';
-      btnViewGrid?.classList.add('text-[#7a1f2b]', 'bg-gray-100');
+      btnViewGrid?.classList.add('bg-white', 'shadow-xs', 'text-[#7a1f2b]');
       btnViewGrid?.classList.remove('text-gray-400', 'hover:text-gray-700');
-      btnViewList?.classList.remove('text-[#7a1f2b]', 'bg-gray-100');
+      btnViewList?.classList.remove('bg-white', 'shadow-xs', 'text-[#7a1f2b]');
       btnViewList?.classList.add('text-gray-400', 'hover:text-gray-700');
     } else {
       reservationList.className = 'flex flex-col gap-4';
-      btnViewList?.classList.add('text-[#7a1f2b]', 'bg-gray-100');
+      btnViewList?.classList.add('bg-white', 'shadow-xs', 'text-[#7a1f2b]');
       btnViewList?.classList.remove('text-gray-400', 'hover:text-gray-700');
-      btnViewGrid?.classList.remove('text-[#7a1f2b]', 'bg-gray-100');
+      btnViewGrid?.classList.remove('bg-white', 'shadow-xs', 'text-[#7a1f2b]');
       btnViewGrid?.classList.add('text-gray-400', 'hover:text-gray-700');
     }
   }

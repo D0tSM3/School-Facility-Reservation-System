@@ -343,42 +343,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   fetchCurrentRole().then(fetchRooms);
 });
-window.openBookingModal = function(roomId) {
-  const modal = document.getElementById('bookingModalOverlay');
-  if (!modal) return;
-  modal.classList.remove('hidden');
-  modal.classList.add('flex');
-  
-  const roomSelect = document.getElementById('roomSelect');
-  if (roomSelect) {
-    roomSelect.value = roomId;
-    roomSelect.dispatchEvent(new Event('change'));
-  }
-};
 
-document.addEventListener('DOMContentLoaded', () => {
-  const modal = document.getElementById('bookingModalOverlay');
-  const closeBtn = document.getElementById('closeBookingModalBtn');
-  const cancelBtn = document.getElementById('cancelModalBtn');
 
-  function closeModal() {
-    if (modal) {
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    }
-  }
 
-  if (closeBtn) closeBtn.addEventListener('click', closeModal);
-  
-  // cancelModalBtn is bound in booking.js to history.back().
-  // We need to override it or let booking.js know it's a modal.
-  if (cancelBtn) {
-    // Override the event listener from booking.js by replacing the element
-    const newCancel = cancelBtn.cloneNode(true);
-    cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
-    newCancel.addEventListener('click', closeModal);
-  }
-});
 document.addEventListener('DOMContentLoaded', () => {
   const statusBtns = document.querySelectorAll('.status-btn');
   const statusSelect = document.getElementById('statusFilter');
