@@ -26,6 +26,7 @@ class RoomCalendar {
     this.currentDate = this.mondayOf(anchor);
 
     this.blocks = [
+      { start: "06:00", label: "6:00 AM" },
       { start: "07:30", label: "7:30 AM" },
       { start: "09:00", label: "9:00 AM" },
       { start: "10:30", label: "10:30 AM" },
@@ -109,36 +110,60 @@ class RoomCalendar {
 
   renderLayout() {
     this.container.innerHTML = `
-      <div class="bg-surface-container-lowest rounded-lg shadow-sm border border-outline-variant overflow-hidden flex flex-col h-full">
-        <div class="px-space-md py-space-sm border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
-          <button type="button" class="btn-prev-week p-1 rounded hover:bg-surface-container-highest transition-colors" aria-label="Previous week">
-            <span class="material-symbols-outlined text-[20px] text-on-surface-variant">chevron_left</span>
-          </button>
-          <h3 class="font-label-lg text-label-lg text-on-surface week-label"></h3>
-          <button type="button" class="btn-next-week p-1 rounded hover:bg-surface-container-highest transition-colors" aria-label="Next week">
-            <span class="material-symbols-outlined text-[20px] text-on-surface-variant">chevron_right</span>
-          </button>
+      <div class="flex flex-col">
+        <!-- Header bar -->
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/80">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-[#7a1f2b]">calendar_view_week</span>
+            <h3 class="text-sm font-bold text-gray-800 tracking-tight">Facility Availability</h3>
+          </div>
+          <div class="flex items-center gap-1">
+            <button type="button" class="btn-prev-week w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-500 transition-colors" aria-label="Previous week">
+              <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+            </button>
+            <span class="week-label text-xs font-semibold text-gray-700 min-w-[160px] text-center px-1"></span>
+            <button type="button" class="btn-next-week w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-500 transition-colors" aria-label="Next week">
+              <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+            </button>
+          </div>
         </div>
 
-        <div class="overflow-x-auto bg-surface-container-lowest p-2">
-          <table class="w-full min-w-[560px] table-fixed border-collapse border border-outline-variant text-center" id="calendarTable">
+        <!-- Scrollable grid -->
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[640px] table-fixed border-collapse text-xs" id="calendarTable">
+            <colgroup>
+              <col style="width:68px" />
+              <col /><col /><col /><col /><col /><col /><col />
+            </colgroup>
             <thead>
-              <tr id="calendarHeaderRow" class="bg-[#FDE68A]">
-                <!-- Headers injected here -->
+              <tr id="calendarHeaderRow" class="bg-gray-50 border-b border-gray-200">
+                <!-- Headers injected by renderGrid -->
               </tr>
             </thead>
             <tbody id="calendarBody">
-              <!-- Rows injected here -->
+              <!-- Rows injected by renderGrid -->
             </tbody>
           </table>
         </div>
 
-        <div class="px-space-sm py-space-xs border-t border-outline-variant bg-surface-container-low flex gap-space-md flex-wrap">
-          <div class="flex items-center gap-1 font-label-sm text-on-surface-variant"><span class="w-3 h-3 rounded bg-white border border-outline-variant inline-block"></span> Available</div>
-          <div class="flex items-center gap-1 font-label-sm text-on-surface-variant"><span class="w-3 h-3 rounded bg-blue-100 border border-blue-300 inline-block"></span> Class</div>
-          <div class="flex items-center gap-1 font-label-sm text-on-surface-variant"><span class="w-3 h-3 rounded bg-[#DCFCE7] border border-[#86EFAC] inline-block"></span> Reserved (approved)</div>
-          <div class="flex items-center gap-1 font-label-sm text-on-surface-variant"><span class="w-3 h-3 rounded bg-amber-100 border border-dashed border-amber-400 inline-block"></span> Reserved (pending)</div>
-          <div class="flex items-center gap-1 font-label-sm text-on-surface-variant"><span class="w-3 h-3 rounded bg-gray-200 border border-gray-300 inline-block"></span> Holiday / closed</div>
+        <!-- Legend -->
+        <div class="flex flex-wrap gap-2 px-4 py-3 border-t border-gray-100 bg-gray-50/80">
+          <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider self-center mr-1">Legend:</span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-gray-200 bg-white text-[11px] font-semibold text-gray-600">
+            <span class="w-2 h-2 rounded-full bg-white border border-gray-300 inline-block"></span>Available
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-blue-200 bg-blue-50 text-[11px] font-semibold text-blue-700">
+            <span class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>Class
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-200 bg-emerald-50 text-[11px] font-semibold text-emerald-700">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>Reserved
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-200 bg-amber-50 text-[11px] font-semibold text-amber-700">
+            <span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>Pending
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-gray-200 bg-gray-100 text-[11px] font-semibold text-gray-500">
+            <span class="w-2 h-2 rounded-full bg-gray-400 inline-block"></span>Closed
+          </span>
         </div>
       </div>
     `;
@@ -162,13 +187,13 @@ class RoomCalendar {
     const endStr = this.formatDateYMD(dates[5]);   // Saturday; Sunday is closed
 
     const opts = { month: 'short', day: 'numeric' };
-    this.container.querySelector('.week-label').textContent =
-      `${dates[0].toLocaleDateString('en-US', opts)} - ${dates[6].toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`;
+    const weekLabel = this.container.querySelector('.week-label');
+    if (weekLabel) {
+      weekLabel.textContent =
+        `${dates[0].toLocaleDateString('en-US', opts)} – ${dates[6].toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`;
+    }
 
     const seq = ++this.requestSeq;
-    // A local/fast response would otherwise flash "Loading…" for an instant,
-    // which reads as a glitch rather than a loading state. Only show it if
-    // the fetch is still in flight after a short delay.
     clearTimeout(this.loadingTimer);
     this.loadingTimer = setTimeout(() => {
       if (seq === this.requestSeq) this.showLoading();
@@ -179,21 +204,21 @@ class RoomCalendar {
     })
       .then(res => res.json())
       .then(json => {
-        if (seq !== this.requestSeq) return;        // a newer request is in flight; drop this one
+        if (seq !== this.requestSeq) return;
         clearTimeout(this.loadingTimer);
         if (json.success) {
           this.lastDates = dates;
           this.lastData = json.data;
           this.renderGrid(dates, json.data);
         } else {
-          console.error("Calendar fetch error:", json.error);
+          console.error('Calendar fetch error:', json.error);
           this.showLoadError();
         }
       })
       .catch(err => {
         if (seq !== this.requestSeq) return;
         clearTimeout(this.loadingTimer);
-        console.error("Calendar fetch error:", err);
+        console.error('Calendar fetch error:', err);
         this.showLoadError();
       });
   }
@@ -201,15 +226,20 @@ class RoomCalendar {
   showLoading() {
     const tbody = this.container.querySelector('#calendarBody');
     if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-on-surface-variant">Loading this room\u2019s schedule\u2026</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-sm text-gray-400 font-medium">
+        <span class="material-symbols-outlined text-[20px] align-middle mr-1 animate-spin">refresh</span>
+        Loading schedule…
+      </td></tr>`;
     }
   }
 
-  // A failed/empty fetch must never look like "everything is free".
   showLoadError() {
     const tbody = this.container.querySelector('#calendarBody');
     if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-error">Couldn\u2019t load this room\u2019s schedule. Please try again.</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-sm text-red-500 font-semibold">
+        <span class="material-symbols-outlined text-[20px] align-middle mr-1">error</span>
+        Couldn't load schedule. Please try again.
+      </td></tr>`;
     }
   }
 
@@ -217,7 +247,7 @@ class RoomCalendar {
 
   chip(cls, line1, line2, title) {
     const div = document.createElement('div');
-    div.className = `border rounded px-1 py-0.5 mb-0.5 leading-tight overflow-hidden ${cls}`;
+    div.className = `rounded-md px-1.5 py-0.5 mb-0.5 leading-tight overflow-hidden text-[10px] ${cls}`;
     div.title = title;
     const a = document.createElement('div');
     a.className = 'font-bold truncate';
@@ -225,7 +255,7 @@ class RoomCalendar {
     div.appendChild(a);
     if (line2) {
       const b = document.createElement('div');
-      b.className = 'truncate opacity-80';
+      b.className = 'truncate opacity-70 font-medium';
       b.textContent = line2;
       div.appendChild(b);
     }
@@ -237,11 +267,11 @@ class RoomCalendar {
     const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const todayYMD = this.formatDateYMD(new Date());
 
-    // Headers
+    // --- Headers ---
     const headerRow = this.container.querySelector('#calendarHeaderRow');
     if (!headerRow) return;
 
-    headerRow.innerHTML = '<th class="p-1 border border-outline-variant font-label-sm font-semibold w-[72px]">Time</th>';
+    headerRow.innerHTML = `<th class="py-2 pl-4 pr-2 text-left border-r border-gray-200 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Time</th>`;
 
     dates.forEach((date, i) => {
       const ymd = this.formatDateYMD(date);
@@ -249,30 +279,39 @@ class RoomCalendar {
       const isSelected = ymd === this.selectedDate;
       const th = document.createElement('th');
       th.dataset.date = ymd;
-      th.className = 'p-1 border border-outline-variant font-label-sm font-semibold ' +
-        (isSelected ? 'bg-primary-container text-on-primary' : (isToday ? 'bg-primary/20' : ''));
-      th.innerHTML = `<div>${days[i]}</div><div class="text-[11px] font-normal">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>`;
+      th.className = 'py-2 px-1 text-center border-r border-gray-200 last:border-r-0 ' +
+        (isSelected
+          ? 'bg-[#7a1f2b] text-white'
+          : isToday
+            ? 'bg-[#f8f0f1] text-[#7a1f2b]'
+            : 'text-gray-700');
+      th.innerHTML = `
+        <div class="text-[11px] font-bold uppercase tracking-wider">${days[i]}</div>
+        <div class="text-[13px] font-semibold mt-0.5">${date.getDate()}</div>
+        <div class="text-[10px] font-medium opacity-70">${date.toLocaleDateString('en-US', { month: 'short' })}</div>`;
       headerRow.appendChild(th);
     });
 
-    // Body
+    // --- Body ---
     const tbody = this.container.querySelector('#calendarBody');
     tbody.innerHTML = '';
 
     this.blocks.forEach((block, index) => {
       const tr = document.createElement('tr');
+      tr.className = 'border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors';
 
       const nextBlock = this.blocks[index + 1];
       const blockEnd = nextBlock ? nextBlock.start : '21:00';
       const endLabel = nextBlock ? nextBlock.label : '9:00 PM';
 
+      // Time cell
       const tdTime = document.createElement('td');
-      tdTime.className = 'p-1 border border-outline-variant font-label-sm font-semibold text-on-surface-variant align-top whitespace-nowrap text-[11px]';
-      tdTime.innerHTML = `<div>${block.label}</div><div class="font-normal opacity-70">${endLabel}</div>`;
+      tdTime.className = 'py-2 pl-4 pr-2 border-r border-gray-200 align-top whitespace-nowrap text-right w-[68px] bg-gray-50/60';
+      tdTime.innerHTML = `
+        <div class="text-[11px] font-bold text-gray-600">${block.label}</div>
+        <div class="text-[10px] text-gray-400 font-medium">${endLabel}</div>`;
       tr.appendChild(tdTime);
 
-      // A booking/class that spans more than one block shows in every block it
-      // overlaps (same rule booking.js uses to grey out start times).
       const overlaps = (s, e) => s < blockEnd && e > block.start;
 
       dates.forEach((date, i) => {
@@ -281,15 +320,16 @@ class RoomCalendar {
         const isSelected = dateYMD === this.selectedDate;
         const beforeOpen = this.minDate && dateYMD < this.minDate;
 
-        // Sunday: one merged "Closed" cell instead of nine empty ones.
+        // Sunday — single merged "Closed" cell
         if (dayName === 'Sunday') {
           if (index === 0) {
             const td = document.createElement('td');
             td.rowSpan = this.blocks.length;
             td.dataset.date = dateYMD;
-            td.className = 'border border-outline-variant bg-surface-container-low text-on-surface-variant text-[11px] font-semibold align-middle' +
-              (isSelected ? ' ring-2 ring-inset ring-primary-container' : '');
-            td.innerHTML = '<span class="material-symbols-outlined text-[16px] block mx-auto mb-1">block</span>Closed<div class="font-normal">Sundays</div>';
+            td.className = 'border-r border-gray-200 last:border-r-0 bg-gray-100/80 text-gray-400 text-center align-middle text-[11px] font-semibold';
+            td.innerHTML = `
+              <span class="material-symbols-outlined text-[18px] block mx-auto mb-1 opacity-40">do_not_disturb</span>
+              <div>Closed</div>`;
             tr.appendChild(td);
           }
           return;
@@ -297,48 +337,46 @@ class RoomCalendar {
 
         const td = document.createElement('td');
         td.dataset.date = dateYMD;
-        td.className = 'p-0.5 border border-outline-variant text-[10px] align-top h-14 ' +
-          (beforeOpen ? 'bg-surface-container-low' : (isSelected ? 'bg-primary/5' : 'bg-white'));
+        let baseBg = isSelected ? 'bg-[#fdf5f6]' : beforeOpen ? 'bg-gray-50' : 'bg-white';
+        td.className = `p-0.5 border-r border-gray-200 last:border-r-0 align-top h-[52px] ${baseBg}`;
 
+        // Holiday
         const holiday = (data.holidays || []).find(h => h.holiday_date === dateYMD);
         if (holiday) {
-          td.className = 'p-0.5 border border-outline-variant text-[10px] align-middle h-14 bg-gray-200 text-on-surface-variant';
-          td.innerHTML = '<span class="material-symbols-outlined text-[14px] block mx-auto">celebration</span>';
-          const name = document.createElement('div');
-          name.className = 'font-bold leading-tight';
-          name.textContent = holiday.name;
-          td.appendChild(name);
+          td.className = `p-1 border-r border-gray-200 last:border-r-0 align-middle h-[52px] bg-gray-100 text-center`;
+          td.innerHTML = `
+            <span class="material-symbols-outlined text-[14px] text-gray-400 block mx-auto">celebration</span>
+            <div class="text-[9px] font-bold text-gray-500 leading-tight mt-0.5 truncate px-0.5">${holiday.name}</div>`;
           tr.appendChild(td);
           return;
         }
 
-        // Classes (recurring weekly)
+        // Classes
         (data.class_schedules || [])
           .filter(c => c.day_of_week === dayName &&
                        overlaps(c.start_time.slice(0, 5), c.end_time.slice(0, 5)))
           .forEach(c => {
-            td.classList.remove('bg-white', 'bg-primary/5', 'bg-surface-container-low');
-            td.classList.add('bg-blue-100');
+            td.className = td.className.replace(/bg-\S+/g, '') + ' bg-blue-50 p-0.5';
             td.appendChild(this.chip(
-              'bg-blue-50 border-blue-300 text-blue-800',
+              'bg-blue-100 text-blue-800 border border-blue-200',
               c.course_code, c.section,
-              `Class: ${c.course_code} ${c.section}, ${this.fmt12(c.start_time.slice(0, 5))} - ${this.fmt12(c.end_time.slice(0, 5))}`
+              `Class: ${c.course_code} ${c.section}, ${this.fmt12(c.start_time.slice(0, 5))} – ${this.fmt12(c.end_time.slice(0, 5))}`
             ));
           });
 
-        // Reservations (Pending + Approved only; the API already filters)
+        // Reservations
         (data.reservations || [])
           .filter(r => r.start_time.startsWith(dateYMD) &&
                        overlaps(r.start_time.slice(11, 16), r.end_time.slice(11, 16)))
           .forEach(r => {
             const pending = r.status === 'Pending';
-            td.classList.remove('bg-white', 'bg-primary/5', 'bg-surface-container-low');
-            td.classList.add(pending ? 'bg-amber-100' : 'bg-[#DCFCE7]');
+            td.className = td.className.replace(/bg-\S+/g, '') + (pending ? ' bg-amber-50 p-0.5' : ' bg-emerald-50 p-0.5');
             td.appendChild(this.chip(
-              pending ? 'bg-amber-50 border-amber-400 border-dashed text-amber-800'
-                      : 'bg-[#DCFCE7] border-[#86EFAC] text-[#15803D]',
+              pending
+                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                : 'bg-emerald-100 text-emerald-800 border border-emerald-200',
               r.purpose, r.customer_name || r.status,
-              `${r.status}: ${r.purpose}, ${this.fmt12(r.start_time.slice(11, 16))} - ${this.fmt12(r.end_time.slice(11, 16))}`
+              `${r.status}: ${r.purpose}, ${this.fmt12(r.start_time.slice(11, 16))} – ${this.fmt12(r.end_time.slice(11, 16))}`
             ));
           });
 

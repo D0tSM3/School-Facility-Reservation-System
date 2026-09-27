@@ -8,88 +8,89 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
 
+  // -----------------------------------------------------------------------
   // 1. Fetch real session info
+  // -----------------------------------------------------------------------
   fetch(BASE + 'api/auth/me', { credentials: 'include' })
     .then(res => res.json())
     .then(json => {
       const currentUser = json.success ? json.data : null;
       if (!currentUser) {
-        // Fix Guide 5.3: app.js isn't loaded by index.html/verify.html, so
-        // landing here with no session means the student needs to log in
-        // rather than sit on a form that will fail on submit.
+        // No active session — send to login page.
         window.location.href = 'index.html';
         return;
       }
 
-      // Fix Guide 5.4: let page scripts (e.g. booking.js) react to the
-      // logged-in user's role without each one re-fetching /api/auth/me.
+      // Expose user globally so other scripts can read it without re-fetching.
       window.currentUser = currentUser;
       document.dispatchEvent(new CustomEvent('campusroom:user', { detail: currentUser }));
 
       const role = String(currentUser.role || '').toLowerCase();
-      
-      const staffLink = document.querySelector('aside nav a[data-path="staff-queue"]');
-      const adminLink = document.querySelector('aside nav a[data-path="admin-governance"]');
+
+      // -----------------------------------------------------------------------
+      // 2. Show / hide role-restricted sidebar links
+      // -----------------------------------------------------------------------
+      const staffLink         = document.querySelector('aside nav a[data-path="staff-queue"]');
+      const adminLink         = document.querySelector('aside nav a[data-path="admin-governance"]');
       const myReservationsLink = document.querySelector('aside nav a[data-path="my-reservations"]');
 
       if (staffLink) {
-        const canViewStaffQueue = role === 'staff' || role === 'admin';
-        staffLink.hidden = !canViewStaffQueue;
-        staffLink.style.setProperty('display', canViewStaffQueue ? 'flex' : 'none', 'important');
+        const show = role === 'staff' || role === 'admin';
+        staffLink.hidden = !show;
+        staffLink.style.setProperty('display', show ? 'flex' : 'none', 'important');
       }
       if (adminLink) {
-        const canViewAdminGovernance = role === 'admin';
-        adminLink.hidden = !canViewAdminGovernance;
-        adminLink.style.setProperty('display', canViewAdminGovernance ? 'flex' : 'none', 'important');
+        const show = role === 'admin';
+        adminLink.hidden = !show;
+        adminLink.style.setProperty('display', show ? 'flex' : 'none', 'important');
       }
       if (myReservationsLink) {
-        const canViewMyReservations = role === 'customer';
-        myReservationsLink.hidden = !canViewMyReservations;
-        myReservationsLink.style.setProperty('display', canViewMyReservations ? 'flex' : 'none', 'important');
+        const show = role === 'customer';
+        myReservationsLink.hidden = !show;
+        myReservationsLink.style.setProperty('display', show ? 'flex' : 'none', 'important');
       }
 
-      // 2. Update Profile Header if present
-      const headerUserName = document.querySelector('header .font-label-md.text-on-surface');
-      const headerUserRole = document.querySelector('header .font-label-sm.text-primary');
+      // -----------------------------------------------------------------------
+      // 3. Update profile header
+      //    Supports both old class-based selectors and new header-* classes.
+      // -----------------------------------------------------------------------
+      const roleLabel = (currentUser.role === 'Staff' || currentUser.role === 'Admin')
+        ? `${currentUser.role} / Registrar`
+        : 'Student';
 
-      if (headerUserName) {
-        headerUserName.textContent = currentUser.name;
-        if (headerUserRole) {
-          headerUserRole.textContent = currentUser.role === 'Staff' || currentUser.role === 'Admin'
-            ? `${currentUser.role} / Registrar`
-            : 'Student';
-        }
-        
-        // Update initials
-        const headerInitials = document.querySelector('.header-initials');
-        if (headerInitials) {
-          const parts = currentUser.name.split(' ').filter(p => p.toLowerCase() !== 'dr.');
-          const initial1 = parts[0] ? parts[0][0] : '';
-          const initial2 = parts.length > 1 ? parts[parts.length - 1][0] : '';
-          headerInitials.textContent = (initial1 + initial2).toUpperCase();
-        }
-      }
+      const parts   = currentUser.name.split(' ').filter(p => p.toLowerCase() !== 'dr.');
+      const i1      = parts[0] ? parts[0][0] : '';
+      const i2      = parts.length > 1 ? parts[parts.length - 1][0] : '';
+      const initials = (i1 + i2).toUpperCase();
+
+      // New-style (header-name / header-role / header-initials classes)
+      document.querySelectorAll('.header-name').forEach(el => { el.textContent = currentUser.name; });
+      document.querySelectorAll('.header-role').forEach(el => { el.textContent = roleLabel; });
+      document.querySelectorAll('.header-initials').forEach(el => { el.textContent = initials; });
+
+      // Legacy-style (specific typography class selectors)
+      const legacyName = document.querySelector('header .font-label-md.text-on-surface');
+      const legacyRole = document.querySelector('header .font-label-sm.text-primary');
+      if (legacyName) legacyName.textContent = currentUser.name;
+      if (legacyRole) legacyRole.textContent = roleLabel;
     })
     .catch(err => console.error('Failed to fetch user session', err));
 
-  // 3. Highlight Active Navigation Link & Ensure Correct Relative URLs
+  // -----------------------------------------------------------------------
+  // 4. Highlight active navigation link & ensure correct relative URLs
+  // -----------------------------------------------------------------------
   const currentPath = window.location.pathname.toLowerCase();
-  const navLinks = document.querySelectorAll('aside nav a');
+  const navLinks    = document.querySelectorAll('aside nav a');
 
-  // Fix Guide 5.2: the Rooms link points to rooms.html, but the booking page
-  // is book-room.html, so a plain currentPath.includes(href) check never
-  // highlights "Rooms" while a student is actually booking a room.
+  // The Rooms link covers both the directory and the booking page.
   const ACTIVE_ALIASES = { rooms: ['rooms.html', 'book-room.html'] };
 
   navLinks.forEach(link => {
     const dataPath = link.getAttribute('data-path') || '';
 
-    // Fix relative links if not already set
-    if (dataPath === 'customer-dashboard') {
-      link.setAttribute('href', 'dashboard.html');
-    } else if (dataPath === 'rooms') {
-      link.setAttribute('href', 'rooms.html');
-    }
+    // Normalise relative hrefs
+    if (dataPath === 'customer-dashboard') link.setAttribute('href', 'dashboard.html');
+    else if (dataPath === 'rooms')         link.setAttribute('href', 'rooms.html');
 
     const href = link.getAttribute('href');
     if (!href || href === '#') return;
@@ -113,18 +114,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 4. Logout Footer
-  const aside = document.querySelector('aside');
-  if (aside && !document.getElementById('logout-banner')) {
-    const logoutDiv = document.createElement('div');
-    logoutDiv.id = 'logout-banner';
-    logoutDiv.className = 'p-4 border-t border-white/5 mt-auto';
-    
-    const logoutBtn = document.createElement('button');
-    logoutBtn.className = 'flex items-center gap-2.5 text-sm text-gray-400 hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg';
-    logoutBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">logout</span><span>Sign Out</span>';
-    logoutBtn.title = 'Sign Out';
-    logoutBtn.addEventListener('click', () => {
+  // -----------------------------------------------------------------------
+  // 5. Sign Out — wire the handler to any #logoutBtn already in the HTML,
+  //    or inject the button+banner into the sidebar if neither is present.
+  // -----------------------------------------------------------------------
+  function attachLogout(btn) {
+    btn.addEventListener('click', () => {
       fetch(BASE + 'api/auth/logout', { method: 'POST', credentials: 'include' })
         .then(() => { window.location.href = 'index.html'; })
         .catch(err => {
@@ -132,8 +127,30 @@ document.addEventListener('DOMContentLoaded', () => {
           window.location.href = 'index.html';
         });
     });
+  }
 
-    logoutDiv.appendChild(logoutBtn);
-    aside.appendChild(logoutDiv);
+  const existingLogoutBtn = document.getElementById('logoutBtn');
+  if (existingLogoutBtn) {
+    // Button is already in the HTML (dashboard, rooms, my-reservations, handbook)
+    attachLogout(existingLogoutBtn);
+  } else {
+    // Older pages without the button — inject the full banner into the sidebar
+    const aside = document.querySelector('aside');
+    if (aside && !document.getElementById('logout-banner')) {
+      const logoutDiv = document.createElement('div');
+      logoutDiv.id = 'logout-banner';
+      logoutDiv.className = 'mt-auto p-4 border-t border-white/5';
+
+      const logoutBtn = document.createElement('button');
+      logoutBtn.id = 'logoutBtn';
+      logoutBtn.type = 'button';
+      logoutBtn.className = 'flex items-center gap-2.5 text-sm text-gray-400 hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg';
+      logoutBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">logout</span><span class="font-medium">Sign Out</span>';
+      logoutBtn.title = 'Sign Out';
+      attachLogout(logoutBtn);
+
+      logoutDiv.appendChild(logoutBtn);
+      aside.appendChild(logoutDiv);
+    }
   }
 });

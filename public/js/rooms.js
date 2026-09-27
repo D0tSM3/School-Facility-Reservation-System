@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (currentRole === 'staff' || currentRole === 'admin') {
         actionBtn = `<div class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-semibold min-w-[100px]">View Only</div>`;
       } else {
-        actionBtn = `<a href="book-room.html?room_id=${r.room_id}" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 rounded-lg bg-[#7A1F2B] hover:bg-[#5e1821] text-white text-xs font-semibold transition-colors shadow-xs min-w-[100px]">Reserve</a>`;
+        actionBtn = `<button type="button" onclick="window.openBookingModal('${r.room_id}')" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 rounded-lg bg-[#7A1F2B] hover:bg-[#5e1821] text-white text-xs font-semibold transition-colors shadow-xs min-w-[100px] cursor-pointer">Reserve</button>`;
       }
 
       if (currentView === 'list') {
@@ -342,4 +342,75 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   fetchCurrentRole().then(fetchRooms);
+});
+window.openBookingModal = function(roomId) {
+  const modal = document.getElementById('bookingModalOverlay');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  
+  const roomSelect = document.getElementById('roomSelect');
+  if (roomSelect) {
+    roomSelect.value = roomId;
+    roomSelect.dispatchEvent(new Event('change'));
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('bookingModalOverlay');
+  const closeBtn = document.getElementById('closeBookingModalBtn');
+  const cancelBtn = document.getElementById('cancelModalBtn');
+
+  function closeModal() {
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  }
+
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  
+  // cancelModalBtn is bound in booking.js to history.back().
+  // We need to override it or let booking.js know it's a modal.
+  if (cancelBtn) {
+    // Override the event listener from booking.js by replacing the element
+    const newCancel = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+    newCancel.addEventListener('click', closeModal);
+  }
+});
+document.addEventListener('DOMContentLoaded', () => {
+  const statusBtns = document.querySelectorAll('.status-btn');
+  const statusSelect = document.getElementById('statusFilter');
+
+  statusBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      statusBtns.forEach(b => {
+        b.classList.remove('active', 'bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+        b.classList.add('text-gray-500', 'font-medium');
+      });
+      btn.classList.add('active', 'bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+      btn.classList.remove('text-gray-500', 'font-medium');
+      
+      if (statusSelect) {
+        statusSelect.value = btn.dataset.status;
+        statusSelect.dispatchEvent(new Event('change'));
+      }
+    });
+  });
+
+  if (statusSelect) {
+    statusSelect.addEventListener('change', () => {
+      const val = statusSelect.value;
+      statusBtns.forEach(b => {
+        if (b.dataset.status === val) {
+          b.classList.add('active', 'bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+          b.classList.remove('text-gray-500', 'font-medium');
+        } else {
+          b.classList.remove('active', 'bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+          b.classList.add('text-gray-500', 'font-medium');
+        }
+      });
+    });
+  }
 });

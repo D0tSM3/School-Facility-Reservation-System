@@ -207,20 +207,18 @@
               </span>
             </div>
 
-            <!-- Status Filter -->
-            <div class="relative">
-              <select
-                id="statusFilter"
-                class="bg-[#f8f9fb] border border-gray-200/80 rounded-xl px-3 py-2 pr-8 text-xs sm:text-sm text-gray-700 font-medium appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] transition-all"
-              >
-                <option value="all">All Statuses</option>
+            <!-- Status Filter Redesign -->
+            <div class="flex bg-[#f8f9fb] border border-gray-200/80 rounded-xl p-1 gap-1">
+              <button type="button" class="status-btn active px-3 py-1.5 rounded-lg text-xs font-semibold bg-white shadow-sm text-gray-800 transition-all" data-status="all">All</button>
+              <button type="button" class="status-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:text-gray-700 transition-all" data-status="available">Available</button>
+              <button type="button" class="status-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:text-gray-700 transition-all" data-status="occupied">In Use</button>
+              <button type="button" class="status-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:text-gray-700 transition-all" data-status="maintenance">Maintenance</button>
+              <select id="statusFilter" class="hidden">
+                <option value="all" selected>All</option>
                 <option value="available">Available</option>
                 <option value="occupied">In Use</option>
                 <option value="maintenance">Maintenance</option>
               </select>
-              <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-[18px]">
-                expand_more
-              </span>
             </div>
           </div>
 
@@ -305,9 +303,563 @@
           </button>
         </div>
       </main>
+
+    <!-- Booking Modal Overlay -->
+    <div id="bookingModalOverlay" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4 sm:p-8 overflow-y-auto">
+      <div class="relative w-full max-w-[1200px] my-auto bg-white rounded-2xl shadow-xl flex flex-col">
+        <!-- Close Button -->
+        <button id="closeBookingModalBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-2 rounded-lg bg-white shadow-sm border border-gray-100 z-10 transition-colors cursor-pointer" type="button">
+           <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+        <div class="max-h-[85vh] overflow-y-auto rounded-2xl relative">
+        <!-- Form Card Container -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          
+          <!-- Selected Room Ribbon Context -->
+          <div class="bg-[#f8f9fb] px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-gray-200">
+            <div class="flex items-center gap-4 flex-wrap">
+              <div class="w-10 h-10 rounded-xl bg-[#7a1f2b] flex items-center justify-center text-white shadow-sm shrink-0">
+                <span class="material-symbols-outlined text-[20px]">meeting_room</span>
+              </div>
+              <div>
+                <h2 id="roomHeading" class="text-lg font-bold text-gray-900 leading-tight">Loading Facility...</h2>
+                <div class="flex items-center gap-3 mt-1 text-xs font-semibold text-gray-500">
+                  <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span><span id="roomPillName">Select Room</span></span>
+                  <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">groups</span><span id="roomPillSeats">-- Capacity</span></span>
+                  <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">layers</span><span id="roomFloor">--</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <form id="roomReservationForm" class="p-6 md:p-8 space-y-8" novalidate>
+            
+            <!-- Dynamic Banners -->
+            <div id="bookingSuccessBanner" class="hidden items-start gap-3 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl">
+              <span class="material-symbols-outlined text-emerald-600 mt-0.5">check_circle</span>
+              <div class="flex flex-col">
+                <span class="text-sm font-bold">Reservation Request Dispatched</span>
+                <p id="bookingSuccessText" class="text-xs mt-0.5">Permit created successfully. Redirecting...</p>
+              </div>
+            </div>
+
+            <div id="collisionErrorBanner" class="hidden items-start gap-3 p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl">
+              <span class="material-symbols-outlined text-red-600 mt-0.5">error</span>
+              <div class="flex flex-col">
+                <span id="collisionErrorTitle" class="text-sm font-bold">Unable to submit request</span>
+                <p id="collisionErrorText" class="text-xs mt-0.5">Scheduling Collision: Room is already booked during this window.</p>
+              </div>
+            </div>
+
+            <div id="rebookNoticeBanner" class="hidden items-start gap-3 p-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-xl">
+              <span class="material-symbols-outlined text-blue-600 mt-0.5">sync</span>
+              <div class="flex flex-col flex-1">
+                <span id="rebookNoticeTitle" class="text-sm font-bold">Re-booking</span>
+                <p id="rebookNoticeText" class="text-xs mt-0.5">...</p>
+              </div>
+              <button type="button" id="rebookNoticeDismiss" class="text-blue-500 hover:text-blue-700">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <!-- Grid: Room Selector & Date -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="flex flex-col space-y-2">
+                <label class="text-sm font-bold text-gray-800" for="roomSelect">Target Facility <span class="text-red-500">*</span></label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-400">location_city</span>
+                  <select id="roomSelect" class="w-full pl-10 pr-8 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none" required>
+                    <option value="">Loading rooms…</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="flex flex-col space-y-2">
+                <label class="text-sm font-bold text-gray-800" for="resDate">Reservation Date <span class="text-red-500">*</span></label>
+                <!-- Hidden native input keeps id=resDate so booking.js/validation work untouched -->
+                <input id="resDate" type="date" class="sr-only" required aria-hidden="true" tabindex="-1" />
+                <div class="relative" id="miniCalWrap">
+                  <!-- Visible trigger -->
+                  <button type="button" id="miniCalTrigger"
+                    class="w-full flex items-center gap-3 pl-10 pr-4 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-600 hover:border-[#7a1f2b] focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] transition-colors text-left">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-[#7a1f2b] pointer-events-none">calendar_today</span>
+                    <span id="miniCalDisplay" class="flex-1 font-medium">Select a date…</span>
+                    <span class="material-symbols-outlined text-[18px] text-gray-400 ml-auto shrink-0">expand_more</span>
+                  </button>
+                  <!-- Popup panel -->
+                  <div id="miniCalPopup"
+                    class="hidden absolute z-50 top-[calc(100%+6px)] left-0 w-72 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden"
+                    role="dialog" aria-label="Date picker">
+                    <!-- Month header -->
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+                      <button type="button" id="miniCalPrev" class="p-1 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors" aria-label="Previous month">
+                        <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                      </button>
+                      <span id="miniCalMonthLabel" class="text-sm font-bold text-gray-800 tracking-tight"></span>
+                      <button type="button" id="miniCalNext" class="p-1 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors" aria-label="Next month">
+                        <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                      </button>
+                    </div>
+                    <!-- Day-of-week labels -->
+                    <div class="grid grid-cols-7 px-3 pt-2 pb-1">
+                      <span class="text-[10px] font-bold text-gray-400 text-center">Su</span>
+                      <span class="text-[10px] font-bold text-gray-400 text-center">Mo</span>
+                      <span class="text-[10px] font-bold text-gray-400 text-center">Tu</span>
+                      <span class="text-[10px] font-bold text-gray-400 text-center">We</span>
+                      <span class="text-[10px] font-bold text-gray-400 text-center">Th</span>
+                      <span class="text-[10px] font-bold text-gray-400 text-center">Fr</span>
+                      <span class="text-[10px] font-bold text-gray-400 text-center">Sa</span>
+                    </div>
+                    <!-- Day grid -->
+                    <div id="miniCalGrid" class="grid grid-cols-7 gap-y-0.5 px-3 pb-3"></div>
+                  </div>
+                </div>
+                <p id="dateError" class="hidden text-xs font-semibold text-red-600"></p>
+              </div>
+            </div>
+
+            <!-- Facility Weekly Availability -->
+            <div id="room-calendar-container" class="rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-white">
+              <!-- Static header — roomCalendar.js replaces the INNER content, not this wrapper -->
+              <div class="p-8 text-center text-gray-400">
+                <span class="material-symbols-outlined text-[36px] opacity-40">calendar_view_week</span>
+                <p class="text-sm mt-2 font-medium">Select a facility to view availability</p>
+              </div>
+            </div>
+
+            <!-- Time Selectors (6:00 AM - 9:00 PM) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#f8f9fb] p-5 rounded-xl border border-gray-200">
+              <div class="flex flex-col space-y-2">
+                <label class="text-sm font-bold text-gray-800" for="startTime">Start Time <span class="text-red-500">*</span></label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-400">login</span>
+                  <select id="startTime" class="w-full pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none" required>
+                    <option value="">Select Start Time</option>
+                    <option value="06:00">06:00 AM</option>
+                    <option value="06:30">06:30 AM</option>
+                    <option value="07:00">07:00 AM</option>
+                    <option value="07:30">07:30 AM</option>
+                    <option value="08:00">08:00 AM</option>
+                    <option value="08:30">08:30 AM</option>
+                    <option value="09:00">09:00 AM</option>
+                    <option value="09:30">09:30 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                    <option value="10:30">10:30 AM</option>
+                    <option value="11:00">11:00 AM</option>
+                    <option value="11:30">11:30 AM</option>
+                    <option value="12:00">12:00 PM</option>
+                    <option value="12:30">12:30 PM</option>
+                    <option value="13:00">01:00 PM</option>
+                    <option value="13:30">01:30 PM</option>
+                    <option value="14:00">02:00 PM</option>
+                    <option value="14:30">02:30 PM</option>
+                    <option value="15:00">03:00 PM</option>
+                    <option value="15:30">03:30 PM</option>
+                    <option value="16:00">04:00 PM</option>
+                    <option value="16:30">04:30 PM</option>
+                    <option value="17:00">05:00 PM</option>
+                    <option value="17:30">05:30 PM</option>
+                    <option value="18:00">06:00 PM</option>
+                    <option value="18:30">06:30 PM</option>
+                    <option value="19:00">07:00 PM</option>
+                    <option value="19:30">07:30 PM</option>
+                    <option value="20:00">08:00 PM</option>
+                    <option value="20:30">08:30 PM</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="flex flex-col space-y-2">
+                <label class="text-sm font-bold text-gray-800" for="endTime">End Time <span class="text-red-500">*</span></label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-400">logout</span>
+                  <select id="endTime" class="w-full pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none" required>
+                    <option value="">Select End Time</option>
+                    <option value="06:30">06:30 AM</option>
+                    <option value="07:00">07:00 AM</option>
+                    <option value="07:30">07:30 AM</option>
+                    <option value="08:00">08:00 AM</option>
+                    <option value="08:30">08:30 AM</option>
+                    <option value="09:00">09:00 AM</option>
+                    <option value="09:30">09:30 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                    <option value="10:30">10:30 AM</option>
+                    <option value="11:00">11:00 AM</option>
+                    <option value="11:30">11:30 AM</option>
+                    <option value="12:00">12:00 PM</option>
+                    <option value="12:30">12:30 PM</option>
+                    <option value="13:00">01:00 PM</option>
+                    <option value="13:30">01:30 PM</option>
+                    <option value="14:00">02:00 PM</option>
+                    <option value="14:30">02:30 PM</option>
+                    <option value="15:00">03:00 PM</option>
+                    <option value="15:30">03:30 PM</option>
+                    <option value="16:00">04:00 PM</option>
+                    <option value="16:30">04:30 PM</option>
+                    <option value="17:00">05:00 PM</option>
+                    <option value="17:30">05:30 PM</option>
+                    <option value="18:00">06:00 PM</option>
+                    <option value="18:30">06:30 PM</option>
+                    <option value="19:00">07:00 PM</option>
+                    <option value="19:30">07:30 PM</option>
+                    <option value="20:00">08:00 PM</option>
+                    <option value="20:30">08:30 PM</option>
+                    <option value="21:00">09:00 PM</option>
+                  </select>
+                </div>
+                <div id="timeErrorContainer" class="hidden items-center gap-1 mt-1 text-xs font-bold text-red-600">
+                  <span class="material-symbols-outlined text-[14px]">warning</span>
+                  <span id="timeErrorText">End time must be after start time.</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Classification Radios -->
+            <div class="space-y-3">
+              <label class="text-sm font-bold text-gray-800">Primary Reservation Classification <span class="text-red-500">*</span></label>
+              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                <label class="relative cursor-pointer">
+                  <input class="peer sr-only" name="reservation_purpose" type="radio" value="lecture" data-label="Academic Lecture" required />
+                  <div class="h-full px-2 py-4 rounded-xl border border-gray-200 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-gray-50 shadow-sm">
+                    <span class="material-symbols-outlined text-[24px]">menu_book</span>
+                    <span class="text-xs font-semibold">Academic Lecture</span>
+                  </div>
+                </label>
+                <label class="relative cursor-pointer">
+                  <input class="peer sr-only" name="reservation_purpose" type="radio" value="defense" data-label="Faculty Defense" required />
+                  <div class="h-full px-2 py-4 rounded-xl border border-gray-200 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-gray-50 shadow-sm">
+                    <span class="material-symbols-outlined text-[24px]">workspace_premium</span>
+                    <span class="text-xs font-semibold">Faculty Defense</span>
+                  </div>
+                </label>
+                <label class="relative cursor-pointer">
+                  <input class="peer sr-only" name="reservation_purpose" type="radio" value="student_org" data-label="Student Org Meeting" required />
+                  <div class="h-full px-2 py-4 rounded-xl border border-gray-200 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-gray-50 shadow-sm">
+                    <span class="material-symbols-outlined text-[24px]">diversity_3</span>
+                    <span class="text-xs font-semibold">Student Org</span>
+                  </div>
+                </label>
+                <label class="relative cursor-pointer">
+                  <input class="peer sr-only" name="reservation_purpose" type="radio" value="workshop" data-label="Dept Workshop" required />
+                  <div class="h-full px-2 py-4 rounded-xl border border-gray-200 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-gray-50 shadow-sm">
+                    <span class="material-symbols-outlined text-[24px]">architecture</span>
+                    <span class="text-xs font-semibold">Dept Workshop</span>
+                  </div>
+                </label>
+                <label class="relative cursor-pointer col-span-2 sm:col-span-1">
+                  <input class="peer sr-only" name="reservation_purpose" type="radio" value="exam" data-label="Exam / Quiz" required />
+                  <div class="h-full px-2 py-4 rounded-xl border border-gray-200 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-gray-50 shadow-sm">
+                    <span class="material-symbols-outlined text-[24px]">quiz</span>
+                    <span class="text-xs font-semibold">Exam / Quiz</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Purpose Textarea -->
+            <div class="flex flex-col space-y-2">
+              <label class="text-sm font-bold text-gray-800" for="purpose">Detailed Purpose Description <span class="text-red-500">*</span></label>
+              <textarea
+                id="purpose"
+                rows="3"
+                maxlength="200"
+                class="w-full p-4 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]"
+                placeholder="e.g. Weekly officers' meeting — agenda review and budget planning"
+                required
+              ></textarea>
+            </div>
+
+            <!-- Equipment Checkboxes -->
+            <div class="space-y-3">
+              <label class="text-sm font-bold text-gray-800">Special Equipment &amp; Technical Logistics</label>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3" id="equipmentOptions">
+                <label class="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
+                  <input checked class="mt-0.5 rounded text-[#7a1f2b] focus:ring-[#7a1f2b] w-4 h-4" data-equipment="Wireless Lapel Mic" type="checkbox" />
+                  <div class="flex flex-col">
+                    <span class="text-sm font-bold text-gray-800">Wireless Lapel Mic</span>
+                    <span class="text-xs text-gray-500 mt-0.5">2 Transmitters &amp; fresh batteries</span>
+                  </div>
+                </label>
+                <label class="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
+                  <input checked class="mt-0.5 rounded text-[#7a1f2b] focus:ring-[#7a1f2b] w-4 h-4" data-equipment="HDMI Cable Kit" type="checkbox" />
+                  <div class="flex flex-col">
+                    <span class="text-sm font-bold text-gray-800">HDMI Cable Kit</span>
+                    <span class="text-xs text-gray-500 mt-0.5">USB-C to 4K / DisplayPort</span>
+                  </div>
+                </label>
+                <label class="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
+                  <input class="mt-0.5 rounded text-[#7a1f2b] focus:ring-[#7a1f2b] w-4 h-4" data-equipment="Archival Recording Pod" type="checkbox" />
+                  <div class="flex flex-col">
+                    <span class="text-sm font-bold text-gray-800">Archival Recording Pod</span>
+                    <span class="text-xs text-gray-500 mt-0.5">Fixed dual cam room capture</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Compliance Policy -->
+            <div class="p-5 bg-amber-50 rounded-xl border border-amber-200">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input id="policyAcknowledgement" class="mt-0.5 rounded text-[#7a1f2b] focus:ring-[#7a1f2b] w-4 h-4 shrink-0" type="checkbox" required />
+                <div class="flex flex-col">
+                  <span class="text-sm font-bold text-amber-900">Institutional Space Policy Acknowledgement</span>
+                  <p class="text-xs text-amber-800 mt-1 leading-relaxed">
+                    I confirm that this reservation complies with BPU Administrative Space Policies and acknowledge responsibility for room integrity. I guarantee immediate vacancy at the conclusion of the approved slot and will ensure all campus AV peripherals are safely docked.
+                  </p>
+                </div>
+              </label>
+            </div>
+            
+          </form>
+
+          <!-- Form Footer Actions -->
+          <div class="bg-gray-50 px-6 py-5 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p class="text-xs text-gray-500 flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px]">info</span>
+              Requests are reviewed by the Registrar before approval.
+            </p>
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+              <button id="cancelModalBtn" type="button" class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-200 text-gray-700 font-medium text-sm rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
+                Cancel
+              </button>
+              <button id="bookingSubmitBtn" type="submit" form="roomReservationForm" disabled
+                class="w-full sm:w-auto px-6 py-2.5 bg-gray-200 text-gray-400 font-medium text-sm rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm cursor-not-allowed"
+                aria-disabled="true">
+                <span class="material-symbols-outlined text-[18px]">send</span>
+                Submit Request
+              </button>
+            </div>
+          </div>
+          
+        </div>
+
+
+        </div>
+      </div>
+    </div>
     </div>
 
+    <script src="js/schedule.js"></script>
+    <script src="js/roomCalendar.js"></script>
+    <script src="js/booking.js"></script>
     <script src="js/app.js"></script>
     <script src="js/rooms.js"></script>
+    <script>
+    // ── Mini Date Picker ──────────────────────────────────────────────────────
+    (function () {
+      const trigger   = document.getElementById('miniCalTrigger');
+      const popup     = document.getElementById('miniCalPopup');
+      const grid      = document.getElementById('miniCalGrid');
+      const label     = document.getElementById('miniCalMonthLabel');
+      const display   = document.getElementById('miniCalDisplay');
+      const prevBtn   = document.getElementById('miniCalPrev');
+      const nextBtn   = document.getElementById('miniCalNext');
+      const hiddenInput = document.getElementById('resDate');
+      if (!trigger || !popup || !hiddenInput) return;
+
+      const MAROON  = '#7a1f2b';
+      const MONTHS  = ['January','February','March','April','May','June',
+                       'July','August','September','October','November','December'];
+      const toYMD   = d => d.getFullYear() + '-' +
+                          String(d.getMonth()+1).padStart(2,'0') + '-' +
+                          String(d.getDate()).padStart(2,'0');
+
+      let cursor = new Date();   // month being displayed
+      cursor.setDate(1);
+
+      // earliest bookable: tomorrow, skip Sunday
+      function minDate() {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        if (d.getDay() === 0) d.setDate(d.getDate() + 1);
+        return toYMD(d);
+      }
+
+      function renderGrid() {
+        const year  = cursor.getFullYear();
+        const month = cursor.getMonth();
+        label.textContent = `${MONTHS[month]} ${year}`;
+        grid.innerHTML = '';
+
+        const min     = minDate();
+        const selYMD  = hiddenInput.value;
+        const todayYMD = toYMD(new Date());
+        const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        // blank cells before first day
+        for (let i = 0; i < firstDay; i++) {
+          const blank = document.createElement('div');
+          grid.appendChild(blank);
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+          const ymd  = toYMD(new Date(year, month, d));
+          const dow  = new Date(year, month, d).getDay(); // 0=Sun
+          const isPast   = ymd < min;
+          const isSun    = dow === 0;
+          const isToday  = ymd === todayYMD;
+          const isSelected = ymd === selYMD;
+          const disabled = isPast || isSun;
+
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = d;
+          btn.disabled = disabled;
+
+          let cls = 'w-9 h-9 mx-auto flex items-center justify-center rounded-full text-[13px] font-semibold transition-colors ';
+          if (isSelected) {
+            cls += 'text-white';
+            btn.style.backgroundColor = MAROON;
+          } else if (disabled) {
+            cls += 'text-gray-300 cursor-not-allowed';
+          } else if (isToday) {
+            cls += `border-2 text-[${MAROON}] hover:bg-[#fdf5f6]`;
+            btn.style.borderColor = MAROON;
+            btn.style.color = MAROON;
+          } else {
+            cls += 'text-gray-700 hover:bg-gray-100';
+          }
+          btn.className = cls;
+
+          if (!disabled) {
+            btn.addEventListener('click', () => selectDate(ymd));
+          }
+          grid.appendChild(btn);
+        }
+      }
+
+      function selectDate(ymd) {
+        hiddenInput.value = ymd;
+        hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+        // Update trigger label
+        const d = new Date(ymd + 'T00:00:00');
+        display.textContent = d.toLocaleDateString('en-US', { weekday:'short', month:'long', day:'numeric', year:'numeric' });
+        display.style.color = '#111827';
+        popup.classList.add('hidden');
+        renderGrid();
+      }
+
+      prevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        cursor.setMonth(cursor.getMonth() - 1);
+        renderGrid();
+      });
+      nextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        cursor.setMonth(cursor.getMonth() + 1);
+        renderGrid();
+      });
+
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = !popup.classList.contains('hidden');
+        if (isOpen) {
+          popup.classList.add('hidden');
+        } else {
+          // Align cursor to currently selected or today
+          const val = hiddenInput.value;
+          if (val) {
+            const d = new Date(val + 'T00:00:00');
+            cursor = new Date(d.getFullYear(), d.getMonth(), 1);
+          } else {
+            const now = new Date();
+            cursor = new Date(now.getFullYear(), now.getMonth(), 1);
+          }
+          renderGrid();
+          popup.classList.remove('hidden');
+        }
+      });
+
+      // Close on outside click
+      document.addEventListener('click', (e) => {
+        if (!popup.contains(e.target) && e.target !== trigger) {
+          popup.classList.add('hidden');
+        }
+      });
+
+      // Initial render (show month but keep closed)
+      renderGrid();
+    })();
+    </script>
+
+    <script>
+    // ── Submit Button Validation Watcher ─────────────────────────────────────
+    (function () {
+      // Wait until the booking modal's form elements exist in the DOM.
+      // booking.js runs after DOMContentLoaded, so we also wait for that.
+      document.addEventListener('DOMContentLoaded', function () {
+        const submitBtn    = document.getElementById('bookingSubmitBtn');
+        const roomSelect   = document.getElementById('roomSelect');
+        const resDate      = document.getElementById('resDate');
+        const startTime    = document.getElementById('startTime');
+        const endTime      = document.getElementById('endTime');
+        const purposeInput = document.getElementById('purpose');
+        const policyBox    = document.getElementById('policyAcknowledgement');
+        const form         = document.getElementById('roomReservationForm');
+
+        if (!submitBtn || !form) return;
+
+        function isFormReady() {
+          // 1. Facility selected
+          if (!roomSelect || !roomSelect.value) return false;
+          // 2. Date selected (hidden input set by mini calendar)
+          if (!resDate || !resDate.value) return false;
+          // 3. Start time
+          if (!startTime || !startTime.value) return false;
+          // 4. End time AND end > start
+          if (!endTime || !endTime.value) return false;
+          if (endTime.value <= startTime.value) return false;
+          // 5. Classification radio
+          const picked = form.querySelector('input[name="reservation_purpose"]:checked');
+          if (!picked) return false;
+          // 6. Purpose description (non-empty after trim)
+          if (!purposeInput || !purposeInput.value.trim()) return false;
+          // 7. Policy acknowledgement
+          if (!policyBox || !policyBox.checked) return false;
+          return true;
+        }
+
+        function updateBtn() {
+          const ready = isFormReady();
+          submitBtn.disabled = !ready;
+          submitBtn.setAttribute('aria-disabled', String(!ready));
+          if (ready) {
+            submitBtn.className = submitBtn.className
+              .replace('bg-gray-200', 'bg-[#7a1f2b]')
+              .replace('text-gray-400', 'text-white')
+              .replace('cursor-not-allowed', 'hover:bg-[#5b0617] cursor-pointer');
+          } else {
+            // Reset to disabled look
+            let cls = submitBtn.className;
+            if (!cls.includes('bg-gray-200'))   cls = cls.replace('bg-[#7a1f2b]', 'bg-gray-200');
+            if (!cls.includes('text-gray-400'))  cls = cls.replace('text-white', 'text-gray-400');
+            cls = cls.replace('hover:bg-[#5b0617]', '').replace('cursor-pointer', 'cursor-not-allowed');
+            submitBtn.className = cls.replace(/\s+/g, ' ').trim();
+          }
+        }
+
+        // Watch every relevant field for changes
+        const watchTargets = [roomSelect, resDate, startTime, endTime, purposeInput, policyBox];
+        watchTargets.forEach(el => {
+          if (!el) return;
+          el.addEventListener('change', updateBtn);
+          el.addEventListener('input',  updateBtn);
+        });
+
+        // Radios share a name — watch the form for radio changes too
+        form.addEventListener('change', updateBtn);
+
+        // Also re-check whenever the booking modal is opened (room pre-selected)
+        const overlay = document.getElementById('bookingModalOverlay');
+        if (overlay) {
+          new MutationObserver(updateBtn).observe(overlay, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        // Initial state
+        updateBtn();
+      });
+    })();
+    </script>
   </body>
 </html>

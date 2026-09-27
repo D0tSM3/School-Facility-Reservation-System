@@ -1,0 +1,241 @@
+
+>         <!-- Form Card Container -->
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            
+            <!-- Selected Room Ribbon Context -->
+            <div class="bg-[#f8f9fb] px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-b 
+border-gray-200">
+              <div class="flex items-center gap-4 flex-wrap">
+                <div class="w-10 h-10 rounded-xl bg-[#7a1f2b] flex items-center justify-center text-white shadow-sm 
+shrink-0">
+                  <span class="material-symbols-outlined text-[20px]">meeting_room</span>
+                </div>
+                <div>
+                  <h2 id="roomHeading" class="text-lg font-bold text-gray-900 leading-tight">Loading Facility...</h2>
+                  <div class="flex items-center gap-3 mt-1 text-xs font-semibold text-gray-500">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full 
+bg-emerald-500"></span><span id="roomPillName">Select Room</span></span>
+                    <span class="flex items-center gap-1"><span class="material-symbols-outlined 
+text-[14px]">groups</span><span id="roomPillSeats">-- Capacity</span></span>
+                    <span class="flex items-center gap-1"><span class="material-symbols-outlined 
+text-[14px]">layers</span><span id="roomFloor">--</span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+  
+            <form id="roomReservationForm" class="p-6 md:p-8 space-y-8" novalidate>
+              
+              <!-- Dynamic Banners -->
+              <div id="bookingSuccessBanner" class="hidden items-start gap-3 p-4 bg-emerald-50 border 
+border-emerald-200 text-emerald-800 rounded-xl">
+                <span class="material-symbols-outlined text-emerald-600 mt-0.5">check_circle</span>
+                <div class="flex flex-col">
+                  <span class="text-sm font-bold">Reservation Request Dispatched</span>
+                  <p id="bookingSuccessText" class="text-xs mt-0.5">Permit created successfully. Redirecting...</p>
+                </div>
+              </div>
+  
+              <div id="collisionErrorBanner" class="hidden items-start gap-3 p-4 bg-red-50 border border-red-200 
+text-red-800 rounded-xl">
+                <span class="material-symbols-outlined text-red-600 mt-0.5">error</span>
+                <div class="flex flex-col">
+                  <span id="collisionErrorTitle" class="text-sm font-bold">Unable to submit request</span>
+                  <p id="collisionErrorText" class="text-xs mt-0.5">Scheduling Collision: Room is already booked 
+during this window.</p>
+                </div>
+              </div>
+  
+              <div id="rebookNoticeBanner" class="hidden items-start gap-3 p-4 bg-blue-50 border border-blue-200 
+text-blue-800 rounded-xl">
+                <span class="material-symbols-outlined text-blue-600 mt-0.5">sync</span>
+                <div class="flex flex-col flex-1">
+                  <span id="rebookNoticeTitle" class="text-sm font-bold">Re-booking</span>
+                  <p id="rebookNoticeText" class="text-xs mt-0.5">...</p>
+                </div>
+                <button type="button" id="rebookNoticeDismiss" class="text-blue-500 hover:text-blue-700">
+                  <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              </div>
+  
+              <!-- Grid: Room Selector & Date -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="flex flex-col space-y-2">
+                  <label class="text-sm font-bold text-gray-800" for="roomSelect">Target Facility <span 
+class="text-red-500">*</span></label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] 
+text-gray-400">location_city</span>
+                    <select id="roomSelect" class="w-full pl-10 pr-8 py-2.5 bg-[#f8f9fb] border border-gray-200 
+rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] 
+appearance-none" required>
+                      <option value="">Loading rooms…</option>
+                    </select>
+                  </div>
+                </div>
+  
+                <div class="flex flex-col space-y-2">
+                  <label class="text-sm font-bold text-gray-800" for="resDate">Reservation Date <span 
+class="text-red-500">*</span></label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] 
+text-gray-400">calendar_today</span>
+                    <input id="resDate" type="date" class="w-full pl-10 pr-4 py-2.5 bg-[#f8f9fb] border 
+border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] 
+focus:border-[#7a1f2b]" required />
+                  </div>
+                  <p id="dateError" class="hidden text-xs font-semibold text-red-600"></p>
+                </div>
+              </div>
+  
+              <!-- Clean Week Calendar Grid View -->
+              <div id="room-calendar-container" class="border border-gray-200 rounded-xl overflow-hidden bg-white 
+shadow-sm">
+                <div class="p-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                  <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px] text-gray-400">calendar_view_week</span>
+                    Facility Weekly Availability
+                  </h3>
+                  <div class="flex items-center gap-1">
+                    <button type="button" class="p-1 rounded-lg hover:bg-gray-200 text-gray-500 flex items-center 
+justify-center"><span class="material-symbols-outlined text-[18px]">chevron_left</span></button>
+                    <span class="text-xs font-semibold text-gray-600 px-2">Current Week</span>
+                    <button type="button" class="p-1 rounded-lg hover:bg-gray-200 text-gray-500 flex items-center 
+justify-center"><span class="material-symbols-outlined text-[18px]">chevron_right</span></button>
+                  </div>
+                </div>
+                
+                <!-- Placeholder for roomCalendar.js to inject its grid into. 
+                     We clear the static one provided in the reference so the real JS can work. -->
+                <div class="p-8 text-center text-gray-500">
+                  <span class="material-symbols-outlined text-[32px] animate-spin">refresh</span>
+                  <p class="text-sm mt-2 font-medium">Loading schedule grid...</p>
+                </div>
+              </div>
+  
+              <!-- Time Selectors (6:00 AM - 9:00 PM) -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#f8f9fb] p-5 rounded-xl border border-gray-200">
+                <div class="flex flex-col space-y-2">
+                  <label class="text-sm font-bold text-gray-800" for="startTime">Start Time <span 
+class="text-red-500">*</span></label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] 
+text-gray-400">login</span>
+                    <select id="startTime" class="w-full pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl 
+text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none" 
+required>
+                      <option value="">Select Start Time</option>
+                      <option value="06:00">06:00 AM</option>
+                      <option value="06:30">06:30 AM</option>
+                      <option value="07:00">07:00 AM</option>
+                      <option value="07:30">07:30 AM</option>
+                      <option value="08:00">08:00 AM</option>
+                      <option value="08:30">08:30 AM</option>
+                      <option value="09:00">09:00 AM</option>
+                      <option value="09:30">09:30 AM</option>
+                      <option value="10:00">10:00 AM</option>
+                      <option value="10:30">10:30 AM</option>
+                      <option value="11:00">11:00 AM</option>
+                      <option value="11:30">11:30 AM</option>
+                      <option value="12:00">12:00 PM</option>
+                      <option value="12:30">12:30 PM</option>
+                      <option value="13:00">01:00 PM</option>
+                      <option value="13:30">01:30 PM</option>
+                      <option value="14:00">02:00 PM</option>
+                      <option value="14:30">02:30 PM</option>
+                      <option value="15:00">03:00 PM</option>
+                      <option value="15:30">03:30 PM</option>
+                      <option value="16:00">04:00 PM</option>
+                      <option value="16:30">04:30 PM</option>
+                      <option value="17:00">05:00 PM</option>
+                      <option value="17:30">05:30 PM</option>
+                      <option value="18:00">06:00 PM</option>
+                      <option value="18:30">06:30 PM</option>
+                      <option value="19:00">07:00 PM</option>
+                      <option value="19:30">07:30 PM</option>
+                      <option value="20:00">08:00 PM</option>
+                      <option value="20:30">08:30 PM</option>
+                    </select>
+                  </div>
+                </div>
+  
+                <div class="flex flex-col space-y-2">
+                  <label class="text-sm font-bold text-gray-800" for="endTime">End Time <span 
+class="text-red-500">*</span></label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] 
+text-gray-400">logout</span>
+                    <select id="endTime" class="w-full pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl 
+text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none" 
+required>
+                      <option value="">Select End Time</option>
+                      <option value="06:30">06:30 AM</option>
+                      <option value="07:00">07:00 AM</option>
+                      <option value="07:30">07:30 AM</option>
+                      <option value="08:00">08:00 AM</option>
+                      <option value="08:30">08:30 AM</option>
+                      <option value="09:00">09:00 AM</option>
+                      <option value="09:30">09:30 AM</option>
+                      <option value="10:00">10:00 AM</option>
+                      <option value="10:30">10:30 AM</option>
+                      <option value="11:00">11:00 AM</option>
+                      <option value="11:30">11:30 AM</option>
+                      <option value="12:00">12:00 PM</option>
+                      <option value="12:30">12:30 PM</option>
+                      <option value="13:00">01:00 PM</option>
+                      <option value="13:30">01:30 PM</option>
+                      <option value="14:00">02:00 PM</option>
+                      <option value="14:30">02:30 PM</option>
+                      <option value="15:00">03:00 PM</option>
+                      <option value="15:30">03:30 PM</option>
+                      <option value="16:00">04:00 PM</option>
+                      <option value="16:30">04:30 PM</option>
+                      <option value="17:00">05:00 PM</option>
+                      <option value="17:30">05:30 PM</option>
+                      <option value="18:00">06:00 PM</option>
+                      <option value="18:30">06:30 PM</option>
+                      <option value="19:00">07:00 PM</option>
+                      <option value="19:30">07:30 PM</option>
+                      <option value="20:00">08:00 PM</option>
+                      <option value="20:30">08:30 PM</option>
+                      <option value="21:00">09:00 PM</option>
+                    </select>
+                  </div>
+                  <div id="timeErrorContainer" class="hidden items-center gap-1 mt-1 text-xs font-bold text-red-600">
+                    <span class="material-symbols-outlined text-[14px]">warning</span>
+                    <span id="timeErrorText">End time must be after start time.</span>
+                  </div>
+                </div>
+              </div>
+  
+              <!-- Classification Radios -->
+              <div class="space-y-3">
+                <label class="text-sm font-bold text-gray-800">Primary Reservation Classification <span 
+class="text-red-500">*</span></label>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                  <label class="relative cursor-pointer">
+                    <input class="peer sr-only" name="reservation_purpose" type="radio" value="lecture" 
+data-label="Academic Lecture" required />
+                    <div class="h-full px-2 py-4 rounded-xl border border-gray-200 bg-white text-gray-500 text-center 
+transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col 
+items-center gap-2 hover:bg-gray-50 shadow-sm">
+                      <span class="material-symbols-outlined text-[24px]">menu_book</span>
+                      <span class="text-xs font-semibold">Academic Lecture</span>
+                    </div>
+                  </label>
+                  <label class="relative cursor-pointer">
+                    <input class="peer sr-only" name="reservation_purpose" type="radio" value="defense" 
+data-label="Faculty Defense" required />
+                    <div class="h-full px-2 py-4 rounded-xl border border-gray-200 bg-white text-gray-500 text-center 
+transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col 
+items-center gap-2 hover:bg-gray-50 shadow-sm">
+                      <span class="material-symbols-outlined text-[24px]">workspace_premium</span>
+                      <span class="text-xs font-semibold">Faculty Defense</span>
+                    </div>
+                  </label>
+                  <label class="relative cursor-pointer">
+                    <input class="peer sr-only" name="reservation_purpose" type="radio" value="student_org" 
+data-label="Student Org Meeting" required />
+
+
+

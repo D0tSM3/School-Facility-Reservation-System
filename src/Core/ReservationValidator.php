@@ -66,12 +66,12 @@ class ReservationValidator
             return "BPU is closed on Sundays.";
         }
 
-        // 3. Business Hours Check (07:30 - 21:00)
-        $startOfDay = strtotime($startDate . ' 07:30:00');
+        // 3. Business Hours Check (06:00 - 21:00)
+        $startOfDay = strtotime($startDate . ' 06:00:00');
         $endOfDay = strtotime($startDate . ' 21:00:00');
 
         if ($start < $startOfDay || $end > $endOfDay) {
-            return "Reservations must be within business hours (07:30 - 21:00).";
+            return "Reservations must be within business hours (06:00 - 21:00).";
         }
 
         // 4. Holiday Check

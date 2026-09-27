@@ -1,36 +1,16 @@
 <!doctype html>
-<style>
-  aside > div:first-child > div {
-    display: none;
-  }
-  .reservation-card {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    border: 1px solid #e1e2e4;
-  }
-  #reservationSearch {
-    width: min(100%, 28rem);
-    background-color: #e5e7eb;
-  }
-</style>
-
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>CampusRoom — My Reservations | BPU</title>
-    <meta name="description" content="View and manage your BPU facility reservation history and status." />
+    <title>CampusRoom — My Reservations | BPU Facility Gateway</title>
+    <meta name="description" content="View and manage your academic facility reservations." />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/main.css" />
@@ -43,660 +23,390 @@
         theme: {
           extend: {
             colors: {
-              "on-tertiary-fixed-variant": "#474746",
-              "on-secondary-fixed": "#261a00",
-              "on-surface": "#191c1e",
-              surface: "#f8f9fb",
+              primary: "#5b0617",
+              "primary-container": "#7a1f2b",
               "on-primary": "#ffffff",
-              "on-primary-container": "#ff8b92",
-              "surface-dim": "#d9dadc",
-              "on-tertiary-container": "#afadac",
-              "on-primary-fixed": "#40000c",
-              "surface-container-high": "#e7e8ea",
-              "primary-fixed": "#ffdada",
-              "on-secondary-container": "#715300",
-              "tertiary-container": "#414141",
-              "surface-tint": "#a13c46",
-              "on-secondary": "#ffffff",
-              "surface-container": "#edeef0",
-              error: "#ba1a1a",
-              "on-primary-fixed-variant": "#822530",
-              "inverse-on-surface": "#f0f1f3",
-              "on-tertiary-fixed": "#1b1c1c",
-              "secondary-fixed-dim": "#f6be39",
-              "on-error-container": "#93000a",
-              "on-error": "#ffffff",
-              "on-secondary-fixed-variant": "#5c4300",
-              "on-background": "#191c1e",
-              "tertiary-fixed-dim": "#c8c6c5",
               secondary: "#795900",
               "secondary-container": "#ffc641",
-              "tertiary-fixed": "#e4e2e1",
-              "outline-variant": "#dcc0c0",
+              tertiary: "#1c1c1e",
               background: "#f8f9fb",
-              "inverse-surface": "#2e3132",
-              "surface-container-lowest": "#ffffff",
-              "primary-container": "#7a1f2b",
-              "error-container": "#ffdad6",
-              "surface-bright": "#f8f9fb",
+              surface: "#f8f9fb",
+              "on-surface": "#191c1e",
               "on-surface-variant": "#564242",
-              "surface-container-highest": "#e1e2e4",
-              "secondary-fixed": "#ffdfa0",
-              "primary-fixed-dim": "#ffb3b5",
-              outline: "#897172",
-              "inverse-primary": "#ffb3b5",
-              "surface-variant": "#e1e2e4",
-              "surface-container-low": "#f3f4f6",
-              primary: "#5b0617",
-              "on-tertiary": "#ffffff",
-              tertiary: "#2b2b2b",
-            },
-            borderRadius: {
-              DEFAULT: "0.125rem",
-              lg: "0.25rem",
-              xl: "0.5rem",
-              full: "0.75rem",
-            },
-            spacing: {
-              "space-sm": "0.5rem",
-              "space-xl": "2.25rem",
-              "space-lg": "1.5rem",
-              "space-md": "1rem",
-              margin: "2rem",
-              "margin-mobile": "1rem",
-              "gutter-mobile": "0.75rem",
-              gutter: "1.25rem",
-              "space-xs": "0.25rem",
             },
             fontFamily: {
-              "headline-lg": ["Inter"],
-              "body-md": ["Inter"],
-              "headline-lg-mobile": ["Inter"],
-              "label-lg": ["Inter"],
-              "headline-md": ["Inter"],
-              "headline-sm": ["Inter"],
-              "body-lg": ["Inter"],
-              "body-sm": ["Inter"],
-              "label-md": ["Inter"],
-              "label-sm": ["Inter"],
-            },
-            fontSize: {
-              "headline-lg": [
-                "30px",
-                {
-                  lineHeight: "38px",
-                  letterSpacing: "-0.02em",
-                  fontWeight: "700",
-                },
-              ],
-              "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
-              "headline-lg-mobile": [
-                "24px",
-                {
-                  lineHeight: "32px",
-                  letterSpacing: "-0.01em",
-                  fontWeight: "700",
-                },
-              ],
-              "label-lg": [
-                "14px",
-                {
-                  lineHeight: "20px",
-                  letterSpacing: "0.01em",
-                  fontWeight: "600",
-                },
-              ],
-              "headline-md": [
-                "22px",
-                {
-                  lineHeight: "28px",
-                  letterSpacing: "-0.01em",
-                  fontWeight: "600",
-                },
-              ],
-              "headline-sm": [
-                "18px",
-                { lineHeight: "24px", fontWeight: "600" },
-              ],
-              "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
-              "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
-              "label-md": [
-                "12px",
-                {
-                  lineHeight: "16px",
-                  letterSpacing: "0.02em",
-                  fontWeight: "600",
-                },
-              ],
-              "label-sm": [
-                "11px",
-                {
-                  lineHeight: "14px",
-                  letterSpacing: "0.04em",
-                  fontWeight: "700",
-                },
-              ],
+              sans: ["Inter", "sans-serif"],
             },
           },
         },
       };
     </script>
   </head>
-  <body
-    class="bg-background font-body-md text-on-surface antialiased min-h-screen"
-  >
-    <aside
-      class="fixed left-0 top-0 h-full w-[250px] bg-tertiary text-on-tertiary z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
-    >
-      <div class="h-16 px-space-md flex items-center gap-space-sm bg-tertiary">
-        <img
-          alt="CampusRoom Maroon &amp; Gold Logo"
-          class="h-8 w-auto object-contain"
-          src="assets/logo.svg"
-        />
-        <div class="flex flex-col">
-          <span
-            class="font-headline-sm text-headline-sm text-on-tertiary tracking-tight"
-            >CampusRoom</span
-          ><span
-            class="font-label-sm text-label-sm text-tertiary-fixed-dim uppercase tracking-wider"
-            >Buenavista Poly</span
-          >
-        </div>
-      </div>
-      <div class="px-space-md py-space-sm">
-        <div
-          class="font-label-sm text-label-sm text-on-tertiary-container uppercase tracking-wider mb-space-xs px-space-sm"
-        >
-          Intranet Core
-        </div>
-      </div>
-      <nav
-        class="flex-1 px-space-sm space-y-space-xs"
-        data-active-classes="bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
-      >
-        <a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="customer-dashboard"
-          href="dashboard.html"
-          ><span class="material-symbols-outlined text-[20px]">dashboard</span
-          ><span>Dashboard</span></a
-        ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="rooms"
-          href="book-room.html"
-          ><span class="material-symbols-outlined text-[20px]"
-            >meeting_room</span
-          ><span>Rooms</span></a
-        ><a
-          aria-current="page"
-          class="flex items-center gap-space-sm px-space-md py-space-sm rounded transition-colors bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"
-          data-path="my-reservations"
-          href="my-reservations.html"
-          ><span class="material-symbols-outlined text-[20px]"
-            >event_available</span
-          ><span>Reservations</span></a
-        ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="staff-queue"
-          href="staff-queue.html"
-          ><span class="material-symbols-outlined text-[20px]">assignment</span
-          ><span>Staff Queue</span></a
-        ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="admin-governance"
-          href="admin-governance.html"
-          ><span class="material-symbols-outlined text-[20px]"
-            >admin_panel_settings</span
-          ><span>Admin Governance</span></a
-        ><a
-          class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="handbook"
-          href="handbook.html"
-          ><span class="material-symbols-outlined text-[20px]">menu_book</span
-          ><span>Handbook</span></a
-        >
-      </nav>
-      <div class="p-space-md bg-tertiary-container/40">
-        <div class="flex items-center justify-between">
-          <div class="flex flex-col">
-            <span class="font-label-sm text-label-sm text-tertiary-fixed-dim"
-              >Registrar Desk</span
-            ><span class="font-body-sm text-body-sm text-on-tertiary"
-              >Ext. 4021 / 4022</span
-            >
-          </div>
-          <span
-            class="material-symbols-outlined text-secondary-container text-[18px]"
-            >verified</span
-          >
-        </div>
-      </div>
-    </aside>
-    <div class="pl-[250px]">
-      <header
-        class="fixed top-0 left-[250px] right-0 h-16 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg"
-      >
-        <div class="flex items-center gap-space-md">
+  <body class="bg-[#F8F9FA] font-sans text-gray-900 antialiased min-h-screen">
+    <!-- Left Sidebar -->
+    <aside class="fixed left-0 top-0 h-full w-[250px] bg-[#1c1c1e] text-white z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+      <!-- Upper Left Logo -->
+      <div class="h-16 px-6 flex items-center">
+        <a href="dashboard.html" class="flex items-center">
           <img
-            alt="CampusRoom Maroon &amp; Gold Logo"
-            class="h-8 w-auto object-contain"
+            alt="CampusRoom Logo"
+            class="h-7 w-auto object-contain"
             src="assets/logo.svg"
           />
-          <div
-            class="hidden md:flex items-center gap-space-xs px-space-sm py-1 bg-surface-container rounded"
-          >
-            <span class="material-symbols-outlined text-secondary text-[16px]"
-              >school</span
-            ><span
-              class="font-label-sm text-label-sm text-on-surface-variant font-semibold"
-              >AY 2024-2025 • First Semester</span
-            >
-          </div>
+        </a>
+      </div>
+
+      <!-- WORKSPACE Section -->
+      <div class="px-5 pt-3 pb-2">
+        <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">WORKSPACE</span>
+      </div>
+      <nav class="px-3 space-y-1">
+        <a
+          class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="customer-dashboard"
+          href="dashboard.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">grid_view</span>
+          <span>Dashboard</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="rooms"
+          href="rooms.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">meeting_room</span>
+          <span>Rooms Directory</span>
+        </a>
+        <a
+          aria-current="page"
+          class="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors bg-[#7a1f2b] text-white font-medium text-sm"
+          data-path="my-reservations"
+          href="my-reservations.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">event_available</span>
+          <span>My Reservations</span>
+        </a>
+        <a
+          class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="staff-queue"
+          href="staff-queue.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">assignment</span>
+          <span>Staff Queue</span>
+        </a>
+        <a
+          class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="admin-governance"
+          href="admin-governance.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+          <span>Admin Governance</span>
+        </a>
+      </nav>
+
+      <!-- RESOURCES Section -->
+      <div class="px-5 pt-6 pb-2">
+        <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">RESOURCES</span>
+      </div>
+      <nav class="px-3 space-y-1">
+        <a
+          class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="handbook"
+          href="handbook.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">menu_book</span>
+          <span>Policy Handbook</span>
+        </a>
+      </nav>
+
+      <!-- Sign Out Footer -->
+      <div id="logout-banner" class="mt-auto p-4 border-t border-white/5">
+        <button
+          id="logoutBtn"
+          class="flex items-center gap-2.5 text-sm text-gray-400 hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg"
+          type="button"
+        >
+          <span class="material-symbols-outlined text-[18px]">logout</span>
+          <span class="font-medium">Sign Out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="pl-[250px]">
+      <!-- Fixed Header -->
+      <header class="fixed top-0 left-[250px] right-0 h-16 bg-white border-b border-gray-100 z-40 flex items-center justify-between px-8 shadow-[0_1px_8px_rgba(0,0,0,0.02)]">
+        <!-- Academic Year Badge -->
+        <div class="flex items-center gap-2 px-3 py-1 bg-gray-100/90 rounded-full text-gray-600 text-xs font-medium">
+          <span class="material-symbols-outlined text-[15px]">school</span>
+          <span>AY 2026-2027 • First Semester</span>
         </div>
-        <div class="flex items-center gap-space-md">
-          
-          <div class="flex items-center gap-space-sm pl-space-sm">
-            <div class="flex flex-col text-right hidden sm:flex">
-              <span class="font-label-md text-label-md text-on-surface"
-                >Dr. Edgardo Valderama</span
-              ><span class="font-label-sm text-label-sm text-primary font-bold bg-primary-container/20 px-2 py-0.5 rounded"
-                >Faculty / Staff</span
-              >
-            </div>
-            <div
-              class="w-8 h-8 rounded-full bg-primary-container text-primary font-bold flex items-center justify-center text-sm shadow-[0_1px_8px_rgba(0,0,0,0.04)] header-initials"
-            >EV</div>
+
+        <!-- User Profile -->
+        <div class="flex items-center gap-3">
+          <div class="flex flex-col text-right">
+            <span class="text-sm font-semibold text-gray-800 leading-tight header-name">—</span>
+            <span class="text-xs text-gray-500 font-medium header-role">—</span>
           </div>
+          <div class="w-9 h-9 rounded-full bg-[#7a1f2b] text-white font-bold flex items-center justify-center text-sm shadow-sm header-initials">—</div>
         </div>
       </header>
-      <main
-        class="w-full pt-16 bg-background px-space-lg py-space-lg min-h-screen"
-      >
-        <div class="flex flex-col w-full space-y-space-lg">
-          <div
-            class="flex flex-col md:flex-row md:items-end justify-between gap-space-md bg-surface-container-lowest p-space-lg rounded shadow-sm relative overflow-hidden"
-          >
-            <div
-              class="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-primary/5 via-secondary/5 to-transparent pointer-events-none"
-            ></div>
-            <div class="flex flex-col space-y-space-xs z-10">
-              <div class="flex items-center gap-space-xs">
-                <span
-                  class="font-label-sm text-label-sm text-secondary font-bold uppercase tracking-wider"
-                  >Faculty Portal • Schedule Desk</span
-                >
-                <span class="text-outline-variant">•</span>
-                <span
-                  class="font-label-sm text-label-sm text-on-surface-variant"
-                  >AY 2024-2025</span
-                >
-              </div>
-              <h1
-                class="font-headline-lg text-headline-lg text-primary tracking-tight font-bold"
-              >
-                My Reservations
-              </h1>
-              <p
-                class="font-body-md text-body-md text-on-surface-variant max-w-2xl"
-              >
-                Track your academic space bookings, pending approvals, and
-                historical permits.
-              </p>
+
+      <!-- My Reservations View -->
+      <main class="w-full pt-20 px-8 pb-12 max-w-[1400px] mx-auto">
+
+        <!-- Toolbar Bar — matches rooms.html pattern -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
+
+          <!-- Left: Search + Status Filter Tabs -->
+          <div class="flex flex-wrap items-center gap-3 flex-1">
+
+            <!-- Search Input — id must match reservations.js -->
+            <div class="relative flex-1 min-w-[240px] max-w-sm">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">search</span>
+              <input
+                id="reservationSearch"
+                type="text"
+                placeholder="Search by purpose, room, or ID…"
+                class="w-full bg-[#f8f9fb] border border-gray-200/80 rounded-xl pl-9 pr-4 py-2 text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] transition-all"
+              />
             </div>
-            <div class="flex items-center gap-space-sm z-10">
-              <button
-                class="inline-flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg rounded transition-colors shadow-sm"
-                id="exportSlipBtn"
-              >
-                <span class="material-symbols-outlined text-[18px]"
-                  >file_download</span
-                >
-                <span>Export Schedule Slip</span>
-              </button>
-              <button
-                class="inline-flex items-center gap-space-xs px-space-md py-space-sm bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg rounded transition-colors shadow-sm"
-                id="newReservationBtn"
-              >
-                <span class="material-symbols-outlined text-[18px]"
-                  >add_circle</span
-                >
-                <span>+ New Reservation</span>
-              </button>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
-            <div class="lg:col-span-12 flex flex-col space-y-space-md">
-              <div
-                class="flex flex-wrap items-center justify-between gap-space-sm bg-surface-container-lowest p-space-xs rounded shadow-sm"
-              >
-                <div
-                  class="flex items-center gap-space-xs overflow-x-auto py-1"
-                  id="filterTabGroup"
-                >
-                  <button
-                    class="filter-tab px-space-md py-space-sm rounded font-label-md text-label-md transition-colors bg-primary text-on-primary font-semibold shadow-sm flex items-center gap-space-xs"
-                    data-filter="all"
-                  >
-                    <span>All Reservations</span>
-                  </button>
-                  <button
-                    class="filter-tab px-space-md py-space-sm rounded font-label-md text-label-md transition-colors text-on-surface-variant hover:text-on-surface hover:bg-surface-container flex items-center gap-space-xs"
-                    data-filter="pending"
-                  >
-                    <span>Pending Review</span>
-                  </button>
-                  <button
-                    class="filter-tab px-space-md py-space-sm rounded font-label-md text-label-md transition-colors text-on-surface-variant hover:text-on-surface hover:bg-surface-container flex items-center gap-space-xs"
-                    data-filter="approved"
-                  >
-                    <span>Approved &amp; Upcoming</span>
-                  </button>
-                  <button
-                    class="filter-tab px-space-md py-space-sm rounded font-label-md text-label-md transition-colors text-on-surface-variant hover:text-on-surface hover:bg-surface-container flex items-center gap-space-xs"
-                    data-filter="history"
-                  >
-                    <span>Past / History</span>
-                  </button>
-                </div>
-              </div>
-              <div
-                class="hidden mb-space-md p-space-sm bg-surface-container-highest text-on-surface rounded-lg shadow-sm items-center justify-between transition-opacity"
-                id="action-toast"
-              >
-                <div class="flex items-center gap-space-sm">
-                  <span
-                    class="material-symbols-outlined text-secondary"
-                    id="action-toast-icon"
-                    >info</span
-                  >
-                  <span
-                    class="font-body-md text-body-md font-semibold"
-                    id="action-toast-text"
-                  ></span>
-                </div>
-                <button
-                  type="button"
-                  class="p-1 text-on-surface-variant hover:text-on-surface rounded"
-                  id="btn-dismiss-toast"
-                  aria-label="Dismiss notification"
-                >
-                  <span class="material-symbols-outlined text-[18px]">close</span>
-                </button>
-              </div>
-              <div
-                class="flex flex-col space-y-space-sm"
-                id="reservationList"
-                aria-busy="true"
-              ></div>
-              <div
-                id="reservationListEmpty"
-                class="hidden flex flex-col items-center justify-center text-center gap-space-xs py-space-xl text-on-surface-variant"
-              >
-                <span class="material-symbols-outlined text-[40px]"
-                  >event_busy</span
-                >
-                <p class="font-body-md text-body-md">No reservations yet.</p>
-                <button
-                  class="mt-space-xs px-space-md py-space-sm bg-primary text-on-primary font-label-sm text-label-sm font-semibold rounded transition-colors"
-                  onclick="window.location.href='rooms.html'"
-                >
-                  Book a room
-                </button>
-              </div>
-              <div
-                id="reservationListError"
-                class="hidden flex flex-col items-center justify-center text-center gap-space-xs py-space-xl text-on-surface-variant"
-              >
-                <span class="material-symbols-outlined text-[40px] text-[#DC2626]"
-                  >error</span
-                >
-                <p class="font-body-md text-body-md" id="reservationListErrorText">
-                  Could not load your reservations.
-                </p>
-                <button
-                  id="reservationListRetry"
-                  class="mt-space-xs px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-semibold rounded transition-colors"
-                >
-                  Retry
-                </button>
-              </div>
-            </div>
-          </div>
-          <!-- Remove Modal — clears a Pending / Rejected / Cancelled booking
-               out of this list. Nothing is deleted; staff keep the record. -->
-          <div
-            class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center hidden"
-            id="cancelModal"
-          >
-            <div
-              class="bg-surface-container-lowest p-space-lg rounded max-w-md w-full mx-space-md shadow-xl flex flex-col space-y-space-md border border-surface-container"
-            >
-              <div class="flex items-center gap-space-sm text-[#DC2626]">
-                <span class="material-symbols-outlined text-[28px]"
-                  >delete_sweep</span
-                >
-                <h3
-                  class="font-headline-sm text-headline-sm font-bold text-on-surface"
-                  id="removeModalTitle"
-                >
-                  Remove this booking?
-                </h3>
-              </div>
-              <p
-                class="font-body-md text-body-md text-on-surface-variant"
-                id="removeModalText"
-              ></p>
-              <div
-                class="flex items-center justify-end gap-space-sm pt-space-xs"
-              >
-                <button
-                  class="px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold rounded transition-colors"
-                  id="modalCloseBtn"
-                >
-                  Keep It
-                </button>
-                <button
-                  class="px-space-md py-space-sm bg-[#DC2626] hover:bg-[#B91C1C] text-[#FFFFFF] font-label-md text-label-md font-semibold rounded transition-colors shadow-sm"
-                  id="modalConfirmBtn"
-                >
-                  Remove
-                </button>
-              </div>
+
+            <!-- Status Filter Pills — .filter-btn used by reservations.js -->
+            <div class="flex bg-[#f8f9fb] border border-gray-200/80 rounded-xl p-1 gap-1">
+              <button type="button" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-white shadow-sm text-gray-800 transition-all" data-filter="all">All</button>
+              <button type="button" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:text-gray-700 transition-all" data-filter="pending">Pending</button>
+              <button type="button" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:text-gray-700 transition-all" data-filter="approved">Approved</button>
+              <button type="button" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:text-gray-700 transition-all" data-filter="past">Past</button>
             </div>
           </div>
 
-          <!-- Cancellation Request Modal — an approved booking can only be
-               cancelled by asking staff, and never on the day it takes place. -->
-          <div
-            class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center hidden"
-            id="cancelRequestModal"
-          >
-            <div
-              class="bg-surface-container-lowest p-space-lg rounded max-w-md w-full mx-space-md shadow-xl flex flex-col space-y-space-md border border-surface-container"
-            >
-              <div class="flex items-center gap-space-sm text-secondary">
-                <span class="material-symbols-outlined text-[28px]"
-                  >assignment_return</span
-                >
-                <h3
-                  class="font-headline-sm text-headline-sm font-bold text-on-surface"
-                >
-                  Request Cancellation
-                </h3>
-              </div>
-              <p class="font-body-md text-body-md text-on-surface-variant">
-                Reservation
-                <span
-                  class="font-bold text-primary"
-                  id="cancelRequestPermitCode"
-                ></span>
-                is already approved, so the room is held for you. Staff will
-                review this request and release the room only once they approve
-                it. Your booking stands until then.
-              </p>
-              <form id="cancelRequestForm" class="flex flex-col space-y-space-xs">
-                <label
-                  for="cancelRequestReason"
-                  class="font-label-sm text-label-sm text-on-surface-variant"
-                  >Reason *</label
-                >
-                <textarea
-                  id="cancelRequestReason"
-                  rows="3"
-                  maxlength="500"
-                  required
-                  placeholder="Why does this booking need to be cancelled?"
-                  class="w-full px-space-sm py-space-xs rounded border border-outline-variant bg-surface font-body-sm text-body-sm text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                ></textarea>
-                <div
-                  id="cancelRequestError"
-                  class="hidden p-space-sm bg-error-container text-on-error-container text-body-sm rounded"
-                ></div>
-              </form>
-              <div
-                class="flex items-center justify-end gap-space-sm pt-space-xs"
-              >
-                <button
-                  class="px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold rounded transition-colors"
-                  id="cancelRequestDismiss"
-                >
-                  Never Mind
-                </button>
-                <button
-                  class="px-space-md py-space-sm bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md font-semibold rounded transition-colors shadow-sm"
-                  id="cancelRequestSubmit"
-                >
-                  Submit Request
-                </button>
-              </div>
+          <!-- Right: Count + View Toggle + Actions -->
+          <div class="flex items-center gap-3">
+            <!-- Count -->
+            <div class="text-xs text-gray-500 whitespace-nowrap">
+              Showing <strong class="text-gray-800" id="visibleResCount">—</strong> reservations
+              <button id="resetResFilters" type="button" class="text-gray-600 hover:text-gray-900 font-semibold underline ml-1 cursor-pointer">Reset</button>
             </div>
+
+            <!-- List / Grid toggle — IDs match reservations.js -->
+            <div class="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200/60">
+              <button id="btn-view-list" type="button" title="List View"
+                class="p-1.5 rounded-lg bg-white shadow-xs text-[#7a1f2b] flex items-center justify-center transition-all">
+                <span class="material-symbols-outlined text-[18px]">format_list_bulleted</span>
+              </button>
+              <button id="btn-view-grid" type="button" title="Grid View"
+                class="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 flex items-center justify-center transition-all">
+                <span class="material-symbols-outlined text-[18px]">grid_view</span>
+              </button>
+            </div>
+
+            <!-- Divider -->
+            <div class="h-5 w-px bg-gray-200"></div>
+
+            <!-- Export Schedule Slip -->
+            <button id="exportSlipBtn" type="button"
+              class="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold rounded-xl shadow-sm transition-colors">
+              <span class="material-symbols-outlined text-[16px]">download</span>
+              Export Slip
+            </button>
+
+            <!-- New Reservation — navigates to rooms.html via reservations.js -->
+            <button id="newReservationBtn" type="button"
+              class="flex items-center gap-1.5 px-4 py-2 bg-[#7a1f2b] hover:bg-[#5b0617] text-white text-xs font-semibold rounded-xl shadow-sm transition-colors">
+              <span class="material-symbols-outlined text-[16px]">add</span>
+              New Reservation
+            </button>
           </div>
         </div>
-        <!-- Move Request Modal -->
-        <div
-          id="moveModalOverlay"
-          class="fixed inset-0 bg-[#000000] bg-opacity-40 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-200"
-          aria-hidden="true"
-        >
-          <div
-            id="moveModal"
-            class="bg-surface w-[90%] max-w-md rounded-xl shadow-xl overflow-hidden transform scale-95 transition-transform duration-200 flex flex-col"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="moveModalTitle"
-          >
-            <!-- Modal Header -->
-            <div
-              class="px-space-md py-space-sm border-b border-outline-variant flex justify-between items-center bg-surface-container-low"
-            >
-              <h2
-                id="moveModalTitle"
-                class="font-title-lg text-title-lg font-semibold text-on-surface"
-              >
-                Request to Move Reservation
-              </h2>
-              <button
-                id="moveModalCloseIcon"
-                class="text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-full p-1"
-                aria-label="Close modal"
-              >
-                <span class="material-symbols-outlined text-[20px]"
-                  >close</span
-                >
-              </button>
-            </div>
 
-            <!-- Modal Body -->
-            <div class="p-space-md flex-1 overflow-y-auto">
-              <p class="text-body-md text-on-surface-variant mb-space-md">
-                Please select the new date and time you would like to move this reservation to. Your request will be reviewed by staff.
-              </p>
-
-              <!-- Move Request Form -->
-              <form id="moveForm" class="space-y-space-md">
-                <!-- Date -->
-                <div>
-                  <label
-                    for="moveDate"
-                    class="block font-label-md text-label-md font-medium text-on-surface mb-space-xs"
-                    >New Date *</label
-                  >
-                  <input
-                    type="date"
-                    id="moveDate"
-                    required
-                    class="w-full bg-surface-container-lowest border border-outline text-on-surface rounded px-space-sm py-space-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow"
-                  />
-                </div>
-
-                <!-- Time Grid -->
-                <div class="grid grid-cols-2 gap-space-md">
-                  <div>
-                    <label
-                      for="moveStartTime"
-                      class="block font-label-md text-label-md font-medium text-on-surface mb-space-xs"
-                      >New Start Time *</label
-                    >
-                    <input
-                      type="time"
-                      id="moveStartTime"
-                      required
-                      class="w-full bg-surface-container-lowest border border-outline text-on-surface rounded px-space-sm py-space-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      for="moveEndTime"
-                      class="block font-label-md text-label-md font-medium text-on-surface mb-space-xs"
-                      >New End Time *</label
-                    >
-                    <input
-                      type="time"
-                      id="moveEndTime"
-                      required
-                      class="w-full bg-surface-container-lowest border border-outline text-on-surface rounded px-space-sm py-space-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow"
-                    />
-                  </div>
-                </div>
-
-                <div
-                  id="moveErrorMsg"
-                  class="hidden p-space-sm bg-error-container text-on-error-container text-body-sm rounded"
-                ></div>
-              </form>
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="px-space-md py-space-sm border-t border-outline-variant bg-surface-container-low flex justify-end gap-space-sm">
-              <button
-                type="button"
-                id="moveModalCancelBtn"
-                class="px-space-md py-space-sm text-on-surface font-label-md font-medium rounded hover:bg-surface-container-highest transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                form="moveForm"
-                id="moveModalSubmitBtn"
-                class="px-space-md py-space-sm bg-primary text-on-primary font-label-md font-medium rounded shadow hover:bg-[#720B20] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-              >
-                Submit Request
-              </button>
-            </div>
-          </div>
+        <!-- Reservation List Container — populated by reservations.js -->
+        <div id="reservationList" class="flex flex-col gap-4">
+          <!-- Skeleton placeholders while loading -->
         </div>
+
+        <!-- Empty State — shown by reservations.js when no records -->
+        <div id="reservationListEmpty" class="hidden bg-white border border-gray-100 p-12 rounded-2xl text-center shadow-sm flex-col items-center justify-center gap-3 mt-4">
+          <div class="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 mb-1">
+            <span class="material-symbols-outlined text-[28px]">event_busy</span>
+          </div>
+          <h3 class="text-base font-bold text-gray-800">No Reservations Found</h3>
+          <p class="text-xs text-gray-500 max-w-sm leading-relaxed">
+            You have no reservations matching the selected filter. Try switching to "All" or make a new booking.
+          </p>
+          <button id="newReservationBtn2" type="button" onclick="document.getElementById('newReservationBtn').click()"
+            class="mt-2 px-5 py-2 bg-[#7a1f2b] hover:bg-[#5e1821] text-white text-xs font-semibold rounded-xl shadow-sm transition-colors flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">add</span>
+            New Reservation
+          </button>
+        </div>
+
+        <!-- Error State — shown by reservations.js on API failure -->
+        <div id="reservationListError" class="hidden bg-red-50 border border-red-200 p-8 rounded-2xl text-center shadow-sm flex-col items-center justify-center gap-3 mt-4">
+          <span class="material-symbols-outlined text-[32px] text-red-400">cloud_off</span>
+          <h3 class="text-sm font-bold text-red-700">Could not load reservations</h3>
+          <p id="reservationListErrorText" class="text-xs text-red-500 max-w-sm leading-relaxed"></p>
+          <button id="reservationListRetry" type="button"
+            class="mt-2 px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-colors flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">refresh</span>
+            Retry
+          </button>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div id="paginationControls" class="flex flex-wrap items-center justify-center gap-3 mt-8 w-full">
+          <button id="prevPageBtn" type="button"
+            class="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-xl shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1">
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span> Previous
+          </button>
+          <span id="pageIndicator" class="text-xs font-semibold text-gray-500 mx-2">Page 1 of 1</span>
+          <button id="nextPageBtn" type="button" disabled
+            class="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-xl shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1">
+            Next <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+          </button>
+        </div>
+
       </main>
     </div>
 
-    <script src="js/app.js"></script>
+    <!-- ── Withdraw / Remove Confirmation Modal ──────────────────────── -->
+    <div id="cancelModal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px] text-red-600">warning</span>
+            </div>
+            <h2 id="removeModalTitle" class="text-base font-bold text-gray-900">Withdraw this request?</h2>
+          </div>
+          <button id="modalCloseBtn" type="button" class="text-gray-400 hover:text-gray-700 transition-colors p-1">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <p id="removeModalText" class="text-sm text-gray-600 leading-relaxed"></p>
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button id="modalDismissBtn" type="button" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors">Keep it</button>
+          <button id="modalConfirmBtn" type="button" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Cancellation Request Modal (Approved bookings) ──────────── -->
+    <div id="cancelRequestModal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px] text-amber-600">cancel</span>
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-gray-900">Request Cancellation</h2>
+              <p id="cancelRequestPermitCode" class="text-xs text-gray-500 font-mono mt-0.5"></p>
+            </div>
+          </div>
+          <button id="cancelRequestDismiss" type="button" class="text-gray-400 hover:text-gray-700 transition-colors p-1">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <p class="text-sm text-gray-600 leading-relaxed">Your booking is already approved. Provide a reason for cancellation — staff will review and decide.</p>
+        <div class="flex flex-col gap-2">
+          <label class="text-xs font-bold text-gray-700 uppercase tracking-wider">Reason <span class="text-red-500">*</span></label>
+          <textarea id="cancelRequestReason" rows="3" placeholder="e.g. Event rescheduled by department…"
+            class="w-full p-3 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 resize-none focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]"></textarea>
+          <p id="cancelRequestError" class="hidden text-xs font-semibold text-red-600"></p>
+        </div>
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button type="button" onclick="document.getElementById('cancelRequestDismiss').click()" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors">Keep Booking</button>
+          <button id="cancelRequestSubmit" type="button" class="px-4 py-2 bg-[#7a1f2b] hover:bg-[#5b0617] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">Submit Request</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Move Request Modal ──────────────────────────────────────── -->
+    <div id="moveModalOverlay" class="opacity-0 pointer-events-none fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4 transition-opacity duration-200">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px] text-blue-600">event_repeat</span>
+            </div>
+            <h2 class="text-base font-bold text-gray-900">Request a Move</h2>
+          </div>
+          <button id="moveModalCloseIcon" type="button" class="text-gray-400 hover:text-gray-700 transition-colors p-1">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <p class="text-sm text-gray-600 leading-relaxed">Choose a new date and time for this booking. Staff will review before changing the schedule.</p>
+        <form id="moveForm" class="flex flex-col gap-3" novalidate>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-gray-700 uppercase tracking-wider">New Date <span class="text-red-500">*</span></label>
+            <input id="moveDate" type="date" required class="w-full px-3 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-bold text-gray-700 uppercase tracking-wider">Start <span class="text-red-500">*</span></label>
+              <select id="moveStartTime" required class="w-full px-3 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 appearance-none focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]">
+                <option value="">Start time</option>
+                <option value="06:00">6:00 AM</option><option value="06:30">6:30 AM</option>
+                <option value="07:00">7:00 AM</option><option value="07:30">7:30 AM</option>
+                <option value="08:00">8:00 AM</option><option value="08:30">8:30 AM</option>
+                <option value="09:00">9:00 AM</option><option value="09:30">9:30 AM</option>
+                <option value="10:00">10:00 AM</option><option value="10:30">10:30 AM</option>
+                <option value="11:00">11:00 AM</option><option value="11:30">11:30 AM</option>
+                <option value="12:00">12:00 PM</option><option value="12:30">12:30 PM</option>
+                <option value="13:00">1:00 PM</option><option value="13:30">1:30 PM</option>
+                <option value="14:00">2:00 PM</option><option value="14:30">2:30 PM</option>
+                <option value="15:00">3:00 PM</option><option value="15:30">3:30 PM</option>
+                <option value="16:00">4:00 PM</option><option value="16:30">4:30 PM</option>
+                <option value="17:00">5:00 PM</option><option value="17:30">5:30 PM</option>
+                <option value="18:00">6:00 PM</option><option value="18:30">6:30 PM</option>
+                <option value="19:00">7:00 PM</option><option value="19:30">7:30 PM</option>
+                <option value="20:00">8:00 PM</option><option value="20:30">8:30 PM</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-bold text-gray-700 uppercase tracking-wider">End <span class="text-red-500">*</span></label>
+              <select id="moveEndTime" required class="w-full px-3 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 appearance-none focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]">
+                <option value="">End time</option>
+                <option value="06:30">6:30 AM</option><option value="07:00">7:00 AM</option>
+                <option value="07:30">7:30 AM</option><option value="08:00">8:00 AM</option>
+                <option value="08:30">8:30 AM</option><option value="09:00">9:00 AM</option>
+                <option value="09:30">9:30 AM</option><option value="10:00">10:00 AM</option>
+                <option value="10:30">10:30 AM</option><option value="11:00">11:00 AM</option>
+                <option value="11:30">11:30 AM</option><option value="12:00">12:00 PM</option>
+                <option value="12:30">12:30 PM</option><option value="13:00">1:00 PM</option>
+                <option value="13:30">1:30 PM</option><option value="14:00">2:00 PM</option>
+                <option value="14:30">2:30 PM</option><option value="15:00">3:00 PM</option>
+                <option value="15:30">3:30 PM</option><option value="16:00">4:00 PM</option>
+                <option value="16:30">4:30 PM</option><option value="17:00">5:00 PM</option>
+                <option value="17:30">5:30 PM</option><option value="18:00">6:00 PM</option>
+                <option value="18:30">6:30 PM</option><option value="19:00">7:00 PM</option>
+                <option value="19:30">7:30 PM</option><option value="20:00">8:00 PM</option>
+                <option value="20:30">8:30 PM</option><option value="21:00">9:00 PM</option>
+              </select>
+            </div>
+          </div>
+          <p id="moveErrorMsg" class="hidden text-xs font-semibold text-red-600"></p>
+          <div class="flex items-center justify-end gap-3 pt-2">
+            <button id="moveModalCancelBtn" type="button" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+            <button type="submit" class="px-4 py-2 bg-[#7a1f2b] hover:bg-[#5b0617] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">Submit Move</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Action Toast ────────────────────────────────────────────── -->
+    <div id="action-toast" class="hidden fixed bottom-6 right-6 z-[300] max-w-sm bg-white border border-gray-200 rounded-2xl shadow-xl px-4 py-3 flex items-start gap-3">
+      <span id="action-toast-icon" class="material-symbols-outlined text-[20px] shrink-0 mt-0.5 text-gray-500">info</span>
+      <p id="action-toast-text" class="text-sm text-gray-800 font-medium flex-1 leading-snug"></p>
+      <button id="btn-dismiss-toast" type="button" class="text-gray-400 hover:text-gray-700 transition-colors shrink-0 p-0.5">
+        <span class="material-symbols-outlined text-[18px]">close</span>
+      </button>
+    </div>
+
     <script src="js/util.js"></script>
     <script src="js/schedule.js"></script>
-    <script src="js/slip.js"></script>
-    <script src="js/logArchive.js"></script>
-    <script src="js/rebook.js"></script>
+    <script src="js/app.js"></script>
     <script src="js/reservations.js"></script>
   </body>
 </html>
-
