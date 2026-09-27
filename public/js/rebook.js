@@ -182,7 +182,7 @@
   function start(reservationId) {
     const id = String(reservationId ?? '').trim();
     if (!id) return;
-    window.location.href = 'book-room.html?rebook=' + encodeURIComponent(id);
+    window.location.href = 'rooms.html?rebook=' + encodeURIComponent(id);
   }
 
   // ---------------------------------------------------------------

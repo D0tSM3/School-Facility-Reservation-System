@@ -210,21 +210,31 @@ document.addEventListener('DOMContentLoaded', () => {
   // action buttons look identical to before now that they're generated.
   
   const ACTION_STYLES = {
-    cancel: 'px-4 py-1.5 bg-white text-red-600 border border-red-200 hover:bg-red-50 text-sm font-medium rounded transition-colors shadow-sm',
-    remove: 'px-4 py-1.5 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 text-sm font-medium rounded transition-colors shadow-sm',
-    reqcancel: 'px-4 py-1.5 bg-white text-red-600 border border-red-200 hover:bg-red-50 text-sm font-medium rounded transition-colors shadow-sm',
-    move:   'px-4 py-1.5 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 text-sm font-medium rounded transition-colors shadow-sm',
-    slip:   'px-4 py-1.5 bg-[#7a1f2b] text-white hover:bg-[#5b0617] border border-[#7a1f2b] text-sm font-medium rounded transition-colors shadow-sm',
-    rebook: 'px-4 py-1.5 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 text-sm font-medium rounded transition-colors shadow-sm',
-    logs:   'px-4 py-1.5 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 text-sm font-medium rounded transition-colors shadow-sm'
+    cancel:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    remove:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    reqcancel: 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    move:      'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-600 border border-gray-200 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    slip:      'inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#7a1f2b] text-white hover:bg-[#5e1821] border border-transparent text-xs font-semibold rounded-lg transition-all shadow-sm',
+    rebook:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-emerald-600 border border-gray-200 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    logs:      'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 text-xs font-semibold rounded-lg transition-all shadow-sm'
   };
-  const ACTION_ICONS = {};
+
+  const ACTION_ICONS = {
+    cancel: 'cancel',
+    remove: 'delete',
+    reqcancel: 'free_cancellation',
+    move: 'edit_calendar',
+    slip: 'receipt_long',
+    rebook: 'event_repeat',
+    logs: 'history'
+  };
 
   function actionButton(action, id, label, disabledReason) {
+    const icon = ACTION_ICONS[action] ? `<span class="material-symbols-outlined text-[14px]">${ACTION_ICONS[action]}</span>` : '';
     const off = disabledReason
       ? ` disabled title="${escapeHtml(disabledReason)}" class="${ACTION_STYLES[action]} opacity-50 cursor-not-allowed"`
       : ` class="${ACTION_STYLES[action]}"`;
-    return `<button${off} data-action="${action}" data-id="${escapeHtml(id)}">${label}</button>`;
+    return `<button${off} data-action="${action}" data-id="${escapeHtml(id)}">${icon}${label}</button>`;
   }
 
   /** Today as 'YYYY-MM-DD' in local time â€” never via toISOString(), which is UTC. */
@@ -449,6 +459,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cancelReqReason) cancelReqReason.focus();
   }
 
+  let moveCalendarInstance = null;
+
   function openMoveModal(id) {
     currentTargetReservationId = id;
     const moveModalOverlay = document.getElementById('moveModalOverlay');
@@ -460,6 +472,33 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshMoveTimeOptions();
     if (moveModalOverlay) {
       moveModalOverlay.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    const target = allReservations.find(r => r.reservation_id === id);
+    if (target && typeof RoomCalendar !== 'undefined') {
+      const initDate = String(target.start_time).slice(0, 10);
+      const initStartTime = String(target.start_time).slice(11, 16);
+      const initEndTime = String(target.end_time).slice(11, 16);
+
+      const moveDate = document.getElementById('moveDate');
+      const moveStartTime = document.getElementById('moveStartTime');
+      const moveEndTime = document.getElementById('moveEndTime');
+
+      if (moveDate) moveDate.value = initDate;
+      if (moveStartTime) moveStartTime.value = initStartTime;
+      if (moveEndTime) moveEndTime.value = initEndTime;
+
+      if (moveCalendarInstance && moveCalendarInstance.roomId === target.room_id) {
+        moveCalendarInstance.goToDate(initDate, true);
+      } else {
+        moveCalendarInstance = new RoomCalendar({
+          containerId: 'move-room-calendar-container',
+          roomId: target.room_id,
+          initialDate: initDate
+        });
+      }
+      
+      moveCalendarInstance.setSelectionTimes(initStartTime, initEndTime);
     }
   }
 
@@ -596,9 +635,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Filtering / search
   // ---------------------------------------------------------------
 
+  // Pagination State
+  const ITEMS_PER_PAGE = 5;
+  let currentPage = 1;
+  const prevPageBtn = document.getElementById('prevPageBtn');
+  const nextPageBtn = document.getElementById('nextPageBtn');
+  const pageIndicator = document.getElementById('pageIndicator');
+  const resetResFilters = document.getElementById('resetResFilters');
+
   function applyFilters() {
     const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
-    const cards = document.querySelectorAll('.reservation-card');
+    const cards = Array.from(document.querySelectorAll('.reservation-card'));
+    
+    let visibleCards = [];
 
     cards.forEach(card => {
       const cardStatus = (card.getAttribute('data-status') || '').toLowerCase();
@@ -606,8 +655,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let matchesFilter = false;
       if (activeFilter === 'all') matchesFilter = true;
-      else if (activeFilter === 'history') {
-        matchesFilter = ['history', 'completed', 'rejected', 'cancelled'].includes(cardStatus);
+      else if (activeFilter === 'history' || activeFilter === 'past') {
+        matchesFilter = ['history', 'past', 'completed', 'rejected', 'cancelled'].includes(cardStatus);
       } else {
         matchesFilter = (cardStatus === activeFilter);
       }
@@ -615,6 +664,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const matchesSearch = !query || text.includes(query);
 
       if (matchesFilter && matchesSearch) {
+        visibleCards.push(card);
+      } else {
+        card.classList.add('hidden');
+        card.style.display = 'none';
+      }
+    });
+
+    const totalPages = Math.max(1, Math.ceil(visibleCards.length / ITEMS_PER_PAGE));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+
+    visibleCards.forEach((card, index) => {
+      if (index >= startIndex && index < endIndex) {
         card.classList.remove('hidden');
         card.style.display = 'block';
       } else {
@@ -622,20 +686,73 @@ document.addEventListener('DOMContentLoaded', () => {
         card.style.display = 'none';
       }
     });
+
+    if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
+    if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages;
+    if (pageIndicator) pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
+    
+    const countEl = document.getElementById('visibleResCount');
+    if (countEl) countEl.textContent = visibleCards.length;
+    
+    if (reservationListEmpty) {
+      reservationListEmpty.classList.toggle('hidden', visibleCards.length > 0);
+    }
   }
 
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
+      tabs.forEach(t => {
+        t.classList.remove('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+        t.classList.add('text-gray-500', 'hover:text-gray-700', 'font-medium');
+      });
+      tab.classList.remove('text-gray-500', 'hover:text-gray-700', 'font-medium');
+      tab.classList.add('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
 
       activeFilter = tab.getAttribute('data-filter') || 'all';
+      currentPage = 1;
       applyFilters();
     });
   });
 
   if (searchInput) {
-    searchInput.addEventListener('input', applyFilters);
+    searchInput.addEventListener('input', () => {
+      currentPage = 1;
+      applyFilters();
+    });
+  }
+  
+  if (prevPageBtn) {
+    prevPageBtn.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        applyFilters();
+      }
+    });
+  }
+  
+  if (nextPageBtn) {
+    nextPageBtn.addEventListener('click', () => {
+      currentPage++;
+      applyFilters();
+    });
+  }
+
+  if (resetResFilters) {
+    resetResFilters.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      activeFilter = 'all';
+      tabs.forEach(t => {
+        t.classList.remove('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+        t.classList.add('text-gray-500', 'hover:text-gray-700', 'font-medium');
+      });
+      const allTab = Array.from(tabs).find(t => t.getAttribute('data-filter') === 'all');
+      if (allTab) {
+        allTab.classList.remove('text-gray-500', 'hover:text-gray-700', 'font-medium');
+        allTab.classList.add('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+      }
+      currentPage = 1;
+      applyFilters();
+    });
   }
 
   // View-toggle (list / grid)
@@ -646,15 +763,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!reservationList) return;
     if (mode === 'grid') {
       reservationList.className = 'grid grid-cols-1 xl:grid-cols-2 gap-4';
-      btnViewGrid?.classList.add('text-[#7a1f2b]', 'bg-gray-100');
+      btnViewGrid?.classList.add('bg-white', 'shadow-xs', 'text-[#7a1f2b]');
       btnViewGrid?.classList.remove('text-gray-400', 'hover:text-gray-700');
-      btnViewList?.classList.remove('text-[#7a1f2b]', 'bg-gray-100');
+      btnViewList?.classList.remove('bg-white', 'shadow-xs', 'text-[#7a1f2b]');
       btnViewList?.classList.add('text-gray-400', 'hover:text-gray-700');
     } else {
       reservationList.className = 'flex flex-col gap-4';
-      btnViewList?.classList.add('text-[#7a1f2b]', 'bg-gray-100');
+      btnViewList?.classList.add('bg-white', 'shadow-xs', 'text-[#7a1f2b]');
       btnViewList?.classList.remove('text-gray-400', 'hover:text-gray-700');
-      btnViewGrid?.classList.remove('text-[#7a1f2b]', 'bg-gray-100');
+      btnViewGrid?.classList.remove('bg-white', 'shadow-xs', 'text-[#7a1f2b]');
       btnViewGrid?.classList.add('text-gray-400', 'hover:text-gray-700');
     }
   }
@@ -727,7 +844,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const input = document.getElementById(id);
       if (!input) return;
       input.addEventListener('change', async () => {
+<<<<<<< HEAD
         if (id === 'moveDate') refreshMoveTimeOptions();
+=======
+        if (moveCalendarInstance) {
+          if (id === 'moveDate') {
+            moveCalendarInstance.goToDate(document.getElementById('moveDate').value);
+          }
+          moveCalendarInstance.setSelectionTimes(
+            document.getElementById('moveStartTime').value,
+            document.getElementById('moveEndTime').value
+          );
+        }
+        
+>>>>>>> 568fff4573876fe6f5c5a9136cc97a4921d40932
         const seq = ++moveCheckSeq;
         const problem = await moveRangeProblem();
         if (seq === moveCheckSeq) showMoveError(problem);

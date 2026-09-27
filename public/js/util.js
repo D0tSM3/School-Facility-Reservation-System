@@ -41,3 +41,46 @@
 
   window.CampusRoomUtil = Object.freeze({ escapeHtml, parseDate });
 })();
+window.openBookingModal = async function(roomId, rebookId = null) {
+  window.bookingModalTargetRoomId = roomId;
+  window.bookingModalRebookId = rebookId;
+  
+  const modal = document.getElementById('bookingModalOverlay');
+  if (!modal) return;
+  
+  if (!modal.dataset.closeInitialized) {
+    if (typeof window.initBookingForm === 'function') {
+      window.initBookingForm();
+    }
+    const closeBtn = document.getElementById('closeBookingModalBtn');
+    const cancelBtn = document.getElementById('cancelModalBtn');
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) {
+      // Just in case it had previous navigateBack listeners from booking.js, clone it to reset
+      const newCancel = cancelBtn.cloneNode(true);
+      if (cancelBtn.parentNode) {
+        cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+        newCancel.addEventListener('click', closeModal);
+      } else {
+        cancelBtn.addEventListener('click', closeModal);
+      }
+    }
+    modal.dataset.closeInitialized = 'true';
+  }
+  
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  
+  const roomSelect = document.getElementById('roomSelect');
+  if (roomSelect && roomId) {
+    roomSelect.value = roomId;
+    roomSelect.dispatchEvent(new Event('change'));
+  }
+};
+

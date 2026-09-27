@@ -226,7 +226,7 @@
         </div>
 
         <!-- Empty State — shown by reservations.js when no records -->
-        <div id="reservationListEmpty" class="hidden bg-white border border-gray-100 p-12 rounded-2xl text-center shadow-sm flex-col items-center justify-center gap-3 mt-4">
+        <div id="reservationListEmpty" class="hidden flex bg-white border border-gray-100 p-12 rounded-2xl text-center shadow-sm flex-col items-center justify-center gap-3 mt-4">
           <div class="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 mb-1">
             <span class="material-symbols-outlined text-[28px]">event_busy</span>
           </div>
@@ -234,15 +234,10 @@
           <p class="text-xs text-gray-500 max-w-sm leading-relaxed">
             You have no reservations matching the selected filter. Try switching to "All" or make a new booking.
           </p>
-          <button id="newReservationBtn2" type="button" onclick="document.getElementById('newReservationBtn').click()"
-            class="mt-2 px-5 py-2 bg-[#7a1f2b] hover:bg-[#5e1821] text-white text-xs font-semibold rounded-xl shadow-sm transition-colors flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-[16px]">add</span>
-            New Reservation
-          </button>
         </div>
 
         <!-- Error State — shown by reservations.js on API failure -->
-        <div id="reservationListError" class="hidden bg-red-50 border border-red-200 p-8 rounded-2xl text-center shadow-sm flex-col items-center justify-center gap-3 mt-4">
+        <div id="reservationListError" class="hidden flex bg-red-50 border border-red-200 p-8 rounded-2xl text-center shadow-sm flex-col items-center justify-center gap-3 mt-4">
           <span class="material-symbols-outlined text-[32px] text-red-400">cloud_off</span>
           <h3 class="text-sm font-bold text-red-700">Could not load reservations</h3>
           <p id="reservationListErrorText" class="text-xs text-red-500 max-w-sm leading-relaxed"></p>
@@ -323,29 +318,32 @@
     </div>
 
     <!-- ── Move Request Modal ──────────────────────────────────────── -->
-    <div id="moveModalOverlay" class="opacity-0 pointer-events-none fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4 transition-opacity duration-200">
-      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+    <div id="moveModalOverlay" class="opacity-0 pointer-events-none fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4 transition-opacity duration-200 overflow-y-auto">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-[1000px] p-6 flex flex-col gap-4 my-auto">
         <div class="flex items-start justify-between gap-3">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
               <span class="material-symbols-outlined text-[20px] text-blue-600">event_repeat</span>
             </div>
-            <h2 class="text-base font-bold text-gray-900">Request a Move</h2>
+            <div>
+              <h2 class="text-base font-bold text-gray-900">Request a Move</h2>
+              <p class="text-sm text-gray-500">Choose a new date and time for this booking. Staff will review before confirming.</p>
+            </div>
           </div>
-          <button id="moveModalCloseIcon" type="button" class="text-gray-400 hover:text-gray-700 transition-colors p-1">
+          <button id="moveModalCloseIcon" type="button" class="text-gray-400 hover:text-gray-700 transition-colors p-1 bg-gray-50 rounded-lg shrink-0">
             <span class="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
-        <p class="text-sm text-gray-600 leading-relaxed">Choose a new date and time for this booking. Staff will review before changing the schedule.</p>
-        <form id="moveForm" class="flex flex-col gap-3" novalidate>
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-bold text-gray-700 uppercase tracking-wider">New Date <span class="text-red-500">*</span></label>
-            <input id="moveDate" type="date" required class="w-full px-3 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
+        
+        <form id="moveForm" class="flex flex-col gap-6" novalidate>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-bold text-gray-700 uppercase tracking-wider">New Date <span class="text-red-500">*</span></label>
+              <input id="moveDate" type="date" required class="w-full px-3 py-2 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600" />
+            </div>
             <div class="flex flex-col gap-1.5">
               <label class="text-xs font-bold text-gray-700 uppercase tracking-wider">Start <span class="text-red-500">*</span></label>
-              <select id="moveStartTime" required class="w-full px-3 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 appearance-none focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]">
+              <select id="moveStartTime" required class="w-full px-3 py-2 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 appearance-none focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600">
                 <option value="">Start time</option>
                 <option value="06:00">6:00 AM</option><option value="06:30">6:30 AM</option>
                 <option value="07:00">7:00 AM</option><option value="07:30">7:30 AM</option>
@@ -366,7 +364,7 @@
             </div>
             <div class="flex flex-col gap-1.5">
               <label class="text-xs font-bold text-gray-700 uppercase tracking-wider">End <span class="text-red-500">*</span></label>
-              <select id="moveEndTime" required class="w-full px-3 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 appearance-none focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]">
+              <select id="moveEndTime" required class="w-full px-3 py-2 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 appearance-none focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600">
                 <option value="">End time</option>
                 <option value="06:30">6:30 AM</option><option value="07:00">7:00 AM</option>
                 <option value="07:30">7:30 AM</option><option value="08:00">8:00 AM</option>
@@ -386,10 +384,21 @@
               </select>
             </div>
           </div>
+
+          <!-- Facility Weekly Availability -->
+          <div id="move-room-calendar-container" class="rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-white">
+            <div class="p-8 text-center text-gray-400">
+              <span class="material-symbols-outlined text-[36px] opacity-40">calendar_view_week</span>
+              <p class="text-sm mt-2 font-medium">Select a date to view availability</p>
+            </div>
+          </div>
+
           <p id="moveErrorMsg" class="hidden text-xs font-semibold text-red-600"></p>
           <div class="flex items-center justify-end gap-3 pt-2">
-            <button id="moveModalCancelBtn" type="button" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
-            <button type="submit" class="px-4 py-2 bg-[#7a1f2b] hover:bg-[#5b0617] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">Submit Move</button>
+            <button id="moveModalCancelBtn" type="button" class="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+            <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">send</span> Submit Move
+            </button>
           </div>
         </form>
       </div>
@@ -405,7 +414,11 @@
     </div>
 
     <script src="js/util.js"></script>
+    <script src="js/roomCalendar.js"></script>
     <script src="js/schedule.js"></script>
+    <script src="js/slip.js"></script>
+    <script src="js/rebook.js"></script>
+    <script src="js/logArchive.js"></script>
     <script src="js/app.js"></script>
     <script src="js/slip.js"></script>
     <script src="js/logArchive.js"></script>

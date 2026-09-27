@@ -262,6 +262,14 @@ class RoomCalendar {
     return div;
   }
 
+  setSelectionTimes(startTime, endTime) {
+    this.selectedStartTime = startTime;
+    this.selectedEndTime = endTime;
+    if (this.lastDates && this.lastData) {
+      this.renderGrid(this.lastDates, this.lastData);
+    }
+  }
+
   renderGrid(dates, data) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -337,8 +345,15 @@ class RoomCalendar {
 
         const td = document.createElement('td');
         td.dataset.date = dateYMD;
-        let baseBg = isSelected ? 'bg-[#fdf5f6]' : beforeOpen ? 'bg-gray-50' : 'bg-white';
-        td.className = `p-0.5 border-r border-gray-200 last:border-r-0 align-top h-[52px] ${baseBg}`;
+
+        const overlapsSelected = isSelected && this.selectedStartTime && this.selectedEndTime &&
+                                 overlaps(this.selectedStartTime, this.selectedEndTime);
+
+        let baseBg = isSelected 
+          ? (overlapsSelected ? 'bg-rose-100 shadow-[inset_0_0_0_2px_#7a1f2b] relative z-10' : 'bg-[#fdf5f6]') 
+          : beforeOpen ? 'bg-gray-50' : 'bg-white';
+          
+        td.className = `p-0.5 border-r border-gray-200 last:border-r-0 align-top h-[52px] transition-all ${baseBg}`;
 
         // Holiday
         const holiday = (data.holidays || []).find(h => h.holiday_date === dateYMD);
