@@ -42,20 +42,34 @@ window.openBookingModal = async function(roomId, rebookId = null) {
     const cancelBtn = document.getElementById('cancelModalBtn');
 
     function closeModal() {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('rebook')) {
+        // Clear rebook state by navigating. If they came from my-reservations, go back there.
+        // Otherwise, strip the query string so the next 'Reserve' click uses a clean state.
+        if (document.referrer && document.referrer.includes('my-reservations.html')) {
+          window.location.href = 'my-reservations.html';
+        } else {
+          window.location.href = window.location.pathname;
+        }
+        return;
+      }
       modal.classList.add('hidden');
       modal.classList.remove('flex');
     }
 
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (cancelBtn) {
-      // Just in case it had previous navigateBack listeners from booking.js, clone it to reset
-      const newCancel = cancelBtn.cloneNode(true);
-      if (cancelBtn.parentNode) {
-        cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
-        newCancel.addEventListener('click', closeModal);
-      } else {
-        cancelBtn.addEventListener('click', closeModal);
-      }
+    // Clone buttons to strip out `navigateBack` listeners previously attached by booking.js
+    let currentClose = document.getElementById('closeBookingModalBtn');
+    if (currentClose) {
+      const newClose = currentClose.cloneNode(true);
+      if (currentClose.parentNode) currentClose.parentNode.replaceChild(newClose, currentClose);
+      newClose.addEventListener('click', closeModal);
+    }
+
+    let currentCancel = document.getElementById('cancelModalBtn');
+    if (currentCancel) {
+      const newCancel = currentCancel.cloneNode(true);
+      if (currentCancel.parentNode) currentCancel.parentNode.replaceChild(newCancel, currentCancel);
+      newCancel.addEventListener('click', closeModal);
     }
     modal.dataset.closeInitialized = 'true';
   }
