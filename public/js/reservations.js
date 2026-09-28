@@ -21,7 +21,25 @@ document.addEventListener('DOMContentLoaded', () => {
       .catch(err => console.error('Error checking session role:', err));
   })();
 
+  const urlParams = new URLSearchParams(window.location.search);
+  let activeFilter = urlParams.get('filter') || 'all';
+
   const tabs = document.querySelectorAll('.filter-btn');
+
+  // Sync visual tab state with activeFilter on load
+  if (tabs) {
+    tabs.forEach(t => {
+      t.classList.remove('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+      t.classList.add('text-gray-500', 'hover:text-gray-700', 'font-medium');
+    });
+    const initialTab = Array.from(tabs).find(t => t.getAttribute('data-filter') === activeFilter) || 
+                       Array.from(tabs).find(t => t.getAttribute('data-filter') === 'all');
+    if (initialTab) {
+      initialTab.classList.remove('text-gray-500', 'hover:text-gray-700', 'font-medium');
+      initialTab.classList.add('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+    }
+  }
+
   const reservationList = document.getElementById('reservationList');
   const reservationListEmpty = document.getElementById('reservationListEmpty');
   const reservationListError = document.getElementById('reservationListError');
@@ -78,8 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (toastDismiss) toastDismiss.addEventListener('click', dismissToast);
 
   let currentTargetReservationId = null;
-  const urlParams = new URLSearchParams(window.location.search);
-  let activeFilter = urlParams.get('filter') || 'all';
   let allReservations = [];
 
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
@@ -280,11 +296,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const action = buildActions(reservation);
+        let filterStatus = reservation.status.toLowerCase();
+        if (isPast && reservation.status !== 'Pending' && reservation.status !== 'Rejected' && reservation.status !== 'Cancelled') {
+          filterStatus = 'history';
+        }
 
-      let filterStatus = reservation.status.toLowerCase();
-      if (isPast && reservation.status !== 'Rejected' && reservation.status !== 'Cancelled') {
-        filterStatus = 'history';
-      }
 
       return `<div data-status="${escapeHtml(filterStatus)}" class="reservation-card bg-white px-5 py-4 rounded-xl border border-gray-200 shadow-sm mb-3 transition-all hover:border-gray-300 hover:shadow">
         <div class="flex items-center gap-5">
