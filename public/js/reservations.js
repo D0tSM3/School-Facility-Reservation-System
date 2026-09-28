@@ -78,7 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (toastDismiss) toastDismiss.addEventListener('click', dismissToast);
 
   let currentTargetReservationId = null;
-  let activeFilter = 'all';
+  const urlParams = new URLSearchParams(window.location.search);
+  let activeFilter = urlParams.get('filter') || 'all';
   let allReservations = [];
 
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
@@ -233,11 +234,11 @@ document.addEventListener('DOMContentLoaded', () => {
     switch (reservation.status) {
       case 'Pending':
         if (canMove) buttons.push(actionButton('move', id, 'Move'));
-        buttons.push(actionButton('remove', id, 'Withdraw'));
+        buttons.push(actionButton('remove', id, 'Cancel'));
         break;
       case 'Approved':
         if (canMove) buttons.push(actionButton('move', id, 'Move'));
-        buttons.push(actionButton('reqcancel', id, 'Cancel', cancelRequestBlockedReason(reservation)));
+        buttons.push(actionButton('reqcancel', id, 'Cancel', 'Only staff can cancel an Approved reservation. Please contact the Registrar.'));
         buttons.push(actionButton('slip', id, 'View Slip'));
         break;
       case 'Completed':
@@ -363,14 +364,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const ref = permitRef(id);
     const isPending = reservation.status === 'Pending';
     if (removeModalTitle) {
-      removeModalTitle.textContent = isPending ? 'Withdraw this request?' : 'Remove this booking?';
+      removeModalTitle.textContent = isPending ? 'Cancel this request?' : 'Remove this booking?';
     }
     if (removeModalText) {
       removeModalText.textContent = isPending
-        ? `${ref} is still awaiting review. Removing it withdraws the request and immediately frees ${reservation.room_name || 'the room'} for other departments. Staff keep a record of it.`
+        ? `${ref} is still awaiting review. Cancelling it withdraws the request and immediately frees ${reservation.room_name || 'the room'} for other departments. Staff keep a record of it.`
         : `${ref} will be cleared from your list. Nothing is deleted â€” staff keep the record, and you can still re-book the space.`;
     }
-    if (modalConfirm) modalConfirm.textContent = isPending ? 'Withdraw' : 'Remove';
+    if (modalConfirm) modalConfirm.textContent = isPending ? 'Cancel' : 'Remove';
     if (modal) modal.classList.remove('hidden');
   }
 
@@ -733,7 +734,44 @@ document.addEventListener('DOMContentLoaded', () => {
     // Warn as soon as the range stops fitting, not only on submit. The
     // sequence guard drops answers that arrive after a newer edit.
     let moveCheckSeq = 0;
+    
+    const moveStartTimeSelect = document.getElementById('moveStartTime');
+    const moveEndTimeSelect = document.getElementById('moveEndTime');
+
+    if (moveStartTimeSelect && moveEndTimeSelect) {
+      const ALL_END_OPTIONS = Array.from(moveEndTimeSelect.options)
+        .filter(o => o.value)
+        .map(o => ({ value: o.value, text: o.textContent }));
+      
+      const syncMoveEndOptions = () => {
+        const start = moveStartTimeSelect.value;
+        const previous = moveEndTimeSelect.value;
+        
+        moveEndTimeSelect.innerHTML = '<option value="">End time</option>';
+        ALL_END_OPTIONS.forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = o.value;
+          opt.textContent = o.text;
+          
+          if (start && o.value <= start) {
+            opt.disabled = true;
+            opt.hidden = true; // hide/disable before or equal
+          }
+          moveEndTimeSelect.appendChild(opt);
+        });
+        
+        if (previous && previous > start) {
+          moveEndTimeSelect.value = previous;
+        }
+      };
+
+      moveStartTimeSelect.addEventListener('change', syncMoveEndOptions);
+      // Run once
+      syncMoveEndOptions();
+    }
+
     ['moveDate', 'moveStartTime', 'moveEndTime'].forEach(id => {
+
       const input = document.getElementById(id);
       if (!input) return;
       input.addEventListener('change', async () => {
@@ -817,7 +855,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(res => res.json())
       .then(json => {
         if (json.success) {
-          showToast(wasPending ? 'Request withdrawn and the room released.' : 'Booking removed from your list.', 'success');
+          showToast(wasPending ? 'Request cancelled and the room released.' : 'Booking removed from your list.', 'success');
           fetchReservations(); // reload entirely
         } else {
           showToast(json.error || 'Failed to remove the booking.', 'error');

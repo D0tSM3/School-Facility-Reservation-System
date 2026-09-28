@@ -320,22 +320,25 @@ window.initBookingForm = function() {
       const start = startTimeInput.value;
       const previous = endTimeInput.value;
       endTimeInput.innerHTML = '<option value="">Select End</option>';
-      ALL_END_OPTIONS
-        .filter(o => !start || o.value > start)          // "HH:MM" strings compare correctly
-        .forEach(o => {
-          const opt = document.createElement('option');
-          opt.value = o.value;
-          opt.textContent = o.text;
-          // Start is free, but is [start, this end) free? A 07:30 start is fine
-          // while a class at 10:30 makes every end after 10:30 unusable.
+      ALL_END_OPTIONS.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.text;
+        
+        if (start && o.value <= start) {
+          opt.disabled = true;
+          opt.hidden = true; // hide/disable before or equal
+        } else {
+          // Start is free, but is [start, this end) free?
           const clash = rangeConflicts(start, o.value);
           if (clash.length) {
             opt.disabled = true;
-            opt.textContent = o.text + ' — unavailable';
+            opt.textContent = o.text + ' ?" unavailable';
             opt.title = window.CampusSchedule.describe(clash, start, o.value);
           }
-          endTimeInput.appendChild(opt);
-        });
+        }
+        endTimeInput.appendChild(opt);
+      });
       // Keep the previous end only if it is still offered AND still usable.
       const keep = Array.from(endTimeInput.options).find(o => o.value === previous);
       if (previous && previous > start && keep && !keep.disabled) endTimeInput.value = previous;
