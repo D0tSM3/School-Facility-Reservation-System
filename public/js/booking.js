@@ -320,22 +320,25 @@ window.initBookingForm = function() {
       const start = startTimeInput.value;
       const previous = endTimeInput.value;
       endTimeInput.innerHTML = '<option value="">Select End</option>';
-      ALL_END_OPTIONS
-        .filter(o => !start || o.value > start)          // "HH:MM" strings compare correctly
-        .forEach(o => {
-          const opt = document.createElement('option');
-          opt.value = o.value;
-          opt.textContent = o.text;
-          // Start is free, but is [start, this end) free? A 07:30 start is fine
-          // while a class at 10:30 makes every end after 10:30 unusable.
+      ALL_END_OPTIONS.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.text;
+        
+        if (start && o.value <= start) {
+          opt.disabled = true;
+          opt.hidden = true; // hide/disable before or equal
+        } else {
+          // Start is free, but is [start, this end) free?
           const clash = rangeConflicts(start, o.value);
           if (clash.length) {
             opt.disabled = true;
-            opt.textContent = o.text + ' — unavailable';
+            opt.textContent = o.text + ' ?" unavailable';
             opt.title = window.CampusSchedule.describe(clash, start, o.value);
           }
-          endTimeInput.appendChild(opt);
-        });
+        }
+        endTimeInput.appendChild(opt);
+      });
       // Keep the previous end only if it is still offered AND still usable.
       const keep = Array.from(endTimeInput.options).find(o => o.value === previous);
       if (previous && previous > start && keep && !keep.disabled) endTimeInput.value = previous;
@@ -350,7 +353,12 @@ window.initBookingForm = function() {
   // submitting instead of after. The server remains the source of truth;
   // this is a convenience layer, so failures are swallowed.
   // ---------------------------------------------------------------
-  const BLOCKS = ['07:30','09:00','10:30','12:00','13:30','15:00','16:30','18:00','19:30','21:00'];
+  const BLOCKS = [
+    '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30',
+    '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
+    '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
+    '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00'
+  ];
 
   if (startTimeInput) {
     // remember each option's original label once

@@ -182,7 +182,38 @@
         },
       };
     </script>
-  </head>
+  
+  <!-- FOUC Preventer -->
+  <script>
+    (function() {
+      const role = localStorage.getItem('campus_role');
+      if (role) {
+        document.documentElement.setAttribute('data-role', role.toLowerCase());
+      }
+    })();
+  </script>
+  <style>
+    /* Prevent sidebar flash */
+    html[data-role="staff"] aside nav a[data-path="customer-dashboard"],
+    html[data-role="staff"] aside nav a[data-path="rooms"],
+    html[data-role="staff"] aside nav a[data-path="my-reservations"],
+    html[data-role="admin"] aside nav a[data-path="customer-dashboard"],
+    html[data-role="admin"] aside nav a[data-path="rooms"],
+    html[data-role="admin"] aside nav a[data-path="my-reservations"] {
+      display: none !important;
+    }
+    
+    html[data-role="staff"] aside nav a[data-path="staff-dashboard"],
+    html[data-role="admin"] aside nav a[data-path="staff-dashboard"] {
+      display: flex !important;
+    }
+    
+    html[data-role="admin"] aside nav a[data-path="admin-governance"] {
+      display: flex !important;
+    }
+  </style>
+
+ </head>
   <body
     class="bg-background font-body-md text-on-surface antialiased min-h-screen"
   >
@@ -230,10 +261,10 @@
           ><span>Reservations</span></a
         ><a
           class="flex items-center gap-space-sm px-space-md py-space-sm text-tertiary-fixed font-label-lg text-label-lg rounded hover:bg-tertiary-container hover:text-on-tertiary transition-colors"
-          data-path="staff-queue"
-          href="staff-queue.html"
+          data-path="staff-dashboard"
+          href="staff-dashboard.html"
           ><span class="material-symbols-outlined text-[20px]">assignment</span
-          ><span>Staff Queue</span></a
+          ><span>Staff Dashboard</span></a
         ><a
           aria-current="page"
           class="flex items-center gap-space-sm px-space-md py-space-sm rounded transition-colors bg-primary-container text-on-primary border-l-4 border-secondary-container font-label-lg"

@@ -165,7 +165,38 @@
         },
       };
     </script>
-  </head>
+  
+  <!-- FOUC Preventer -->
+  <script>
+    (function() {
+      const role = localStorage.getItem('campus_role');
+      if (role) {
+        document.documentElement.setAttribute('data-role', role.toLowerCase());
+      }
+    })();
+  </script>
+  <style>
+    /* Prevent sidebar flash */
+    html[data-role="staff"] aside nav a[data-path="customer-dashboard"],
+    html[data-role="staff"] aside nav a[data-path="rooms"],
+    html[data-role="staff"] aside nav a[data-path="my-reservations"],
+    html[data-role="admin"] aside nav a[data-path="customer-dashboard"],
+    html[data-role="admin"] aside nav a[data-path="rooms"],
+    html[data-role="admin"] aside nav a[data-path="my-reservations"] {
+      display: none !important;
+    }
+    
+    html[data-role="staff"] aside nav a[data-path="staff-dashboard"],
+    html[data-role="admin"] aside nav a[data-path="staff-dashboard"] {
+      display: flex !important;
+    }
+    
+    html[data-role="admin"] aside nav a[data-path="admin-governance"] {
+      display: flex !important;
+    }
+  </style>
+
+ </head>
   <body
     class="bg-background font-body-md text-on-surface antialiased min-h-screen flex items-center justify-center p-space-md"
   >

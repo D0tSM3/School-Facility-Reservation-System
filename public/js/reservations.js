@@ -34,7 +34,25 @@ document.addEventListener('DOMContentLoaded', () => {
       .catch(err => console.error('Error checking session role:', err));
   })();
 
+  const urlParams = new URLSearchParams(window.location.search);
+  let activeFilter = urlParams.get('filter') || 'all';
+
   const tabs = document.querySelectorAll('.filter-btn');
+
+  // Sync visual tab state with activeFilter on load
+  if (tabs) {
+    tabs.forEach(t => {
+      t.classList.remove('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+      t.classList.add('text-gray-500', 'hover:text-gray-700', 'font-medium');
+    });
+    const initialTab = Array.from(tabs).find(t => t.getAttribute('data-filter') === activeFilter) || 
+                       Array.from(tabs).find(t => t.getAttribute('data-filter') === 'all');
+    if (initialTab) {
+      initialTab.classList.remove('text-gray-500', 'hover:text-gray-700', 'font-medium');
+      initialTab.classList.add('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
+    }
+  }
+
   const reservationList = document.getElementById('reservationList');
   const reservationListEmpty = document.getElementById('reservationListEmpty');
   const reservationListError = document.getElementById('reservationListError');
@@ -91,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (toastDismiss) toastDismiss.addEventListener('click', dismissToast);
 
   let currentTargetReservationId = null;
-  let activeFilter = 'all';
   let allReservations = [];
 
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
@@ -294,11 +311,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     switch (reservation.status) {
       case 'Pending':
-        buttons.push(actionButton('move', id, 'Move', moveRequestBlockedReason(reservation)));
+        if (canMove) buttons.push(actionButton('move', id, 'Move'));
         buttons.push(actionButton('remove', id, 'Withdraw'));
         break;
       case 'Approved':
-        buttons.push(actionButton('move', id, 'Move', moveRequestBlockedReason(reservation)));
+        if (canMove) buttons.push(actionButton('move', id, 'Move'));
         buttons.push(actionButton('reqcancel', id, 'Cancel', cancelRequestBlockedReason(reservation)));
         buttons.push(actionButton('slip', id, 'View Slip'));
         break;
@@ -346,10 +363,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const action = buildActions(reservation);
 
-      let filterStatus = status.toLowerCase();
+      let filterStatus = reservation.status.toLowerCase();
       if (isPast && reservation.status !== 'Rejected' && reservation.status !== 'Cancelled') {
         filterStatus = 'history';
       }
+
 
       return `<div data-status="${escapeHtml(filterStatus)}" class="reservation-card bg-white px-5 py-4 rounded-xl border border-gray-200 shadow-sm mb-3 transition-all hover:border-gray-300 hover:shadow">
         <div class="flex items-center gap-5">
@@ -429,14 +447,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const ref = permitRef(id);
     const isPending = reservation.status === 'Pending';
     if (removeModalTitle) {
-      removeModalTitle.textContent = isPending ? 'Withdraw this request?' : 'Remove this booking?';
+      removeModalTitle.textContent = isPending ? 'Cancel this request?' : 'Remove this booking?';
     }
     if (removeModalText) {
       removeModalText.textContent = isPending
-        ? `${ref} is still awaiting review. Removing it withdraws the request and immediately frees ${reservation.room_name || 'the room'} for other departments. Staff keep a record of it.`
+        ? `${ref} is still awaiting review. Cancelling it withdraws the request and immediately frees ${reservation.room_name || 'the room'} for other departments. Staff keep a record of it.`
         : `${ref} will be cleared from your list. Nothing is deleted â€” staff keep the record, and you can still re-book the space.`;
     }
-    if (modalConfirm) modalConfirm.textContent = isPending ? 'Withdraw' : 'Remove';
+    if (modalConfirm) modalConfirm.textContent = isPending ? 'Cancel' : 'Remove';
     if (modal) modal.classList.remove('hidden');
   }
 
@@ -473,70 +491,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (moveModalOverlay) {
       moveModalOverlay.classList.remove('opacity-0', 'pointer-events-none');
     }
-
-    const target = allReservations.find(r => r.reservation_id === id);
-    if (target && typeof RoomCalendar !== 'undefined') {
-      const initDate = String(target.start_time).slice(0, 10);
-      const initStartTime = String(target.start_time).slice(11, 16);
-      const initEndTime = String(target.end_time).slice(11, 16);
-
-      const moveDate = document.getElementById('moveDate');
-      const moveStartTime = document.getElementById('moveStartTime');
-      const moveEndTime = document.getElementById('moveEndTime');
-
-      if (moveDate) moveDate.value = initDate;
-      if (moveStartTime) moveStartTime.value = initStartTime;
-      if (moveEndTime) moveEndTime.value = initEndTime;
-
-      if (moveCalendarInstance && moveCalendarInstance.roomId === target.room_id) {
-        moveCalendarInstance.goToDate(initDate, true);
-      } else {
-        moveCalendarInstance = new RoomCalendar({
-          containerId: 'move-room-calendar-container',
-          roomId: target.room_id,
-          initialDate: initDate
-        });
-      }
-      
-      moveCalendarInstance.setSelectionTimes(initStartTime, initEndTime);
-    }
-  }
-
-  /**
-   * "HH:MM" for right now, local time — same wall-clock string format the
-   * start/end <option> values already use (see js/schedule.js).
-   */
-  function nowHHMM() {
-    const d = new Date();
-    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-  }
-
-  /**
-   * When the chosen move date is today, disable every start/end time option
-   * that has already gone by, so a customer can't submit a "move" into a
-   * slot that's already started. Any other date re-enables the full list.
-   * The server repeats this check (requestMove()'s "must be in the future"
-   * rule); this is convenience only.
-   */
-  function refreshMoveTimeOptions() {
-    const dateInput = document.getElementById('moveDate');
-    const startSelect = document.getElementById('moveStartTime');
-    const endSelect = document.getElementById('moveEndTime');
-    if (!dateInput || !startSelect || !endSelect) return;
-
-    const isToday = dateInput.value === todayYMD();
-    const cutoff = isToday ? nowHHMM() : null;
-
-    [startSelect, endSelect].forEach(select => {
-      let clearedSelection = false;
-      Array.from(select.options).forEach(opt => {
-        if (!opt.value) return; // leave the blank placeholder alone
-        const isPastSlot = cutoff !== null && opt.value <= cutoff;
-        opt.disabled = isPastSlot;
-        if (isPastSlot && select.value === opt.value) clearedSelection = true;
-      });
-      if (clearedSelection) select.value = '';
-    });
   }
 
   // Confirmation slip (Section 12), log archive (Section 13) and re-book
@@ -840,7 +794,44 @@ document.addEventListener('DOMContentLoaded', () => {
     // Warn as soon as the range stops fitting, not only on submit. The
     // sequence guard drops answers that arrive after a newer edit.
     let moveCheckSeq = 0;
+    
+    const moveStartTimeSelect = document.getElementById('moveStartTime');
+    const moveEndTimeSelect = document.getElementById('moveEndTime');
+
+    if (moveStartTimeSelect && moveEndTimeSelect) {
+      const ALL_END_OPTIONS = Array.from(moveEndTimeSelect.options)
+        .filter(o => o.value)
+        .map(o => ({ value: o.value, text: o.textContent }));
+      
+      const syncMoveEndOptions = () => {
+        const start = moveStartTimeSelect.value;
+        const previous = moveEndTimeSelect.value;
+        
+        moveEndTimeSelect.innerHTML = '<option value="">End time</option>';
+        ALL_END_OPTIONS.forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = o.value;
+          opt.textContent = o.text;
+          
+          if (start && o.value <= start) {
+            opt.disabled = true;
+            opt.hidden = true; // hide/disable before or equal
+          }
+          moveEndTimeSelect.appendChild(opt);
+        });
+        
+        if (previous && previous > start) {
+          moveEndTimeSelect.value = previous;
+        }
+      };
+
+      moveStartTimeSelect.addEventListener('change', syncMoveEndOptions);
+      // Run once
+      syncMoveEndOptions();
+    }
+
     ['moveDate', 'moveStartTime', 'moveEndTime'].forEach(id => {
+
       const input = document.getElementById(id);
       if (!input) return;
       input.addEventListener('change', async () => {
@@ -958,7 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(res => res.json())
       .then(json => {
         if (json.success) {
-          showToast(wasPending ? 'Request withdrawn and the room released.' : 'Booking removed from your list.', 'success');
+          showToast(wasPending ? 'Request cancelled and the room released.' : 'Booking removed from your list.', 'success');
           fetchReservations(); // reload entirely
         } else {
           showToast(json.error || 'Failed to remove the booking.', 'error');

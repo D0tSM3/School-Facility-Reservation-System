@@ -41,7 +41,38 @@
         box-sizing: border-box;
       }
     </style>
-  </head>
+  
+  <!-- FOUC Preventer -->
+  <script>
+    (function() {
+      const role = localStorage.getItem('campus_role');
+      if (role) {
+        document.documentElement.setAttribute('data-role', role.toLowerCase());
+      }
+    })();
+  </script>
+  <style>
+    /* Prevent sidebar flash */
+    html[data-role="staff"] aside nav a[data-path="customer-dashboard"],
+    html[data-role="staff"] aside nav a[data-path="rooms"],
+    html[data-role="staff"] aside nav a[data-path="my-reservations"],
+    html[data-role="admin"] aside nav a[data-path="customer-dashboard"],
+    html[data-role="admin"] aside nav a[data-path="rooms"],
+    html[data-role="admin"] aside nav a[data-path="my-reservations"] {
+      display: none !important;
+    }
+    
+    html[data-role="staff"] aside nav a[data-path="staff-dashboard"],
+    html[data-role="admin"] aside nav a[data-path="staff-dashboard"] {
+      display: flex !important;
+    }
+    
+    html[data-role="admin"] aside nav a[data-path="admin-governance"] {
+      display: flex !important;
+    }
+  </style>
+
+ </head>
   <body class="bg-[#F8F9FA] font-sans text-gray-900 antialiased min-h-screen">
     
     <!-- Left Sidebar -->
@@ -68,9 +99,9 @@
           <span class="material-symbols-outlined text-[20px]">event_available</span>
           <span>My Reservations</span>
         </a>
-        <a class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="staff-queue" href="staff-queue.html">
+        <a class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="staff-dashboard" href="staff-dashboard.html">
           <span class="material-symbols-outlined text-[20px]">assignment</span>
-          <span>Staff Queue</span>
+          <span>Staff Dashboard</span>
         </a>
         <a class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="admin-governance" href="admin-governance.html">
           <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
@@ -98,11 +129,8 @@
 
     <div class="pl-[250px]">
       
-      <header class="fixed top-0 left-[250px] right-0 h-16 bg-white border-b border-gray-100 z-40 flex items-center justify-between px-8 shadow-[0_1px_8px_rgba(0,0,0,0.02)]">
-        <div class="flex items-center gap-2 px-3 py-1 bg-gray-100/90 rounded-full text-gray-600 text-xs font-medium">
-          <span class="material-symbols-outlined text-[15px]">school</span>
-          <span>AY 2024-2025 • First Semester</span>
-        </div>
+      <header class="fixed top-0 left-[250px] right-0 h-16 bg-white border-b border-gray-100 z-40 flex items-center justify-end px-8 shadow-[0_1px_8px_rgba(0,0,0,0.02)]">
+        
 
         <div class="flex items-center gap-3">
           <div class="flex flex-col text-right hidden sm:flex">

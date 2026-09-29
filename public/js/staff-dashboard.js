@@ -52,10 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const kpiAuth          = el('kpi-auth-count');
 
   const batchApproveBtn   = el('btn-batch-approve');
+  const searchInput       = el('searchInput');
   const batchApproveLabel = el('batch-approve-label');
-  const refreshBtn        = el('btn-refresh-queue');
-  const refreshIcon       = el('btn-refresh-icon');
-  const exportLogBtn      = el('btn-export-log');
+      const exportLogBtn      = el('btn-export-log');
 
   const toast       = el('action-toast');
   const toastText   = el('action-toast-text');
@@ -63,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const toastDismiss = el('btn-dismiss-toast');
 
   const facilityFilter = el('facility-filter');
-  const facilityGrid   = el('facility-grid');
+  const facilityGrid   = el('view-maintenance-list');
 
   const alertBox      = el('maintenance-alert');
   const alertLocation = el('maintenance-alert-location');
@@ -72,8 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const alertBtn      = el('btn-maintenance-alert-toggle');
   const alertBtnLabel = el('btn-maintenance-alert-label');
 
-  const syncTimestamp = el('sync-timestamp');
-  const syncIndicator = el('sync-indicator');
+  
+  
   const accessNotice  = el('access-notice');
   const accessText    = el('access-notice-text');
 
@@ -121,7 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
     currentMoveId: null,
     currentCancelReqId: null,
     currentCancelId: null,
-    loading: false
+    loading: false,
+    searchQuery: ''
   };
 
   // ---------------------------------------------------------------
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         kind === 'error' ? 'error' : kind === 'success' ? 'check_circle' : 'info';
       toastIcon.className =
         'material-symbols-outlined ' +
-        (kind === 'error' ? 'text-error' : kind === 'success' ? 'text-[#15803D]' : 'text-secondary');
+        (kind === 'error' ? 'text-red-600' : kind === 'success' ? 'text-[#15803D]' : 'text-[#7a1f2b]');
     }
 
     toast.classList.remove('hidden');
@@ -275,30 +275,36 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tabs
   // ---------------------------------------------------------------
 
-  const ACTIVE_TAB_CLASSES = ['bg-surface-container-lowest', 'text-primary', 'shadow-sm'];
+  
+  
 
   function switchTab(tab) {
     state.activeTab = tab;
 
     const pairs = [
-      ['pending', tabPending, viewPending],
-      ['moves', tabMoves, viewMoves],
-      ['cancels', tabCancels, viewCancels],
-      ['all', tabAll, viewAll],
-      ['maintenance', tabMaintenance, viewMaintenance]
+      ['pending', tabPending, viewPending, 'Pending Approvals'],
+      ['moves', tabMoves, viewMoves, 'Move Requests'],
+      ['cancels', tabCancels, viewCancels, 'Cancellation Requests'],
+      ['all', tabAll, viewAll, 'All Requests'],
+      ['maintenance', tabMaintenance, viewMaintenance, 'Facility State Grid']
     ];
 
-    pairs.forEach(([name, tabEl, viewEl]) => {
+    pairs.forEach(([name, tabEl, viewEl, title]) => {
       const active = name === tab;
       if (tabEl) {
-        tabEl.classList.toggle('text-on-surface-variant', !active);
-        ACTIVE_TAB_CLASSES.forEach((cls) => tabEl.classList.toggle(cls, active));
+        tabEl.classList.toggle('active-tab', active);
+        tabEl.classList.toggle('ring-2', active);
+        tabEl.classList.toggle('ring-[#7a1f2b]', active);
         tabEl.setAttribute('aria-selected', active ? 'true' : 'false');
       }
       if (viewEl) viewEl.classList.toggle('hidden', !active);
+      
+      if (active) {
+         const titleEl = document.getElementById('viewport-title');
+         if (titleEl) titleEl.textContent = title;
+      }
     });
 
-    // The maintenance banner only belongs to the facility tab.
     if (alertBox) {
       alertBox.classList.toggle('hidden', tab !== 'maintenance' || !alertBtn.dataset.roomId);
     }
@@ -315,105 +321,91 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------------------------------------------------------------
 
   function emptyState(message, icon = 'inbox') {
-    return `
-      <div class="p-space-lg flex flex-col items-center gap-space-xs text-center bg-surface-container-lowest rounded-lg shadow-sm">
-        <span class="material-symbols-outlined text-[32px] text-outline">${icon}</span>
-        <p class="font-body-md text-body-md text-on-surface-variant">${escapeHtml(message)}</p>
-      </div>`;
-  }
+      return `<div class="p-8 flex flex-col items-center gap-2 text-center bg-white border border-gray-100 rounded-2xl shadow-sm text-gray-500">
+          <span class="material-symbols-outlined text-[32px]">${icon}</span>
+          <p class="text-sm">${escapeHtml(message)}</p>
+        </div>`;
+    }
 
   function reservationCard(reservation) {
-    const id = escapeHtml(reservation.reservation_id);
-    const requester = escapeHtml(reservation.customer_name || reservation.customer_email || 'Unknown requester');
-    const meta = statusMeta(reservation.status);
-    const isPending = reservation.status === 'Pending';
+      const id = escapeHtml(reservation.reservation_id);
+      const requester = escapeHtml(reservation.customer_name || reservation.customer_email || 'Unknown requester');
+      const isPending = reservation.status === 'Pending';
+      
+      let badgeBg = 'bg-gray-100 text-gray-700';
+      if (reservation.status === 'Approved') badgeBg = 'bg-green-100 text-green-700';
+      else if (isPending) badgeBg = 'bg-amber-100 text-amber-700';
+      else if (reservation.status === 'Cancelled' || reservation.status === 'Rejected') badgeBg = 'bg-red-100 text-red-700';
 
-    return `
-      <div class="relative bg-surface-container-lowest rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md"
-           data-card-id="${id}">
-        <div class="absolute left-0 top-0 bottom-0 w-1.5 ${meta.accent}"></div>
-        <div class="p-space-md pl-space-lg flex flex-col xl:flex-row xl:items-center justify-between gap-space-md">
-          <div class="flex flex-col md:flex-row md:items-start gap-space-md flex-1">
-            <div class="flex-shrink-0">
-              <span class="px-space-xs py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm tracking-wide">
-                #${shortId(reservation.reservation_id)}
-              </span>
-            </div>
-            <div class="space-y-1 flex-1">
-              <div class="flex flex-wrap items-center gap-space-xs">
-                <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">${requester}</h3>
-                ${reservation.customer_email
-                  ? `<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm">${escapeHtml(reservation.customer_email)}</span>`
-                  : ''}
-                <span class="px-space-xs py-0.5 rounded ${meta.badgeClass} font-label-sm font-semibold flex items-center gap-0.5">
-                  <span class="material-symbols-outlined text-[14px]">${meta.icon}</span>
-                  ${escapeHtml(meta.label)}
-                </span>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-space-md gap-y-1 pt-space-xs text-on-surface-variant font-body-sm text-body-sm">
-                <div class="flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[16px] text-primary">meeting_room</span>
-                  <span class="font-semibold text-on-surface">${escapeHtml(reservation.room_name || 'Room')}</span>
-                  <span>(${escapeHtml(roomMeta(reservation))})</span>
+      return `
+        <div class="relative bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md hover:border-gray-300 mb-4" data-card-id="${id}">
+          <div class="p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
+            <div class="flex flex-col md:flex-row md:items-center gap-5 flex-1">
+              <div class="flex-shrink-0 flex items-center gap-3">
+                  ${isPending ? `<input type="checkbox" value="${id}" class="batch-checkbox w-4 h-4 text-[#7a1f2b] bg-gray-50 border-gray-300 rounded focus:ring-[#7a1f2b] cursor-pointer" onchange="window.CampusRoomStaff.updateBatchButton()">` : ""}
+                  <span class="px-2.5 py-1.5 rounded-lg bg-[#FDF2F4] text-[#7a1f2b] text-xs font-bold tracking-wide border border-[#FDF2F4]">
+                    #${shortId(reservation.reservation_id)}
+                  </span>
                 </div>
-                <div class="flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[16px] text-secondary">calendar_today</span>
-                  <span class="font-semibold text-on-surface">${escapeHtml(formatDay(reservation.start_time))}</span>
-                  <span>${escapeHtml(formatTime(reservation.start_time))} – ${escapeHtml(formatTime(reservation.end_time))}</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex flex-wrap items-center gap-2 mb-2">
+                  <h3 class="text-base font-bold text-gray-900 truncate">${requester}</h3>
+                  ${reservation.customer_email ? `<span class="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold uppercase truncate">${escapeHtml(reservation.customer_email)}</span>` : ''}
+                  <span class="px-2 py-0.5 rounded ${badgeBg} text-[10px] font-bold uppercase tracking-wider">${escapeHtml(reservation.status)}</span>
+                  ${reservation.category ? `<span class="px-2 py-0.5 rounded border border-gray-200 text-gray-500 text-xs">${escapeHtml(reservation.category)}</span>` : ''}
                 </div>
-                <div class="flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[16px] text-tertiary">category</span>
-                  <span>Purpose:</span>
-                  <span class="font-semibold text-on-surface">${escapeHtml(reservation.purpose || '—')}</span>
-                  ${reservation.category ? `<span class="ml-1 px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm font-semibold">${escapeHtml(reservation.category)}</span>` : ''}
+                
+                <div class="flex items-center gap-2 text-sm text-gray-500 mt-1 mb-2">
+                  <span class="material-symbols-outlined text-[16px] text-gray-400">event</span>
+                  <span class="font-medium">${formatDateTime(reservation.start_time)} &rarr; ${formatTime(reservation.end_time)}</span>
+                  <span class="mx-1">&bull;</span>
+                  <span class="material-symbols-outlined text-[16px] text-gray-400">meeting_room</span>
+                  <span class="font-semibold text-gray-700">${escapeHtml(reservation.room_name)}</span>
                 </div>
-              </div>
-              <div class="pt-space-xs flex flex-wrap items-center gap-space-xs font-body-sm text-body-sm text-on-surface-variant">
-                <span class="font-label-sm text-label-sm text-on-tertiary-fixed-variant">Filed:</span>
-                <span class="bg-surface-container-high px-2 py-0.5 rounded text-on-surface font-medium">${escapeHtml(formatDateTime(reservation.created_at))}</span>
+                
+                <p class="text-sm text-gray-600 truncate w-full max-w-2xl"><span class="font-semibold text-gray-700">Purpose:</span> ${escapeHtml(reservation.purpose)}</p>
+                ${reservation.equipment_notes ? `<p class="text-sm text-gray-600 mt-1 truncate"><span class="font-semibold text-gray-700">Equip/Notes:</span> ${escapeHtml(reservation.equipment_notes)}</p>` : ''}
               </div>
             </div>
+            
+            <div class="flex flex-wrap items-center gap-2 shrink-0 border-t xl:border-t-0 border-gray-100 pt-4 xl:pt-0">
+              <button type="button" onclick="window.CampusRoomStaff.openDetailModal('${id}')" class="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">Details</button>
+              ${isPending ? `<button type="button" onclick="window.CampusRoomStaff.decide('${id}', 'Rejected', '${requester}', this)" class="px-4 py-2 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors shadow-sm">Reject</button>` : ''}
+              ${isPending ? `<button type="button" onclick="window.CampusRoomStaff.decide('${id}', 'Approved', '${requester}', this)" class="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm">Approve</button>` : ''}
+              ${!isPending && reservation.status === 'Approved' ? `<button type="button" onclick="window.CampusRoomStaff.openStaffCancelModal('${id}', ${escapeHtml(JSON.stringify(reservation))})" class="px-4 py-2 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors shadow-sm">Cancel Booking</button>` : ''}
+            </div>
           </div>
-          <div class="flex items-center gap-space-xs justify-end flex-shrink-0 pt-space-xs xl:pt-0">
-            ${isPending ? `
-            <button type="button"
-                    class="btn-approve-req flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-lowest text-[#15803D] hover:bg-[#DCFCE7] shadow-sm font-label-lg transition-all disabled:opacity-40 disabled:pointer-events-none"
-                    data-id="${id}" data-name="${requester}" title="Approve Reservation">
-              <span class="material-symbols-outlined text-[18px]">check</span>
-              <span>Approve</span>
-            </button>
-            <button type="button"
-                    class="btn-reject-req flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-lowest text-error hover:bg-error-container shadow-sm font-label-lg transition-all disabled:opacity-40 disabled:pointer-events-none"
-                    data-id="${id}" data-name="${requester}" title="Decline Reservation">
-              <span class="material-symbols-outlined text-[18px]">close</span>
-              <span>Reject</span>
-            </button>` : ''}
-            <button type="button"
-                    class="btn-actions-menu p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
-                    data-id="${id}" aria-haspopup="menu" aria-expanded="false" title="More actions">
-              <span class="material-symbols-outlined text-[20px]">more_vert</span>
-            </button>
-          </div>
-        </div>
-      </div>`;
+        </div>`;
+    }
+
+  
+  function matchSearch(obj) {
+    if (!state.searchQuery) return true;
+    const q = state.searchQuery;
+    const fields = [
+      obj.reservation_id,
+      obj.customer_name,
+      obj.customer_email,
+      obj.room_name,
+      obj.purpose,
+      obj.room_type,
+      obj.customer_reason,
+      obj.staff_comment
+    ];
+    return fields.some(f => f && String(f).toLowerCase().includes(q));
   }
 
   function renderPending() {
     if (!viewPending) return;
 
-    const pending = state.reservations.filter((r) => r.status === 'Pending');
+    const pending = state.reservations.filter((r) => r.status === 'Pending' && matchSearch(r));
 
     viewPending.innerHTML = pending.length
       ? pending.map(reservationCard).join('')
       : emptyState('No pending applications. The dispatch queue is clear.', 'task_alt');
 
     if (pendingBadge) pendingBadge.textContent = `${pending.length} Requests`;
-    if (batchApproveLabel) {
-      batchApproveLabel.textContent = pending.length
-        ? `Batch Approve All Pending (${pending.length})`
-        : 'Batch Approve All Pending';
-    }
-    if (batchApproveBtn) batchApproveBtn.disabled = pending.length === 0;
+    
   }
 
   function renderAllRequests() {
@@ -431,57 +423,53 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (allStatusFilter) {
-    allStatusFilter.addEventListener('change', () => {
+    if (allStatusFilter) allStatusFilter.addEventListener('change', () => {
       state.allStatusFilter = allStatusFilter.value;
       renderAllRequests();
     });
   }
 
   function moveCard(request) {
-    const id = escapeHtml(request.request_id);
-    return `
-      <div class="relative bg-surface-container-lowest rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md">
-        <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary"></div>
-        <div class="p-space-md pl-space-lg flex flex-col xl:flex-row xl:items-center justify-between gap-space-md">
-          <div class="space-y-1 flex-1">
-            <div class="flex flex-wrap items-center gap-space-xs">
-              <span class="px-space-xs py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm tracking-wide">#${shortId(request.reservation_id)}</span>
-              <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(request.customer_name || request.customer_email || 'Requester')}</h3>
-              <span class="px-space-xs py-0.5 rounded bg-secondary-container/30 text-on-secondary-container font-label-sm font-semibold">MOVE REQUEST</span>
+      const id = escapeHtml(request.request_id);
+      const resId = escapeHtml(request.reservation_id);
+      return `
+        <div class="relative bg-white rounded-2xl border border-blue-200 shadow-sm overflow-hidden transition-all hover:shadow-md mb-4" data-move-id="${id}">
+          <div class="p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-3">
+                <span class="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-bold tracking-wide border border-blue-100">Move REQ #${shortId(id)}</span>
+                <span class="text-xs text-gray-500 font-semibold">Ref: <a href="#" onclick="window.CampusRoomStaff.openDetailModal('${resId}')" class="text-[#7a1f2b] hover:underline">#${shortId(resId)}</a></span>
+              </div>
+              <div class="flex flex-col md:flex-row gap-4 text-sm mt-3 items-stretch">
+                 <div class="flex-1 p-4 bg-gray-50 rounded-xl border border-gray-100 relative">
+                    <div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Current Booking</div>
+                    <div class="font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
+                    <div class="text-xs text-gray-600 mt-1">${formatDateTime(request.original_start_time)} - ${formatTime(request.original_end_time)}</div>
+                 </div>
+                 <div class="flex-1 p-4 bg-blue-50 rounded-xl border border-blue-100 relative">
+                    <div class="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Requested Move</div>
+                    <div class="font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
+                    <div class="text-xs text-gray-600 mt-1">${formatDateTime(request.requested_start_time)} - ${formatTime(request.requested_end_time)}</div>
+                 </div>
+              </div>
             </div>
-            <div class="flex items-center gap-1 pt-space-xs font-body-sm text-body-sm text-on-surface-variant">
-              <span class="material-symbols-outlined text-[16px] text-primary">meeting_room</span>
-              <span class="font-semibold text-on-surface">${escapeHtml(request.room_name || 'Room')}</span>
-            </div>
-            <div class="font-body-md text-body-md text-on-surface">
-              <span class="font-semibold text-on-surface-variant">Original:</span>
-              ${escapeHtml(formatDateTime(request.original_start_time))} – ${escapeHtml(formatTime(request.original_end_time))}
-            </div>
-            <div class="font-body-md text-body-md text-on-surface">
-              <span class="font-semibold text-secondary">Requested:</span>
-              ${escapeHtml(formatDateTime(request.requested_start_time))} – ${escapeHtml(formatTime(request.requested_end_time))}
+            
+            <div class="flex flex-wrap items-center gap-2 shrink-0 border-t xl:border-t-0 border-gray-100 pt-4 xl:pt-0">
+              <button type="button" onclick="window.CampusRoomStaff.openMoveModal('${id}')" class="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors shadow-sm">Review Move</button>
             </div>
           </div>
-          <div class="flex items-center gap-space-xs justify-end flex-shrink-0 pt-space-xs xl:pt-0">
-            <button type="button"
-                    class="btn-review-move flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-container-highest shadow-sm font-label-lg transition-all"
-                    data-id="${id}">
-              <span class="material-symbols-outlined text-[18px]">rate_review</span>
-              <span>Review Request</span>
-            </button>
-          </div>
-        </div>
-      </div>`;
-  }
+        </div>`;
+    }
 
   function renderMoves() {
     if (!viewMoves) return;
 
-    viewMoves.innerHTML = state.moveRequests.length
-      ? state.moveRequests.map(moveCard).join('')
+    const moves = state.moveRequests.filter(matchSearch);
+    viewMoves.innerHTML = moves.length
+      ? moves.map(moveCard).join('')
       : emptyState('No pending move requests.', 'event_available');
 
-    if (moveBadge) moveBadge.textContent = `${state.moveRequests.length} Requests`;
+    if (moveBadge) moveBadge.textContent = `${state.moveRequests.length}`;
   }
 
   /**
@@ -490,95 +478,74 @@ document.addEventListener('DOMContentLoaded', () => {
    * it is the whole basis for the decision.
    */
   function cancelRequestCard(request) {
-    const id = escapeHtml(request.request_id);
-    return `
-      <div class="relative bg-surface-container-lowest rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md">
-        <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-error"></div>
-        <div class="p-space-md pl-space-lg flex flex-col xl:flex-row xl:items-center justify-between gap-space-md">
-          <div class="space-y-1 flex-1">
-            <div class="flex flex-wrap items-center gap-space-xs">
-              <span class="px-space-xs py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm tracking-wide">#${shortId(request.reservation_id)}</span>
-              <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(request.customer_name || request.customer_email || 'Requester')}</h3>
-              <span class="px-space-xs py-0.5 rounded bg-error-container text-on-error-container font-label-sm font-semibold">CANCELLATION REQUEST</span>
+      const id = escapeHtml(request.request_id);
+      const resId = escapeHtml(request.reservation_id);
+      return `
+        <div class="relative bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden transition-all hover:shadow-md mb-4" data-cancel-id="${id}">
+          <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="px-2 py-1 rounded bg-red-50 text-red-700 text-xs font-bold tracking-wide border border-red-100">Cancel REQ #${id}</span>
+                <span class="text-xs text-gray-500 font-semibold">Ref: <a href="#" onclick="window.CampusRoomStaff.openDetailModal('${resId}')" class="text-[#7a1f2b] hover:underline">#${shortId(resId)}</a></span>
+              </div>
+              <div class="text-sm text-gray-600 mt-3">
+                 <span class="font-semibold text-gray-700">Reason given:</span> ${escapeHtml(request.customer_reason)}
+              </div>
+              <div class="text-xs text-gray-400 mt-2">
+                 Requested on ${formatDateTime(request.created_at)}
+              </div>
             </div>
-            <div class="flex items-center gap-1 pt-space-xs font-body-sm text-body-sm text-on-surface-variant">
-              <span class="material-symbols-outlined text-[16px] text-primary">meeting_room</span>
-              <span class="font-semibold text-on-surface">${escapeHtml(request.room_name || 'Room')}</span>
-            </div>
-            <div class="font-body-md text-body-md text-on-surface">
-              <span class="font-semibold text-on-surface-variant">Booked:</span>
-              ${escapeHtml(formatDateTime(request.start_time))} – ${escapeHtml(formatTime(request.end_time))}
-            </div>
-            <div class="font-body-md text-body-md text-on-surface">
-              <span class="font-semibold text-error">Reason:</span>
-              ${escapeHtml(request.reason || '—')}
+            <div class="flex items-center gap-2 shrink-0 border-t sm:border-t-0 border-gray-100 pt-4 sm:pt-0">
+               <button type="button" onclick="window.CampusRoomStaff.openCancelRequestModal('${id}')" class="px-5 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors shadow-sm">Review Request</button>
             </div>
           </div>
-          <div class="flex items-center gap-space-xs justify-end flex-shrink-0 pt-space-xs xl:pt-0">
-            <button type="button"
-                    class="btn-review-cancel flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-container-highest shadow-sm font-label-lg transition-all"
-                    data-id="${id}">
-              <span class="material-symbols-outlined text-[18px]">rate_review</span>
-              <span>Review Request</span>
-            </button>
-          </div>
-        </div>
-      </div>`;
-  }
+        </div>`;
+    }
 
   function renderCancelRequests() {
     if (!viewCancels) return;
 
-    viewCancels.innerHTML = state.cancelRequests.length
-      ? state.cancelRequests.map(cancelRequestCard).join('')
+    const cancels = state.cancelRequests.filter(matchSearch);
+    viewCancels.innerHTML = cancels.length
+      ? cancels.map(cancelRequestCard).join('')
       : emptyState('No pending cancellation requests.', 'assignment_turned_in');
 
-    if (cancelReqBadge) cancelReqBadge.textContent = `${state.cancelRequests.length} Requests`;
+    if (cancelReqBadge) cancelReqBadge.textContent = `${state.cancelRequests.length}`;
   }
 
   function facilityCard(room) {
-    // Decommissioned rooms (is_active = false) now show up for Staff/Admin
-    // (see RoomController::index()) so there's a way back to reactivating
-    // them, but they're read-only here: is_active is an Admin-only toggle
-    // (admin-governance.html), so Staff just gets a clearly-marked, disabled card.
-    const decommissioned = room.live_status === 'Decommissioned' || Number(room.is_active) === 0;
-    const offline = room.status === 'Maintenance';
-    const occupied = room.live_status === 'Occupied';
-
-    const badge = decommissioned
-      ? '<span class="px-2 py-0.5 rounded text-label-sm bg-surface-container-highest text-on-surface-variant font-bold">DECOMMISSIONED</span>'
-      : offline
-        ? '<span class="px-2 py-0.5 rounded text-label-sm bg-surface-container-highest text-tertiary font-bold">MAINTENANCE</span>'
-        : occupied
-          ? '<span class="px-2 py-0.5 rounded text-label-sm bg-secondary-fixed text-on-secondary-fixed font-bold">OCCUPIED</span>'
-          : '<span class="px-2 py-0.5 rounded text-label-sm bg-[#DCFCE7] text-[#15803D] font-bold">AVAILABLE</span>';
-
-    return `
-      <div class="p-space-md rounded-lg bg-surface-container flex flex-col justify-between space-y-space-sm ${decommissioned ? 'opacity-60' : ''}">
-        <div class="flex items-start justify-between gap-space-xs">
-          <div>
-            <span class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(room.name)}</span>
-            <p class="font-body-sm text-body-sm text-on-surface-variant">${escapeHtml(roomMeta(room))}</p>
-          </div>
-          ${badge}
-        </div>
-        <div class="flex items-center justify-between pt-space-xs gap-space-xs">
-          <span class="font-label-sm text-label-sm text-on-surface-variant">${decommissioned ? 'Reactivate in Admin \u2192 Rooms' : 'Lockout Override'}</span>
-          <button type="button"
-                  class="btn-toggle-facility px-3 py-1 rounded font-label-md transition-colors disabled:opacity-40 disabled:pointer-events-none ${
-                    offline
-                      ? 'bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim'
-                      : 'bg-surface-container-highest text-on-surface hover:bg-outline-variant'
-                  }"
-                  data-room-id="${escapeHtml(room.room_id)}"
-                  data-room-name="${escapeHtml(room.name)}"
-                  data-next-status="${offline ? 'Available' : 'Maintenance'}"
-                  ${decommissioned ? 'disabled' : ''}>
-            ${offline ? 'Set Available' : 'Set Maintenance'}
-          </button>
-        </div>
-      </div>`;
-  }
+      const isAvailable = room.status === 'Available';
+      const isMaint = room.status === 'Maintenance';
+      
+      let badgeBg = 'bg-gray-100 text-gray-700';
+      if (isAvailable) badgeBg = 'bg-emerald-100 text-emerald-700';
+      else if (isMaint) badgeBg = 'bg-amber-100 text-amber-700';
+      
+      const rId = escapeHtml(room.room_id);
+      const rName = escapeHtml(room.name);
+      
+      return `
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+           <div class="p-5 border-b border-gray-50 flex items-start justify-between gap-3">
+              <div>
+                 <div class="text-[10px] font-bold text-gray-400 tracking-wider uppercase mb-1">${escapeHtml(room.room_type)} &bull; Floor ${escapeHtml(room.floor)}</div>
+                 <h4 class="font-bold text-gray-900 text-base leading-tight mb-2">${rName}</h4>
+                 <span class="px-2 py-0.5 rounded ${badgeBg} text-[10px] font-bold uppercase tracking-wider">${escapeHtml(room.status)}</span>
+              </div>
+              <div class="flex flex-col gap-1 items-end shrink-0">
+                <span class="material-symbols-outlined text-gray-300 text-[24px]">meeting_room</span>
+                <span class="text-xs font-semibold text-gray-500">Cap: ${room.capacity}</span>
+              </div>
+           </div>
+           <div class="p-4 bg-[#f8f9fb] flex flex-col gap-3 mt-auto">
+              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Quick State Toggle</span>
+              <div class="grid grid-cols-2 gap-2">
+                 <button type="button" onclick="window.CampusRoomStaff.toggleFacility('${rId}','Available','${rName}',this)" class="flex items-center justify-center py-2 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-50 transition-colors ${isAvailable ? 'bg-emerald-50 ring-2 ring-emerald-500 border-transparent' : 'bg-white'}" title="Set Available"><span class="material-symbols-outlined text-[20px]">check_circle</span></button>
+                 <button type="button" onclick="window.CampusRoomStaff.toggleFacility('${rId}','Maintenance','${rName}',this)" class="flex items-center justify-center py-2 rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-50 transition-colors ${isMaint ? 'bg-amber-50 ring-2 ring-amber-500 border-transparent' : 'bg-white'}" title="Set Maintenance"><span class="material-symbols-outlined text-[20px]">build</span></button>
+              </div>
+           </div>
+        </div>`;
+    }
 
   function renderFacilities() {
     if (!facilityGrid) return;
@@ -591,7 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     facilityGrid.innerHTML = filtered.length
       ? filtered.map(facilityCard).join('')
-      : `<div class="p-space-md text-on-surface-variant font-body-md text-body-md">No rooms match this filter.</div>`;
+      : `<div class="p-5 text-gray-500 text-sm ">No rooms match this filter.</div>`;
 
     if (maintenanceBadge) maintenanceBadge.textContent = `${state.rooms.length} Rooms`;
   }
@@ -668,24 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
     stampSync();
   }
 
-  function stampSync() {
-    if (!syncTimestamp) return;
-    try {
-      const now = new Date().toLocaleString('en-US', {
-        timeZone: 'Asia/Manila',
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      });
-      syncTimestamp.textContent = `Sync: ${now} PHT`;
-    } catch (_) {
-      syncTimestamp.textContent = `Sync: ${new Date().toLocaleString()}`;
-    }
-  }
+  function stampSync() {}
 
   // ---------------------------------------------------------------
   // Data loading
@@ -694,8 +644,8 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadAll(options = {}) {
     if (state.loading) return;
     state.loading = true;
-    if (refreshIcon) refreshIcon.classList.add('animate-spin');
-    if (syncIndicator) syncIndicator.classList.add('animate-pulse');
+    
+    
 
     const [reservations, rooms, moves, cancels] = await Promise.all([
       api('api/reservations'),
@@ -705,7 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ]);
 
     state.loading = false;
-    if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+    
 
     const failed = [reservations, rooms, moves, cancels].find((r) => !r.ok);
     if (failed && handleAuthFailure(failed)) return;
@@ -759,7 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewMoves) viewMoves.innerHTML = '';
     if (viewCancels) viewCancels.innerHTML = '';
     if (facilityGrid) facilityGrid.innerHTML = '';
-    [batchApproveBtn, refreshBtn, exportLogBtn].forEach((btn) => {
+    [batchApproveBtn, exportLogBtn].forEach((btn) => {
       if (btn) btn.disabled = true;
     });
     if (syncTimestamp) syncTimestamp.textContent = 'Dispatch offline';
@@ -868,7 +818,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const facilityBtn = event.target.closest('.btn-toggle-facility');
     if (facilityBtn) {
-      toggleFacility(
+      toggleFacility,
+    updateBatchButton(
         facilityBtn.dataset.roomId,
         facilityBtn.dataset.nextStatus,
         facilityBtn.dataset.roomName,
@@ -882,8 +833,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------------------------------------------------------------
 
   if (batchApproveBtn) {
-    batchApproveBtn.addEventListener('click', async () => {
-      const pending = state.reservations.filter((r) => r.status === 'Pending');
+    
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      state.searchQuery = (e.target.value || '').trim().toLowerCase();
+      renderAll();
+    });
+  }
+
+  if (batchApproveBtn) batchApproveBtn.addEventListener('click', async () => {
+      const pending = state.reservations.filter((r) => r.status === 'Pending' && matchSearch(r));
       if (!pending.length) {
         showToast('No pending reservations available for batch approval.');
         return;
@@ -928,13 +887,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------------------------------------------------------------
-  // Refresh
-  // ---------------------------------------------------------------
-
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => loadAll({ notify: true }));
-  }
-
   // ---------------------------------------------------------------
   // Facility maintenance toggle
   // ---------------------------------------------------------------
@@ -977,15 +929,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (alertBtn) {
-    alertBtn.addEventListener('click', () => {
+    if (alertBtn) alertBtn.addEventListener('click', () => {
       const roomId = alertBtn.dataset.roomId;
       if (!roomId) return;
-      toggleFacility(roomId, 'Available', alertBtn.dataset.roomName, alertBtn);
+      toggleFacility,
+    updateBatchButton(roomId, 'Available', alertBtn.dataset.roomName, alertBtn);
     });
   }
 
   if (facilityFilter) {
-    facilityFilter.addEventListener('change', () => {
+    if (facilityFilter) facilityFilter.addEventListener('change', () => {
       state.wingFilter = facilityFilter.value;
       renderFacilities();
     });
@@ -999,7 +952,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------------------------------------------------------------
 
   if (exportLogBtn) {
-    exportLogBtn.addEventListener('click', () => {
+    if (exportLogBtn) exportLogBtn.addEventListener('click', () => {
       window.CampusRoomLogArchive.openGlobal();
     });
   }
@@ -1009,12 +962,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------------------------------------------------------------
 
   function detailRow(label, value) {
-    return `
-      <div class="flex justify-between gap-space-md py-space-xs border-b border-outline-variant last:border-0">
-        <span class="font-label-md text-label-md text-on-surface-variant">${escapeHtml(label)}</span>
-        <span class="font-body-md text-body-md text-on-surface text-right">${escapeHtml(value)}</span>
-      </div>`;
-  }
+      return `
+        <div class="flex justify-between items-start gap-4 py-3 border-b border-gray-100 last:border-0">
+          <span class="text-sm font-semibold text-gray-500 whitespace-nowrap">${escapeHtml(label)}</span>
+          <span class="text-sm font-medium text-gray-900 text-right break-words">${escapeHtml(value)}</span>
+        </div>`;
+    }
 
   function openDetailModal(reservationId) {
     const reservation = state.reservations.find((r) => r.reservation_id === reservationId);
@@ -1049,7 +1002,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (detailCloseIcon) detailCloseIcon.addEventListener('click', closeDetailModal);
   if (detailCloseBtn) detailCloseBtn.addEventListener('click', closeDetailModal);
   if (detailOverlay) {
-    detailOverlay.addEventListener('click', (event) => {
+    if (detailOverlay) detailOverlay.addEventListener('click', (event) => {
       if (event.target === detailOverlay) closeDetailModal();
     });
   }
@@ -1072,7 +1025,7 @@ document.addEventListener('DOMContentLoaded', () => {
     actionMenuEl.id = 'staffActionMenu';
     actionMenuEl.setAttribute('role', 'menu');
     actionMenuEl.className =
-      'fixed z-[70] hidden min-w-[220px] py-1 bg-surface-container-lowest rounded-lg shadow-xl border border-outline-variant';
+      'fixed z-[70] hidden min-w-[220px] py-1 bg-white rounded-lg shadow-xl border border-outline-variant';
     document.body.appendChild(actionMenuEl);
     return actionMenuEl;
   }
@@ -1127,8 +1080,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     menu.innerHTML = actionMenuItems(reservation).map((item) => `
       <button type="button" role="menuitem"
-              class="w-full flex items-center gap-space-xs px-space-md py-2 text-left font-label-md text-label-md transition-colors ${
-                item.danger ? 'text-error hover:bg-error-container' : 'text-on-surface hover:bg-surface-container'
+              class="w-full flex items-center gap-2 px-4 py-2 text-left text-xs font-semibold  transition-colors ${
+                item.danger ? 'text-red-600 hover:bg-red-600-container' : 'text-gray-900 hover:bg-[#f8f9fb]'
               }"
               data-menu-action="${item.key}" data-id="${escapeHtml(reservationId)}">
         <span class="material-symbols-outlined text-[18px]">${item.icon}</span>
@@ -1209,10 +1162,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (staffCancelSummary) {
       staffCancelSummary.innerHTML = reservation
         ? `
-          <div><span class="font-semibold text-on-surface">Requester:</span> ${escapeHtml(reservation.customer_name || reservation.customer_email || '—')}</div>
-          <div><span class="font-semibold text-on-surface">Room:</span> ${escapeHtml(reservation.room_name || '—')}</div>
-          <div><span class="font-semibold text-on-surface">Permit:</span> #${shortId(reservationId)}</div>`
-        : `<div><span class="font-semibold text-on-surface">Permit:</span> #${shortId(reservationId)}</div>`;
+          <div><span class="font-semibold text-gray-900">Requester:</span> ${escapeHtml(reservation.customer_name || reservation.customer_email || '—')}</div>
+          <div><span class="font-semibold text-gray-900">Room:</span> ${escapeHtml(reservation.room_name || '—')}</div>
+          <div><span class="font-semibold text-gray-900">Permit:</span> #${shortId(reservationId)}</div>`
+        : `<div><span class="font-semibold text-gray-900">Permit:</span> #${shortId(reservationId)}</div>`;
     }
 
     if (staffCancelOverlay) {
@@ -1232,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (staffCancelCloseIcon) staffCancelCloseIcon.addEventListener('click', closeStaffCancelModal);
   if (staffCancelCancelBtn) staffCancelCancelBtn.addEventListener('click', closeStaffCancelModal);
   if (staffCancelOverlay) {
-    staffCancelOverlay.addEventListener('click', (event) => {
+    if (staffCancelOverlay) staffCancelOverlay.addEventListener('click', (event) => {
       if (event.target === staffCancelOverlay) closeStaffCancelModal();
     });
   }
@@ -1285,27 +1238,40 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------------------------------------------------------------
 
   function openMoveModal(requestId) {
-    const request = state.moveRequests.find((r) => r.request_id === requestId);
-    state.currentMoveId = requestId;
+      const request = state.moveRequests.find((m) => m.request_id === requestId);
+      if (!request || !moveOverlay || !moveSummary) return;
 
-    if (moveComment) moveComment.value = '';
-    if (moveError) moveError.classList.add('hidden');
+      state.currentMoveId = requestId;
+      
+      moveSummary.innerHTML = `
+        <div class="space-y-4">
+           <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+             <div class="text-[10px] font-bold text-blue-600 tracking-wider uppercase mb-1">Target Booking</div>
+             <div class="text-sm font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
+             <div class="text-xs text-gray-600 mt-1">Ref #${shortId(request.reservation_id)}</div>
+           </div>
+           
+           <div class="grid grid-cols-2 gap-3">
+             <div class="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Current</div>
+                <div class="text-xs text-gray-900 font-semibold">${formatDateTime(request.original_start_time)}</div>
+             </div>
+             <div class="p-3 bg-white rounded-xl border border-blue-200 ring-1 ring-blue-50">
+                <div class="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Requested</div>
+                <div class="text-xs text-blue-700 font-bold">${formatDateTime(request.requested_start_time)}</div>
+             </div>
+           </div>
+        </div>
+      `;
 
-    if (moveSummary) {
-      moveSummary.innerHTML = request
-        ? `
-          <div><span class="font-semibold text-on-surface">Requester:</span> ${escapeHtml(request.customer_name || request.customer_email || '—')}</div>
-          <div><span class="font-semibold text-on-surface">Room:</span> ${escapeHtml(request.room_name || '—')}</div>
-          <div><span class="font-semibold text-on-surface">Original:</span> ${escapeHtml(formatDateTime(request.original_start_time))} – ${escapeHtml(formatTime(request.original_end_time))}</div>
-          <div><span class="font-semibold text-secondary">Requested:</span> ${escapeHtml(formatDateTime(request.requested_start_time))} – ${escapeHtml(formatTime(request.requested_end_time))}</div>`
-        : '';
-    }
+      if (moveComment) moveComment.value = '';
+      if (moveError) moveError.classList.add('hidden');
+      if (moveApproveBtn) moveApproveBtn.disabled = false;
+      if (moveRejectBtn) moveRejectBtn.disabled = false;
 
-    if (moveOverlay) {
       moveOverlay.classList.remove('opacity-0', 'pointer-events-none');
       moveOverlay.setAttribute('aria-hidden', 'false');
     }
-  }
 
   function closeMoveModal() {
     state.currentMoveId = null;
@@ -1320,7 +1286,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (moveCloseIcon) moveCloseIcon.addEventListener('click', closeMoveModal);
   if (moveCancelBtn) moveCancelBtn.addEventListener('click', closeMoveModal);
   if (moveOverlay) {
-    moveOverlay.addEventListener('click', (event) => {
+    if (moveOverlay) moveOverlay.addEventListener('click', (event) => {
       if (event.target === moveOverlay) closeMoveModal();
     });
   }
@@ -1383,11 +1349,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cancelReqSummary) {
       cancelReqSummary.innerHTML = request
         ? `
-          <div><span class="font-semibold text-on-surface">Requester:</span> ${escapeHtml(request.customer_name || request.customer_email || '—')}</div>
-          <div><span class="font-semibold text-on-surface">Room:</span> ${escapeHtml(request.room_name || '—')}</div>
-          <div><span class="font-semibold text-on-surface">Booked:</span> ${escapeHtml(formatDateTime(request.start_time))} – ${escapeHtml(formatTime(request.end_time))}</div>
-          <div><span class="font-semibold text-on-surface">Purpose:</span> ${escapeHtml(request.purpose || '—')}</div>
-          <div><span class="font-semibold text-error">Reason given:</span> ${escapeHtml(request.reason || '—')}</div>`
+          <div><span class="font-semibold text-gray-900">Requester:</span> ${escapeHtml(request.customer_name || request.customer_email || '—')}</div>
+          <div><span class="font-semibold text-gray-900">Room:</span> ${escapeHtml(request.room_name || '—')}</div>
+          <div><span class="font-semibold text-gray-900">Booked:</span> ${escapeHtml(formatDateTime(request.start_time))} – ${escapeHtml(formatTime(request.end_time))}</div>
+          <div><span class="font-semibold text-gray-900">Purpose:</span> ${escapeHtml(request.purpose || '—')}</div>
+          <div><span class="font-semibold text-red-600">Reason given:</span> ${escapeHtml(request.reason || '—')}</div>`
         : '';
     }
 
@@ -1410,7 +1376,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (cancelReqCloseIcon) cancelReqCloseIcon.addEventListener('click', closeCancelRequestModal);
   if (cancelReqCancelBtn) cancelReqCancelBtn.addEventListener('click', closeCancelRequestModal);
   if (cancelReqOverlay) {
-    cancelReqOverlay.addEventListener('click', (event) => {
+    if (cancelReqOverlay) cancelReqOverlay.addEventListener('click', (event) => {
       if (event.target === cancelReqOverlay) closeCancelRequestModal();
     });
   }
@@ -1475,9 +1441,77 @@ document.addEventListener('DOMContentLoaded', () => {
     closeStaffCancelModal();
   });
 
+
+  
+  // ---------------------------------------------------------------
+  // Batch approve
+  // ---------------------------------------------------------------
+  function updateBatchButton() {
+    if (!batchApproveBtn || !batchApproveLabel) return;
+    const checkedCount = document.querySelectorAll('.batch-checkbox:checked').length;
+    if (checkedCount > 0) {
+      batchApproveBtn.disabled = false;
+      batchApproveLabel.textContent = `Approve Selected (${checkedCount})`;
+    } else {
+      batchApproveBtn.disabled = true;
+      batchApproveLabel.textContent = 'Approve Selected';
+    }
+  }
+
+  if (batchApproveBtn) {
+    batchApproveBtn.addEventListener('click', async () => {
+      const checked = Array.from(document.querySelectorAll('.batch-checkbox:checked')).map(cb => cb.value);
+      if (checked.length === 0) return;
+
+      if (!window.confirm(`Approve the ${checked.length} selected reservation(s)?`)) return;
+
+      batchApproveBtn.disabled = true;
+      batchApproveLabel.textContent = 'Processing...';
+
+      let successCount = 0;
+      let failCount = 0;
+      for (const id of checked) {
+        try {
+          const res = await api(`/api/reservations/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'Approved', staff_comment: 'Batch approved' })
+          });
+          if (res.ok) successCount++;
+          else failCount++;
+        } catch (e) {
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        showToast(`Successfully approved ${successCount} reservations.`, 'success');
+      }
+      if (failCount > 0) {
+        showToast(`Failed to approve ${failCount} reservations.`, 'error');
+      }
+      
+      batchApproveLabel.textContent = 'Approve Selected';
+      await loadAll();
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // Export Global API for inline HTML onclick handlers
+  // ---------------------------------------------------------------
+  window.CampusRoomStaff = {
+    decide,
+    openDetailModal,
+    openStaffCancelModal,
+    openMoveModal,
+    openCancelRequestModal,
+    toggleFacility,
+    updateBatchButton
+  };
+
   // ---------------------------------------------------------------
   // Go
   // ---------------------------------------------------------------
 
   start();
 });
+

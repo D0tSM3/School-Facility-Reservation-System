@@ -25,18 +25,11 @@ class RoomCalendar {
     const anchor = this.parseYMD(this.selectedDate) || this.parseYMD(this.minDate) || new Date();
     this.currentDate = this.mondayOf(anchor);
 
-    this.blocks = [
-      { start: "06:00", label: "6:00 AM" },
-      { start: "07:30", label: "7:30 AM" },
-      { start: "09:00", label: "9:00 AM" },
-      { start: "10:30", label: "10:30 AM" },
-      { start: "12:00", label: "12:00 PM" },
-      { start: "13:30", label: "1:30 PM" },
-      { start: "15:00", label: "3:00 PM" },
-      { start: "16:30", label: "4:30 PM" },
-      { start: "18:00", label: "6:00 PM" },
-      { start: "19:30", label: "7:30 PM" }
-    ];
+    this.blocks = [];
+    for (let h = 6; h < 21; h++) {
+      this.blocks.push({ start: String(h).padStart(2, '0') + ':00', label: this.fmt12(String(h).padStart(2, '0') + ':00') });
+      this.blocks.push({ start: String(h).padStart(2, '0') + ':30', label: this.fmt12(String(h).padStart(2, '0') + ':30') });
+    }
 
     if (!this.container) {
       console.error('RoomCalendar: Container not found');
@@ -353,12 +346,12 @@ class RoomCalendar {
           ? (overlapsSelected ? 'bg-rose-100 shadow-[inset_0_0_0_2px_#7a1f2b] relative z-10' : 'bg-[#fdf5f6]') 
           : beforeOpen ? 'bg-gray-50' : 'bg-white';
           
-        td.className = `p-0.5 border-r border-gray-200 last:border-r-0 align-top h-[52px] transition-all ${baseBg}`;
+        td.className = `p-0.5 border-r border-gray-200 last:border-r-0 align-top h-[42px] transition-all ${baseBg}`;
 
         // Holiday
         const holiday = (data.holidays || []).find(h => h.holiday_date === dateYMD);
         if (holiday) {
-          td.className = `p-1 border-r border-gray-200 last:border-r-0 align-middle h-[52px] bg-gray-100 text-center`;
+          td.className = `p-1 border-r border-gray-200 last:border-r-0 align-middle h-[42px] bg-gray-100 text-center`;
           td.innerHTML = `
             <span class="material-symbols-outlined text-[14px] text-gray-400 block mx-auto">celebration</span>
             <div class="text-[9px] font-bold text-gray-500 leading-tight mt-0.5 truncate px-0.5">${holiday.name}</div>`;
