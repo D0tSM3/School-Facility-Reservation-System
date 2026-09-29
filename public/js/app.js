@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     .then(json => {
       const currentUser = json.success ? json.data : null;
       if (!currentUser) {
+        localStorage.removeItem('campus_role');
         // No active session — send to login page.
         window.location.href = 'index.html';
         return;
@@ -30,9 +31,24 @@ document.addEventListener('DOMContentLoaded', () => {
       // -----------------------------------------------------------------------
       // 2. Show / hide role-restricted sidebar links
       // -----------------------------------------------------------------------
-      const staffLink         = document.querySelector('aside nav a[data-path="staff-queue"]');
+      
+      const dashboardLink     = document.querySelector('aside nav a[data-path="customer-dashboard"]');
+      const roomsLink         = document.querySelector('aside nav a[data-path="rooms"]');
+      const staffLink         = document.querySelector('aside nav a[data-path="staff-dashboard"]');
       const adminLink         = document.querySelector('aside nav a[data-path="admin-governance"]');
       const myReservationsLink = document.querySelector('aside nav a[data-path="my-reservations"]');
+
+      if (dashboardLink) {
+        const show = role === 'customer';
+        dashboardLink.hidden = !show;
+        dashboardLink.style.setProperty('display', show ? 'flex' : 'none', 'important');
+      }
+      if (roomsLink) {
+        const show = role === 'customer';
+        roomsLink.hidden = !show;
+        roomsLink.style.setProperty('display', show ? 'flex' : 'none', 'important');
+      }
+
 
       if (staffLink) {
         const show = role === 'staff' || role === 'admin';
@@ -121,9 +137,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function attachLogout(btn) {
     btn.addEventListener('click', () => {
       fetch(BASE + 'api/auth/logout', { method: 'POST', credentials: 'include' })
-        .then(() => { window.location.href = 'index.html'; })
+        .then(() => { localStorage.removeItem('campus_role'); window.location.href = 'index.html'; })
         .catch(err => {
           console.error(err);
+          localStorage.removeItem('campus_role');
           window.location.href = 'index.html';
         });
     });

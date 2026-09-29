@@ -157,10 +157,11 @@ document.addEventListener('DOMContentLoaded', () => {
           hideLoginError();
 
           
-          if (payload.role === 'Admin') {
+          localStorage.setItem('campus_role', payload.role);
+            if (payload.role === 'Admin') {
             window.location.href = 'admin-governance.html';
           } else if (payload.role === 'Staff') {
-            window.location.href = 'staff-queue.html';
+            window.location.href = 'staff-dashboard.html';
           } else {
             window.location.href = 'dashboard.html';
           }
