@@ -844,9 +844,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const input = document.getElementById(id);
       if (!input) return;
       input.addEventListener('change', async () => {
-<<<<<<< HEAD
-        if (id === 'moveDate') refreshMoveTimeOptions();
-=======
         if (moveCalendarInstance) {
           if (id === 'moveDate') {
             moveCalendarInstance.goToDate(document.getElementById('moveDate').value);
@@ -857,7 +854,6 @@ document.addEventListener('DOMContentLoaded', () => {
           );
         }
         
->>>>>>> 568fff4573876fe6f5c5a9136cc97a4921d40932
         const seq = ++moveCheckSeq;
         const problem = await moveRangeProblem();
         if (seq === moveCheckSeq) showMoveError(problem);
