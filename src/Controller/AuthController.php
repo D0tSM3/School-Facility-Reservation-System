@@ -264,6 +264,96 @@ class AuthController
     }
 
     // ---------------------------------------------------------------
+    // POST /api/auth/forgot-password
+    // ---------------------------------------------------------------
+
+    public function forgotPassword(): never
+    {
+        $body = $this->jsonBody();
+
+        // Fails CLOSED. Sending email consumes institutional quota and
+        // could be abused to spam inboxes without verification.
+        $this->requireHuman($body);
+
+        $email = trim($body['email'] ?? '');
+
+        if ($email === '') {
+            Response::error('Email is required.', 422);
+        }
+
+        $user = $this->users->findByEmailFull($email);
+        if ($user === null) {
+            // Don't leak whether the email is registered
+            Response::json([
+                'email'   => $email,
+                'message' => 'If an account exists with this email, a verification code has been dispatched.'
+            ]);
+        }
+
+        $otp  = $this->issueOtp($user['user_id']);
+        $sent = Mailer::sendOtp($email, $user['name'], $otp);
+
+        $payload = [
+            'email'   => $email,
+            'message' => 'If an account exists with this email, a verification code has been dispatched.'
+        ];
+
+        if (!$sent || empty($_ENV['SMTP_HOST'] ?? '') || empty($_ENV['SMTP_USER'] ?? '')) {
+            $payload['dev_otp']  = $otp;
+            $payload['dev_note'] = 'SMTP not configured — OTP returned for development use only.';
+        }
+
+        Response::json($payload);
+    }
+
+    // ---------------------------------------------------------------
+    // POST /api/auth/reset-password
+    // ---------------------------------------------------------------
+
+    public function resetPassword(): never
+    {
+        $body  = $this->jsonBody();
+        $email = strtolower(trim((string) ($body['email'] ?? '')));
+        $otp   = trim((string) ($body['otp'] ?? ''));
+        $password = (string) ($body['password'] ?? '');
+
+        if ($email === '' || $otp === '' || $password === '') {
+            Response::error('Email, verification code, and new password are required.', 422);
+        }
+
+        if (strlen($password) < 8) {
+            Response::error('Password must be at least 8 characters.', 422);
+        }
+        if (strlen($password) > 72) {
+            Response::error('Password must be 72 characters or fewer.', 422);
+        }
+
+        $user = $this->users->findByEmailFull($email);
+        if ($user === null) {
+            Response::error('Invalid password reset request.', 404);
+        }
+
+        // Validate OTP
+        if ($user['otp_code'] === null || $otp !== $user['otp_code']) {
+            Response::error('Incorrect verification code. Please check your email and try again.', 422);
+        }
+
+        // Check expiry
+        $expiresAt = strtotime($user['otp_expires_at'] ?? '1970-01-01');
+        if (time() > $expiresAt) {
+            Response::error('This verification code has expired. Please request a new one.', 422);
+        }
+
+        // Update password and clear OTP
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+        $this->users->updatePassword($user['user_id'], $passwordHash);
+
+        Response::json([
+            'message' => 'Password reset successful! You can now sign in with your new password.'
+        ]);
+    }
+
+    // ---------------------------------------------------------------
     // POST /api/auth/resend-otp
     // ---------------------------------------------------------------
 

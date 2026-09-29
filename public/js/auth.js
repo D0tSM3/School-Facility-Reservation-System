@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 2. Registration Page Logic
   // ==========================================
   const registerForm = document.getElementById('registerForm');
-  if (registerForm) {
+  if (registerForm && document.getElementById('fullName')) {
     const fullNameInput = document.getElementById('fullName');
     const emailInput = document.getElementById('univEmail');
     const departmentSelect = document.getElementById('department');

@@ -233,6 +233,12 @@
           const email = document.getElementById('bpu-email').value.trim();
           const password = document.getElementById('bpu-password').value;
           const confirm = document.getElementById('bpu-confirm').value;
+          if (!fname || !lname || !email || !password || !confirm) {
+            errText.textContent = "Please fill in all required fields.";
+            errAlert.classList.remove('hidden');
+            errAlert.classList.add('flex');
+            return;
+          }
 
           if (password !== confirm) {
             errText.textContent = "Passwords do not match.";
@@ -252,26 +258,33 @@
           btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span><span>Creating Account...</span>`;
 
           try {
-            const recaptchaToken = window.grecaptcha ? await grecaptcha.execute() : '';
-            const res = await fetch('/api/auth/register', {
+            const recaptchaToken = window.grecaptcha ? grecaptcha.getResponse() : '';
+            const BASE = window.location.pathname.replace(/[^\/]*$/, '');
+            const res = await fetch(BASE + 'api/auth/register', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name, email, password, recaptchaToken })
+              body: JSON.stringify({ name, email, password, recaptcha_token: recaptchaToken })
             });
 
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
+              if (window.grecaptcha) grecaptcha.reset();
               throw new Error(data.error || 'Registration failed.');
             }
 
-            alert("Registration successful! Please sign in.");
-            window.location.href = 'index.html';
+            const payload = data.data || {};
+            sessionStorage.setItem('otp_email', payload.email || email);
+            if (payload.dev_otp) {
+              sessionStorage.setItem('dev_otp', payload.dev_otp);
+            }
+
+            window.location.href = 'verify.html';
           } catch (err) {
             errText.textContent = err.message;
             errAlert.classList.remove('hidden');
             errAlert.classList.add('flex');
             btn.disabled = false;
-            btn.innerHTML = `<span>Register Account</span><span class="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">login</span>`;
+            btn.innerHTML = `<span>Register Account</span><span class="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">arrow_forward</span>`;
           }
         });
       }

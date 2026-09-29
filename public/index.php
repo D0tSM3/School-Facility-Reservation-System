@@ -90,11 +90,13 @@ $routes = [
         ]);
     }],
 
-    // Auth — login
-    ['POST', '#^/api/auth/register$#',    fn() => (new AuthController())->register()],
-    ['POST', '#^/api/auth/login$#',       fn() => (new AuthController())->login()],
-    ['POST', '#^/api/auth/verify-otp$#',  fn() => (new AuthController())->verifyOtp()],
-    ['POST', '#^/api/auth/resend-otp$#',  fn() => (new AuthController())->resendOtp()],
+    // Auth — login & recovery
+    ['POST', '#^/api/auth/register$#',        fn() => (new AuthController())->register()],
+    ['POST', '#^/api/auth/login$#',           fn() => (new AuthController())->login()],
+    ['POST', '#^/api/auth/forgot-password$#', fn() => (new AuthController())->forgotPassword()],
+    ['POST', '#^/api/auth/reset-password$#',  fn() => (new AuthController())->resetPassword()],
+    ['POST', '#^/api/auth/verify-otp$#',      fn() => (new AuthController())->verifyOtp()],
+    ['POST', '#^/api/auth/resend-otp$#',      fn() => (new AuthController())->resendOtp()],
     // Auth — session
     ['GET',  '#^/api/auth/me$#',          fn() => (new AuthController())->me()],
     ['POST', '#^/api/auth/logout$#',      fn() => (new AuthController())->logout()],

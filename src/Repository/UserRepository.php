@@ -128,4 +128,22 @@ class UserRepository
         );
         return $this->findById($userId);
     }
+
+    /**
+     * Update a user's password and clear OTP fields.
+     */
+    public function updatePassword(string $userId, string $passwordHash): void
+    {
+        $this->db->query(
+            'UPDATE Users
+                SET password_hash = :hash,
+                    otp_code = NULL,
+                    otp_expires_at = NULL
+              WHERE user_id = :user_id',
+            [
+                ':hash'    => $passwordHash,
+                ':user_id' => $userId,
+            ]
+        );
+    }
 }

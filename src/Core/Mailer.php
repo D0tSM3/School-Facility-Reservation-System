@@ -39,9 +39,19 @@ class Mailer
             $mail->Host       = $host;
             $mail->SMTPAuth   = true;
             $mail->Username   = $user;
-            $mail->Password   = $_ENV['SMTP_PASS'] ?? '';
+            $rawPass = $_ENV['SMTP_PASS'] ?? $_ENV['SMTP_PASSWORD'] ?? '';
+            $mail->Password   = str_replace(' ', '', (string)$rawPass);
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port       = (int)($_ENV['SMTP_PORT'] ?? 587);
+
+            // Windows / XAMPP often lacks local CA root certs, which causes STARTTLS verify failure
+            $mail->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer'       => false,
+                    'verify_peer_name'  => false,
+                    'allow_self_signed' => true,
+                ],
+            ];
 
             $fromAddr = $_ENV['SMTP_FROM'] ?? 'noreply@campusroom.bpu.edu.ph';
             $mail->setFrom($fromAddr, 'CampusRoom BPU');
