@@ -76,7 +76,19 @@ $routes = [
     // Public bootstrap — the login screen reads the reCAPTCHA site key from
     // here so .env stays the single source for it. No auth: it must answer
     // before anyone can log in, and it returns only public values.
-    ['GET',  '#^/api/config$#',           fn() => (new AuthController())->config()],
+    ['GET', '#^/api/config$#', function () {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $enabled = filter_var($_ENV['RECAPTCHA_ENABLED'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $siteKey = $enabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : '';
+
+        Response::json([
+            'recaptcha_enabled'  => $enabled,
+            'recaptcha_site_key' => $siteKey,
+        ]);
+    }],
 
     // Auth — login
     ['POST', '#^/api/auth/register$#',    fn() => (new AuthController())->register()],
@@ -112,7 +124,7 @@ $routes = [
     // Two path segments after /reservations/, so it cannot collide with the single-segment GET /{id} above.
     ['GET',   '#^/api/reservations/(?P<id>[^/]+)/logs$#', fn(string $id) => (new ReservationController())->logs($id)],
     ['POST',  '#^/api/reservations/(?P<id>[^/]+)/move-request$#', fn(string $id) => (new ReservationController())->requestMove($id)],
-    ['PATCH', '#^/api/reservations/move-requests/(?P<id>[^/]+)$#',fn(string $id) => (new ReservationController())->resolveMoveRequest($id)],
+    ['PATCH', '#^/api/reservations/move-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->resolveMoveRequest($id)],
 
     // Cancellation Requests (approved bookings)
     ['POST',  '#^/api/reservations/(?P<id>[^/]+)/cancel-request$#', fn(string $id) => (new ReservationController())->requestCancel($id)],
