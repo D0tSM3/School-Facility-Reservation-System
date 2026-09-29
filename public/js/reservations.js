@@ -311,11 +311,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     switch (reservation.status) {
       case 'Pending':
-        if (canMove) buttons.push(actionButton('move', id, 'Move'));
+        buttons.push(actionButton('move', id, 'Move', moveRequestBlockedReason(reservation)));
         buttons.push(actionButton('remove', id, 'Withdraw'));
         break;
       case 'Approved':
-        if (canMove) buttons.push(actionButton('move', id, 'Move'));
+        buttons.push(actionButton('move', id, 'Move', moveRequestBlockedReason(reservation)));
         buttons.push(actionButton('reqcancel', id, 'Cancel', cancelRequestBlockedReason(reservation)));
         buttons.push(actionButton('slip', id, 'View Slip'));
         break;
