@@ -48,7 +48,7 @@
     role = String(role || '').toLowerCase();
     if ((role === 'staff' || role === 'admin') &&
         /\/my-reservations\.html$/i.test(window.location.pathname)) {
-      window.location.replace(BASE + 'staff-queue.html');
+      window.location.replace(BASE + 'staff-dashboard.html');
       return true;
     }
     return false;

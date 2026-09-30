@@ -1,1 +1,0 @@
-<?php require 'vendor/autoload.php'; \ = Dotenv\Dotenv::createImmutable(__DIR__); \->load(); \ = new PDO('mysql:host='.\['DB_HOST'].';dbname='.\['DB_NAME'], \['DB_USER'], \['DB_PASSWORD']); \ = \->query('SELECT room_id, name FROM Rooms'); print_r(\->fetchAll(PDO::FETCH_ASSOC));

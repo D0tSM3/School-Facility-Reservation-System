@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentUser = json.success ? json.data : null;
         const role = String(currentUser && currentUser.role || '').toLowerCase();
         if (role === 'staff' || role === 'admin') {
-          window.location.replace(BASE + 'staff-queue.html');
+          window.location.replace(BASE + 'staff-dashboard.html');
         }
       })
       .catch(err => console.error('Error checking session role:', err));

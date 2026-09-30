@@ -1,1 +1,0 @@
-<?php require 'vendor/autoload.php'; $dotenv = Dotenv\Dotenv::createImmutable(__DIR__); $dotenv->safeLoad(); require 'src/Core/Database.php'; try { CampusRoom\Core\Database::getInstance(); echo 'OK'; } catch (Exception $e) { echo $e->getMessage(); }

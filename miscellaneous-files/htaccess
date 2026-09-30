@@ -1,8 +1,0 @@
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    # Skip anything already routed into /public/ (works from a subdirectory too,
-    # e.g. /School-Facility-Reservation-System/public/...), otherwise the rule
-    # re-enters and produces public/public/...
-    RewriteCond %{REQUEST_URI} !(^|/)public/
-    RewriteRule ^(.*)$ public/$1 [L]
-</IfModule>
