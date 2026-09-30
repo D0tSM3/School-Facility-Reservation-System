@@ -401,45 +401,20 @@
               </div>
 
               <div class="flex flex-col space-y-2">
-                <label class="text-sm font-bold text-gray-800" for="resDate">Reservation Date <span class="text-red-500">*</span></label>
-                <!-- Hidden native input keeps id=resDate so booking.js/validation work untouched -->
-                <input id="resDate" type="date" class="sr-only" required aria-hidden="true" tabindex="-1" />
-                <div class="relative" id="miniCalWrap">
-                  <!-- Visible trigger -->
-                  <button type="button" id="miniCalTrigger"
-                    class="w-full flex items-center gap-3 pl-10 pr-4 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-600 hover:border-[#7a1f2b] focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] transition-colors text-left">
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-[#7a1f2b] pointer-events-none">calendar_today</span>
-                    <span id="miniCalDisplay" class="flex-1 font-medium">Select a date…</span>
-                    <span class="material-symbols-outlined text-[18px] text-gray-400 ml-auto shrink-0">expand_more</span>
-                  </button>
-                  <!-- Popup panel -->
-                  <div id="miniCalPopup"
-                    class="hidden absolute z-50 top-[calc(100%+6px)] left-0 w-72 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden"
-                    role="dialog" aria-label="Date picker">
-                    <!-- Month header -->
-                    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
-                      <button type="button" id="miniCalPrev" class="p-1 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors" aria-label="Previous month">
-                        <span class="material-symbols-outlined text-[18px]">chevron_left</span>
-                      </button>
-                      <span id="miniCalMonthLabel" class="text-sm font-bold text-gray-800 tracking-tight"></span>
-                      <button type="button" id="miniCalNext" class="p-1 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors" aria-label="Next month">
-                        <span class="material-symbols-outlined text-[18px]">chevron_right</span>
-                      </button>
-                    </div>
-                    <!-- Day-of-week labels -->
-                    <div class="grid grid-cols-7 px-3 pt-2 pb-1">
-                      <span class="text-[10px] font-bold text-gray-400 text-center">Su</span>
-                      <span class="text-[10px] font-bold text-gray-400 text-center">Mo</span>
-                      <span class="text-[10px] font-bold text-gray-400 text-center">Tu</span>
-                      <span class="text-[10px] font-bold text-gray-400 text-center">We</span>
-                      <span class="text-[10px] font-bold text-gray-400 text-center">Th</span>
-                      <span class="text-[10px] font-bold text-gray-400 text-center">Fr</span>
-                      <span class="text-[10px] font-bold text-gray-400 text-center">Sa</span>
-                    </div>
-                    <!-- Day grid -->
-                    <div id="miniCalGrid" class="grid grid-cols-7 gap-y-0.5 px-3 pb-3"></div>
+                <span class="text-sm font-bold text-gray-800">Reservation Dates <span class="text-red-500">*</span></span>
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="relative">
+                    <label for="resDate" class="sr-only">Start date</label>
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase tracking-wider text-gray-400">From</span>
+                    <input id="resDate" type="date" class="w-full pl-12 pr-2 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" required />
+                  </div>
+                  <div class="relative">
+                    <label for="resEndDate" class="sr-only">End date</label>
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase tracking-wider text-gray-400">To</span>
+                    <input id="resEndDate" type="date" class="w-full pl-12 pr-2 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" required />
                   </div>
                 </div>
+                <p id="dateRangeHint" class="text-xs text-gray-500">For one day, use the same date twice. The start and end times below apply to every day in the range.</p>
                 <p id="dateError" class="hidden text-xs font-semibold text-red-600"></p>
               </div>
             </div>
@@ -671,150 +646,6 @@
     <script src="js/booking.js"></script>
     <script src="js/app.js"></script>
     <script src="js/rooms.js"></script>
-    <script>
-    // ── Mini Date Picker ──────────────────────────────────────────────────────
-    (function () {
-      const trigger   = document.getElementById('miniCalTrigger');
-      const popup     = document.getElementById('miniCalPopup');
-      const grid      = document.getElementById('miniCalGrid');
-      const label     = document.getElementById('miniCalMonthLabel');
-      const display   = document.getElementById('miniCalDisplay');
-      const prevBtn   = document.getElementById('miniCalPrev');
-      const nextBtn   = document.getElementById('miniCalNext');
-      const hiddenInput = document.getElementById('resDate');
-      if (!trigger || !popup || !hiddenInput) return;
-
-      const MAROON  = '#7a1f2b';
-      const MONTHS  = ['January','February','March','April','May','June',
-                       'July','August','September','October','November','December'];
-      const toYMD   = d => d.getFullYear() + '-' +
-                          String(d.getMonth()+1).padStart(2,'0') + '-' +
-                          String(d.getDate()).padStart(2,'0');
-
-      let cursor = new Date();   // month being displayed
-      cursor.setDate(1);
-
-      // Closed weekdays (Admin > System Configuration); Sunday until api/config answers.
-      const S = window.CampusSchedule;
-      let closedDays = S ? S.DEFAULT_RULES.closedDays : ['Sunday'];
-      const isClosed = ymd => (S ? S.isClosedDay(ymd, closedDays) : new Date(ymd + 'T00:00:00').getDay() === 0);
-      if (S) S.loadRules(window.location.pathname.replace(/[^\/]*$/, '')).then(r => { closedDays = r.closedDays; renderGrid(); });
-
-      // earliest bookable: tomorrow, skipping closed days
-      function minDate() {
-        const d = new Date();
-        d.setDate(d.getDate() + 1);
-        for (let i = 0; i < 7 && isClosed(toYMD(d)); i++) d.setDate(d.getDate() + 1);
-        return toYMD(d);
-      }
-
-      function renderGrid() {
-        const year  = cursor.getFullYear();
-        const month = cursor.getMonth();
-        label.textContent = `${MONTHS[month]} ${year}`;
-        grid.innerHTML = '';
-
-        const min     = minDate();
-        const selYMD  = hiddenInput.value;
-        const todayYMD = toYMD(new Date());
-        const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-        // blank cells before first day
-        for (let i = 0; i < firstDay; i++) {
-          const blank = document.createElement('div');
-          grid.appendChild(blank);
-        }
-
-        for (let d = 1; d <= daysInMonth; d++) {
-          const ymd  = toYMD(new Date(year, month, d));
-          const dow  = new Date(year, month, d).getDay(); // 0=Sun
-          const isPast   = ymd < min;
-          const isShut   = isClosed(ymd);
-          const isToday  = ymd === todayYMD;
-          const isSelected = ymd === selYMD;
-          const disabled = isPast || isShut;
-
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.textContent = d;
-          btn.disabled = disabled;
-
-          let cls = 'w-9 h-9 mx-auto flex items-center justify-center rounded-full text-[13px] font-semibold transition-colors ';
-          if (isSelected) {
-            cls += 'text-white';
-            btn.style.backgroundColor = MAROON;
-          } else if (disabled) {
-            cls += 'text-gray-300 cursor-not-allowed';
-          } else if (isToday) {
-            cls += `border-2 text-[${MAROON}] hover:bg-[#fdf5f6]`;
-            btn.style.borderColor = MAROON;
-            btn.style.color = MAROON;
-          } else {
-            cls += 'text-gray-700 hover:bg-gray-100';
-          }
-          btn.className = cls;
-
-          if (!disabled) {
-            btn.addEventListener('click', () => selectDate(ymd));
-          }
-          grid.appendChild(btn);
-        }
-      }
-
-      function selectDate(ymd) {
-        hiddenInput.value = ymd;
-        hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
-        // Update trigger label
-        const d = new Date(ymd + 'T00:00:00');
-        display.textContent = d.toLocaleDateString('en-US', { weekday:'short', month:'long', day:'numeric', year:'numeric' });
-        display.style.color = '#111827';
-        popup.classList.add('hidden');
-        renderGrid();
-      }
-
-      prevBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        cursor.setMonth(cursor.getMonth() - 1);
-        renderGrid();
-      });
-      nextBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        cursor.setMonth(cursor.getMonth() + 1);
-        renderGrid();
-      });
-
-      trigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isOpen = !popup.classList.contains('hidden');
-        if (isOpen) {
-          popup.classList.add('hidden');
-        } else {
-          // Align cursor to currently selected or today
-          const val = hiddenInput.value;
-          if (val) {
-            const d = new Date(val + 'T00:00:00');
-            cursor = new Date(d.getFullYear(), d.getMonth(), 1);
-          } else {
-            const now = new Date();
-            cursor = new Date(now.getFullYear(), now.getMonth(), 1);
-          }
-          renderGrid();
-          popup.classList.remove('hidden');
-        }
-      });
-
-      // Close on outside click
-      document.addEventListener('click', (e) => {
-        if (!popup.contains(e.target) && e.target !== trigger) {
-          popup.classList.add('hidden');
-        }
-      });
-
-      // Initial render (show month but keep closed)
-      renderGrid();
-    })();
-    </script>
 
     <script>
     // ── Submit Button Validation Watcher ─────────────────────────────────────
@@ -825,6 +656,7 @@
         const submitBtn    = document.getElementById('bookingSubmitBtn');
         const roomSelect   = document.getElementById('roomSelect');
         const resDate      = document.getElementById('resDate');
+        const resEndDate   = document.getElementById('resEndDate');
         const startTime    = document.getElementById('startTime');
         const endTime      = document.getElementById('endTime');
         const purposeInput = document.getElementById('purpose');
@@ -836,8 +668,9 @@
         function isFormReady() {
           // 1. Facility selected
           if (!roomSelect || !roomSelect.value) return false;
-          // 2. Date selected (hidden input set by mini calendar)
+          // 2. Dates selected
           if (!resDate || !resDate.value) return false;
+          if (!resEndDate || !resEndDate.value) return false;
           // 3. Start time
           if (!startTime || !startTime.value) return false;
           // 4. End time AND end > start
@@ -873,7 +706,7 @@
         }
 
         // Watch every relevant field for changes
-        const watchTargets = [roomSelect, resDate, startTime, endTime, purposeInput, policyBox];
+        const watchTargets = [roomSelect, resDate, resEndDate, startTime, endTime, purposeInput, policyBox];
         watchTargets.forEach(el => {
           if (!el) return;
           el.addEventListener('change', updateBtn);

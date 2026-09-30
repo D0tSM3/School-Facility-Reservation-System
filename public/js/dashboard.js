@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const qrErrorText = document.getElementById('qrErrorText');
 
   const qrDate = document.getElementById('qrDate');
+  const qrEndDate = document.getElementById('qrEndDate');
   const qrStartTime = document.getElementById('qrStartTime');
   const qrEndTime = document.getElementById('qrEndTime');
   const qrCapacity = document.getElementById('qrCapacity');
@@ -150,6 +151,9 @@ document.addEventListener('DOMContentLoaded', () => {
         qrErrorBanner.classList.remove('hidden');
         return;
       }
+      
+      const endDateValue = qrEndDate && qrEndDate.value ? qrEndDate.value : qrDate.value;
+      
       if (Schedule && Schedule.isClosedDay(qrDate.value, rules.closedDays)) {
         qrErrorText.textContent = `BPU is closed on ${Schedule.dayName(qrDate.value)}s. Please pick another day.`;
         qrErrorBanner.classList.remove('hidden');
@@ -172,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
         room_id: 'tbd00000-0000-4000-8000-000000000000',
         purpose: purpose,
         start_time: `${qrDate.value} ${qrStartTime.value}:00`,
-        end_time: `${qrDate.value} ${qrEndTime.value}:00`,
+        end_time: `${endDateValue} ${qrEndTime.value}:00`,
         category: 'Academic Lecture', // default
         equipment_notes: equipmentNotes
       };
