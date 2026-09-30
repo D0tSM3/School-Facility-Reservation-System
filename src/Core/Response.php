@@ -23,13 +23,14 @@ class Response
         exit;
     }
 
-    public static function error(string $message, int $status = 400): never
+    /** $data carries machine-readable detail about the error, when a client needs it. */
+    public static function error(string $message, int $status = 400, mixed $data = null): never
     {
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'success' => false,
-            'data'    => null,
+            'data'    => $data,
             'error'   => $message,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;

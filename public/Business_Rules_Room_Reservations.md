@@ -82,9 +82,9 @@ Buenavista, Bohol
 
 ## ARTICLE V — HOURS OF OPERATION AND FACILITY AVAILABILITY
 
-**Section 1.** No Facility may be reserved except between the hours of **7:30 in the morning and 9:00 in the evening.**
+**Section 1.** No Facility may be reserved except within **the hours configured in System Settings.**
 
-**Section 2.** No Facility may be reserved on a Sunday, nor on any date entered in the Holidays table.
+**Section 2.** No Facility may be reserved on a day of the week designated as closed in System Settings, nor on any date entered in the Holidays table.
 
 **Section 3.** A Facility marked under Maintenance status, or otherwise deactivated, shall not be reservable under any circumstance, for any hour or date, until such time as an Admin account restores it to active, Available status.
 

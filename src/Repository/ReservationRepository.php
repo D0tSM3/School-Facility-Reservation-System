@@ -53,12 +53,13 @@ class ReservationRepository
         string $startTime,
         string $endTime,
         ?string $equipmentNotes = null,
-        string $category = 'Academic Lecture'
+        string $category = 'Academic Lecture',
+        ?string $seriesId = null
     ): array {
         $reservationId = self::uuidv4();
         $this->db->query(
-            'INSERT INTO Reservations (reservation_id, customer_id, room_id, purpose, category, equipment_notes, start_time, end_time)
-             VALUES (:reservation_id, :customer_id, :room_id, :purpose, :category, :equipment_notes, :start_time, :end_time)',
+            'INSERT INTO Reservations (reservation_id, customer_id, room_id, purpose, category, equipment_notes, start_time, end_time, series_id)
+             VALUES (:reservation_id, :customer_id, :room_id, :purpose, :category, :equipment_notes, :start_time, :end_time, :series_id)',
             [
                 ':reservation_id'  => $reservationId,
                 ':customer_id'     => $customerId,
@@ -68,6 +69,7 @@ class ReservationRepository
                 ':equipment_notes' => $equipmentNotes,
                 ':start_time'      => $startTime,
                 ':end_time'        => $endTime,
+                ':series_id'       => $seriesId,
             ]
         );
         // Fetch by primary key — no more re-fetch-by-natural-key ambiguity.
@@ -112,12 +114,16 @@ class ReservationRepository
                     res.category,
                     res.start_time,
                     res.end_time,
+                    res.series_id,
                     res.status,
                     res.processed_by,
                     p.name          AS processed_by_name,
                     res.created_at,
                     mr.status AS move_status,
                     mr.staff_comment AS move_comment,
+                    mr.reason AS move_reason,
+                    mr.requested_start_time AS move_requested_start_time,
+                    mr.requested_end_time AS move_requested_end_time,
                     cr.status AS cancel_status,
                     cr.staff_comment AS cancel_comment,
                     cr.reason AS cancel_reason
@@ -184,6 +190,7 @@ class ReservationRepository
                     res.category,
                     res.start_time,
                     res.end_time,
+                    res.series_id,
                     res.status,
                     res.processed_by,
                     res.processed_at,
@@ -230,6 +237,7 @@ class ReservationRepository
                     res.equipment_notes,
                     res.start_time,
                     res.end_time,
+                    res.series_id,
                     res.status,
                     res.processed_by,
                     p.name          AS processed_by_name,
@@ -280,7 +288,7 @@ class ReservationRepository
     {
         $stmt = $this->db->query(
             'SELECT reservation_id, customer_id, room_id, purpose, category, equipment_notes,
-                    start_time, end_time, status, processed_by, processed_at,
+                    start_time, end_time, series_id, status, processed_by, processed_at,
                     cancellation_reason, cancelled_by, created_at
                FROM Reservations
               WHERE reservation_id = :reservation_id
@@ -289,6 +297,54 @@ class ReservationRepository
         );
         $row = $stmt->fetch();
         return $row ?: null;
+    }
+
+    /** A fresh id for the per-day rows of one multi-day booking. */
+    public function newSeriesId(): string
+    {
+        return self::uuidv4();
+    }
+
+    /**
+     * Every row of a multi-day booking, earliest day first. Same columns as
+     * findById().
+     */
+    public function findSeries(string $seriesId): array
+    {
+        $stmt = $this->db->query(
+            'SELECT reservation_id, customer_id, room_id, purpose, category, equipment_notes,
+                    start_time, end_time, series_id, status, processed_by, processed_at,
+                    cancellation_reason, cancelled_by, created_at
+               FROM Reservations
+              WHERE series_id = :series_id
+           ORDER BY start_time',
+            [':series_id' => $seriesId]
+        );
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Run $work inside one transaction: a multi-day booking or a series-wide
+     * status change either lands on every day or on none.
+     *
+     * @template T
+     * @param callable(): T $work
+     * @return T
+     */
+    public function transaction(callable $work): mixed
+    {
+        $pdo = $this->db->getPdo();
+        $pdo->beginTransaction();
+        try {
+            $result = $work();
+            $pdo->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
     }
 
     /**
@@ -544,17 +600,19 @@ class ReservationRepository
     // Move Requests
     // ---------------------------------------------------------------
 
-    public function createMoveRequest(string $reservationId, string $requestedStart, string $requestedEnd): array
+    /** $reason: why the move was proposed, when it wasn't the holder's own idea. */
+    public function createMoveRequest(string $reservationId, string $requestedStart, string $requestedEnd, ?string $reason = null): array
     {
         $requestId = self::uuidv4();
         $this->db->query(
-            'INSERT INTO ReservationMoveRequests (request_id, reservation_id, requested_start_time, requested_end_time)
-             VALUES (:request_id, :reservation_id, :requested_start_time, :requested_end_time)',
+            'INSERT INTO ReservationMoveRequests (request_id, reservation_id, requested_start_time, requested_end_time, reason)
+             VALUES (:request_id, :reservation_id, :requested_start_time, :requested_end_time, :reason)',
             [
                 ':request_id'           => $requestId,
                 ':reservation_id'       => $reservationId,
                 ':requested_start_time' => $requestedStart,
                 ':requested_end_time'   => $requestedEnd,
+                ':reason'               => $reason,
             ]
         );
 

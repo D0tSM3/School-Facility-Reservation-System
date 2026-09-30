@@ -21,6 +21,13 @@ class HolidayRepository
         return $stmt->fetchAll();
     }
 
+    public function findByDate(string $date): ?array
+    {
+        $stmt = $this->db->query("SELECT * FROM Holidays WHERE holiday_date = :date", [':date' => $date]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
     public function create(string $date, string $name, string $type): void
     {
         $this->db->query(

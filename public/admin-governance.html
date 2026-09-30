@@ -308,14 +308,17 @@
       ><div class="flex flex-col w-full space-y-space-lg">
     <div class="flex flex-col space-y-space-xs">
         <h1 class="font-headline-lg text-headline-lg text-primary tracking-tight font-bold">Admin Governance</h1>
-        <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">Manage users, adjust room status, and view system logs.</p>
+        <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">Manage users, rooms, class schedules, holidays and system settings, and view system logs.</p>
     </div>
 
     <!-- Tabs -->
-    <div class="flex items-center gap-space-sm border-b border-surface-variant">
-        <button id="tabUsers" class="px-space-md py-space-sm font-label-lg text-primary border-b-2 border-primary">Users</button>
-        <button id="tabRooms" class="px-space-md py-space-sm font-label-lg text-on-surface-variant hover:text-on-surface">Rooms</button>
-        <button id="tabLogs" class="px-space-md py-space-sm font-label-lg text-on-surface-variant hover:text-on-surface">System Logs</button>
+    <div class="flex items-center gap-space-sm border-b border-surface-variant overflow-x-auto">
+        <button id="tabUsers" class="px-space-md py-space-sm font-label-lg whitespace-nowrap text-primary border-b-2 border-primary">Users</button>
+        <button id="tabRooms" class="px-space-md py-space-sm font-label-lg whitespace-nowrap text-on-surface-variant hover:text-on-surface">Rooms</button>
+        <button id="tabSchedules" class="px-space-md py-space-sm font-label-lg whitespace-nowrap text-on-surface-variant hover:text-on-surface">Class Schedules</button>
+        <button id="tabHolidays" class="px-space-md py-space-sm font-label-lg whitespace-nowrap text-on-surface-variant hover:text-on-surface">Holidays</button>
+        <button id="tabSettings" class="px-space-md py-space-sm font-label-lg whitespace-nowrap text-on-surface-variant hover:text-on-surface">System Configuration</button>
+        <button id="tabLogs" class="px-space-md py-space-sm font-label-lg whitespace-nowrap text-on-surface-variant hover:text-on-surface">System Logs</button>
     </div>
 
     <!-- Users View -->
@@ -358,6 +361,125 @@
         </div>
     </div>
 
+    <!-- Class Schedules View (Hidden by default) -->
+    <div id="viewSchedules" class="hidden space-y-space-md">
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Class Schedules</h2>
+        <form id="scheduleForm" class="bg-surface-container-lowest p-space-md rounded shadow-sm grid grid-cols-2 md:grid-cols-7 gap-3 items-end font-body-sm" novalidate>
+            <label class="flex flex-col gap-1 col-span-2 md:col-span-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Room</span>
+                <select id="schRoom" class="p-2 bg-surface border rounded" required><option value="">Loading rooms…</option></select>
+            </label>
+            <label class="flex flex-col gap-1">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Course Code</span>
+                <input id="schCourse" type="text" maxlength="50" placeholder="e.g. CS-101" class="p-2 bg-surface border rounded" required>
+            </label>
+            <label class="flex flex-col gap-1">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Section</span>
+                <input id="schSection" type="text" maxlength="20" placeholder="e.g. BSCS-2A" class="p-2 bg-surface border rounded" required>
+            </label>
+            <label class="flex flex-col gap-1">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Day</span>
+                <select id="schDay" class="p-2 bg-surface border rounded" required>
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                </select>
+            </label>
+            <label class="flex flex-col gap-1">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Start</span>
+                <input id="schStart" type="time" step="1800" class="p-2 bg-surface border rounded" required>
+            </label>
+            <label class="flex flex-col gap-1">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">End</span>
+                <input id="schEnd" type="time" step="1800" class="p-2 bg-surface border rounded" required>
+            </label>
+            <button type="submit" class="col-span-2 md:col-span-7 md:justify-self-end px-space-md py-2 bg-primary text-on-primary rounded font-label-sm">Add Schedule</button>
+            <p id="scheduleMsg" class="hidden col-span-2 md:col-span-7 text-sm font-semibold" role="alert"></p>
+        </form>
+        <div class="bg-surface-container-lowest p-space-md rounded shadow-sm overflow-x-auto">
+            <table class="w-full text-left font-body-sm text-on-surface border-collapse">
+                <thead>
+                    <tr class="border-b border-surface-variant text-on-surface-variant uppercase text-[11px] tracking-wider">
+                        <th class="p-2">Room</th>
+                        <th class="p-2">Course Code</th>
+                        <th class="p-2">Section</th>
+                        <th class="p-2">Day</th>
+                        <th class="p-2">Start</th>
+                        <th class="p-2">End</th>
+                        <th class="p-2 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="schedulesTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Holidays View (Hidden by default) -->
+    <div id="viewHolidays" class="hidden space-y-space-md">
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Holidays</h2>
+        <form id="holidayForm" class="bg-surface-container-lowest p-space-md rounded shadow-sm grid grid-cols-1 md:grid-cols-4 gap-3 items-end font-body-sm" novalidate>
+            <label class="flex flex-col gap-1">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Date</span>
+                <input id="holDate" type="date" class="p-2 bg-surface border rounded" required>
+            </label>
+            <label class="flex flex-col gap-1">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Name</span>
+                <input id="holName" type="text" maxlength="100" placeholder="e.g. Independence Day" class="p-2 bg-surface border rounded" required>
+            </label>
+            <label class="flex flex-col gap-1">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Type</span>
+                <select id="holType" class="p-2 bg-surface border rounded" required>
+                    <option value="Regular">Regular</option>
+                    <option value="Special Non-Working">Special Non-Working</option>
+                </select>
+            </label>
+            <button type="submit" class="px-space-md py-2 bg-primary text-on-primary rounded font-label-sm">Add Holiday</button>
+            <p id="holidayMsg" class="hidden md:col-span-4 text-sm font-semibold" role="alert"></p>
+        </form>
+        <div class="bg-surface-container-lowest p-space-md rounded shadow-sm overflow-x-auto">
+            <table class="w-full text-left font-body-sm text-on-surface border-collapse">
+                <thead>
+                    <tr class="border-b border-surface-variant text-on-surface-variant uppercase text-[11px] tracking-wider">
+                        <th class="p-2">Date</th>
+                        <th class="p-2">Name</th>
+                        <th class="p-2">Type</th>
+                        <th class="p-2 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="holidaysTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- System Configuration View (Hidden by default) -->
+    <div id="viewSettings" class="hidden space-y-space-md">
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">System Configuration</h2>
+        <form id="settingsForm" class="bg-surface-container-lowest p-space-md rounded shadow-sm space-y-4 font-body-sm max-w-2xl" novalidate>
+            <div class="grid grid-cols-2 gap-3">
+                <label class="flex flex-col gap-1">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Business hours start</span>
+                    <input id="setStart" type="time" step="1800" class="p-2 bg-surface border rounded" required>
+                </label>
+                <label class="flex flex-col gap-1">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Business hours end</span>
+                    <input id="setEnd" type="time" step="1800" class="p-2 bg-surface border rounded" required>
+                </label>
+            </div>
+            <fieldset class="flex flex-col gap-2">
+                <legend class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">Closed days</legend>
+                <div id="setClosedDays" class="flex flex-wrap gap-3"></div>
+            </fieldset>
+            <p class="text-xs text-on-surface-variant">Applies to new requests and to approvals from now on. Existing bookings are not changed.</p>
+            <div class="flex items-center gap-3">
+                <button type="submit" class="px-space-md py-2 bg-primary text-on-primary rounded font-label-sm">Save</button>
+                <p id="settingsMsg" class="hidden text-sm font-semibold" role="alert"></p>
+            </div>
+        </form>
+    </div>
+
     <!-- Logs View (Hidden by default) -->
     <div id="viewLogs" class="hidden space-y-space-md">
         <h2 class="font-headline-sm text-headline-sm text-on-surface">System Logs</h2>
@@ -386,8 +508,230 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabs = {
         users: { btn: document.getElementById('tabUsers'), view: document.getElementById('viewUsers'), load: loadUsers },
         rooms: { btn: document.getElementById('tabRooms'), view: document.getElementById('viewRooms'), load: loadRooms },
+        schedules: { btn: document.getElementById('tabSchedules'), view: document.getElementById('viewSchedules'), load: loadSchedules },
+        holidays:  { btn: document.getElementById('tabHolidays'), view: document.getElementById('viewHolidays'), load: loadHolidays },
+        settings:  { btn: document.getElementById('tabSettings'), view: document.getElementById('viewSettings'), load: loadSettings },
         logs:  { btn: document.getElementById('tabLogs'), view: document.getElementById('viewLogs'), load: loadLogs }
     };
+
+    // ---- shared helpers for the schedule / holiday / settings tabs ----
+
+    /** fetch() JSON with the session cookie. Always resolves to {ok, status, data, error}. */
+    async function api(path, options) {
+        const opts = Object.assign({ credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } }, options || {});
+        try {
+            const res = await fetch(BASE + path, opts);
+            let json = null;
+            try { json = await res.json(); } catch (_) { /* non-JSON error page */ }
+            if (res.status === 401) window.location.replace(BASE + 'index.html');
+            return {
+                ok: res.ok && !!json && json.success !== false,
+                status: res.status,
+                data: json ? json.data : null,
+                error: (json && json.error) || `Request failed (HTTP ${res.status}).`
+            };
+        } catch (_) {
+            return { ok: false, status: 0, data: null, error: 'Could not reach the server. Check your connection.' };
+        }
+    }
+
+    /** Show a message under a form; kind is 'error' or 'ok'. Empty text hides it. */
+    function showMsg(el, text, kind) {
+        el.textContent = text || '';
+        el.classList.toggle('hidden', !text);
+        el.classList.toggle('text-red-600', kind === 'error');
+        el.classList.toggle('text-green-700', kind === 'ok');
+    }
+
+    /** '13:30:00' -> '1:30 PM' */
+    function fmt12(t) {
+        const m = /^(\d{2}):(\d{2})/.exec(String(t || ''));
+        if (!m) return String(t || '');
+        const h = Number(m[1]);
+        return `${((h + 11) % 12) + 1}:${m[2]} ${h >= 12 ? 'PM' : 'AM'}`;
+    }
+
+    function emptyRow(cols, text) {
+        return `<tr><td colspan="${cols}" class="p-4 text-center text-on-surface-variant">${escapeHtml(text)}</td></tr>`;
+    }
+
+    // ---- Class Schedules ----
+
+    const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const scheduleForm = document.getElementById('scheduleForm');
+    const scheduleMsg  = document.getElementById('scheduleMsg');
+
+    async function loadScheduleRooms() {
+        const sel = document.getElementById('schRoom');
+        const res = await api('api/rooms');
+        if (!res.ok) { sel.innerHTML = '<option value="">Could not load rooms</option>'; return; }
+        const keep = sel.value;
+        sel.innerHTML = '<option value="">Select a room</option>' + (res.data || [])
+            .filter(r => Number(r.is_active) !== 0)
+            .map(r => `<option value="${escapeHtml(r.room_id)}">${escapeHtml(r.name)}</option>`).join('');
+        sel.value = keep;
+    }
+
+    async function loadSchedules() {
+        loadScheduleRooms();
+        const tbody = document.getElementById('schedulesTableBody');
+        tbody.innerHTML = emptyRow(7, 'Loading…');
+        const res = await api('api/classes');
+        if (!res.ok) { tbody.innerHTML = emptyRow(7, res.error); return; }
+        const rows = (res.data || []).slice().sort((a, b) =>
+            String(a.room_name).localeCompare(String(b.room_name)) ||
+            DAY_ORDER.indexOf(a.day_of_week) - DAY_ORDER.indexOf(b.day_of_week) ||
+            String(a.start_time).localeCompare(String(b.start_time)));
+        if (!rows.length) { tbody.innerHTML = emptyRow(7, 'No class schedules yet.'); return; }
+        tbody.innerHTML = rows.map(c => `
+            <tr class="border-b border-surface-variant">
+                <td class="p-2 font-medium">${escapeHtml(c.room_name)}</td>
+                <td class="p-2">${escapeHtml(c.course_code)}</td>
+                <td class="p-2">${escapeHtml(c.section)}</td>
+                <td class="p-2">${escapeHtml(c.day_of_week)}</td>
+                <td class="p-2 whitespace-nowrap">${escapeHtml(fmt12(c.start_time))}</td>
+                <td class="p-2 whitespace-nowrap">${escapeHtml(fmt12(c.end_time))}</td>
+                <td class="p-2 text-right">
+                    <button type="button" class="delete-schedule text-tertiary font-bold text-xs" data-id="${escapeHtml(c.schedule_id)}"
+                        data-label="${escapeHtml(`${c.course_code} ${c.section} (${c.day_of_week})`)}">Delete</button>
+                </td>
+            </tr>`).join('');
+    }
+
+    document.getElementById('schedulesTableBody').addEventListener('click', async (e) => {
+        const btn = e.target.closest('.delete-schedule');
+        if (!btn) return;
+        if (!confirm(`Delete the class schedule ${btn.dataset.label}?`)) return;
+        btn.disabled = true;
+        const res = await api('api/classes/' + encodeURIComponent(btn.dataset.id), { method: 'DELETE' });
+        if (!res.ok) { btn.disabled = false; return showMsg(scheduleMsg, res.error, 'error'); }
+        showMsg(scheduleMsg, 'Class schedule deleted.', 'ok');
+        loadSchedules();
+    });
+
+    scheduleForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const body = {
+            room_id: document.getElementById('schRoom').value,
+            course_code: document.getElementById('schCourse').value.trim(),
+            section: document.getElementById('schSection').value.trim(),
+            day_of_week: document.getElementById('schDay').value,
+            start_time: document.getElementById('schStart').value,
+            end_time: document.getElementById('schEnd').value
+        };
+        if (Object.values(body).some(v => !v)) return showMsg(scheduleMsg, 'Please fill in every field.', 'error');
+        if (body.end_time <= body.start_time) return showMsg(scheduleMsg, 'End time must be after start time.', 'error');
+
+        const submit = scheduleForm.querySelector('button[type="submit"]');
+        submit.disabled = true;
+        // A 409 here is the API refusing an overlap with another class or with
+        // an upcoming Pending/Approved reservation; its message says which.
+        const res = await api('api/classes', { method: 'POST', body: JSON.stringify(body) });
+        submit.disabled = false;
+        if (!res.ok) return showMsg(scheduleMsg, res.error, 'error');
+        showMsg(scheduleMsg, `Added ${body.course_code} ${body.section}.`, 'ok');
+        ['schCourse', 'schSection', 'schStart', 'schEnd'].forEach(id => { document.getElementById(id).value = ''; });
+        loadSchedules();
+    });
+
+    // ---- Holidays ----
+
+    const holidayForm = document.getElementById('holidayForm');
+    const holidayMsg  = document.getElementById('holidayMsg');
+
+    async function loadHolidays() {
+        const tbody = document.getElementById('holidaysTableBody');
+        tbody.innerHTML = emptyRow(4, 'Loading…');
+        const res = await api('api/holidays');
+        if (!res.ok) { tbody.innerHTML = emptyRow(4, res.error); return; }
+        const rows = res.data || [];
+        if (!rows.length) { tbody.innerHTML = emptyRow(4, 'No holidays yet.'); return; }
+        tbody.innerHTML = rows.map(h => {
+            const date = String(h.holiday_date).slice(0, 10);
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+            const label = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+                .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : date;
+            return `
+            <tr class="border-b border-surface-variant">
+                <td class="p-2 whitespace-nowrap">${escapeHtml(label)}</td>
+                <td class="p-2 font-medium">${escapeHtml(h.name)}</td>
+                <td class="p-2">${escapeHtml(h.type)}</td>
+                <td class="p-2 text-right">
+                    <button type="button" class="delete-holiday text-tertiary font-bold text-xs" data-date="${escapeHtml(date)}" data-label="${escapeHtml(h.name)}">Delete</button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    document.getElementById('holidaysTableBody').addEventListener('click', async (e) => {
+        const btn = e.target.closest('.delete-holiday');
+        if (!btn) return;
+        if (!confirm(`Delete the holiday "${btn.dataset.label}" (${btn.dataset.date})?`)) return;
+        btn.disabled = true;
+        const res = await api('api/holidays/' + encodeURIComponent(btn.dataset.date), { method: 'DELETE' });
+        if (!res.ok) { btn.disabled = false; return showMsg(holidayMsg, res.error, 'error'); }
+        showMsg(holidayMsg, 'Holiday deleted.', 'ok');
+        loadHolidays();
+    });
+
+    holidayForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const body = {
+            holiday_date: document.getElementById('holDate').value,
+            name: document.getElementById('holName').value.trim(),
+            type: document.getElementById('holType').value
+        };
+        if (!body.holiday_date || !body.name || !body.type) return showMsg(holidayMsg, 'Please fill in every field.', 'error');
+
+        const submit = holidayForm.querySelector('button[type="submit"]');
+        submit.disabled = true;
+        const res = await api('api/holidays', { method: 'POST', body: JSON.stringify(body) });
+        submit.disabled = false;
+        if (!res.ok) return showMsg(holidayMsg, res.error, 'error');
+        showMsg(holidayMsg, `Added ${body.name}.`, 'ok');
+        document.getElementById('holDate').value = '';
+        document.getElementById('holName').value = '';
+        loadHolidays();
+    });
+
+    // ---- System Configuration ----
+
+    const settingsForm = document.getElementById('settingsForm');
+    const settingsMsg  = document.getElementById('settingsMsg');
+    document.getElementById('setClosedDays').innerHTML = DAY_ORDER.map(d => `
+        <label class="inline-flex items-center gap-1.5">
+            <input type="checkbox" name="closedDay" value="${d}" class="rounded"> ${d}
+        </label>`).join('');
+
+    async function loadSettings() {
+        showMsg(settingsMsg, '', '');
+        const res = await api('api/settings');
+        if (!res.ok) return showMsg(settingsMsg, res.error, 'error');
+        const s = res.data || {};
+        document.getElementById('setStart').value = s.business_hours_start || '';
+        document.getElementById('setEnd').value = s.business_hours_end || '';
+        const closed = Array.isArray(s.closed_days) ? s.closed_days : [];
+        settingsForm.querySelectorAll('input[name="closedDay"]').forEach(cb => { cb.checked = closed.includes(cb.value); });
+    }
+
+    settingsForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const body = {
+            business_hours_start: document.getElementById('setStart').value,
+            business_hours_end: document.getElementById('setEnd').value,
+            closed_days: Array.from(settingsForm.querySelectorAll('input[name="closedDay"]:checked')).map(cb => cb.value)
+        };
+        if (!body.business_hours_start || !body.business_hours_end) return showMsg(settingsMsg, 'Please set both times.', 'error');
+        if (body.business_hours_end <= body.business_hours_start) return showMsg(settingsMsg, 'Closing time must be after opening time.', 'error');
+        if (body.closed_days.length === DAY_ORDER.length) return showMsg(settingsMsg, 'At least one day must stay open.', 'error');
+
+        const submit = settingsForm.querySelector('button[type="submit"]');
+        submit.disabled = true;
+        const res = await api('api/settings', { method: 'PATCH', body: JSON.stringify(body) });
+        submit.disabled = false;
+        if (!res.ok) return showMsg(settingsMsg, res.error, 'error');
+        showMsg(settingsMsg, 'Settings saved.', 'ok');
+    });
     
     function switchTab(activeKey) {
         Object.keys(tabs).forEach(key => {
@@ -406,10 +750,22 @@ document.addEventListener('DOMContentLoaded', () => {
     
     tabs.users.btn.addEventListener('click', () => switchTab('users'));
     tabs.rooms.btn.addEventListener('click', () => switchTab('rooms'));
+    tabs.schedules.btn.addEventListener('click', () => switchTab('schedules'));
+    tabs.holidays.btn.addEventListener('click', () => switchTab('holidays'));
+    tabs.settings.btn.addEventListener('click', () => switchTab('settings'));
     tabs.logs.btn.addEventListener('click', () => switchTab('logs'));
-    
-    // Initial Load
-    switchTab('users');
+
+    // Admin-only page. The API refuses non-Admins either way; this just sends
+    // them somewhere useful instead of a page of load errors.
+    fetch(BASE + 'api/auth/me', { credentials: 'same-origin' })
+        .then(res => res.json().then(json => ({ status: res.status, json })))
+        .then(({ status, json }) => {
+            if (status === 401) return window.location.replace(BASE + 'index.html');
+            const role = json && json.data && json.data.role;
+            if (role === 'Admin') return switchTab('users');
+            window.location.replace(BASE + (role === 'Staff' ? 'staff-dashboard.html' : 'dashboard.html'));
+        })
+        .catch(() => switchTab('users'));   // offline: the API still guards the data
 
     async function loadUsers() {
         try {
@@ -495,6 +851,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             : '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-surface-container-highest text-on-surface-variant">DECOMMISSIONED</span>'}
                     </td>
                     <td class="p-2 text-right space-x-2 whitespace-nowrap">
+                        <button class="edit-room text-primary font-bold text-xs" data-id="${escapeHtml(r.room_id)}">Edit</button>
                         <button class="save-room text-primary font-bold text-xs" data-id="${escapeHtml(r.room_id)}" ${isActive ? '' : 'disabled'}>Save</button>
                         <button class="toggle-active font-bold text-xs ${isActive ? 'text-tertiary' : 'text-primary'}" data-id="${escapeHtml(r.room_id)}" data-next-active="${isActive ? 'false' : 'true'}">
                             ${isActive ? 'Deactivate' : 'Reactivate'}
@@ -517,6 +874,41 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     if (resp.ok) alert('Saved!');
                     else alert('Error saving room.');
+                });
+            });
+
+            // Edit details: same prompt flow as "Add Room", prefilled with the
+            // current values. Only fields that actually changed are sent.
+            document.querySelectorAll('.edit-room').forEach(b => {
+                b.addEventListener('click', async (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    const room = rooms.find(r => r.room_id === id);
+                    if (!room) return;
+                    const fields = [
+                        ['name', 'Room Name:', v => v.trim()],
+                        ['capacity', 'Capacity (number):', v => parseInt(v, 10)],
+                        ['floor', 'Floor (number):', v => parseInt(v, 10)],
+                        ['room_type', 'Room Type:', v => v.trim()]
+                    ];
+                    const changes = {};
+                    for (const [key, label, parse] of fields) {
+                        const answer = prompt(label, room[key] == null ? '' : String(room[key]));
+                        if (answer === null) return;                       // cancelled
+                        if (String(answer).trim() !== String(room[key] == null ? '' : room[key])) {
+                            changes[key] = parse(answer);
+                        }
+                    }
+                    if (!Object.keys(changes).length) return;
+                    const resp = await fetch(BASE + 'api/rooms/' + encodeURIComponent(id), {
+                        method: 'PATCH',
+                        credentials: 'same-origin',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(changes)
+                    });
+                    if (resp.ok) return loadRooms();
+                    let msg = 'Error saving room.';
+                    try { msg = (await resp.json()).error || msg; } catch (_) { /* non-JSON */ }
+                    alert(msg);
                 });
             });
 

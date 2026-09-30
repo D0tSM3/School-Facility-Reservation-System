@@ -25,12 +25,14 @@ require BASE_DIR . '/vendor/autoload.php';
 use Dotenv\Dotenv;
 use CampusRoom\Core\Response;
 use CampusRoom\Core\Auth;
+use CampusRoom\Core\Settings;
 use CampusRoom\Controller\AuthController;
 use CampusRoom\Controller\RoomController;
 use CampusRoom\Controller\ReservationController;
 use CampusRoom\Controller\ClassScheduleController;
 use CampusRoom\Controller\HolidayController;
 use CampusRoom\Controller\UserController;
+use CampusRoom\Controller\SettingsController;
 
 // Load .env (immutable so it never overwrites real server env vars).
 $dotenv = Dotenv::createImmutable(BASE_DIR);
@@ -84,10 +86,12 @@ $routes = [
         $enabled = filter_var($_ENV['RECAPTCHA_ENABLED'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $siteKey = $enabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : '';
 
+        // The booking rules the Admin sets on System Configuration, so the
+        // booking form and room calendar offer only what the server accepts.
         Response::json([
             'recaptcha_enabled'  => $enabled,
             'recaptcha_site_key' => $siteKey,
-        ]);
+        ] + Settings::toArray());
     }],
 
     // Auth — login & recovery
@@ -145,6 +149,17 @@ $routes = [
     ['GET',    '#^/api/holidays$#',                  fn() => (new HolidayController())->index()],
     ['POST',   '#^/api/holidays$#',                  fn() => (new HolidayController())->store()],
     ['DELETE', '#^/api/holidays/(?P<id>[^/]+)$#',    fn(string $id) => (new HolidayController())->destroy($id)],
+
+    // Conflict override requests (Customer)
+    ['GET',   '#^/api/conflict-override-requests/mine$#', fn() => (new ReservationController())->myOverrides()],
+    ['POST',  '#^/api/conflict-override-requests$#',      fn() => (new ReservationController())->requestOverride()],
+    // Conflict override requests (Staff/Admin)
+    ['GET',   '#^/api/conflict-override-requests$#',      fn() => (new ReservationController())->overrideIndex()],
+    ['PATCH', '#^/api/conflict-override-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->resolveOverride($id)],
+
+    // System settings (Admin)
+    ['GET',   '#^/api/settings$#',                   fn() => (new SettingsController())->show()],
+    ['PATCH', '#^/api/settings$#',                   fn() => (new SettingsController())->update()],
 
     // Logs (Admin)
     ['GET',   '#^/api/logs$#',                       fn() => (new UserController())->logs()],

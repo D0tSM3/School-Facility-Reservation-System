@@ -126,11 +126,15 @@ class ClassScheduleRepository
         return $scheduleId;
     }
 
-    public function delete(string $scheduleId): void
+    /** @return array|null the deleted row, or null if there was none */
+    public function delete(string $scheduleId): ?array
     {
-        $this->db->query(
-            "DELETE FROM ClassSchedules WHERE schedule_id = :schedule_id",
+        $stmt = $this->db->query(
+            "DELETE FROM ClassSchedules WHERE schedule_id = :schedule_id
+             RETURNING course_code, section, day_of_week",
             [':schedule_id' => $scheduleId]
         );
+        $row = $stmt->fetch();
+        return $row ?: null;
     }
 }

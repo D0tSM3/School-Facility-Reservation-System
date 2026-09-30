@@ -157,10 +157,18 @@ class RoomRepository
      *
      * @return array|null Updated row, or null if not found.
      */
-    public function update(string $roomId, ?string $status, ?bool $isActive): ?array
+    public function update(string $roomId, ?string $status, ?bool $isActive, array $details = []): ?array
     {
         $sets   = [];
         $params = [':room_id' => $roomId];
+
+        // Admin-edited details. Keys are fixed here, never taken from input.
+        foreach (['name', 'capacity', 'floor', 'room_type'] as $column) {
+            if (array_key_exists($column, $details)) {
+                $sets[]              = "{$column} = :{$column}";
+                $params[":{$column}"] = $details[$column];
+            }
+        }
 
         if ($status !== null) {
             $sets[]           = 'status = :status';
@@ -210,7 +218,7 @@ class RoomRepository
             "SELECT r.reservation_id,
                     r.customer_id,
                     u.name AS customer_name,
-                    r.purpose, r.start_time, r.end_time, r.status
+                    r.purpose, r.start_time, r.end_time, r.series_id, r.status
                FROM Reservations r
                JOIN Users u ON u.user_id = r.customer_id
               WHERE r.room_id = :room_id

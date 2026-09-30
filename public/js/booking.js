@@ -11,6 +11,9 @@ window.initBookingForm = function() {
   const form = document.getElementById('roomReservationForm');
   const roomSelect = document.getElementById('roomSelect');
   const resDateInput = document.getElementById('resDate');
+  // Optional: book-room.html has a date range; the rooms.html booking modal
+  // only has resDate, which then acts as both start and end.
+  const resEndDateInput = document.getElementById('resEndDate');
   const startTimeInput = document.getElementById('startTime');
   const endTimeInput = document.getElementById('endTime');
   const purposeInput = document.getElementById('purpose');
@@ -163,7 +166,11 @@ window.initBookingForm = function() {
   // --- Room Calendar Integration ---
   let calendarInstance = null;
   function updateCalendarSelection() {
-    if (calendarInstance && startTimeInput && endTimeInput && typeof calendarInstance.setSelectionTimes === 'function') {
+    if (!calendarInstance) return;
+    if (typeof calendarInstance.setSelectionRange === 'function') {
+      calendarInstance.setSelectionRange(startDateValue(), endDateValue());
+    }
+    if (startTimeInput && endTimeInput && typeof calendarInstance.setSelectionTimes === 'function') {
       calendarInstance.setSelectionTimes(startTimeInput.value, endTimeInput.value);
     }
   }
@@ -173,7 +180,7 @@ window.initBookingForm = function() {
     // down and rebuilding the whole component (which also resets the
     // student back to the current week if they had navigated elsewhere).
     if (calendarInstance && calendarInstance.roomId === roomId) {
-      calendarInstance.goToDate(resDateInput ? resDateInput.value : '', true);
+      calendarInstance.goToDate(startDateValue(), true);
       return;
     }
     const container = document.getElementById('room-calendar-container');
@@ -182,9 +189,12 @@ window.initBookingForm = function() {
         calendarInstance = new RoomCalendar({
           containerId: 'room-calendar-container',
           roomId: roomId,
-          initialDate: resDateInput ? resDateInput.value : '',
-          minDate: resDateInput ? resDateInput.min : ''
+          initialDate: startDateValue(),
+          initialEndDate: endDateValue(),
+          minDate: resDateInput ? resDateInput.min : '',
+          rules: rules
         });
+        updateCalendarSelection();
       }
     }
   }
@@ -203,11 +213,18 @@ window.initBookingForm = function() {
            String(d.getDate()).padStart(2, '0');
   }
 
-  // Earliest bookable day: tomorrow, skipping Sunday.
+  // Business hours and closed days (Admin > System Configuration). Starts on
+  // the long-standing defaults and is replaced by applyRules() once
+  // GET api/config answers.
+  let rules = window.CampusSchedule.DEFAULT_RULES;
+
+  // Earliest bookable day: tomorrow, skipping closed days.
   function earliestOpenDay() {
     const d = new Date();
     d.setDate(d.getDate() + 1);
-    if (d.getDay() === 0) d.setDate(d.getDate() + 1);
+    for (let i = 0; i < 7 && window.CampusSchedule.isClosedDay(toYMD(d), rules.closedDays); i++) {
+      d.setDate(d.getDate() + 1);
+    }
     return d;
   }
 
@@ -219,6 +236,39 @@ window.initBookingForm = function() {
     }
   }
 
+  // Same cap as ReservationValidator::MAX_RANGE_DAYS on the server.
+  const MAX_RANGE_DAYS = 31;
+
+  function startDateValue() {
+    return resDateInput ? resDateInput.value : '';
+  }
+
+  /** The range's last day; the start date when there is no end-date field. */
+  function endDateValue() {
+    return resEndDateInput ? resEndDateInput.value : startDateValue();
+  }
+
+  /**
+   * Keep the end date usable after the start changes: never before the start,
+   * and filled in so a one-day booking needs no second pick. A re-book goes
+   * through POST .../rebook, which books one day, so its end date is locked
+   * to the start date.
+   */
+  function syncEndDate() {
+    if (!resEndDateInput) return;
+    const start = startDateValue();
+    resEndDateInput.min = start || (resDateInput ? resDateInput.min : '');
+    if (isRebook) {
+      resEndDateInput.value = start;
+      resEndDateInput.disabled = true;
+      return;
+    }
+    if (start && (!resEndDateInput.value || resEndDateInput.value < start)) {
+      resEndDateInput.value = start;
+    }
+  }
+  syncEndDate();
+
   const dateError = document.getElementById('dateError');
 
   function setDateError(message) {
@@ -227,16 +277,28 @@ window.initBookingForm = function() {
       dateError.classList.toggle('hidden', !message);
     }
     if (resDateInput) resDateInput.setAttribute('aria-invalid', message ? 'true' : 'false');
+    if (resEndDateInput) resEndDateInput.setAttribute('aria-invalid', message ? 'true' : 'false');
   }
 
-  /** '' when the date can be booked, otherwise the reason it can't. */
-  function dateProblem(value) {
-    if (!value) return '';
-    if (new Date(value + 'T00:00:00').getDay() === 0) {          // local, not UTC
-      return 'Sundays are not available for reservation. Please pick another day.';
-    }
-    if (resDateInput && resDateInput.min && value < resDateInput.min) {
+  /** '' when every day in the range can be booked, otherwise the reason it can't. */
+  function dateProblem(start, end) {
+    if (!start || !end) return '';
+    if (resDateInput && resDateInput.min && start < resDateInput.min) {
       return 'Bookings open starting tomorrow. Please pick a later date.';
+    }
+    if (end < start) {
+      return 'The end date must be on or after the start date.';
+    }
+    const days = window.CampusSchedule.datesBetween(start, end);
+    if (days.length > MAX_RANGE_DAYS) {
+      return `A booking can cover at most ${MAX_RANGE_DAYS} days.`;
+    }
+    const closed = days.find(d => window.CampusSchedule.isClosedDay(d, rules.closedDays));
+    if (closed) {
+      const day = window.CampusSchedule.dayName(closed);
+      return days.length > 1
+        ? `The range includes a ${day}, when BPU is closed. Pick dates that skip ${closedDaysText()}.`
+        : `${day}s are not available for reservation. Please pick another day.`;
     }
     return '';
   }
@@ -247,15 +309,25 @@ window.initBookingForm = function() {
     return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number(value.slice(0, 4)) >= 2000;
   }
 
+  function onDatesChanged() {
+    const start = startDateValue(), end = endDateValue();
+    if (!isRealDate(start) || !isRealDate(end)) { setDateError(''); return; }
+    setDateError(dateProblem(start, end));              // message only; never wipe what they typed
+    if (calendarInstance) calendarInstance.goToDate(start);
+    updateCalendarSelection();
+    markTakenSlots();
+  }
+
   if (resDateInput) {
     resDateInput.addEventListener('change', () => {
-      const value = resDateInput.value;
-      if (!isRealDate(value)) { setDateError(''); return; }
-      setDateError(dateProblem(value));                 // message only; never wipe what they typed
-      if (calendarInstance) calendarInstance.goToDate(value);
-      markTakenSlots();
+      // Setting .value in code fires no event, so this marks a real choice
+      // (typed, or picked in rooms.html's calendar) that applyRules() keeps.
+      resDateInput.dataset.touched = '1';
+      if (isRealDate(resDateInput.value)) syncEndDate();
+      onDatesChanged();
     });
   }
+  if (resEndDateInput) resEndDateInput.addEventListener('change', onDatesChanged);
 
   // The visible calendar button (the browser's own icon is hidden in components.css).
   const openPickerBtn = document.getElementById('openDatePickerBtn');
@@ -288,21 +360,23 @@ window.initBookingForm = function() {
 
   if (endTimeInput) endTimeInput.addEventListener('change', () => { validateTime(); updateCalendarSelection(); });
 
-  // The chosen room's schedule for the chosen date, from the last successful
+  // The chosen room's schedule for the chosen dates, from the last successful
   // calendar fetch (see markTakenSlots). null until it arrives, and whenever it
-  // is for a different room/date than the form now shows.
-  let dayData = null;   // { roomId, date, data }
+  // is for a different room/range than the form now shows.
+  let rangeData = null;   // { roomId, start, end, dates, data }
 
   /**
-   * Conflicts for the whole range [start, end): a class, another reservation
-   * or a holiday that shares any minute with it. Empty when the range is free
-   * OR when the schedule isn't loaded yet — the server re-checks either way.
+   * Conflicts for the daily window [start, end) on any day of the range: a
+   * class, another reservation or a holiday that shares any minute with it.
+   * Empty when the window is free OR when the schedule isn't loaded yet —
+   * the server re-checks either way.
    */
   function rangeConflicts(start, end) {
-    if (!dayData || !start || !end) return [];
+    if (!rangeData || !start || !end) return [];
     if (!roomSelect || !resDateInput) return [];
-    if (dayData.roomId !== roomSelect.value || dayData.date !== resDateInput.value) return [];
-    return window.CampusSchedule.findConflicts(dayData.data, dayData.date, start, end);
+    if (rangeData.roomId !== roomSelect.value ||
+        rangeData.start !== startDateValue() || rangeData.end !== endDateValue()) return [];
+    return window.CampusSchedule.findRangeConflicts(rangeData.data, rangeData.dates, start, end);
   }
 
   // ---------------------------------------------------------------
@@ -311,11 +385,11 @@ window.initBookingForm = function() {
   // would stretch the booking across a class or another reservation.
   // ---------------------------------------------------------------
   let syncEndOptions = () => {};
+  // Every end time the day allows; rebuilt by applyRules() from business hours.
+  let ALL_END_OPTIONS = endTimeInput
+    ? Array.from(endTimeInput.options).filter(o => o.value).map(o => ({ value: o.value, text: o.textContent }))
+    : [];
   if (startTimeInput && endTimeInput) {
-    const ALL_END_OPTIONS = Array.from(endTimeInput.options)
-      .filter(o => o.value)
-      .map(o => ({ value: o.value, text: o.textContent }));
-
     syncEndOptions = () => {
       const start = startTimeInput.value;
       const previous = endTimeInput.value;
@@ -332,9 +406,12 @@ window.initBookingForm = function() {
           // Start is free, but is [start, this end) free?
           const clash = rangeConflicts(start, o.value);
           if (clash.length) {
-            opt.disabled = true;
-            opt.textContent = o.text + ' ?" unavailable';
-            opt.title = window.CampusSchedule.describe(clash, start, o.value);
+            // Only another Approved booking in the way: still selectable, so
+            // the customer can reach the urgent-override option on submit.
+            const overridable = !isRebook && window.CampusSchedule.onlyApprovedConflicts(clash);
+            opt.disabled = !overridable;
+            opt.textContent = o.text + (overridable ? ' — booked (urgent override possible)' : ' — unavailable');
+            opt.title = window.CampusSchedule.describeRange(clash, start, o.value);
           }
         }
         endTimeInput.appendChild(opt);
@@ -353,16 +430,70 @@ window.initBookingForm = function() {
   // submitting instead of after. The server remains the source of truth;
   // this is a convenience layer, so failures are swallowed.
   // ---------------------------------------------------------------
-  const BLOCKS = [
-    '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30',
-    '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
-    '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
-    '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00'
-  ];
+  // Half-hour marks from opening to closing; rebuilt by applyRules().
+  let BLOCKS = window.CampusSchedule.halfHours(rules.open, rules.close);
 
   if (startTimeInput) {
     // remember each option's original label once
     Array.from(startTimeInput.options).forEach(o => { o.dataset.label = o.textContent; });
+  }
+
+  /** '13:30' -> '01:30 PM' (the label style the time selects already use). */
+  function optionLabel(hhmm) {
+    const h = Number(hhmm.slice(0, 2));
+    return String(((h + 11) % 12) + 1).padStart(2, '0') + ':' + hhmm.slice(3, 5) + (h >= 12 ? ' PM' : ' AM');
+  }
+
+  function closedDaysText() {
+    const days = rules.closedDays.map(d => d + 's');
+    return days.length > 1 ? days.slice(0, -1).join(', ') + ' and ' + days[days.length - 1] : (days[0] || 'closed days');
+  }
+
+  /**
+   * Rebuild everything that depends on business hours / closed days:
+   * the start and end time options, the earliest bookable date, the hint
+   * under the dates, and the calendar. A time already chosen is kept if the
+   * new hours still offer it.
+   */
+  function applyRules(next) {
+    rules = next;
+    BLOCKS = window.CampusSchedule.halfHours(rules.open, rules.close);
+
+    if (startTimeInput) {
+      const keep = startTimeInput.value;
+      startTimeInput.innerHTML = '<option value="">Select Start Time</option>';
+      BLOCKS.slice(0, -1).forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = opt.dataset.label = optionLabel(t);
+        startTimeInput.appendChild(opt);
+      });
+      if (BLOCKS.includes(keep)) startTimeInput.value = keep;
+    }
+    ALL_END_OPTIONS = BLOCKS.slice(1).map(t => ({ value: t, text: optionLabel(t) }));
+
+    if (resDateInput) {
+      const min = toYMD(earliestOpenDay());
+      resDateInput.min = min;
+      // Only move the date we filled in ourselves; never one the customer typed.
+      if (!isRebook && !resDateInput.dataset.touched &&
+          (!resDateInput.value || resDateInput.value < min ||
+           window.CampusSchedule.isClosedDay(resDateInput.value, rules.closedDays))) {
+        resDateInput.value = min;
+      }
+      syncEndDate();
+    }
+
+    const hint = document.getElementById('dateRangeHint');
+    if (hint) {
+      hint.textContent = 'For one day, use the same date twice. The start and end times below apply to every day in the range. ' +
+        `Open ${window.CampusSchedule.fmt12(rules.open)} – ${window.CampusSchedule.fmt12(rules.close)}` +
+        (rules.closedDays.length ? `, closed ${closedDaysText()}.` : ', every day.');
+    }
+
+    if (calendarInstance && typeof calendarInstance.setRules === 'function') calendarInstance.setRules(rules);
+    syncEndOptions();
+    onDatesChanged();
   }
 
   function resetStartOptions() {
@@ -376,35 +507,39 @@ window.initBookingForm = function() {
   let takenSeq = 0;
   async function markTakenSlots() {
     if (!startTimeInput || !roomSelect || !resDateInput) return;
-    const roomId = roomSelect.value, d = resDateInput.value;
-    if (!roomId || !isRealDate(d)) return;
+    const roomId = roomSelect.value, start = startDateValue(), end = endDateValue();
+    if (!roomId || !isRealDate(start) || !isRealDate(end)) return;
+    const dates = window.CampusSchedule.datesBetween(start, end);
+    if (!dates.length || dates.length > MAX_RANGE_DAYS) return;   // dateProblem() already says why
     const seq = ++takenSeq;
-    dayData = null;   // whatever we knew belongs to the previous room/date
+    rangeData = null;   // whatever we knew belongs to the previous room/range
 
     // null = couldn't load. Never treat that as "free": clear the greying so
     // nothing stale stays on screen and let the server decide.
-    const data = await window.CampusSchedule.fetchDay(BASE, roomId, d);
+    const data = await window.CampusSchedule.fetchRange(BASE, roomId, start, end);
     if (seq !== takenSeq) return;                              // a newer request superseded this one
     if (!data) {
       resetStartOptions();
       syncEndOptions();
       return;
     }
-    dayData = { roomId, date: d, data };
+    rangeData = { roomId, start, end, dates, data };
 
-    // A start block is only usable if the block itself is free (the shortest
-    // booking is one block); which END times stay usable is decided in
-    // syncEndOptions() once a start is chosen.
+    // A start block is only usable if the block itself is free on EVERY day
+    // of the range (the shortest booking is one block); which END times stay
+    // usable is decided in syncEndOptions() once a start is chosen.
     Array.from(startTimeInput.options).forEach(opt => {
       if (!opt.value) return;
       const i = BLOCKS.indexOf(opt.value);
-      const [bs, be] = [BLOCKS[i], BLOCKS[i + 1] || '21:00'];
-      const taken = window.CampusSchedule.findConflicts(data, d, bs, be).length > 0;
-      opt.disabled = taken;
-      opt.textContent = opt.dataset.label + (taken ? ' — unavailable' : '');
+      const [bs, be] = [BLOCKS[i], BLOCKS[i + 1] || rules.close];
+      const clash = window.CampusSchedule.findRangeConflicts(data, dates, bs, be);
+      const overridable = !isRebook && window.CampusSchedule.onlyApprovedConflicts(clash);
+      opt.disabled = clash.length > 0 && !overridable;
+      opt.textContent = opt.dataset.label +
+        (!clash.length ? '' : overridable ? ' — booked (urgent override possible)' : ' — unavailable');
     });
 
-    // A start time that was valid for the previous date may be taken on this one.
+    // A start time that was valid for the previous dates may be taken on these.
     const chosen = startTimeInput.selectedOptions[0];
     if (chosen && chosen.disabled) startTimeInput.value = '';
 
@@ -648,6 +783,9 @@ window.initBookingForm = function() {
 
   prefillFromRebookSource();
 
+  // Swap the defaults for the Admin-configured hours and closed days.
+  window.CampusSchedule.loadRules(BASE).then(applyRules);
+
   // ---------------------------------------------------------------
   // Consolidated submit handler (Fix Guide 1.3, 1.5, 1.6, 1.7)
   // ---------------------------------------------------------------
@@ -676,6 +814,126 @@ window.initBookingForm = function() {
     return { status: res.status, json };
   }
 
+  // ---------------------------------------------------------------
+  // Conflict override (urgent) request. Shown when POST api/reservations
+  // answers 409 with override_eligible: the slot is taken only by someone
+  // else's Approved booking, so staff could move it. The customer either
+  // goes back to pick another time or files POST
+  // api/conflict-override-requests with a reason.
+  // ---------------------------------------------------------------
+
+  /** "2026-10-01 09:00:00" -> "Thu, Oct 1, 9:00 AM" (literal Manila wall-clock). */
+  function formatSlot(value) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(value || ''));
+    if (!m) return String(value || '');
+    const day = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+      .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return day + ', ' + window.CampusSchedule.fmt12(m[4] + ':' + m[5]);
+  }
+
+  let overrideModal = null;
+
+  function buildOverrideModal() {
+    const wrap = document.createElement('div');
+    wrap.className = 'fixed inset-0 z-[100] hidden items-center justify-center bg-black/40 p-4';
+    wrap.setAttribute('role', 'dialog');
+    wrap.setAttribute('aria-modal', 'true');
+    wrap.setAttribute('aria-labelledby', 'overrideModalTitle');
+    wrap.innerHTML = `
+      <div class="w-full max-w-md rounded-2xl bg-white shadow-xl p-6 space-y-4">
+        <div class="flex items-start gap-3">
+          <span class="material-symbols-outlined text-amber-500 text-[28px]">event_busy</span>
+          <div>
+            <h2 id="overrideModalTitle" class="text-base font-bold text-gray-900">This room is already booked</h2>
+            <p class="text-sm text-gray-600 mt-1" data-override-text></p>
+          </div>
+        </div>
+        <div data-override-choice class="flex flex-col sm:flex-row gap-2 sm:justify-end">
+          <button type="button" data-override-back class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Choose a different time</button>
+          <button type="button" data-override-open class="px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600">Request override (urgent)</button>
+        </div>
+        <form data-override-form class="hidden space-y-3" novalidate>
+          <label class="block text-sm font-bold text-gray-800" for="overrideReason">Why is this urgent? <span class="text-red-500">*</span></label>
+          <textarea id="overrideReason" rows="4" maxlength="500" class="w-full p-3 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[#7a1f2b]" placeholder="Explain why you need this exact slot. Staff will read this when deciding whether to ask the current holder to move."></textarea>
+          <p class="text-xs text-gray-500">Staff review every override. If approved, the current booking is asked to move and your request joins the normal approval queue.</p>
+          <p data-override-error class="hidden text-sm font-semibold text-red-600" role="alert"></p>
+          <div class="flex flex-col sm:flex-row gap-2 sm:justify-end">
+            <button type="button" data-override-back class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Choose a different time</button>
+            <button type="submit" data-override-submit class="px-4 py-2 rounded-xl bg-[#7a1f2b] text-white text-sm font-semibold hover:opacity-90">Submit override request</button>
+          </div>
+        </form>
+      </div>`;
+    document.body.appendChild(wrap);
+
+    const close = () => { wrap.classList.add('hidden'); wrap.classList.remove('flex'); };
+    wrap.querySelectorAll('[data-override-back]').forEach(b => b.addEventListener('click', close));
+    wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !wrap.classList.contains('hidden')) close(); });
+    wrap.querySelector('[data-override-open]').addEventListener('click', () => {
+      wrap.querySelector('[data-override-choice]').classList.add('hidden');
+      wrap.querySelector('[data-override-form]').classList.remove('hidden');
+      wrap.querySelector('#overrideReason').focus();
+    });
+    wrap.querySelector('[data-override-form]').addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitOverride();
+    });
+    return { wrap, close, payload: null };
+  }
+
+  function openOverrideModal(payload, conflict, message) {
+    if (!overrideModal) overrideModal = buildOverrideModal();
+    const { wrap } = overrideModal;
+    overrideModal.payload = payload;
+
+    const when = conflict && conflict.start_time
+      ? `${formatSlot(conflict.start_time)} – ${window.CampusSchedule.fmt12(String(conflict.end_time).slice(11, 16))}`
+      : 'the time you picked';
+    wrap.querySelector('[data-override-text]').textContent =
+      `This room is already booked during ${when}. You can pick another time, or ask staff for an urgent override.`;
+    wrap.title = message || '';
+
+    wrap.querySelector('[data-override-choice]').classList.remove('hidden');
+    wrap.querySelector('[data-override-form]').classList.add('hidden');
+    wrap.querySelector('#overrideReason').value = '';
+    const err = wrap.querySelector('[data-override-error]');
+    err.classList.add('hidden');
+    wrap.querySelector('[data-override-submit]').disabled = false;
+
+    wrap.classList.remove('hidden');
+    wrap.classList.add('flex');
+    wrap.querySelector('[data-override-back]').focus();
+  }
+
+  async function submitOverride() {
+    const { wrap, close, payload } = overrideModal;
+    const reason = wrap.querySelector('#overrideReason').value.trim();
+    const err = wrap.querySelector('[data-override-error]');
+    const btn = wrap.querySelector('[data-override-submit]');
+    const fail = (msg) => { err.textContent = msg; err.classList.remove('hidden'); btn.disabled = false; };
+
+    if (!reason) return fail('Please explain why this booking is urgent.');
+    btn.disabled = true;
+    err.classList.add('hidden');
+
+    let result;
+    try {
+      result = await sendReservation('api/conflict-override-requests', Object.assign({}, payload, { reason }));
+    } catch (_) {
+      return fail('Could not reach the server. Check your connection and try again.');
+    }
+    if (!result) return;                                   // 401 → already redirecting to login
+    const { status, json } = result;
+    if (!json) return fail(`The server sent an unexpected response (HTTP ${status}). Please try again.`);
+    if (!json.success) return fail(json.error || 'Your override request could not be submitted.');
+
+    close();
+    redirecting = true;
+    setSubmitting(true);
+    showSuccess('Override request sent: staff will review it and you can follow its status in My Reservations. Redirecting…');
+    setTimeout(() => { window.location.href = 'my-reservations.html'; }, 1800);
+  }
+
   if (form) {
     form.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -683,32 +941,33 @@ window.initBookingForm = function() {
       hideCollisionError();
 
       const roomId      = roomSelect ? roomSelect.value : '';
-      const dateVal     = resDateInput ? resDateInput.value : '';
+      const dateVal     = startDateValue();
+      const endDateVal  = endDateValue();
       const startVal    = startTimeInput ? startTimeInput.value : '';
       const endVal      = endTimeInput ? endTimeInput.value : '';
       const picked      = form.querySelector('input[name="reservation_purpose"]:checked');
       const description = purposeInput ? purposeInput.value.trim() : '';
       const policyBox   = document.getElementById('policyAcknowledgement');
 
-      if (!roomId || !dateVal || !startVal || !endVal) {
-        return showCollisionError('Please choose a room, date, start time and end time.', 'Missing information');
+      if (!roomId || !dateVal || !endDateVal || !startVal || !endVal) {
+        return showCollisionError('Please choose a room, dates, start time and end time.', 'Missing information');
       }
-      const problem = dateProblem(dateVal);
+      const problem = dateProblem(dateVal, endDateVal);
       if (problem) {
         setDateError(problem);
         return showCollisionError(problem, 'Invalid date');
       }
-      if (resDateInput && resDateInput.min && dateVal < resDateInput.min) {
-        return showCollisionError('Please choose a date that is not in the past.', 'Invalid date');
-      }
       if (!validateTime()) {
         return showCollisionError('End time must be after the start time.', 'Invalid time');
       }
-      // The whole range must be free, not just its first block. (Only checked
-      // once the schedule has loaded; otherwise the server's 409 says the same.)
+      // The whole window must be free on every day, not just its first block.
+      // (Only checked once the schedule has loaded; otherwise the server's
+      // 409 says the same.)
+      // A clash with Approved bookings only goes on to the server, whose 409
+      // offers the urgent-override choice.
       const clash = rangeConflicts(startVal, endVal);
-      if (clash.length) {
-        return showCollisionError(window.CampusSchedule.describe(clash, startVal, endVal), 'Scheduling conflict');
+      if (clash.length && (isRebook || !window.CampusSchedule.onlyApprovedConflicts(clash))) {
+        return showCollisionError(window.CampusSchedule.describeRange(clash, startVal, endVal), 'Scheduling conflict');
       }
       if (!picked) {
         return showCollisionError('Please choose a reservation classification.', 'Missing information');
@@ -726,8 +985,10 @@ window.initBookingForm = function() {
         // travels in its own column instead of being glued to the front.
         purpose: description,
         category: PURPOSE_LABELS[picked.value],
+        // Different dates = a multi-day booking: the server books
+        // startVal–endVal on every day from dateVal to endDateVal.
         start_time: `${dateVal}T${startVal}:00`,
-        end_time: `${dateVal}T${endVal}:00`,
+        end_time: `${endDateVal}T${endVal}:00`,
         equipment_notes: collectEquipmentNotes() || 'Standard Academic Setup'
       };
 
@@ -747,6 +1008,9 @@ window.initBookingForm = function() {
           if (!json) {
             return showCollisionError(`The server sent an unexpected response (HTTP ${status}). Please try again.`, 'Something went wrong');
           }
+          if (!json.success && status === 409 && !isRebook && json.data && json.data.override_eligible) {
+            return openOverrideModal(payload, json.data.conflict, json.error);
+          }
           if (!json.success) {
             return showCollisionError(
               json.error || 'Your request could not be submitted.',
@@ -756,7 +1020,10 @@ window.initBookingForm = function() {
 
           redirecting = true;
           const ref = 'REQ-' + String(json.data.reservation_id).substring(0, 8).toUpperCase();
-          showSuccess(`${isRebook ? 'Re-booking created' : 'Reservation request created'}: ${ref} is now in the staff queue for verification. Redirecting to My Reservations…`);
+          const dayCount = Array.isArray(json.data.series) ? json.data.series.length : 1;
+          const what = isRebook ? 'Re-booking created'
+            : dayCount > 1 ? `Reservation request created for ${dayCount} days` : 'Reservation request created';
+          showSuccess(`${what}: ${ref} is now in the staff queue for verification. Redirecting to My Reservations…`);
           setTimeout(() => { window.location.href = 'my-reservations.html'; }, 1500);
         })
         .catch(() => showCollisionError('Could not reach the server. Check your connection and try again.', 'Network error'))

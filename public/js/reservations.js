@@ -180,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
         allReservations = json.data || [];
         renderReservations();
         applyFilters();
+        fetchOverrideRequests();
       })
       .catch(err => {
         // Log the real cause instead of silently swallowing it - this is
@@ -195,6 +196,77 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (reservationListRetry) reservationListRetry.addEventListener('click', fetchReservations);
+
+  // ---------------------------------------------------------------
+  // Urgent (conflict override) requests: shown in their own panel above the
+  // list. They aren't reservations yet, so the status filters don't apply.
+  // ---------------------------------------------------------------
+
+  let overridePanel = null;
+
+  function ensureOverridePanel() {
+    if (overridePanel || !reservationList || !reservationList.parentNode) return overridePanel;
+    overridePanel = document.createElement('section');
+    overridePanel.id = 'overrideRequestsPanel';
+    overridePanel.className = 'hidden mb-4';
+    overridePanel.setAttribute('aria-label', 'Urgent override requests');
+    reservationList.parentNode.insertBefore(overridePanel, reservationList);
+    return overridePanel;
+  }
+
+  /** Label + colors + detail line for an override request's current state. */
+  function overrideState(o) {
+    if (o.status === 'Pending') {
+      return { label: 'Pending review', cls: 'bg-yellow-100 text-yellow-700', note: 'Staff will decide whether to ask the current holder to move.' };
+    }
+    if (o.status === 'Rejected') {
+      return { label: 'Rejected', cls: 'bg-red-100 text-red-700', note: o.staff_comment ? `Staff comment: ${o.staff_comment}` : 'Staff declined this request.' };
+    }
+    switch (o.outcome) {
+      case 'Booked':
+        return { label: 'Approved · booked', cls: 'bg-green-100 text-green-700', note: 'Your reservation was created and is awaiting normal approval — see it in the list below.' };
+      case 'Move rejected':
+        return { label: 'Not fulfilled', cls: 'bg-red-100 text-red-700', note: 'The current booking could not be moved, so the slot stays with its holder.' + (o.outcome_note ? ` Staff comment: ${o.outcome_note}` : '') };
+      case 'Booking failed':
+        return { label: 'Not fulfilled', cls: 'bg-red-100 text-red-700', note: `The slot was freed, but your booking couldn't be created: ${o.outcome_note || 'the room is no longer free.'}` };
+      default:
+        return { label: 'Approved · awaiting move', cls: 'bg-violet-100 text-violet-700', note: 'Staff approved your request and asked the current booking to move. Your reservation is created once that move is confirmed.' + (o.staff_comment ? ` Staff comment: ${o.staff_comment}` : '') };
+    }
+  }
+
+  function renderOverrideRequests(list) {
+    const panel = ensureOverridePanel();
+    if (!panel) return;
+    panel.classList.toggle('hidden', !list.length);
+    if (!list.length) { panel.innerHTML = ''; return; }
+
+    panel.innerHTML = `
+      <h2 class="text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[18px] text-violet-600">priority_high</span>Urgent override requests
+      </h2>` + list.map(o => {
+        const s = overrideState(o);
+        const d = formatDate(o.start_time);
+        const multi = String(o.start_time).slice(0, 10) !== String(o.end_time).slice(0, 10);
+        const days = multi ? ` to ${formatDate(o.end_time).month} ${formatDate(o.end_time).day}` : '';
+        return `<div class="bg-white px-5 py-3 rounded-xl border border-violet-200 shadow-sm mb-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="text-sm font-bold text-gray-900">${escapeHtml(o.purpose)}</h3>
+            <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded ${s.cls}">${escapeHtml(s.label)}</span>
+          </div>
+          <div class="text-xs text-gray-500 mt-1">
+            ${escapeHtml(o.room_name)} • ${escapeHtml(d.month)} ${escapeHtml(String(d.day))}${escapeHtml(days)} • ${formatTime(o.start_time)} – ${formatTime(o.end_time)}${multi ? ' daily' : ''}
+          </div>
+          <div class="text-xs text-gray-600 mt-1.5">${escapeHtml(s.note)}</div>
+        </div>`;
+      }).join('');
+  }
+
+  function fetchOverrideRequests() {
+    fetch(BASE + 'api/conflict-override-requests/mine', { credentials: 'same-origin' })
+      .then(res => res.json())
+      .then(json => renderOverrideRequests(json && json.success && Array.isArray(json.data) ? json.data : []))
+      .catch(err => console.error('[My Reservations] override requests failed to load:', err));
+  }
 
   // ---------------------------------------------------------------
   // Rendering
@@ -349,7 +421,14 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (reservation.status === 'Cancelled' || reservation.status === 'Rejected') statusColor = 'bg-red-100 text-red-700';
 
       let moveStatusBadge = '';
-      if (reservation.move_status === 'Pending') {
+      if (reservation.move_status === 'Pending' && reservation.move_reason) {
+        // Staff proposed this move (an urgent override request needs the slot);
+        // the holder didn't ask for it, so say what and why.
+        const to = reservation.move_requested_start_time
+          ? ` to ${formatDate(reservation.move_requested_start_time).month} ${formatDate(reservation.move_requested_start_time).day}, ${formatTime(reservation.move_requested_start_time)} – ${formatTime(reservation.move_requested_end_time)}`
+          : '';
+        moveStatusBadge = `<div class="mt-2 text-xs font-medium text-violet-800 bg-violet-50 px-2.5 py-1.5 rounded-lg border border-violet-200/60">Staff have proposed moving this booking${escapeHtml(to)}: ${escapeHtml(reservation.move_reason)} Your booking stays as it is until staff confirm the move.</div>`;
+      } else if (reservation.move_status === 'Pending') {
         moveStatusBadge = `<div class="mt-2 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200/60">Move Request Pending review.</div>`;
       } else if (reservation.move_status === 'Rejected' && reservation.move_comment) {
         moveStatusBadge = `<div class="mt-2 text-xs font-medium text-red-700 bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-200/60">Move Request Rejected: ${escapeHtml(reservation.move_comment)}</div>`;

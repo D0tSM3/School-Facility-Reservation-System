@@ -694,11 +694,17 @@
       let cursor = new Date();   // month being displayed
       cursor.setDate(1);
 
-      // earliest bookable: tomorrow, skip Sunday
+      // Closed weekdays (Admin > System Configuration); Sunday until api/config answers.
+      const S = window.CampusSchedule;
+      let closedDays = S ? S.DEFAULT_RULES.closedDays : ['Sunday'];
+      const isClosed = ymd => (S ? S.isClosedDay(ymd, closedDays) : new Date(ymd + 'T00:00:00').getDay() === 0);
+      if (S) S.loadRules(window.location.pathname.replace(/[^\/]*$/, '')).then(r => { closedDays = r.closedDays; renderGrid(); });
+
+      // earliest bookable: tomorrow, skipping closed days
       function minDate() {
         const d = new Date();
         d.setDate(d.getDate() + 1);
-        if (d.getDay() === 0) d.setDate(d.getDate() + 1);
+        for (let i = 0; i < 7 && isClosed(toYMD(d)); i++) d.setDate(d.getDate() + 1);
         return toYMD(d);
       }
 
@@ -724,10 +730,10 @@
           const ymd  = toYMD(new Date(year, month, d));
           const dow  = new Date(year, month, d).getDay(); // 0=Sun
           const isPast   = ymd < min;
-          const isSun    = dow === 0;
+          const isShut   = isClosed(ymd);
           const isToday  = ymd === todayYMD;
           const isSelected = ymd === selYMD;
-          const disabled = isPast || isSun;
+          const disabled = isPast || isShut;
 
           const btn = document.createElement('button');
           btn.type = 'button';

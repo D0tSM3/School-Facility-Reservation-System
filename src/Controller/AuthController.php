@@ -8,6 +8,7 @@ use CampusRoom\Core\Auth;
 use CampusRoom\Core\Mailer;
 use CampusRoom\Core\Recaptcha;
 use CampusRoom\Core\Response;
+use CampusRoom\Repository\ReservationRepository;
 use CampusRoom\Repository\UserRepository;
 use PDOException;
 
@@ -27,6 +28,13 @@ class AuthController
     public function __construct()
     {
         $this->users = new UserRepository();
+    }
+
+    /** Start the session and record the login in the audit log. */
+    private function startSession(array $user): void
+    {
+        Auth::login($user['user_id'], $user['role']);
+        (new ReservationRepository())->insertLog($user['user_id'], "{$user['role']} logged in");
     }
 
     /**
@@ -210,7 +218,7 @@ class AuthController
             exit;
         }
 
-        Auth::login($user['user_id'], $user['role']);
+        $this->startSession($user);
 
         unset($user['password_hash'], $user['otp_code'], $user['otp_expires_at']);
         Response::json($user);
@@ -237,7 +245,7 @@ class AuthController
 
         // Already verified — just log in (user may have submitted twice)
         if ((bool)$user['is_verified'] && empty($user['otp_code'])) {
-            Auth::login($user['user_id'], $user['role']);
+            $this->startSession($user);
             unset($user['password_hash'], $user['otp_code'], $user['otp_expires_at']);
             Response::json($user);
         }
@@ -256,7 +264,7 @@ class AuthController
         // Mark verified, clear OTP, and log in
         $this->users->markVerified($user['user_id']);
 
-        Auth::login($user['user_id'], $user['role']);
+        $this->startSession($user);
 
         $fresh = $this->users->findById($user['user_id']);
         unset($fresh['password_hash'], $fresh['otp_code'], $fresh['otp_expires_at']);

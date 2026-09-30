@@ -215,7 +215,7 @@
         </div>
 
         <!-- 4-Column Metric Cards (Act as Tabs) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" id="staffTabsContainer">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8" id="staffTabsContainer">
           
           <!-- Card 1: Pending Approvals -->
           <button type="button" id="tab-pending" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-all cursor-pointer relative overflow-hidden group focus:outline-none">
@@ -247,6 +247,16 @@
             <p class="text-xs font-semibold text-gray-500">Cancellation Requests</p>
           </button>
 
+          <!-- Card: Conflict Override Requests -->
+          <button type="button" id="tab-overrides" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-all cursor-pointer relative overflow-hidden group focus:outline-none">
+            <div class="absolute bottom-0 left-0 right-0 h-1 bg-violet-500 opacity-0 group-[.active-tab]:opacity-100 transition-opacity"></div>
+            <div class="w-12 h-12 rounded-xl bg-violet-50 group-[.active-tab]:bg-violet-500 flex items-center justify-center text-violet-500 group-[.active-tab]:text-white mb-4 transition-colors">
+              <span class="material-symbols-outlined text-[24px]">priority_high</span>
+            </div>
+            <p class="text-4xl font-extrabold text-gray-900 mb-2 leading-none" id="override-badge-count">0</p>
+            <p class="text-xs font-semibold text-gray-500">Override Requests</p>
+          </button>
+
           <!-- Card 4: Facility Status -->
           <button type="button" id="tab-maintenance" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-all cursor-pointer relative overflow-hidden group focus:outline-none">
             <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500 opacity-0 group-[.active-tab]:opacity-100 transition-opacity"></div>
@@ -274,6 +284,10 @@
         
         <div id="view-cancels" class="hidden space-y-4 mb-8">
             <div class="p-8 text-center text-gray-500 bg-white border border-gray-100 rounded-2xl shadow-sm text-sm">Loading cancellations...</div>
+        </div>
+
+        <div id="view-overrides" class="hidden space-y-4 mb-8">
+            <div class="p-8 text-center text-gray-500 bg-white border border-gray-100 rounded-2xl shadow-sm text-sm">Loading override requests...</div>
         </div>
         
         <div id="view-all" class="hidden space-y-4 mb-8">

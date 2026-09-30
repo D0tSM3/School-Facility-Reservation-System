@@ -5,7 +5,7 @@
  * staff dispatch queue (staff-queue.html):
  *
  *   window.CampusRoomLogArchive.open(reservationId)   per-booking timeline
- *   window.CampusRoomLogArchive.openGlobal()          Staff/Admin audit search
+ *   window.CampusRoomLogArchive.openGlobal()          Admin audit search
  *   window.CampusRoomLogArchive.close()
  *
  * Load order on a page:

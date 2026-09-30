@@ -94,8 +94,9 @@ class RoomController
 
     // ---------------------------------------------------------------
     // Staff/Admin: PATCH /api/rooms/{id}
-    //   status    (Available|Maintenance) -> Staff or Admin
-    //   is_active (decommission)          -> Admin only
+    //   status    (Available|Maintenance)             -> Staff or Admin
+    //   is_active (decommission)                      -> Admin only
+    //   name, capacity, floor, room_type (details)    -> Admin only
     // ---------------------------------------------------------------
 
     public function update(string $roomId): never
@@ -104,6 +105,11 @@ class RoomController
 
         $role = (string) Auth::role();
         $body = $this->jsonBody();
+
+        $details = $this->roomDetails($body);
+        if ($details !== [] && $role !== 'Admin') {
+            Response::error('Only an Admin can edit room details.', 403);
+        }
 
         $status = isset($body['status']) ? trim((string) $body['status']) : null;
 
@@ -129,13 +135,22 @@ class RoomController
             Response::error('Room not found.', 404);
         }
 
-        $room = $this->rooms->update($roomId, $status, $isActive);
+        $room = $this->rooms->update($roomId, $status, $isActive, $details);
         if ($room === null) {
             Response::error('Room not found.', 404);
         }
 
         // Audit log: actual actor role + room NAME (the log archive shows this verbatim).
         $parts = [];
+        $changed = [];
+        foreach ($details as $field => $value) {
+            if ((string) $before[$field] !== (string) $value) {
+                $changed[] = "{$field} {$before[$field]} → {$value}";
+            }
+        }
+        if ($changed !== []) {
+            $parts[] = "{$role} edited {$before['name']}: " . implode(', ', $changed);
+        }
         if ($status !== null) {
             $parts[] = "{$role} set {$room['name']} to {$status}";
         }
@@ -203,6 +218,47 @@ class RoomController
     // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------
+
+    /**
+     * The room-detail fields present in a PATCH body, validated with the same
+     * rules as store(). Absent fields are left out; an invalid one ends the
+     * request with 422.
+     *
+     * @return array<string, string|int>
+     */
+    private function roomDetails(array $body): array
+    {
+        $details = [];
+
+        if (array_key_exists('name', $body)) {
+            $name = trim((string) $body['name']);
+            if ($name === '') {
+                Response::error('name cannot be empty.', 422);
+            }
+            $details['name'] = $name;
+        }
+        if (array_key_exists('capacity', $body)) {
+            if (!is_numeric($body['capacity']) || (int) $body['capacity'] <= 0) {
+                Response::error('capacity must be a positive integer.', 422);
+            }
+            $details['capacity'] = (int) $body['capacity'];
+        }
+        if (array_key_exists('floor', $body)) {
+            if ($body['floor'] === '' || !is_numeric($body['floor'])) {
+                Response::error('floor must be a number.', 422);
+            }
+            $details['floor'] = (int) $body['floor'];
+        }
+        if (array_key_exists('room_type', $body)) {
+            $roomType = trim((string) $body['room_type']);
+            if ($roomType === '') {
+                Response::error('room_type cannot be empty.', 422);
+            }
+            $details['room_type'] = $roomType;
+        }
+
+        return $details;
+    }
 
     private function jsonBody(): array
     {

@@ -8,6 +8,7 @@ use CampusRoom\Core\Auth;
 use CampusRoom\Core\DateTimeHelper;
 use CampusRoom\Core\Response;
 use CampusRoom\Core\ReservationValidator;
+use CampusRoom\Repository\ConflictOverrideRepository;
 use CampusRoom\Repository\ReservationRepository;
 use PDOException;
 
@@ -148,8 +149,63 @@ class ReservationController
     {
         Auth::requireRole(['Customer']);
 
-        $body = $this->jsonBody();
+        [
+            'room_id' => $roomId, 'purpose' => $purpose, 'category' => $category,
+            'equipment_notes' => $equipmentNotes, 'start_time' => $startTime, 'end_time' => $endTime,
+        ] = $this->bookingRequest($this->jsonBody());
 
+        // Different dates = a multi-day booking: start_time's date to
+        // end_time's date, using start_time's clock to end_time's clock as the
+        // window on every one of those days.
+        if (substr($startTime, 0, 10) !== substr($endTime, 0, 10)) {
+            $this->storeSeries($roomId, $purpose, $category, $equipmentNotes, $startTime, $endTime);
+        }
+
+        $error = ReservationValidator::check($roomId, $startTime, $endTime);
+        if ($error !== null) {
+            $this->conflictError($error, $roomId, $startTime, $endTime);
+        }
+
+        try {
+            $reservation = $this->reservations->create(
+                Auth::userId(),
+                $roomId,
+                $purpose,
+                $startTime,
+                $endTime,
+                $equipmentNotes !== '' ? $equipmentNotes : null,
+                $category
+            );
+        } catch (PDOException $e) {
+            // Fallback in case of race condition caught by the DB trigger
+            if ($e->getCode() === '45000') {
+                Response::error(
+                    'Scheduling Collision: Room is already booked or pending during this time window.',
+                    409
+                );
+            }
+            throw $e;
+        }
+
+        // The booking's audit trail now starts at submission, not approval.
+        $this->reservations->insertLog(
+            Auth::userId(),
+            'Reservation submitted by requester',
+            $reservation['reservation_id']
+        );
+
+        Response::json($reservation, 201);
+    }
+
+    /**
+     * The fields of a new booking request (POST /api/reservations and POST
+     * /api/conflict-override-requests share them), validated and normalised.
+     * Ends the request with 422 on the first problem.
+     *
+     * @return array{room_id: string, purpose: string, category: string, equipment_notes: string, start_time: string, end_time: string}
+     */
+    private function bookingRequest(array $body): array
+    {
         $roomId    = trim((string) ($body['room_id']    ?? ''));
         $purpose   = trim((string) ($body['purpose']    ?? ''));
         $startTime = trim((string) ($body['start_time'] ?? ''));
@@ -194,23 +250,162 @@ class ReservationController
             Response::error('The start time must be in the future.', 422);
         }
 
-        $error = ReservationValidator::check($roomId, $startTime, $endTime);
+        return [
+            'room_id'         => $roomId,
+            'purpose'         => $purpose,
+            'category'        => $category,
+            'equipment_notes' => $equipmentNotes,
+            'start_time'      => $startTime,
+            'end_time'        => $endTime,
+        ];
+    }
+
+    /**
+     * The approved booking that alone stands in the way of this request, or
+     * null. "Alone" means the request passes every other rule (closed day,
+     * hours, holiday, class, Pending bookings) once Approved bookings are
+     * ignored — only then can staff resolve it by moving that booking.
+     * start/end follow the POST convention: dates = range, clocks = daily window.
+     */
+    private function overridableConflict(string $roomId, string $startTime, string $endTime): ?array
+    {
+        $startDate  = substr($startTime, 0, 10);
+        $endDate    = substr($endTime, 0, 10);
+        $dailyStart = substr($startTime, 11);
+        $dailyEnd   = substr($endTime, 11);
+
+        if (ReservationValidator::checkRange($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, [], ['Pending']) !== null) {
+            return null;
+        }
+        $conflict = ReservationValidator::findApprovedConflict($roomId, $startDate, $endDate, $dailyStart, $dailyEnd);
+
+        // Nobody overrides their own booking; they'd move it instead.
+        if ($conflict === null || $conflict['customer_id'] === Auth::userId()) {
+            return null;
+        }
+        return $conflict;
+    }
+
+    /**
+     * End a booking request with 409, telling the client whether the customer
+     * may file a conflict override request instead. Only the clashing time is
+     * shared, never whose booking it is.
+     */
+    private function conflictError(string $error, string $roomId, string $startTime, string $endTime): never
+    {
+        $conflict = $this->overridableConflict($roomId, $startTime, $endTime);
+        Response::error($error, 409, [
+            'override_eligible' => $conflict !== null,
+            'conflict'          => $conflict === null ? null : [
+                'start_time' => $conflict['start_time'],
+                'end_time'   => $conflict['end_time'],
+            ],
+        ]);
+    }
+
+    // ---------------------------------------------------------------
+    // Customer: POST /api/conflict-override-requests
+    // Same body as POST /api/reservations plus `reason`. Accepted only when
+    // the slot is blocked solely by another customer's Approved booking.
+    // ---------------------------------------------------------------
+
+    public function requestOverride(): never
+    {
+        Auth::requireRole(['Customer']);
+
+        $body    = $this->jsonBody();
+        $request = $this->bookingRequest($body);
+
+        $reason = trim((string) ($body['reason'] ?? ''));
+        if ($reason === '') {
+            Response::error('Please explain why this booking is urgent.', 422);
+        }
+        if (mb_strlen($reason) > 500) {
+            Response::error('reason must be 500 characters or fewer.', 422);
+        }
+
+        $startDate = substr($request['start_time'], 0, 10);
+        $endDate   = substr($request['end_time'], 0, 10);
+        $error     = ReservationValidator::checkRange(
+            $request['room_id'], $startDate, $endDate,
+            substr($request['start_time'], 11), substr($request['end_time'], 11)
+        );
+        if ($error === null) {
+            Response::error('This slot is free. Submit a normal reservation request instead.', 422);
+        }
+
+        // The conflicting booking is worked out here, never taken from the client.
+        $conflict = $this->overridableConflict($request['room_id'], $request['start_time'], $request['end_time']);
+        if ($conflict === null) {
+            Response::error("An override can't resolve this: {$error}", 409);
+        }
+
+        $overrides = new ConflictOverrideRepository();
+        if ($overrides->hasPendingFor(Auth::userId(), $conflict['reservation_id'])) {
+            Response::error('You already have an override request awaiting review for this slot.', 409);
+        }
+
+        $override = $overrides->create(
+            Auth::userId(),
+            $request['room_id'],
+            $request['start_time'],
+            $request['end_time'],
+            $request['purpose'],
+            $request['category'],
+            $request['equipment_notes'] !== '' ? $request['equipment_notes'] : null,
+            $reason,
+            $conflict['reservation_id']
+        );
+
+        // Logged against the booking it targets, so that booking's history shows it.
+        $this->reservations->insertLog(
+            Auth::userId(),
+            'Conflict override requested by another requester',
+            $conflict['reservation_id']
+        );
+
+        Response::json($override, 201);
+    }
+
+    // ---------------------------------------------------------------
+    // Customer: GET /api/conflict-override-requests/mine
+    // ---------------------------------------------------------------
+
+    public function myOverrides(): never
+    {
+        Auth::requireRole(['Customer']);
+        Response::json((new ConflictOverrideRepository())->findByRequester(Auth::userId()));
+    }
+
+    /**
+     * Create one Pending row per day of a multi-day booking, all sharing a
+     * series_id, in a single transaction. Responds with the first day's row
+     * plus the whole series under `series`.
+     */
+    private function storeSeries(
+        string $roomId,
+        string $purpose,
+        string $category,
+        string $equipmentNotes,
+        string $startTime,
+        string $endTime
+    ): never {
+        $startDate   = substr($startTime, 0, 10);
+        $endDate     = substr($endTime, 0, 10);
+        $dailyStart  = substr($startTime, 11);
+        $dailyEnd    = substr($endTime, 11);
+
+        $error = ReservationValidator::checkRange($roomId, $startDate, $endDate, $dailyStart, $dailyEnd);
         if ($error !== null) {
-            Response::error($error, 409);
+            $this->conflictError($error, $roomId, $startTime, $endTime);
         }
 
         try {
-            $reservation = $this->reservations->create(
-                Auth::userId(),
-                $roomId,
-                $purpose,
-                $startTime,
-                $endTime,
-                $equipmentNotes !== '' ? $equipmentNotes : null,
-                $category
+            $rows = $this->createBookingRows(
+                Auth::userId(), $roomId, $purpose, $category,
+                $equipmentNotes !== '' ? $equipmentNotes : null, $startTime, $endTime
             );
         } catch (PDOException $e) {
-            // Fallback in case of race condition caught by the DB trigger
             if ($e->getCode() === '45000') {
                 Response::error(
                     'Scheduling Collision: Room is already booked or pending during this time window.',
@@ -220,14 +415,230 @@ class ReservationController
             throw $e;
         }
 
-        // The booking's audit trail now starts at submission, not approval.
-        $this->reservations->insertLog(
-            Auth::userId(),
-            'Reservation submitted by requester',
-            $reservation['reservation_id']
+        $count = count($rows);
+        foreach ($rows as $i => $row) {
+            $this->reservations->insertLog(
+                Auth::userId(),
+                'Reservation submitted by requester (day ' . ($i + 1) . " of $count)",
+                $row['reservation_id']
+            );
+        }
+
+        Response::json($rows[0] + ['series' => $rows], 201);
+    }
+
+    /**
+     * Insert the Pending row(s) for a booking in one transaction: one row when
+     * start and end share a date, otherwise one per day sharing a series_id
+     * (dates = range, clocks = daily window). Validation is the caller's job.
+     * Throws PDOException (45000 = the double-booking trigger) on a clash.
+     *
+     * @return array[] the created rows, earliest first
+     */
+    private function createBookingRows(
+        string $customerId,
+        string $roomId,
+        string $purpose,
+        string $category,
+        ?string $equipmentNotes,
+        string $startTime,
+        string $endTime
+    ): array {
+        $startDate = substr($startTime, 0, 10);
+        $endDate   = substr($endTime, 0, 10);
+
+        if ($startDate === $endDate) {
+            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $equipmentNotes, $category)];
+        }
+
+        $days       = ReservationValidator::datesBetween($startDate, $endDate) ?? [];
+        $dailyStart = substr($startTime, 11);
+        $dailyEnd   = substr($endTime, 11);
+        $seriesId   = $this->reservations->newSeriesId();
+
+        return $this->reservations->transaction(function () use ($days, $customerId, $roomId, $purpose, $category, $equipmentNotes, $dailyStart, $dailyEnd, $seriesId): array {
+            $rows = [];
+            foreach ($days as $day) {
+                $rows[] = $this->reservations->create(
+                    $customerId, $roomId, $purpose, "$day $dailyStart", "$day $dailyEnd",
+                    $equipmentNotes, $category, $seriesId
+                );
+            }
+            return $rows;
+        });
+    }
+
+    // ---------------------------------------------------------------
+    // Staff/Admin: GET /api/conflict-override-requests[?status=Pending]
+    // ---------------------------------------------------------------
+
+    public function overrideIndex(): never
+    {
+        Auth::requireRole(['Staff', 'Admin']);
+
+        $status = $_GET['status'] ?? null;
+        if ($status !== null && !in_array($status, ['Pending', 'Approved', 'Rejected'], true)) {
+            Response::error('status must be one of: Pending, Approved, Rejected', 422);
+        }
+
+        Response::json((new ConflictOverrideRepository())->findAll($status));
+    }
+
+    // ---------------------------------------------------------------
+    // Staff/Admin: PATCH /api/conflict-override-requests/{id}
+    //   { status: 'Rejected', staff_comment? }
+    //   { status: 'Approved', staff_comment?, move_start_time, move_end_time }
+    //
+    // Approving files a move request on the conflicting booking (to the
+    // time staff chose). The requester's reservation is created, Pending,
+    // only when that move is approved — see resolveMoveRequest(). Until
+    // then both would hold the same slot, which the double-booking trigger
+    // forbids.
+    // ---------------------------------------------------------------
+
+    public function resolveOverride(string $requestId): never
+    {
+        Auth::requireRole(['Staff', 'Admin']);
+
+        $body         = $this->jsonBody();
+        $status       = trim((string) ($body['status'] ?? ''));
+        $staffComment = trim((string) ($body['staff_comment'] ?? ''));
+
+        if (!in_array($status, ['Approved', 'Rejected'], true)) {
+            Response::error('status must be Approved or Rejected.', 422);
+        }
+        if (mb_strlen($staffComment) > 500) {
+            Response::error('staff_comment must be 500 characters or fewer.', 422);
+        }
+
+        $overrides = new ConflictOverrideRepository();
+        $override  = self::isUuid($requestId) ? $overrides->findById($requestId) : null;
+        if ($override === null) {
+            Response::error('Override request not found.', 404);
+        }
+        if ($override['status'] !== 'Pending') {
+            Response::error("This override request is already {$override['status']}.", 422);
+        }
+
+        $conflictId = $override['conflicting_reservation_id'];
+
+        if ($status === 'Rejected') {
+            $updated = $overrides->decide($requestId, 'Rejected', Auth::userId(), $staffComment !== '' ? $staffComment : null);
+            $this->reservations->insertLog(Auth::userId(), 'Conflict override request rejected', $conflictId);
+            Response::json($updated);
+        }
+
+        // --- Approve: propose moving the conflicting booking out of the way ---
+        $conflict = $this->reservations->findById($conflictId);
+        if ($conflict === null || $conflict['status'] !== 'Approved') {
+            Response::error(
+                'The conflicting booking is no longer approved' . ($conflict ? " ({$conflict['status']})" : '')
+                . ', so there is nothing to move. Reject this override; the requester can book the slot normally.',
+                409
+            );
+        }
+        if ($this->reservations->hasPendingMoveRequest($conflictId)) {
+            Response::error('The conflicting booking already has a move request awaiting review. Resolve that first.', 409);
+        }
+
+        $moveStart = DateTimeHelper::toMysqlDateTime(trim((string) ($body['move_start_time'] ?? '')));
+        $moveEnd   = DateTimeHelper::toMysqlDateTime(trim((string) ($body['move_end_time'] ?? '')));
+        if ($moveStart === null || $moveEnd === null) {
+            Response::error('Choose where to move the conflicting booking: move_start_time and move_end_time are required.', 422);
+        }
+        if (strtotime($moveStart) <= time()) {
+            Response::error('The new time for the conflicting booking must be in the future.', 422);
+        }
+
+        // Moving it into another part of the requested slot would free nothing.
+        $days = ReservationValidator::datesBetween(substr($override['start_time'], 0, 10), substr($override['end_time'], 0, 10)) ?? [];
+        $moveDay = substr($moveStart, 0, 10);
+        if (in_array($moveDay, $days, true)
+            && substr($moveStart, 11) < substr($override['end_time'], 11)
+            && substr($moveEnd, 11) > substr($override['start_time'], 11)) {
+            Response::error('That new time still overlaps the slot being requested. Pick a time outside it.', 422);
+        }
+
+        $error = ReservationValidator::check($conflict['room_id'], $moveStart, $moveEnd, $conflictId);
+        if ($error !== null) {
+            Response::error("The conflicting booking can't move there: {$error}", 409);
+        }
+
+        $updated = $this->reservations->transaction(function () use ($overrides, $requestId, $conflictId, $moveStart, $moveEnd, $staffComment): array {
+            $move = $this->reservations->createMoveRequest(
+                $conflictId,
+                $moveStart,
+                $moveEnd,
+                'Staff proposed this move so an urgent request can use the original time slot.'
+            );
+            return $overrides->decide(
+                $requestId, 'Approved', Auth::userId(),
+                $staffComment !== '' ? $staffComment : null,
+                $move['request_id'], 'Awaiting move'
+            ) ?? [];
+        });
+
+        $this->reservations->insertLog(Auth::userId(), 'Move proposed by staff for a conflict override request', $conflictId);
+
+        Response::json($updated);
+    }
+
+    /**
+     * Finish an approved override once its move request is decided:
+     * approved -> create the requester's Pending reservation(s) in the freed
+     * slot; rejected -> record that the slot stays with its holder. Returns
+     * a short note for staff, or null if this move wasn't override-driven.
+     */
+    private function settleOverrideAfterMove(string $moveRequestId, string $moveStatus, ?string $staffComment): ?string
+    {
+        $overrides = new ConflictOverrideRepository();
+        $override  = $overrides->findAwaitingMove($moveRequestId);
+        if ($override === null) {
+            return null;
+        }
+
+        if ($moveStatus === 'Rejected') {
+            $overrides->setOutcome($override['request_id'], 'Move rejected', $staffComment);
+            return 'The linked override request was not fulfilled: the slot stays with its current holder.';
+        }
+
+        $error = ReservationValidator::checkRange(
+            $override['room_id'],
+            substr($override['start_time'], 0, 10),
+            substr($override['end_time'], 0, 10),
+            substr($override['start_time'], 11),
+            substr($override['end_time'], 11)
         );
 
-        Response::json($reservation, 201);
+        if ($error === null) {
+            try {
+                $rows = $this->createBookingRows(
+                    $override['requested_by'], $override['room_id'], $override['purpose'], $override['category'],
+                    $override['equipment_notes'], $override['start_time'], $override['end_time']
+                );
+            } catch (PDOException $e) {
+                if ($e->getCode() !== '45000') {
+                    throw $e;
+                }
+                $error = 'Room is already booked or pending during this time window.';
+            }
+        }
+
+        if ($error !== null) {
+            $overrides->setOutcome($override['request_id'], 'Booking failed', $error);
+            return "The move went through, but the override booking couldn't be created: {$error}";
+        }
+
+        $overrides->setOutcome($override['request_id'], 'Booked', null, $rows[0]['reservation_id']);
+        foreach ($rows as $row) {
+            $this->reservations->insertLog(Auth::userId(), 'Reservation created from an approved conflict override request', $row['reservation_id']);
+        }
+        return 'The override requester\'s booking was created and is now in the Pending queue.';
+    }
+
+    private static function isUuid(string $value): bool
+    {
+        return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $value) === 1;
     }
 
     // ---------------------------------------------------------------
@@ -249,6 +660,12 @@ class ReservationController
         $existing = $this->reservations->findById($reservationId);
         if ($existing === null) {
             Response::error('Reservation not found.', 404);
+        }
+
+        // Approving or rejecting one day of a multi-day booking decides the
+        // whole booking. Completed stays per day: each day finishes on its own.
+        if ($existing['series_id'] !== null && $status !== 'Completed') {
+            $this->updateSeriesStatus($existing, $status);
         }
 
         // A booking that was clean when it was requested can have become
@@ -297,6 +714,67 @@ class ReservationController
         );
 
         Response::json($reservation);
+    }
+
+    /**
+     * Approve or reject every day of $existing's series that is still in the
+     * same status as $existing (a day the customer already cancelled is left
+     * alone). Approval re-validates each day first, ignoring the series' own
+     * rows so it can't collide with itself. Responds with $existing's updated
+     * row plus the whole series under `series`.
+     */
+    private function updateSeriesStatus(array $existing, string $status): never
+    {
+        $series  = $this->reservations->findSeries($existing['series_id']);
+        $targets = array_values(array_filter(
+            $series,
+            static fn(array $row): bool => $row['status'] === $existing['status'] && $row['status'] !== $status
+        ));
+        $seriesIds = array_column($series, 'reservation_id');
+
+        if ($status === 'Approved') {
+            foreach ($targets as $row) {
+                $day   = substr($row['start_time'], 0, 10);
+                $error = ReservationValidator::checkRange(
+                    $row['room_id'],
+                    $day,
+                    $day,
+                    substr($row['start_time'], 11, 8),
+                    substr($row['end_time'], 11, 8),
+                    $seriesIds
+                );
+                if ($error !== null) {
+                    Response::error($error, 409);
+                }
+            }
+        }
+
+        try {
+            $this->reservations->transaction(function () use ($targets, $status): void {
+                foreach ($targets as $row) {
+                    $this->reservations->updateStatus($row['reservation_id'], $status, Auth::userId());
+                }
+            });
+        } catch (PDOException $e) {
+            if ($e->getCode() === '45000') {
+                Response::error(
+                    'Scheduling Collision: Room is already booked or pending during this time window.',
+                    409
+                );
+            }
+            throw $e;
+        }
+
+        foreach ($targets as $row) {
+            $this->reservations->insertLog(
+                Auth::userId(),
+                "Reservation status changed to {$status} (multi-day booking)",
+                $row['reservation_id']
+            );
+        }
+
+        $updated = $this->reservations->findById($existing['reservation_id']);
+        Response::json(($updated ?? $existing) + ['series' => $this->reservations->findSeries($existing['series_id'])]);
     }
 
     // ---------------------------------------------------------------
@@ -840,6 +1318,12 @@ class ReservationController
             "Move request {$status}",
             $existing['reservation_id']
         );
+
+        // A move staff proposed for a conflict override: now book (or not) the requester.
+        $overrideNote = $this->settleOverrideAfterMove($requestId, $status, $staffComment === '' ? null : $staffComment);
+        if ($overrideNote !== null && is_array($request)) {
+            $request['override_note'] = $overrideNote;
+        }
 
         Response::json($request);
     }

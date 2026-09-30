@@ -58,7 +58,9 @@
 
   /** [icon, label, blurb, target article id] */
   const AT_A_GLANCE = [
-    ['schedule', 'Open 7:30 AM – 9:00 PM', 'Monday to Saturday. Closed Sundays and on listed holidays.', 'v'],
+    // No clock times here: hours and closed days are set in System Settings,
+    // and the booking form shows the current ones.
+    ['schedule', 'Open during set hours', 'Hours and closed days are set in System Settings. Closed on listed holidays.', 'v'],
     ['event_busy', 'Cancelling an approved booking', 'File a Cancellation Request — and not on the day itself.', 'x'],
     ['edit_calendar', 'Changing the date or time', 'File a Move Request. One open request at a time.', 'ix'],
     ['school', 'Classes always win', 'A room in class cannot be booked during that slot.', 'vi'],

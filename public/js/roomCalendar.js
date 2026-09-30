@@ -7,7 +7,14 @@
  *   roomId       room whose schedule is shown
  *   initialDate  'YYYY-MM-DD' the student is booking; the calendar opens on
  *                that date's week and highlights its column
+ *   initialEndDate 'YYYY-MM-DD' last day of a multi-day range (optional);
+ *                every column from initialDate to it is highlighted
  *   minDate      'YYYY-MM-DD' earliest bookable day; earlier days are greyed
+ *   rules        { open, close, closedDays } business hours / closed days
+ *                (optional; otherwise read from GET api/config)
+ *
+ * Multi-day bookings arrive as one reservation per day sharing a series_id;
+ * renderGrid() joins those days into one continuous bar.
  */
 class RoomCalendar {
   constructor(config) {
@@ -15,6 +22,7 @@ class RoomCalendar {
     this.roomId = config.roomId;
     this.baseUri = window.location.pathname.replace(/[^\/]*$/, '');
     this.selectedDate = config.initialDate || '';
+    this.selectedEndDate = config.initialEndDate || this.selectedDate;
     this.minDate = config.minDate || '';
     this.requestSeq = 0;          // guards against out-of-order responses
     this.loadingTimer = null;     // delays the "Loading…" row so fast responses don't flash it
@@ -25,11 +33,8 @@ class RoomCalendar {
     const anchor = this.parseYMD(this.selectedDate) || this.parseYMD(this.minDate) || new Date();
     this.currentDate = this.mondayOf(anchor);
 
-    this.blocks = [];
-    for (let h = 6; h < 21; h++) {
-      this.blocks.push({ start: String(h).padStart(2, '0') + ':00', label: this.fmt12(String(h).padStart(2, '0') + ':00') });
-      this.blocks.push({ start: String(h).padStart(2, '0') + ':30', label: this.fmt12(String(h).padStart(2, '0') + ':30') });
-    }
+    const S = window.CampusSchedule;
+    this.buildBlocks(config.rules || (S ? S.DEFAULT_RULES : { open: '06:00', close: '21:00', closedDays: ['Sunday'] }));
 
     if (!this.container) {
       console.error('RoomCalendar: Container not found');
@@ -38,6 +43,26 @@ class RoomCalendar {
 
     this.renderLayout();
     this.loadData();
+
+    // No rules handed in: fetch the configured ones and redraw once they arrive.
+    if (!config.rules && S) S.loadRules(this.baseUri).then(r => this.setRules(r));
+  }
+
+  /** Time-axis rows (half hours, opening to closing) and the closed weekdays. */
+  buildBlocks(rules) {
+    this.rules = rules;
+    const marks = window.CampusSchedule
+      ? window.CampusSchedule.halfHours(rules.open, rules.close)
+      : [];
+    this.dayEnd = marks[marks.length - 1] || rules.close;
+    this.blocks = marks.slice(0, -1).map(t => ({ start: t, label: this.fmt12(t) }));
+  }
+
+  /** New business hours / closed days: rebuild the axis and redraw. */
+  setRules(rules) {
+    if (!rules) return;
+    this.buildBlocks(rules);
+    if (this.lastDates && this.lastData) this.renderGrid(this.lastDates, this.lastData);
   }
 
   // ---- date helpers ------------------------------------------------------
@@ -90,6 +115,7 @@ class RoomCalendar {
       return;
     }
     this.selectedDate = ymd;
+    if (!this.selectedEndDate || this.selectedEndDate < ymd) this.selectedEndDate = ymd;
     const monday = this.mondayOf(d);
     if (!force && this.formatDateYMD(monday) === this.formatDateYMD(this.currentDate)) {
       if (this.lastData) this.renderGrid(this.lastDates, this.lastData);   // just move the highlight
@@ -177,7 +203,7 @@ class RoomCalendar {
   loadData() {
     const dates = this.getDatesForWeek();
     const startStr = this.formatDateYMD(dates[0]);
-    const endStr = this.formatDateYMD(dates[5]);   // Saturday; Sunday is closed
+    const endStr = this.formatDateYMD(dates[6]);   // through Sunday: closed days are configurable
 
     const opts = { month: 'short', day: 'numeric' };
     const weekLabel = this.container.querySelector('.week-label');
@@ -263,6 +289,46 @@ class RoomCalendar {
     }
   }
 
+  /** Highlight every column from start to end ('YYYY-MM-DD', inclusive). */
+  setSelectionRange(start, end) {
+    this.selectedDate = start || '';
+    this.selectedEndDate = end && end >= this.selectedDate ? end : this.selectedDate;
+    if (this.lastDates && this.lastData) {
+      this.renderGrid(this.lastDates, this.lastData);
+    }
+  }
+
+  isInSelection(ymd) {
+    return !!this.selectedDate && ymd >= this.selectedDate && ymd <= (this.selectedEndDate || this.selectedDate);
+  }
+
+  /** 'YYYY-MM-DD' shifted by n days. */
+  addDays(ymd, n) {
+    const d = this.parseYMD(ymd);
+    d.setDate(d.getDate() + n);
+    return this.formatDateYMD(d);
+  }
+
+  /**
+   * Where a reservation sits in its multi-day series, from the rows loaded
+   * for this week: whether the same series continues on the day before /
+   * after, and the series' first and last loaded dates.
+   */
+  seriesPosition(r, reservations) {
+    if (!r.series_id) return null;
+    const dates = reservations
+      .filter(o => o.series_id === r.series_id)
+      .map(o => o.start_time.slice(0, 10))
+      .sort();
+    const day = r.start_time.slice(0, 10);
+    return {
+      hasPrev: dates.includes(this.addDays(day, -1)),
+      hasNext: dates.includes(this.addDays(day, 1)),
+      first: dates[0],
+      last: dates[dates.length - 1]
+    };
+  }
+
   renderGrid(dates, data) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -277,15 +343,18 @@ class RoomCalendar {
     dates.forEach((date, i) => {
       const ymd = this.formatDateYMD(date);
       const isToday = ymd === todayYMD;
-      const isSelected = ymd === this.selectedDate;
+      const isSelected = this.isInSelection(ymd);
       const th = document.createElement('th');
       th.dataset.date = ymd;
+      const isClosed = this.rules.closedDays.includes(dayNames[i]);
       th.className = 'py-2 px-1 text-center border-r border-gray-200 last:border-r-0 ' +
         (isSelected
           ? 'bg-[#7a1f2b] text-white'
-          : isToday
-            ? 'bg-[#f8f0f1] text-[#7a1f2b]'
-            : 'text-gray-700');
+          : isClosed
+            ? 'bg-gray-100 text-gray-400'
+            : isToday
+              ? 'bg-[#f8f0f1] text-[#7a1f2b]'
+              : 'text-gray-700');
       th.innerHTML = `
         <div class="text-[11px] font-bold uppercase tracking-wider">${days[i]}</div>
         <div class="text-[13px] font-semibold mt-0.5">${date.getDate()}</div>
@@ -302,8 +371,8 @@ class RoomCalendar {
       tr.className = 'border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors';
 
       const nextBlock = this.blocks[index + 1];
-      const blockEnd = nextBlock ? nextBlock.start : '21:00';
-      const endLabel = nextBlock ? nextBlock.label : '9:00 PM';
+      const blockEnd = nextBlock ? nextBlock.start : this.dayEnd;
+      const endLabel = nextBlock ? nextBlock.label : this.fmt12(this.dayEnd);
 
       // Time cell
       const tdTime = document.createElement('td');
@@ -318,11 +387,11 @@ class RoomCalendar {
       dates.forEach((date, i) => {
         const dateYMD = this.formatDateYMD(date);
         const dayName = dayNames[i];
-        const isSelected = dateYMD === this.selectedDate;
+        const isSelected = this.isInSelection(dateYMD);
         const beforeOpen = this.minDate && dateYMD < this.minDate;
 
-        // Sunday — single merged "Closed" cell
-        if (dayName === 'Sunday') {
+        // Closed day (System Configuration) — single merged "Closed" cell
+        if (this.rules.closedDays.includes(dayName)) {
           if (index === 0) {
             const td = document.createElement('td');
             td.rowSpan = this.blocks.length;
@@ -373,19 +442,43 @@ class RoomCalendar {
           });
 
         // Reservations
-        (data.reservations || [])
+        const reservations = data.reservations || [];
+        reservations
           .filter(r => r.start_time.startsWith(dateYMD) &&
                        overlaps(r.start_time.slice(11, 16), r.end_time.slice(11, 16)))
           .forEach(r => {
             const pending = r.status === 'Pending';
             td.className = td.className.replace(/bg-\S+/g, '') + (pending ? ' bg-amber-50 p-0.5' : ' bg-emerald-50 p-0.5');
-            td.appendChild(this.chip(
-              pending
-                ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                : 'bg-emerald-100 text-emerald-800 border border-emerald-200',
-              r.purpose, r.customer_name || r.status,
-              `${r.status}: ${r.purpose}, ${this.fmt12(r.start_time.slice(11, 16))} – ${this.fmt12(r.end_time.slice(11, 16))}`
-            ));
+
+            const colors = pending
+              ? 'bg-amber-100 text-amber-800 border-amber-200'
+              : 'bg-emerald-100 text-emerald-800 border-emerald-200';
+            const times = `${this.fmt12(r.start_time.slice(11, 16))} – ${this.fmt12(r.end_time.slice(11, 16))}`;
+            const pos = this.seriesPosition(r, reservations);
+
+            if (!pos) {
+              td.appendChild(this.chip(`${colors} border`, r.purpose, r.customer_name || r.status,
+                `${r.status}: ${r.purpose}, ${times}`));
+              return;
+            }
+
+            // One continuous bar across the series' days: square off and
+            // stretch over the column border on each side the series
+            // continues, and label only its first day in view.
+            const span = pos.first === pos.last ? '' :
+              ` (${this.parseYMD(pos.first).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ` +
+              `${this.parseYMD(pos.last).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} this week)`;
+            const shape = [
+              'border-y',
+              pos.hasPrev ? 'rounded-l-none border-l-0 -ml-[3px]' : 'border-l',
+              pos.hasNext ? 'rounded-r-none border-r-0 -mr-[3px]' : 'border-r'
+            ].join(' ');
+            const chip = this.chip(`${colors} ${shape}`,
+              pos.hasPrev ? ' ' : r.purpose,
+              pos.hasPrev ? '' : (r.customer_name || r.status) + ' · multi-day',
+              `${r.status}: ${r.purpose}, ${times} daily — multi-day booking${span}`);
+            chip.dataset.seriesId = r.series_id;
+            td.appendChild(chip);
           });
 
         tr.appendChild(td);

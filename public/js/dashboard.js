@@ -63,12 +63,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const qrCapacity = document.getElementById('qrCapacity');
   
 
-  const TIMES = [
-    '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30',
-    '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
-    '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
-    '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00'
-  ];
+  // Business hours and closed days (Admin > System Configuration, via
+  // GET api/config). Defaults until loaded; the server enforces the real ones.
+  const Schedule = window.CampusSchedule;
+  let rules = Schedule ? Schedule.DEFAULT_RULES : { open: '06:00', close: '21:00', closedDays: ['Sunday'] };
 
   function format12(time24) {
     const [h, m] = time24.split(':').map(Number);
@@ -77,20 +75,28 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${h12}:${m.toString().padStart(2, '0')} ${period}`;
   }
 
-  if (qrStartTime && qrEndTime) {
-    TIMES.slice(0, -1).forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t;
-      opt.textContent = format12(t);
-      qrStartTime.appendChild(opt);
-    });
+  /** Half-hour marks from opening to closing, e.g. ['06:00', '06:30', ... '21:00']. */
+  function timeMarks() {
+    return Schedule ? Schedule.halfHours(rules.open, rules.close) : [];
+  }
 
-    TIMES.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t;
-      opt.textContent = format12(t);
-      qrEndTime.appendChild(opt);
+  /** Rebuild both time selects from the current hours (keeps the placeholder option). */
+  function fillTimeOptions() {
+    const marks = timeMarks();
+    [[qrStartTime, marks.slice(0, -1)], [qrEndTime, marks.slice(1)]].forEach(([select, times]) => {
+      Array.from(select.options).forEach(opt => { if (opt.value) opt.remove(); });
+      times.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = format12(t);
+        select.appendChild(opt);
+      });
     });
+  }
+
+  if (qrStartTime && qrEndTime) {
+    fillTimeOptions();
+    if (Schedule) Schedule.loadRules(BASE).then(r => { rules = r; fillTimeOptions(); });
 
     qrStartTime.addEventListener('change', () => {
       const start = qrStartTime.value;
@@ -141,6 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
     submitQuickReserveBtn.addEventListener('click', () => {
       if (!qrDate.value || !qrStartTime.value || !qrEndTime.value || !qrCapacity.value) {
         qrErrorText.textContent = 'Please fill out all required fields.';
+        qrErrorBanner.classList.remove('hidden');
+        return;
+      }
+      if (Schedule && Schedule.isClosedDay(qrDate.value, rules.closedDays)) {
+        qrErrorText.textContent = `BPU is closed on ${Schedule.dayName(qrDate.value)}s. Please pick another day.`;
         qrErrorBanner.classList.remove('hidden');
         return;
       }

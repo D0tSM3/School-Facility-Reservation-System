@@ -205,11 +205,20 @@
               </div>
 
               <div class="flex flex-col space-y-2">
-                <label class="text-sm font-bold text-gray-800" for="resDate">Reservation Date <span class="text-red-500">*</span></label>
-                <div class="relative">
-                  <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-400">calendar_today</span>
-                  <input id="resDate" type="date" class="w-full pl-10 pr-4 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" required />
+                <span class="text-sm font-bold text-gray-800">Reservation Dates <span class="text-red-500">*</span></span>
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="relative">
+                    <label for="resDate" class="sr-only">Start date</label>
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase tracking-wider text-gray-400">From</span>
+                    <input id="resDate" type="date" class="w-full pl-12 pr-2 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" required />
+                  </div>
+                  <div class="relative">
+                    <label for="resEndDate" class="sr-only">End date</label>
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase tracking-wider text-gray-400">To</span>
+                    <input id="resEndDate" type="date" class="w-full pl-12 pr-2 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" required />
+                  </div>
                 </div>
+                <p id="dateRangeHint" class="text-xs text-gray-500">For one day, use the same date twice. The start and end times below apply to every day in the range.</p>
                 <p id="dateError" class="hidden text-xs font-semibold text-red-600"></p>
               </div>
             </div>
@@ -242,6 +251,7 @@
                 <label class="text-sm font-bold text-gray-800" for="startTime">Start Time <span class="text-red-500">*</span></label>
                 <div class="relative">
                   <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-400">login</span>
+                  <!-- Options below are a fallback; booking.js rebuilds them from the configured business hours. -->
                   <select id="startTime" class="w-full pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none" required>
                     <option value="">Select Start Time</option>
                     <option value="06:00">06:00 AM</option>
@@ -454,6 +464,7 @@
         const submitBtn = document.getElementById('bookingSubmitBtn');
         const roomSelect = document.getElementById('roomSelect');
         const resDate = document.getElementById('resDate');
+        const resEndDate = document.getElementById('resEndDate');
         const startTime = document.getElementById('startTime');
         const endTime = document.getElementById('endTime');
         const purposeInput = document.getElementById('purpose');
@@ -464,6 +475,7 @@
         function isFormReady() {
           if (roomSelect && !roomSelect.value) return false;
           if (resDate && !resDate.value) return false;
+          if (resEndDate && !resEndDate.value) return false;
           if (startTime && !startTime.value) return false;
           if (endTime && !endTime.value) return false;
           if (purposeInput && !purposeInput.value.trim()) return false;
@@ -492,7 +504,7 @@
           }
         }
 
-        const watchTargets = [roomSelect, resDate, startTime, endTime, purposeInput, policyBox];
+        const watchTargets = [roomSelect, resDate, resEndDate, startTime, endTime, purposeInput, policyBox];
         watchTargets.forEach(el => {
           if (!el) return;
           el.addEventListener('change', updateBtn);

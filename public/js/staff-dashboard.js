@@ -32,11 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabPending      = el('tab-pending');
   const tabMoves        = el('tab-moves');
   const tabCancels      = el('tab-cancels');
+  const tabOverrides    = el('tab-overrides');
   const tabAll          = el('tab-all');
   const tabMaintenance  = el('tab-maintenance');
   const viewPending     = el('view-pending');
   const viewMoves       = el('view-moves');
   const viewCancels     = el('view-cancels');
+  const viewOverrides   = el('view-overrides');
   const viewAll         = el('view-all');
   const viewAllList     = el('view-all-list');
   const viewMaintenance = el('view-maintenance');
@@ -45,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const pendingBadge     = el('pending-badge-count');
   const moveBadge        = el('move-badge-count');
   const cancelReqBadge   = el('cancel-badge-count');
+  const overrideBadge    = el('override-badge-count');
   const allBadge         = el('all-badge-count');
   const maintenanceBadge = el('maintenance-badge-count');
   const kpiPending       = el('kpi-pending-count');
@@ -114,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     rooms: [],
     moveRequests: [],
     cancelRequests: [],
+    overrideRequests: [],
     activeTab: 'pending',
     wingFilter: 'all',
     allStatusFilter: 'all',
@@ -285,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ['pending', tabPending, viewPending, 'Pending Approvals'],
       ['moves', tabMoves, viewMoves, 'Move Requests'],
       ['cancels', tabCancels, viewCancels, 'Cancellation Requests'],
+      ['overrides', tabOverrides, viewOverrides, 'Conflict Override Requests'],
       ['all', tabAll, viewAll, 'All Requests'],
       ['maintenance', tabMaintenance, viewMaintenance, 'Facility State Grid']
     ];
@@ -313,6 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (tabPending) tabPending.addEventListener('click', () => switchTab('pending'));
   if (tabMoves) tabMoves.addEventListener('click', () => switchTab('moves'));
   if (tabCancels) tabCancels.addEventListener('click', () => switchTab('cancels'));
+  if (tabOverrides) tabOverrides.addEventListener('click', () => switchTab('overrides'));
   if (tabAll) tabAll.addEventListener('click', () => switchTab('all'));
   if (tabMaintenance) tabMaintenance.addEventListener('click', () => switchTab('maintenance'));
 
@@ -390,7 +396,10 @@ document.addEventListener('DOMContentLoaded', () => {
       obj.purpose,
       obj.room_type,
       obj.customer_reason,
-      obj.staff_comment
+      obj.staff_comment,
+      obj.requester_name,
+      obj.requester_email,
+      obj.reason
     ];
     return fields.some(f => f && String(f).toLowerCase().includes(q));
   }
@@ -439,7 +448,9 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="flex items-center gap-2 mb-3">
                 <span class="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-bold tracking-wide border border-blue-100">Move REQ #${shortId(id)}</span>
                 <span class="text-xs text-gray-500 font-semibold">Ref: <a href="#" onclick="window.CampusRoomStaff.openDetailModal('${resId}')" class="text-[#7a1f2b] hover:underline">#${shortId(resId)}</a></span>
+                ${request.reason ? '<span class="px-2 py-1 rounded bg-violet-50 text-violet-700 text-[10px] font-bold uppercase tracking-wide border border-violet-100">Staff-proposed · override</span>' : ''}
               </div>
+              ${request.reason ? `<div class="text-xs text-gray-500">${escapeHtml(request.reason)} Approving it also books the override requester.</div>` : ''}
               <div class="flex flex-col md:flex-row gap-4 text-sm mt-3 items-stretch">
                  <div class="flex-1 p-4 bg-gray-50 rounded-xl border border-gray-100 relative">
                     <div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Current Booking</div>
@@ -511,6 +522,70 @@ document.addEventListener('DOMContentLoaded', () => {
       : emptyState('No pending cancellation requests.', 'assignment_turned_in');
 
     if (cancelReqBadge) cancelReqBadge.textContent = `${state.cancelRequests.length}`;
+  }
+
+  /** "Mar 10, 2031 · 9:00 AM – 11:00 AM", or a range "Mar 10 – Mar 12, 2031 · 9:00 AM – 11:00 AM daily". */
+  function formatWindow(start, end) {
+    const sameDay = String(start).slice(0, 10) === String(end).slice(0, 10);
+    const times = `${formatTime(start)} – ${formatTime(end)}`;
+    if (sameDay) return `${formatDay(start)} · ${times}`;
+    const s = parseDate(start);
+    const from = s ? s.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—';
+    return `${from} – ${formatDay(end)} · ${times} daily`;
+  }
+
+  /**
+   * A conflict override request: a customer wants a slot that another
+   * customer's Approved booking holds. Staff see who is asking and why, and
+   * both time ranges side by side — but not who holds the slot; the
+   * requester was never told that either.
+   */
+  function overrideCard(request) {
+    const id = escapeHtml(request.request_id);
+    return `
+      <div class="relative bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden transition-all hover:shadow-md mb-4" data-override-id="${id}">
+        <div class="p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-2 py-1 rounded bg-violet-50 text-violet-700 text-xs font-bold tracking-wide border border-violet-100">Override REQ #${shortId(id)}</span>
+              <h3 class="text-base font-bold text-gray-900 truncate">${escapeHtml(request.requester_name || 'Requester')}</h3>
+              ${request.requester_email ? `<span class="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold uppercase truncate">${escapeHtml(request.requester_email)}</span>` : ''}
+              ${request.category ? `<span class="px-2 py-0.5 rounded border border-gray-200 text-gray-500 text-xs">${escapeHtml(request.category)}</span>` : ''}
+            </div>
+            <div class="text-sm text-gray-700 mt-2">
+              <span class="font-semibold text-violet-700">Urgency reason:</span> ${escapeHtml(request.reason)}
+            </div>
+            <div class="text-xs text-gray-500 mt-1">Purpose: ${escapeHtml(request.purpose)}</div>
+            <div class="flex flex-col md:flex-row gap-4 text-sm mt-4 items-stretch">
+              <div class="flex-1 p-4 bg-violet-50 rounded-xl border border-violet-100">
+                <div class="text-[10px] font-bold text-violet-600 uppercase tracking-wider mb-1">Requested slot</div>
+                <div class="font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
+                <div class="text-xs text-gray-600 mt-1">${escapeHtml(formatWindow(request.start_time, request.end_time))}</div>
+              </div>
+              <div class="flex-1 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Conflicting booking (${escapeHtml(request.conflict_status || 'Approved')})</div>
+                <div class="font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
+                <div class="text-xs text-gray-600 mt-1">${escapeHtml(formatWindow(request.conflict_start_time, request.conflict_end_time))}</div>
+              </div>
+            </div>
+            <div class="text-xs text-gray-400 mt-2">Requested on ${formatDateTime(request.created_at)}</div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 shrink-0 border-t xl:border-t-0 border-gray-100 pt-4 xl:pt-0">
+            <button type="button" onclick="window.CampusRoomStaff.openOverrideModal('${id}')" class="px-6 py-2.5 text-sm font-bold text-white bg-violet-600 rounded-xl hover:bg-violet-700 transition-colors shadow-sm">Review Override</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderOverrides() {
+    if (!viewOverrides) return;
+
+    const overrides = state.overrideRequests.filter(matchSearch);
+    viewOverrides.innerHTML = overrides.length
+      ? overrides.map(overrideCard).join('')
+      : emptyState('No pending override requests.', 'verified');
+
+    if (overrideBadge) overrideBadge.textContent = `${state.overrideRequests.length}`;
   }
 
   function facilityCard(room) {
@@ -627,6 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPending();
     renderMoves();
     renderCancelRequests();
+    renderOverrides();
     renderAllRequests();
     renderFacilityFilter();
     renderFacilities();
@@ -647,23 +723,25 @@ document.addEventListener('DOMContentLoaded', () => {
     
     
 
-    const [reservations, rooms, moves, cancels] = await Promise.all([
+    const [reservations, rooms, moves, cancels, overrides] = await Promise.all([
       api('api/reservations'),
       api('api/rooms'),
       api('api/reservations/move-requests?status=Pending'),
-      api('api/reservations/cancel-requests?status=Pending')
+      api('api/reservations/cancel-requests?status=Pending'),
+      api('api/conflict-override-requests?status=Pending')
     ]);
 
     state.loading = false;
     
 
-    const failed = [reservations, rooms, moves, cancels].find((r) => !r.ok);
+    const failed = [reservations, rooms, moves, cancels, overrides].find((r) => !r.ok);
     if (failed && handleAuthFailure(failed)) return;
 
     if (reservations.ok) state.reservations = reservations.data || [];
     if (rooms.ok) state.rooms = rooms.data || [];
     if (moves.ok) state.moveRequests = moves.data || [];
     if (cancels.ok) state.cancelRequests = cancels.data || [];
+    if (overrides.ok) state.overrideRequests = overrides.data || [];
 
     renderAll();
 
@@ -708,6 +786,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewPending) viewPending.innerHTML = emptyState('Queue unavailable.', 'lock');
     if (viewMoves) viewMoves.innerHTML = '';
     if (viewCancels) viewCancels.innerHTML = '';
+    if (viewOverrides) viewOverrides.innerHTML = '';
     if (facilityGrid) facilityGrid.innerHTML = '';
     [batchApproveBtn, exportLogBtn].forEach((btn) => {
       if (btn) btn.disabled = true;
@@ -1328,7 +1407,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     closeMoveModal();
-    showToast(`Move request ${status.toLowerCase()}.`, 'success');
+    // A move proposed for a conflict override also books (or doesn't) the requester; say which.
+    const overrideNote = result.data && result.data.override_note;
+    showToast(`Move request ${status.toLowerCase()}.` + (overrideNote ? ` ${overrideNote}` : ''), 'success');
     await loadAll();
   }
 
@@ -1431,11 +1512,195 @@ document.addEventListener('DOMContentLoaded', () => {
   if (cancelReqApproveBtn) cancelReqApproveBtn.addEventListener('click', () => submitCancelReview('Approved'));
   if (cancelReqRejectBtn) cancelReqRejectBtn.addEventListener('click', () => submitCancelReview('Rejected'));
 
+  // ---------------------------------------------------------------
+  // Conflict override review modal
+  //
+  // Approve = propose moving the conflicting booking to a new time (a
+  // regular move request, reviewed later in Move Requests). When that move
+  // is approved, the requester's booking is created as Pending. Reject =
+  // optional comment the requester sees in My Reservations.
+  // ---------------------------------------------------------------
+
+  let overrideModal = null;
+
+  function buildOverrideModal() {
+    const wrap = document.createElement('div');
+    wrap.className = 'fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4';
+    wrap.setAttribute('role', 'dialog');
+    wrap.setAttribute('aria-modal', 'true');
+    wrap.setAttribute('aria-labelledby', 'overrideReviewTitle');
+    wrap.innerHTML = `
+      <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-start justify-between gap-3">
+          <h2 id="overrideReviewTitle" class="text-lg font-bold text-gray-900">Review override request</h2>
+          <button type="button" data-ov-close class="text-gray-400 hover:text-gray-600" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div data-ov-summary class="text-sm text-gray-700 space-y-1"></div>
+        <fieldset class="p-4 rounded-xl border border-violet-100 bg-violet-50/50 space-y-3">
+          <legend class="px-1 text-[11px] font-bold uppercase tracking-wider text-violet-700">If approving: move the conflicting booking to</legend>
+          <div class="grid grid-cols-3 gap-2">
+            <label class="flex flex-col gap-1 text-xs font-semibold text-gray-600 col-span-3 sm:col-span-1">Date
+              <input type="date" data-ov-date class="p-2 border border-gray-200 rounded-lg text-sm bg-white">
+            </label>
+            <label class="flex flex-col gap-1 text-xs font-semibold text-gray-600">Start
+              <input type="time" step="1800" data-ov-start class="p-2 border border-gray-200 rounded-lg text-sm bg-white">
+            </label>
+            <label class="flex flex-col gap-1 text-xs font-semibold text-gray-600">End
+              <input type="time" step="1800" data-ov-end class="p-2 border border-gray-200 rounded-lg text-sm bg-white">
+            </label>
+          </div>
+          <p data-ov-hint class="text-xs text-gray-500"></p>
+        </fieldset>
+        <label class="block text-sm font-semibold text-gray-800">Comment <span class="font-normal text-gray-400">(optional; the requester sees it)</span>
+          <textarea data-ov-comment rows="3" maxlength="500" class="mt-1 w-full p-3 border border-gray-200 rounded-xl text-sm"></textarea>
+        </label>
+        <p data-ov-error class="hidden text-sm font-semibold text-red-600" role="alert"></p>
+        <div class="flex flex-col sm:flex-row gap-2 sm:justify-end">
+          <button type="button" data-ov-close class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button type="button" data-ov-reject class="px-4 py-2 rounded-xl border border-red-200 text-sm font-semibold text-red-600 hover:bg-red-50">Reject</button>
+          <button type="button" data-ov-approve class="px-5 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700">Approve &amp; propose move</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+
+    const q = (sel) => wrap.querySelector(sel);
+    wrap.querySelectorAll('[data-ov-close]').forEach((b) => b.addEventListener('click', closeOverrideModal));
+    wrap.addEventListener('click', (e) => { if (e.target === wrap) closeOverrideModal(); });
+    q('[data-ov-approve]').addEventListener('click', () => submitOverrideReview('Approved'));
+    q('[data-ov-reject]').addEventListener('click', () => submitOverrideReview('Rejected'));
+    return { wrap, q, requestId: null };
+  }
+
+  function openOverrideModal(requestId) {
+    const request = state.overrideRequests.find((r) => r.request_id === requestId);
+    if (!request) return;
+    if (!overrideModal) overrideModal = buildOverrideModal();
+    const { wrap, q } = overrideModal;
+    overrideModal.requestId = requestId;
+
+    q('[data-ov-summary]').innerHTML = `
+      <div><span class="font-semibold text-gray-900">Requester:</span> ${escapeHtml(request.requester_name || '—')}</div>
+      <div><span class="font-semibold text-gray-900">Room:</span> ${escapeHtml(request.room_name || '—')}</div>
+      <div><span class="font-semibold text-gray-900">Requested:</span> ${escapeHtml(formatWindow(request.start_time, request.end_time))}</div>
+      <div><span class="font-semibold text-gray-900">Conflicting booking:</span> ${escapeHtml(formatWindow(request.conflict_start_time, request.conflict_end_time))}</div>
+      <div><span class="font-semibold text-violet-700">Urgency reason:</span> ${escapeHtml(request.reason || '—')}</div>`;
+    q('[data-ov-comment]').value = '';
+    q('[data-ov-error]').classList.add('hidden');
+    q('[data-ov-approve]').disabled = false;
+    q('[data-ov-reject]').disabled = false;
+    ['[data-ov-date]', '[data-ov-start]', '[data-ov-end]'].forEach((sel) => { q(sel).value = ''; });
+    q('[data-ov-hint]').textContent = 'Looking for the first free slot of the same length…';
+
+    wrap.classList.remove('hidden');
+    wrap.classList.add('flex');
+
+    suggestMoveSlot(request).then((slot) => {
+      if (overrideModal.requestId !== requestId) return;       // another card was opened meanwhile
+      if (!slot) {
+        q('[data-ov-hint]').textContent = 'No free slot of the same length in the next 14 days. Enter a time manually.';
+        return;
+      }
+      q('[data-ov-date]').value = slot.date;
+      q('[data-ov-start]').value = slot.start;
+      q('[data-ov-end]').value = slot.end;
+      q('[data-ov-hint]').textContent = 'Suggested: the first free slot of the same length in this room. You can change it; the server re-checks it.';
+    });
+  }
+
+  /**
+   * The first free window, the same length as the conflicting booking, in the
+   * same room: from its own day onward (up to 14 days), within business
+   * hours, skipping closed days and holidays, not inside the requested slot,
+   * and not in the past. null if none. Staff can always type another time.
+   */
+  async function suggestMoveSlot(request) {
+    const S = window.CampusSchedule;
+    if (!S) return null;
+    const rules = await S.loadRules(BASE);
+    const toMin = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+    const toHHMM = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+
+    const firstDay = String(request.conflict_start_time).slice(0, 10);
+    const length = toMin(S.hhmm(request.conflict_end_time)) - toMin(S.hhmm(request.conflict_start_time));
+    const last = new Date(firstDay + 'T00:00:00');
+    last.setDate(last.getDate() + 13);
+    const lastDay = last.getFullYear() + '-' + String(last.getMonth() + 1).padStart(2, '0') + '-' + String(last.getDate()).padStart(2, '0');
+
+    const data = await S.fetchRange(BASE, request.room_id, firstDay, lastDay);
+    if (!data || length <= 0) return null;
+
+    const requestedDays = S.datesBetween(String(request.start_time).slice(0, 10), String(request.end_time).slice(0, 10));
+    const reqStart = S.hhmm(request.start_time), reqEnd = S.hhmm(request.end_time);
+    const now = new Date();
+
+    for (const date of S.datesBetween(firstDay, lastDay)) {
+      if (S.isClosedDay(date, rules.closedDays)) continue;
+      for (let m = Math.ceil(toMin(rules.open) / 30) * 30; m + length <= toMin(rules.close); m += 30) {
+        const start = toHHMM(m), end = toHHMM(m + length);
+        if (new Date(`${date}T${start}:00`) <= now) continue;
+        if (requestedDays.includes(date) && start < reqEnd && end > reqStart) continue;
+        if (S.findConflicts(data, date, start, end, { excludeReservationId: request.conflicting_reservation_id }).length) continue;
+        return { date, start, end };
+      }
+    }
+    return null;
+  }
+
+  function closeOverrideModal() {
+    if (!overrideModal) return;
+    overrideModal.requestId = null;
+    overrideModal.wrap.classList.add('hidden');
+    overrideModal.wrap.classList.remove('flex');
+  }
+
+  async function submitOverrideReview(status) {
+    if (!overrideModal || !overrideModal.requestId) return;
+    const { q, requestId } = overrideModal;
+    const errorEl = q('[data-ov-error]');
+    const fail = (msg) => { errorEl.textContent = msg; errorEl.classList.remove('hidden'); };
+
+    const body = { status, staff_comment: q('[data-ov-comment]').value.trim() };
+    if (status === 'Approved') {
+      const date = q('[data-ov-date]').value, start = q('[data-ov-start]').value, end = q('[data-ov-end]').value;
+      if (!date || !start || !end) return fail('Choose the date and times to move the conflicting booking to.');
+      if (end <= start) return fail('The end time must be after the start time.');
+      body.move_start_time = `${date} ${start}:00`;
+      body.move_end_time = `${date} ${end}:00`;
+    }
+
+    q('[data-ov-approve]').disabled = true;
+    q('[data-ov-reject]').disabled = true;
+    errorEl.classList.add('hidden');
+
+    const result = await api(`api/conflict-override-requests/${encodeURIComponent(requestId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body)
+    });
+
+    q('[data-ov-approve]').disabled = false;
+    q('[data-ov-reject]').disabled = false;
+
+    if (!result.ok) {
+      if (handleAuthFailure(result)) return;
+      return fail(result.error);
+    }
+
+    closeOverrideModal();
+    showToast(
+      status === 'Approved'
+        ? 'Override approved. A move request is now in Move Requests; approving it books the requester.'
+        : 'Override rejected. The requester will see your comment.',
+      'success'
+    );
+    await loadAll();
+  }
+
   // Escape closes whichever modal (or the action menu) is open.
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
     closeMoveModal();
     closeCancelRequestModal();
+    closeOverrideModal();
     closeDetailModal();
     closeActionMenu();
     closeStaffCancelModal();
@@ -1504,6 +1769,7 @@ document.addEventListener('DOMContentLoaded', () => {
     openStaffCancelModal,
     openMoveModal,
     openCancelRequestModal,
+    openOverrideModal,
     toggleFacility,
     updateBatchButton
   };

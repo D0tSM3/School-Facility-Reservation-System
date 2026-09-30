@@ -7,6 +7,7 @@ namespace CampusRoom\Controller;
 use CampusRoom\Core\Auth;
 use CampusRoom\Core\Response;
 use CampusRoom\Repository\ClassScheduleRepository;
+use CampusRoom\Repository\ReservationRepository;
 use CampusRoom\Repository\RoomRepository;
 
 class ClassScheduleController
@@ -66,7 +67,7 @@ class ClassScheduleController
             Response::error('end_time must be after start_time.', 422);
         }
 
-        if ((new RoomRepository())->findById($roomId) === null) {
+        if (!self::isUuid($roomId) || (new RoomRepository())->findById($roomId) === null) {
             Response::error('Room not found.', 404);
         }
 
@@ -97,14 +98,33 @@ class ClassScheduleController
         }
 
         $id = $this->repo->create($roomId, $courseCode, $section, $dayOfWeek, $startTime, $endTime);
+        (new ReservationRepository())->insertLog(
+            Auth::userId(),
+            "Admin added class {$courseCode} {$section} ({$dayOfWeek} " . self::hhmm($startTime) . '-' . self::hhmm($endTime) . ')'
+        );
         Response::json(['success' => true, 'schedule_id' => $id], 201);
     }
 
     public function destroy(string $id): never
     {
         Auth::requireRole(['Admin']);
-        $this->repo->delete($id);
+
+        // schedule_id is a Postgres UUID; a malformed one would be a 500, not a 404.
+        $deleted = self::isUuid($id) ? $this->repo->delete($id) : null;
+        if ($deleted === null) {
+            Response::error('Class schedule not found.', 404);
+        }
+
+        (new ReservationRepository())->insertLog(
+            Auth::userId(),
+            "Admin removed class {$deleted['course_code']} {$deleted['section']} ({$deleted['day_of_week']})"
+        );
         Response::json(['success' => true]);
+    }
+
+    private static function isUuid(string $value): bool
+    {
+        return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $value) === 1;
     }
 
     /** 'H:MM', 'HH:MM' or 'HH:MM:SS' -> 'HH:MM:SS', or null if it is not a real time of day. */

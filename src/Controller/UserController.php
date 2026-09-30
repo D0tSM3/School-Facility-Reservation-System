@@ -71,7 +71,7 @@ class UserController
     }
 
     // ---------------------------------------------------------------
-    // Staff/Admin: GET /api/logs
+    // Admin: GET /api/logs
     //   ?reservation_id= &user_id= &from=YYYY-MM-DD &to=YYYY-MM-DD &q=
     //   ?limit= (1..500, default 100) &offset= (>= 0)
     // Returns { items, total, limit, offset }.
@@ -79,8 +79,9 @@ class UserController
 
     public function logs(): never
     {
-        // Staff export the audit dispatch log from the approval queue.
-        Auth::requireRole(['Staff', 'Admin']);
+        // The system-wide audit log is Admin-only. Staff still see one
+        // booking's history through GET /api/reservations/{id}/logs.
+        Auth::requireRole(['Admin']);
 
         $limit  = isset($_GET['limit'])  && ctype_digit((string) $_GET['limit'])  ? (int) $_GET['limit']  : 100;
         $offset = isset($_GET['offset']) && ctype_digit((string) $_GET['offset']) ? (int) $_GET['offset'] : 0;

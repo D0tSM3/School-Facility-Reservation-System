@@ -60,9 +60,22 @@
   const ROOT_ID = 'crRebookRoot';
   const OPEN_CLASS = 'cr-rebook-open';
 
-  // Mirrors ReservationValidator's business-hours window (07:30–21:00).
-  const DAY_OPENS = '07:30';
-  const DAY_CLOSES = '21:00';
+  // Business hours and closed days, as ReservationValidator enforces them
+  // (Admin > System Configuration, via GET api/config). Defaults until loaded.
+  let rules = window.CampusSchedule
+    ? window.CampusSchedule.DEFAULT_RULES
+    : { open: '06:00', close: '21:00', closedDays: ['Sunday'] };
+
+  function isClosed(ymd) {
+    return rules.closedDays.includes(dayName(ymd));
+  }
+
+  /** "Sundays" / "Saturdays and Sundays" / "no days". */
+  function closedDaysText() {
+    const days = rules.closedDays.map((d) => d + 's');
+    if (!days.length) return 'no days';
+    return days.length > 1 ? days.slice(0, -1).join(', ') + ' and ' + days[days.length - 1] : days[0];
+  }
 
   const state = {
     ticket: 0,          // bumped per load so a slow, stale response cannot overwrite a newer one
@@ -208,10 +221,12 @@
   async function load(reservationId) {
     const ticket = ++state.ticket;
 
-    const [source, rooms] = await Promise.all([
+    const [source, rooms, loadedRules] = await Promise.all([
       api('api/reservations/' + encodeURIComponent(reservationId)),
-      api('api/rooms')
+      api('api/rooms'),
+      window.CampusSchedule ? window.CampusSchedule.loadRules(BASE) : Promise.resolve(rules)
     ]);
+    rules = loadedRules;
 
     if (ticket !== state.ticket) return; // a newer open() won
 
@@ -330,14 +345,14 @@
           <label class="cr-rebook-field">
             <span>Start time</span>
             <input type="time" id="crRebookStart" value="${escapeHtml(defaultStart)}"
-                   min="${DAY_OPENS}" max="${DAY_CLOSES}" step="300" ${noRooms ? 'disabled' : ''}>
+                   min="${rules.open}" max="${rules.close}" step="300" ${noRooms ? 'disabled' : ''}>
           </label>
           <label class="cr-rebook-field">
             <span>End time</span>
             <input type="time" id="crRebookEnd" value="${escapeHtml(defaultEnd)}"
-                   min="${DAY_OPENS}" max="${DAY_CLOSES}" step="300" ${noRooms ? 'disabled' : ''}>
+                   min="${rules.open}" max="${rules.close}" step="300" ${noRooms ? 'disabled' : ''}>
           </label>
-          <p class="cr-rebook-hourshint">Campus hours ${formatClock(DAY_OPENS)} – ${formatClock(DAY_CLOSES)}, closed Sundays.</p>
+          <p class="cr-rebook-hourshint">Campus hours ${formatClock(rules.open)} – ${formatClock(rules.close)}, closed ${escapeHtml(closedDaysText())}.</p>
         </div>
 
         <label class="cr-rebook-field cr-rebook-field-block">
@@ -492,8 +507,8 @@
       rows.push(hintRow('celebration', 'holiday', 'Campus holiday', holiday.name || 'Holiday'));
     }
 
-    if (dayName(date) === 'Sunday') {
-      rows.push(hintRow('do_not_disturb_on', 'holiday', 'Closed', 'BPU is closed on Sundays.'));
+    if (isClosed(date)) {
+      rows.push(hintRow('do_not_disturb_on', 'holiday', 'Closed', `BPU is closed on ${dayName(date)}s.`));
     }
 
     const weekday = dayName(date);
@@ -572,14 +587,14 @@
     if (!roomId) return showError('Select a room.');
     if (!date) return showError('Pick a date for the new booking.');
     if (!startTime || !endTime) return showError('Pick a start time and an end time.');
-    if (dayName(date) === 'Sunday') return showError('BPU is closed on Sundays.');
+    if (isClosed(date)) return showError(`BPU is closed on ${dayName(date)}s.`);
 
     const startMin = toMinutes(startTime);
     const endMin = toMinutes(endTime);
     if (startMin === null || endMin === null) return showError('Enter the times as HH:MM.');
     if (endMin <= startMin) return showError('End time must be after start time.');
-    if (startMin < toMinutes(DAY_OPENS) || endMin > toMinutes(DAY_CLOSES)) {
-      return showError(`Reservations must be within business hours (${DAY_OPENS} – ${DAY_CLOSES}).`);
+    if (startMin < toMinutes(rules.open) || endMin > toMinutes(rules.close)) {
+      return showError(`Reservations must be within business hours (${rules.open} – ${rules.close}).`);
     }
     const clash = rangeClash();
     if (clash) return showError(clash);
