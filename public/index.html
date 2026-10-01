@@ -204,9 +204,9 @@
     </style>
 </head>
   <body
-    class="bg-background font-body-md text-on-surface antialiased min-h-screen flex items-center justify-center p-space-md"
+    class="bg-background font-body-md text-on-surface antialiased min-h-screen flex justify-center items-start p-space-md py-10 overflow-y-auto"
   >
-        <main class="w-full max-w-[950px]">
+        <main class="w-full max-w-[950px] my-auto">
       <div class="flex flex-col w-full shadow-2xl rounded-2xl overflow-hidden bg-white">
         <div class="flex flex-col md:flex-row min-h-[600px]">
           
@@ -286,7 +286,7 @@
                   <button
                     type="button"
                     id="toggle-password"
-                    class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#564242] opacity-70 hover:opacity-100 transition-opacity focus:outline-none flex items-center justify-center cursor-pointer"
+                    class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#564242] opacity-70 hover:opacity-100 transition-opacity focus:outline-none flex justify-center items-start overflow-y-auto cursor-pointer"
                     aria-label="Toggle password visibility"
                   >
                     <span id="toggle-password-icon" class="material-symbols-outlined text-[20px] select-none">
@@ -311,19 +311,10 @@
               <!-- reCAPTCHA mounts here -->
               <div id="loginRecaptcha" class="flex justify-start"></div>
 
-              <label class="flex items-center gap-3 cursor-pointer py-1 select-none">
-                <input
-                  checked=""
-                  class="w-[18px] h-[18px] rounded text-[#7a1f2b] bg-[#e7e8ea] border-none focus:ring-0 accent-[#7a1f2b] cursor-pointer"
-                  type="checkbox"
-                />
-                <span class="text-[14px] text-[#564242] font-medium">
-                  Remember my device on BPU campus network
-                </span>
-              </label>
+              
 
               <button
-                class="w-full bg-[#7a2839] hover:bg-[#5b1e2a] text-white font-label-lg text-[15px] py-3.5 px-4 rounded-lg shadow-sm flex items-center justify-center gap-2 transition-colors group mt-2"
+                class="w-full bg-[#7a2839] hover:bg-[#5b1e2a] text-white font-label-lg text-[15px] py-3.5 px-4 rounded-lg shadow-sm flex justify-center items-start overflow-y-auto gap-2 transition-colors group mt-2"
                 type="submit"
               >
                 <span>Sign In to CampusRoom</span>
@@ -333,14 +324,14 @@
               </button>
             </form>
 
-            <div class="mt-4 flex items-center justify-center">
+            <div class="mt-4 flex justify-center items-start overflow-y-auto">
               <p class="text-[14px] text-gray-600 font-medium">
                 Don't have an account? 
                 <a href="register.html" class="text-[#7a1f2b] font-bold hover:underline ml-1">Register</a>
               </p>
             </div>
             
-            <div class="mt-8 flex items-center justify-center gap-1.5 text-on-surface-variant opacity-70">
+            <div class="mt-8 flex justify-center items-start overflow-y-auto gap-1.5 text-on-surface-variant opacity-70">
               <span class="material-symbols-outlined text-[16px]">
                 shield
               </span>

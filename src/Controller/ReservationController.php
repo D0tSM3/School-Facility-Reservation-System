@@ -148,22 +148,22 @@ class ReservationController
     public function store(): never
     {
         Auth::requireRole(['Customer']);
-
+        $body = $this->jsonBody();
         [
             'room_id' => $roomId, 'purpose' => $purpose, 'category' => $category,
             'equipment_notes' => $equipmentNotes, 'start_time' => $startTime, 'end_time' => $endTime,
-        ] = $this->bookingRequest($this->jsonBody());
+        ] = $this->bookingRequest($body);
 
         // Different dates = a multi-day booking: start_time's date to
         // end_time's date, using start_time's clock to end_time's clock as the
         // window on every one of those days.
         if (substr($startTime, 0, 10) !== substr($endTime, 0, 10)) {
-            $this->storeSeries($roomId, $purpose, $category, $equipmentNotes, $startTime, $endTime);
+            $this->storeSeries($roomId, $purpose, $category, $equipmentNotes, $startTime, $endTime, $activeDates, $body['active_dates'] ?? null);
         }
 
-        $error = ReservationValidator::check($roomId, $startTime, $endTime);
+        $error = ReservationValidator::check($roomId, $startTime, $endTime, $activeDates);
         if ($error !== null) {
-            $this->conflictError($error, $roomId, $startTime, $endTime);
+            $this->conflictError($error, $roomId, $startTime, $endTime, $activeDates);
         }
 
         try {
@@ -267,17 +267,16 @@ class ReservationController
      * ignored — only then can staff resolve it by moving that booking.
      * start/end follow the POST convention: dates = range, clocks = daily window.
      */
-    private function overridableConflict(string $roomId, string $startTime, string $endTime): ?array
-    {
+    private function overridableConflict(string $roomId, string $startTime, string $endTime, ?array $activeDates = null): ?array {
         $startDate  = substr($startTime, 0, 10);
         $endDate    = substr($endTime, 0, 10);
         $dailyStart = substr($startTime, 11);
         $dailyEnd   = substr($endTime, 11);
 
-        if (ReservationValidator::checkRange($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, [], ['Pending']) !== null) {
+        if (ReservationValidator::checkRange($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, [], ['Pending'], $activeDates) !== null) {
             return null;
         }
-        $conflict = ReservationValidator::findApprovedConflict($roomId, $startDate, $endDate, $dailyStart, $dailyEnd);
+        $conflict = ReservationValidator::findApprovedConflict($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, $activeDates);
 
         // Nobody overrides their own booking; they'd move it instead.
         if ($conflict === null || $conflict['customer_id'] === Auth::userId()) {
@@ -291,9 +290,9 @@ class ReservationController
      * may file a conflict override request instead. Only the clashing time is
      * shared, never whose booking it is.
      */
-    private function conflictError(string $error, string $roomId, string $startTime, string $endTime): never
+    private function conflictError(string $error, string $roomId, string $startTime, string $endTime, ?array $activeDates = null): never
     {
-        $conflict = $this->overridableConflict($roomId, $startTime, $endTime);
+        $conflict = $this->overridableConflict($roomId, $startTime, $endTime, $activeDates);
         Response::error($error, 409, [
             'override_eligible' => $conflict !== null,
             'conflict'          => $conflict === null ? null : [
@@ -395,15 +394,15 @@ class ReservationController
         $dailyStart  = substr($startTime, 11);
         $dailyEnd    = substr($endTime, 11);
 
-        $error = ReservationValidator::checkRange($roomId, $startDate, $endDate, $dailyStart, $dailyEnd);
+        $error = ReservationValidator::checkRange($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, [], ['Pending', 'Approved'], $activeDates);
         if ($error !== null) {
-            $this->conflictError($error, $roomId, $startTime, $endTime);
+            $this->conflictError($error, $roomId, $startTime, $endTime, $activeDates);
         }
 
         try {
             $rows = $this->createBookingRows(
                 Auth::userId(), $roomId, $purpose, $category,
-                $equipmentNotes !== '' ? $equipmentNotes : null, $startTime, $endTime
+                $equipmentNotes !== '' ? $equipmentNotes : null, $startTime, $endTime, $activeDates
             );
         } catch (PDOException $e) {
             if ($e->getCode() === '45000') {
@@ -448,10 +447,18 @@ class ReservationController
         $endDate   = substr($endTime, 0, 10);
 
         if ($startDate === $endDate) {
-            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $equipmentNotes, $category)];
+            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $activeDates, $equipmentNotes, $category)];
         }
 
+        
         $days       = ReservationValidator::datesBetween($startDate, $endDate) ?? [];
+        if ($activeDates !== null && count($activeDates) > 0) {
+            $days = array_values(array_intersect($days, $activeDates));
+        }
+        if (empty($days)) {
+            Response::error('No valid dates selected within the range.', 400);
+        }
+
         $dailyStart = substr($startTime, 11);
         $dailyEnd   = substr($endTime, 11);
         $seriesId   = $this->reservations->newSeriesId();
@@ -926,7 +933,7 @@ class ReservationController
         // this because "it was valid before". This also covers the
         // Maintenance / is_active check via ReservationValidator's own
         // step 0, so no separate room-status check is needed here.
-        $error = ReservationValidator::check($roomId, $startTime, $endTime);
+        $error = ReservationValidator::check($roomId, $startTime, $endTime, $activeDates);
         if ($error !== null) {
             Response::error($error, 409);
         }
@@ -1237,7 +1244,7 @@ class ReservationController
             Response::error($error, 409);
         }
 
-        $request = $this->reservations->createMoveRequest($reservationId, $startTime, $endTime);
+        $request = $this->reservations->createMoveRequest($reservationId, $startTime, $endTime, $activeDates);
         
         $this->reservations->insertLog(
             Auth::userId(),

@@ -73,7 +73,8 @@ class ReservationValidator
         string $dailyStart,
         string $dailyEnd,
         array $excludeReservationIds = [],
-        array $blockingStatuses = ['Pending', 'Approved']
+        array $blockingStatuses = ['Pending', 'Approved'],
+        ?array $activeDates = null
     ): ?string {
         $pdo = Database::getInstance()->getPdo();
 
@@ -82,7 +83,20 @@ class ReservationValidator
             return $roomError;
         }
 
+        
+        
         $days = self::datesBetween($startDate, $endDate);
+        if ($activeDates !== null && count($activeDates) > 0) {
+            $days = array_values(array_intersect($days, $activeDates));
+        }
+        if ($activeDates !== null && count($activeDates) > 0) {
+            $days = array_values(array_intersect($days, $activeDates));
+        }
+
+        if ($activeDates !== null && count($activeDates) > 0) {
+            $days = array_values(array_intersect($days, $activeDates));
+        }
+
         if ($days === null) {
             return "The end date must be on or after the start date.";
         }
@@ -116,7 +130,8 @@ class ReservationValidator
         string $startDate,
         string $endDate,
         string $dailyStart,
-        string $dailyEnd
+        string $dailyEnd,
+        ?array $activeDates = null
     ): ?array {
         $pdo  = Database::getInstance()->getPdo();
         $stmt = $pdo->prepare("

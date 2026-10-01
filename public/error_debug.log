@@ -1,0 +1,16 @@
+[CampusRoom] Uncaught exception: Database connection failed: could not find driver
+#0 D:\School-Facility-Reservation-System\src\Core\Database.php(66): CampusRoom\Core\Database->__construct()
+#1 D:\School-Facility-Reservation-System\src\Repository\SettingsRepository.php(18): CampusRoom\Core\Database::getInstance()
+#2 D:\School-Facility-Reservation-System\src\Core\Settings.php(74): CampusRoom\Repository\SettingsRepository->__construct()
+#3 D:\School-Facility-Reservation-System\src\Core\Settings.php(32): CampusRoom\Core\Settings::get('business_hours_...')
+#4 D:\School-Facility-Reservation-System\src\Core\Settings.php(51): CampusRoom\Core\Settings::businessHoursStart()
+#5 D:\School-Facility-Reservation-System\public\index.php(94): CampusRoom\Core\Settings::toArray()
+#6 D:\School-Facility-Reservation-System\public\index.php(189): {closure}()
+#7 {main}
+[CampusRoom] Uncaught exception: Database connection failed: could not find driver
+#0 D:\School-Facility-Reservation-System\src\Core\Database.php(66): CampusRoom\Core\Database->__construct()
+#1 D:\School-Facility-Reservation-System\src\Repository\UserRepository.php(18): CampusRoom\Core\Database::getInstance()
+#2 D:\School-Facility-Reservation-System\src\Controller\AuthController.php(30): CampusRoom\Repository\UserRepository->__construct()
+#3 D:\School-Facility-Reservation-System\public\index.php(99): CampusRoom\Controller\AuthController->__construct()
+#4 D:\School-Facility-Reservation-System\public\index.php(189): {closure}()
+#5 {main}

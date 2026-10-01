@@ -82,10 +82,25 @@ class RoomCalendar {
     return d;
   }
 
-  getDatesForWeek() {
+  getDatesToRender() {
     const dates = [];
-    for (let i = 0; i < 7; i++) { // Monday to Sunday
-      const d = new Date(this.currentDate);
+    let startD = new Date(this.currentDate);
+    let count = 7;
+    
+    if (this.selectedDate && this.selectedEndDate) {
+        const s = this.parseYMD(this.selectedDate);
+        const e = this.parseYMD(this.selectedEndDate);
+        if (s && e && s <= e) {
+            const diff = Math.round((e - s) / 86400000) + 1;
+            if (diff >= 1 && diff <= 7) {
+                startD = s;
+                count = diff;
+            }
+        }
+    }
+    
+    for (let i = 0; i < count; i++) {
+      const d = new Date(startD);
       d.setDate(d.getDate() + i);
       dates.push(d);
     }
@@ -201,7 +216,7 @@ class RoomCalendar {
   // ---- data --------------------------------------------------------------
 
   loadData() {
-    const dates = this.getDatesForWeek();
+    const dates = this.getDatesToRender();
     const startStr = this.formatDateYMD(dates[0]);
     const endStr = this.formatDateYMD(dates[6]);   // through Sunday: closed days are configurable
 
@@ -291,6 +306,7 @@ class RoomCalendar {
 
   /** Highlight every column from start to end ('YYYY-MM-DD', inclusive). */
   setSelectionRange(start, end) {
+    this.activeDates = null;
     this.selectedDate = start || '';
     this.selectedEndDate = end && end >= this.selectedDate ? end : this.selectedDate;
     if (this.lastDates && this.lastData) {
@@ -298,7 +314,21 @@ class RoomCalendar {
     }
   }
 
+  setSelectionActiveDates(activeDatesArray) {
+    this.activeDates = activeDatesArray;
+    if (activeDatesArray && activeDatesArray.length > 0) {
+        this.selectedDate = activeDatesArray[0];
+        this.selectedEndDate = activeDatesArray[activeDatesArray.length - 1];
+    }
+    if (this.lastDates && this.lastData) {
+      this.renderGrid(this.lastDates, this.lastData);
+    }
+  }
+
   isInSelection(ymd) {
+    if (this.activeDates) {
+        return this.activeDates.includes(ymd);
+    }
     return !!this.selectedDate && ymd >= this.selectedDate && ymd <= (this.selectedEndDate || this.selectedDate);
   }
 
@@ -330,9 +360,15 @@ class RoomCalendar {
   }
 
   renderGrid(dates, data) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const todayYMD = this.formatDateYMD(new Date());
+
+    // --- Colgroups ---
+    const colgroup = this.container.querySelector('colgroup');
+    if (colgroup) {
+        colgroup.innerHTML = `<col class="w-16 sm:w-20">` + dates.map(() => `<col class="w-[${(100/dates.length).toFixed(2)}%]">`).join('');
+    }
 
     // --- Headers ---
     const headerRow = this.container.querySelector('#calendarHeaderRow');
@@ -340,13 +376,17 @@ class RoomCalendar {
 
     headerRow.innerHTML = `<th class="py-2 pl-4 pr-2 text-left border-r border-gray-200 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Time</th>`;
 
-    dates.forEach((date, i) => {
+    dates.forEach((date) => {
+      const dayIndex = date.getDay();
+      const dayShort = days[dayIndex];
+      const dayFull = dayNames[dayIndex];
+      
       const ymd = this.formatDateYMD(date);
       const isToday = ymd === todayYMD;
       const isSelected = this.isInSelection(ymd);
       const th = document.createElement('th');
       th.dataset.date = ymd;
-      const isClosed = this.rules.closedDays.includes(dayNames[i]);
+      const isClosed = this.rules.closedDays.includes(dayFull);
       th.className = 'py-2 px-1 text-center border-r border-gray-200 last:border-r-0 ' +
         (isSelected
           ? 'bg-[#7a1f2b] text-white'
@@ -384,9 +424,9 @@ class RoomCalendar {
 
       const overlaps = (s, e) => s < blockEnd && e > block.start;
 
-      dates.forEach((date, i) => {
+      dates.forEach((date) => {
         const dateYMD = this.formatDateYMD(date);
-        const dayName = dayNames[i];
+        const dayName = dayNames[date.getDay()];
         const isSelected = this.isInSelection(dateYMD);
         const beforeOpen = this.minDate && dateYMD < this.minDate;
 

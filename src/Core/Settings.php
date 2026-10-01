@@ -20,7 +20,7 @@ final class Settings
     private const DEFAULTS = [
         'business_hours_start' => '06:00',
         'business_hours_end'   => '21:00',
-        'closed_days'          => 'Sunday',
+        'closed_days'          => '',
     ];
 
     /** @var array<string, string>|null */

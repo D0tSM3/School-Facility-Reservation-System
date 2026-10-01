@@ -9,6 +9,137 @@ window.initBookingForm = function() {
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
 
   const form = document.getElementById('roomReservationForm');
+    const bookingModeRadios = document.querySelectorAll('input[name="booking_mode"]');
+    const resDateWrapper = document.getElementById('resDateWrapper');
+    const resEndDateWrapper = document.getElementById('resEndDateWrapper');
+    const resDateLabel = document.getElementById('resDateLabel');
+    const dateRangeHint = document.getElementById('dateRangeHint');
+    const specificDaysWrapper = document.getElementById('specificDaysWrapper');
+    const dayCheckboxesContainer = document.getElementById('dayCheckboxes');
+
+    function getBookingMode() {
+      const checked = document.querySelector('input[name="booking_mode"]:checked');
+      return checked ? checked.value : 'single';
+    }
+
+    function updateBookingModeUI() {
+      const mode = getBookingMode();
+      
+      if (mode === 'single') {
+        resDateWrapper.classList.remove('col-span-2');
+        resDateWrapper.classList.add('w-full');
+        resEndDateWrapper.classList.add('hidden');
+        resDateLabel.textContent = 'Date';
+        specificDaysWrapper.classList.add('hidden');
+        dateRangeHint.textContent = 'Select one date for your reservation.';
+        if (resDateInput.value) {
+          resEndDateInput.value = resDateInput.value; // Sync automatically
+        }
+      } else if (mode === 'range') {
+        resDateWrapper.classList.remove('col-span-2');
+        resDateWrapper.classList.add('w-full');
+        resEndDateWrapper.classList.remove('hidden');
+        resDateLabel.textContent = 'From';
+        specificDaysWrapper.classList.add('hidden');
+        dateRangeHint.textContent = 'Maximum booking span: 7 days.';
+      } else if (mode === 'specific') {
+        resDateWrapper.classList.remove('col-span-2');
+        resDateWrapper.classList.add('w-full');
+        resEndDateWrapper.classList.remove('hidden');
+        resDateLabel.textContent = 'From';
+        specificDaysWrapper.classList.remove('hidden');
+        dateRangeHint.textContent = 'Choose a range of up to 7 days, then select the exact dates.';
+        renderSpecificDays();
+      }
+      onDatesChanged();
+    }
+
+    function renderSpecificDays() {
+      if (getBookingMode() !== 'specific') return;
+      const start = startDateValue();
+      const end = endDateValue();
+      if (!isRealDate(start) || !isRealDate(end)) {
+        dayCheckboxesContainer.innerHTML = '<span class="text-xs text-gray-400">Select From and To dates first.</span>';
+        return;
+      }
+      
+      const sDate = new Date(start);
+      const eDate = new Date(end);
+      dayCheckboxesContainer.innerHTML = '';
+      
+      const daysDiff = (eDate - sDate) / (1000 * 60 * 60 * 24);
+      if (daysDiff < 0) {
+        dayCheckboxesContainer.innerHTML = '<span class="text-xs text-red-500">Invalid date range.</span>';
+        return;
+      }
+      if (daysDiff > 6) {
+        dayCheckboxesContainer.innerHTML = '<span class="text-xs text-red-500">Range exceeds 7 days.</span>';
+        return;
+      }
+
+      const counter = document.getElementById('selectedDaysCount');
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      let curr = new Date(sDate);
+      
+      while (curr <= eDate) {
+        const dateStr = toYMD(curr);
+        const dayName = days[curr.getDay()];
+        
+        const label = document.createElement('label');
+        label.className = 'flex items-center gap-2.5 bg-white px-3.5 py-2.5 rounded-lg cursor-pointer border border-gray-200 shadow-sm transition-colors hover:border-[#7a1f2b]/30';
+        label.innerHTML = `<input type="checkbox" name="active_days" value="${dateStr}" class="w-4 h-4 text-[#7a1f2b] bg-white border-gray-300 rounded focus:ring-[#7a1f2b] focus:ring-1" checked><span class="text-[13px] font-bold text-[#1e293b]">${dayName} <span class="text-gray-400 font-normal ml-1">· ${curr.toLocaleString('en-US', {month:'short', day:'numeric'})}</span></span>`;
+        
+        label.querySelector('input').addEventListener('change', () => { 
+            const count = typeof getSelectedDates === 'function' ? getSelectedDates().length : document.querySelectorAll('input[name="active_days"]:checked').length;
+            if (counter) counter.textContent = `${count} selected`;
+            onDatesChanged(); 
+            updateCalendarSelection(); 
+        });
+        dayCheckboxesContainer.appendChild(label);
+        
+        curr.setDate(curr.getDate() + 1);
+      }
+      if (counter) {
+        const count = typeof getSelectedDates === 'function' ? getSelectedDates().length : document.querySelectorAll('input[name="active_days"]:checked').length;
+        counter.textContent = `${count} selected`;
+      }
+    }
+
+    if (bookingModeRadios) {
+      bookingModeRadios.forEach(radio => {
+        radio.addEventListener('change', updateBookingModeUI);
+      });
+    }
+
+    function getSelectedDates() {
+      const mode = getBookingMode();
+      const start = startDateValue();
+      const end = endDateValue();
+      if (!isRealDate(start) || !isRealDate(end)) return [];
+
+      if (mode === 'single') {
+        return [start];
+      }
+      
+      if (mode === 'range') {
+        let dates = [];
+        let curr = new Date(start);
+        const eDate = new Date(end);
+        while (curr <= eDate) {
+          dates.push(toYMD(curr));
+          curr.setDate(curr.getDate() + 1);
+        }
+        return dates;
+      }
+      
+      if (mode === 'specific') {
+        const checkboxes = document.querySelectorAll('input[name="active_days"]:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+      }
+      
+      return [];
+    }
+
   const roomSelect = document.getElementById('roomSelect');
   const resDateInput = document.getElementById('resDate');
   // Optional: book-room.html has a date range; the rooms.html booking modal
@@ -167,20 +298,26 @@ window.initBookingForm = function() {
   let calendarInstance = null;
   function updateCalendarSelection() {
     if (!calendarInstance) return;
-    if (typeof calendarInstance.setSelectionRange === 'function') {
-      calendarInstance.setSelectionRange(startDateValue(), endDateValue());
+    const selected = getSelectedDates();
+    if (typeof calendarInstance.setActiveDates === 'function') {
+      calendarInstance.setActiveDates(selected);
     }
     if (startTimeInput && endTimeInput && typeof calendarInstance.setSelectionTimes === 'function') {
       calendarInstance.setSelectionTimes(startTimeInput.value, endTimeInput.value);
     }
   }
+
   function updateCalendar(roomId) {
     if (!roomId) return;
-    // Fix Guide 4.4: refresh in place for the same room instead of tearing
-    // down and rebuilding the whole component (which also resets the
-    // student back to the current week if they had navigated elsewhere).
     if (calendarInstance && calendarInstance.roomId === roomId) {
-      calendarInstance.goToDate(startDateValue(), true);
+      if (typeof calendarInstance.setRange === 'function') {
+        calendarInstance.setRange(startDateValue(), endDateValue(), getSelectedDates());
+      } else {
+        calendarInstance.goToDate(startDateValue(), true);
+      }
+      if (startTimeInput && endTimeInput && typeof calendarInstance.setSelectionTimes === 'function') {
+        calendarInstance.setSelectionTimes(startTimeInput.value, endTimeInput.value);
+      }
       return;
     }
     const container = document.getElementById('room-calendar-container');
@@ -192,6 +329,7 @@ window.initBookingForm = function() {
           initialDate: startDateValue(),
           initialEndDate: endDateValue(),
           minDate: resDateInput ? resDateInput.min : '',
+          activeDates: getSelectedDates(),
           rules: rules
         });
         updateCalendarSelection();
@@ -244,20 +382,19 @@ window.initBookingForm = function() {
   }
 
   /** The range's last day; the start date when there is no end-date field. */
-  function endDateValue() {
-    return resEndDateInput ? resEndDateInput.value : startDateValue();
-  }
-
-  /**
-   * Keep the end date usable after the start changes: never before the start,
-   * and filled in so a one-day booking needs no second pick. A re-book goes
-   * through POST .../rebook, which books one day, so its end date is locked
-   * to the start date.
-   */
   function syncEndDate() {
     if (!resEndDateInput) return;
     const start = startDateValue();
     resEndDateInput.min = start || (resDateInput ? resDateInput.min : '');
+    
+    if (start) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + 6);
+      resEndDateInput.max = toYMD(d);
+    } else {
+      resEndDateInput.removeAttribute('max');
+    }
+    
     if (isRebook) {
       resEndDateInput.value = start;
       resEndDateInput.disabled = true;
@@ -267,6 +404,11 @@ window.initBookingForm = function() {
       resEndDateInput.value = start;
     }
   }
+
+  function endDateValue() {
+    return resEndDateInput ? resEndDateInput.value : startDateValue();
+  }
+
   syncEndDate();
 
   const dateError = document.getElementById('dateError');
@@ -283,6 +425,15 @@ window.initBookingForm = function() {
   /** '' when every day in the range can be booked, otherwise the reason it can't. */
   function dateProblem(start, end) {
     if (!start || !end) return '';
+    const sDate = new Date(start);
+    const eDate = new Date(end);
+    const diff = (eDate - sDate) / (1000 * 60 * 60 * 24);
+    if (diff > 6 && getBookingMode() !== 'single') {
+        return 'Multiple day bookings are strictly limited to a maximum range of 7 days.';
+    }
+    if (getBookingMode() === 'specific' && getSelectedDates().length === 0) {
+        return 'Please select at least one specific day.';
+    }
     if (resDateInput && resDateInput.min && start < resDateInput.min) {
       return 'Bookings open starting tomorrow. Please pick a later date.';
     }
@@ -310,24 +461,66 @@ window.initBookingForm = function() {
   }
 
   function onDatesChanged() {
-    const start = startDateValue(), end = endDateValue();
-    if (!isRealDate(start) || !isRealDate(end)) { setDateError(''); return; }
-    setDateError(dateProblem(start, end));              // message only; never wipe what they typed
-    if (calendarInstance) calendarInstance.goToDate(start);
-    updateCalendarSelection();
+    const mode = getBookingMode();
+    const start = startDateValue();
+    const end = endDateValue();
+
+    if (mode === 'single') {
+      if (resDateInput && resEndDateInput && resDateInput.value !== resEndDateInput.value) {
+        resEndDateInput.value = resDateInput.value;
+      }
+    }
+
+    if (mode === 'specific') {
+      renderSpecificDays();
+    }
+
+    if (!isRealDate(start) || !isRealDate(end)) {
+      setDateError('');
+      return;
+    }
+
+    setDateError(dateProblem(start, end));
+
+    if (calendarInstance) {
+      if (typeof calendarInstance.setRange === 'function') {
+        calendarInstance.setRange(start, end, getSelectedDates());
+      } else {
+        calendarInstance.goToDate(start);
+      }
+      if (startTimeInput && endTimeInput && typeof calendarInstance.setSelectionTimes === 'function') {
+        calendarInstance.setSelectionTimes(startTimeInput.value, endTimeInput.value);
+      }
+    }
+
     markTakenSlots();
   }
 
   if (resDateInput) {
-    resDateInput.addEventListener('change', () => {
-      // Setting .value in code fires no event, so this marks a real choice
-      // (typed, or picked in rooms.html's calendar) that applyRules() keeps.
+    const onStartChange = () => {
       resDateInput.dataset.touched = '1';
-      if (isRealDate(resDateInput.value)) syncEndDate();
+      if (isRealDate(resDateInput.value)) {
+        syncEndDate();
+      }
       onDatesChanged();
-    });
+    };
+    resDateInput.addEventListener('change', onStartChange);
+    resDateInput.addEventListener('input', onStartChange);
   }
-  if (resEndDateInput) resEndDateInput.addEventListener('change', onDatesChanged);
+
+  if (resEndDateInput) {
+    const onEndChange = () => {
+      if (resEndDateInput.min && resEndDateInput.value < resEndDateInput.min) {
+        resEndDateInput.value = resEndDateInput.min;
+      }
+      if (resEndDateInput.max && resEndDateInput.value > resEndDateInput.max) {
+        resEndDateInput.value = resEndDateInput.max;
+      }
+      onDatesChanged();
+    };
+    resEndDateInput.addEventListener('change', onEndChange);
+    resEndDateInput.addEventListener('input', onEndChange);
+  }
 
   // The visible calendar button (the browser's own icon is hidden in components.css).
   const openPickerBtn = document.getElementById('openDatePickerBtn');
@@ -482,13 +675,6 @@ window.initBookingForm = function() {
         resDateInput.value = min;
       }
       syncEndDate();
-    }
-
-    const hint = document.getElementById('dateRangeHint');
-    if (hint) {
-      hint.textContent = 'For one day, use the same date twice. The start and end times below apply to every day in the range. ' +
-        `Open ${window.CampusSchedule.fmt12(rules.open)} – ${window.CampusSchedule.fmt12(rules.close)}` +
-        (rules.closedDays.length ? `, closed ${closedDaysText()}.` : ', every day.');
     }
 
     if (calendarInstance && typeof calendarInstance.setRules === 'function') calendarInstance.setRules(rules);
@@ -890,7 +1076,7 @@ window.initBookingForm = function() {
       ? `${formatSlot(conflict.start_time)} – ${window.CampusSchedule.fmt12(String(conflict.end_time).slice(11, 16))}`
       : 'the time you picked';
     wrap.querySelector('[data-override-text]').textContent =
-      `This room is already booked during ${when}. You can pick another time, or ask staff for an urgent override.`;
+      `This room is already booked during ${when}. You can pick another time, or request a slip for a conflict override.`;
     wrap.title = message || '';
 
     wrap.querySelector('[data-override-choice]').classList.remove('hidden');
@@ -981,16 +1167,15 @@ window.initBookingForm = function() {
 
       const payload = {
         room_id: roomId,
-        // `purpose` is now the requester's description only; the classification
-        // travels in its own column instead of being glued to the front.
         purpose: description,
         category: PURPOSE_LABELS[picked.value],
-        // Different dates = a multi-day booking: the server books
-        // startVal–endVal on every day from dateVal to endDateVal.
         start_time: `${dateVal}T${startVal}:00`,
         end_time: `${endDateVal}T${endVal}:00`,
         equipment_notes: collectEquipmentNotes() || 'Standard Academic Setup'
       };
+      if (getBookingMode() === 'specific') {
+        payload.active_dates = getSelectedDates();
+      }
 
       // Same body either way; only the endpoint differs. The rebook route
       // files the new booking under the ORIGINAL requester and logs where it

@@ -175,7 +175,7 @@
   // ---- Booking rules (Admin > System Configuration, via GET api/config) ----
 
   /** What the server enforced before the rules became configurable. */
-  const DEFAULT_RULES = Object.freeze({ open: '06:00', close: '21:00', closedDays: ['Sunday'] });
+  const DEFAULT_RULES = Object.freeze({ open: '06:00', close: '21:00', closedDays: [] });
   let rulesPromise = null;
 
   /**

@@ -6,25 +6,43 @@
     <meta name="description" content="Register for a CampusRoom account." />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/main.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+      body { font-family: 'Inter', sans-serif; }
       .material-symbols-outlined {
-        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24 !important;
+      }
+      .input-error {
+        border-color: #93000a !important;
+      }
+      .text-error {
+        color: #93000a !important;
+      }
+      .criteria-met {
+        color: #146c2e;
+      }
+      .criteria-unmet {
+        color: #93000a;
       }
     </style>
   </head>
-  <body class="bg-gray-50 text-gray-900 antialiased min-h-screen flex items-center justify-center p-6">
-    <main class="w-full max-w-[950px]">
+  <body class="bg-gray-50 text-gray-900 antialiased min-h-screen flex justify-center items-start p-6 py-10 overflow-y-auto">
+    <main class="w-full max-w-[950px] my-auto">
       <div class="flex flex-col w-full shadow-2xl rounded-2xl overflow-hidden bg-white">
         <div class="flex flex-col md:flex-row min-h-[650px]">
           
           <!-- Left side -->
           <div class="relative w-full md:w-[45%] bg-[#1a1a1a] p-10 flex flex-col">
             <div class="relative z-10 flex flex-col h-full">
+              <!-- Top Left Header -->
               <div class="mb-auto">
                 <img alt="CampusRoom Logo" class="h-12 w-auto object-contain" src="assets/logo.svg" onerror="this.src='https://placehold.co/120x48/1a1a1a/FFF?text=CampusRoom'" />
               </div>
+              
+              <!-- Center Text -->
               <div class="my-auto py-8">
                 <h1 class="text-white text-5xl font-extrabold tracking-tight mb-4">
                   Join CampusRoom
@@ -33,6 +51,8 @@
                   Create an account to browse and book academic facilities, laboratories, and seminar spaces instantly.
                 </p>
               </div>
+
+              <!-- Bottom Text -->
               <div class="mt-auto">
                 <p class="text-[10px] text-[#a3a3a3] uppercase tracking-wider font-semibold leading-relaxed">
                   &copy; 2024 Buenavista Polytechnic University.<br/>All rights reserved.
@@ -44,122 +64,81 @@
           <!-- Right side -->
           <div class="w-full md:w-[55%] p-10 md:p-14 flex flex-col justify-center bg-white">
             
-            <div class="mb-6">
+            <div class="mb-8">
               <h2 class="text-[32px] font-bold text-[#191c1e] mb-3 tracking-tight">
-                Create Account
+                Create an Account
               </h2>
               <p class="text-[#564242] text-[15px] leading-relaxed max-w-[340px]">
-                Sign up with your valid BPU institutional email.
+                Register to reserve academic facilities.
               </p>
             </div>
 
             <form id="registerForm" class="flex flex-col gap-4">
               <!-- Name Row -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="grid grid-cols-2 gap-4">
                 <!-- First Name -->
                 <div>
-                  <label class="block text-[13px] font-semibold text-[#191c1e] mb-1.5" for="bpu-fname">
-                    First Name
-                  </label>
+                  <label class="block text-[13px] font-bold text-[#00173d] mb-1.5" for="bpu-fname">First Name</label>
                   <div class="relative">
-                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#564242] material-symbols-outlined text-[20px] opacity-70">
-                      person
-                    </span>
-                    <input
-                      class="w-full bg-[#f8f9fb] border border-[#dcc0c0] rounded-lg pl-10 pr-3 py-2.5 text-[#191c1e] text-[14px] focus:bg-white focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] focus:outline-none transition-all placeholder:text-[#897172]"
-                      id="bpu-fname"
-                      placeholder="Juan"
-                      type="text"
-                      maxlength="64"
-                      required
-                    />
+                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[20px]">person</span>
+                    <input class="w-full bg-[#fcfcfc] border border-gray-200 rounded-xl pl-10 pr-3 py-3 text-[#191c1e] text-[14px] focus:bg-white focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] focus:outline-none transition-all placeholder:text-gray-400" id="bpu-fname" placeholder="First Name" type="text" maxlength="64" />
                   </div>
+                  <p id="err-fname" class="hidden text-[12px] text-error mt-1 font-medium">Required.</p>
                 </div>
 
                 <!-- Last Name -->
                 <div>
-                  <label class="block text-[13px] font-semibold text-[#191c1e] mb-1.5" for="bpu-lname">
-                    Last Name
-                  </label>
+                  <label class="block text-[13px] font-bold text-[#00173d] mb-1.5" for="bpu-lname">Last Name</label>
                   <div class="relative">
-                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#564242] material-symbols-outlined text-[20px] opacity-70">
-                      person
-                    </span>
-                    <input
-                      class="w-full bg-[#f8f9fb] border border-[#dcc0c0] rounded-lg pl-10 pr-3 py-2.5 text-[#191c1e] text-[14px] focus:bg-white focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] focus:outline-none transition-all placeholder:text-[#897172]"
-                      id="bpu-lname"
-                      placeholder="Dela Cruz"
-                      type="text"
-                      maxlength="64"
-                      required
-                    />
+                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[20px]">person</span>
+                    <input class="w-full bg-[#fcfcfc] border border-gray-200 rounded-xl pl-10 pr-3 py-3 text-[#191c1e] text-[14px] focus:bg-white focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] focus:outline-none transition-all placeholder:text-gray-400" id="bpu-lname" placeholder="Last Name" type="text" maxlength="64" />
                   </div>
+                  <p id="err-lname" class="hidden text-[12px] text-error mt-1 font-medium">Required.</p>
                 </div>
               </div>
 
               <!-- Email -->
               <div>
-                <label class="block text-[13px] font-semibold text-[#191c1e] mb-1.5" for="bpu-email">
-                  University Email Address
-                </label>
+                <label class="block text-[13px] font-bold text-[#00173d] mb-1.5" for="bpu-email">University Email Address</label>
                 <div class="relative">
-                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#564242] material-symbols-outlined text-[20px] opacity-70">
-                    school
-                  </span>
-                  <input
-                    class="w-full bg-[#f8f9fb] border border-[#dcc0c0] rounded-lg pl-10 pr-3 py-2.5 text-[#191c1e] text-[14px] focus:bg-white focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] focus:outline-none transition-all placeholder:text-[#897172]"
-                    id="bpu-email"
-                    placeholder="id@bpu.edu.ph"
-                    type="email"
-                    maxlength="64"
-                    required
-                  />
+                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[20px]">school</span>
+                  <input class="w-full bg-[#fcfcfc] border border-gray-200 rounded-xl pl-10 pr-3 py-3 text-[#191c1e] text-[14px] focus:bg-white focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] focus:outline-none transition-all placeholder:text-gray-400" id="bpu-email" placeholder="customer@gmail.com" type="email" maxlength="64" />
+                </div>
+                <p id="err-email" class="hidden text-[12px] text-error mt-1 font-medium">Required.</p>
+              </div>
+
+              <!-- Password -->
+              <div>
+                <label class="block text-[13px] font-bold text-[#00173d] mb-1.5" for="bpu-password">Password</label>
+                <div class="relative mb-3">
+                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[20px]">lock</span>
+                  <input class="w-full bg-[#fcfcfc] border border-gray-200 rounded-xl pl-10 pr-10 py-3 text-[#191c1e] text-[14px] focus:bg-white focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] focus:outline-none transition-all placeholder:text-gray-400" id="bpu-password" type="password" placeholder="Create a password" />
+                  <button type="button" class="toggle-password absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none flex justify-center items-start overflow-y-auto cursor-pointer" data-target="bpu-password">
+                    <span class="material-symbols-outlined text-[20px] select-none">visibility_off</span>
+                  </button>
+                </div>
+
+                <!-- Password Criteria Box -->
+                <div class="bg-[#fcfcfc] border border-gray-200 rounded-xl p-4 flex flex-col gap-2">
+                  <div id="crit-length" class="criteria-unmet flex items-center gap-2 text-[13px] font-medium"><span class="material-symbols-outlined text-[16px]">close</span> At least 8 characters</div>
+                  <div id="crit-upper" class="criteria-unmet flex items-center gap-2 text-[13px] font-medium"><span class="material-symbols-outlined text-[16px]">close</span> Uppercase letter</div>
+                  <div id="crit-lower" class="criteria-unmet flex items-center gap-2 text-[13px] font-medium"><span class="material-symbols-outlined text-[16px]">close</span> Lowercase letter</div>
+                  <div id="crit-number" class="criteria-unmet flex items-center gap-2 text-[13px] font-medium"><span class="material-symbols-outlined text-[16px]">close</span> Number</div>
+                  <div id="crit-special" class="criteria-unmet flex items-center gap-2 text-[13px] font-medium"><span class="material-symbols-outlined text-[16px]">close</span> Special character</div>
                 </div>
               </div>
 
-              <!-- Passwords -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-[13px] font-semibold text-[#191c1e] mb-1.5" for="bpu-password">
-                    Password
-                  </label>
-                  <div class="relative">
-                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#564242] material-symbols-outlined text-[20px] opacity-70">
-                      lock
-                    </span>
-                    <input
-                      class="w-full bg-[#f8f9fb] border border-[#dcc0c0] rounded-lg pl-10 pr-10 py-2.5 text-[#191c1e] text-[14px] focus:bg-white focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] focus:outline-none transition-all placeholder:text-[#897172] tracking-wide"
-                      id="bpu-password"
-                      type="password"
-                      placeholder="••••••••"
-                      required
-                    />
-                    <button type="button" class="toggle-password absolute right-3.5 top-1/2 -translate-y-1/2 text-[#564242] opacity-70 hover:opacity-100 transition-opacity focus:outline-none flex items-center justify-center cursor-pointer" data-target="bpu-password">
-                      <span class="material-symbols-outlined text-[20px] select-none">visibility_off</span>
-                    </button>
-                  </div>
+              <!-- Confirm Password -->
+              <div>
+                <label class="block text-[13px] font-bold text-[#00173d] mb-1.5" for="bpu-confirm">Confirm Password</label>
+                <div class="relative">
+                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[20px]">lock</span>
+                  <input class="w-full bg-[#fcfcfc] border border-gray-200 rounded-xl pl-10 pr-10 py-3 text-[#191c1e] text-[14px] focus:bg-white focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] focus:outline-none transition-all placeholder:text-gray-400" id="bpu-confirm" type="password" placeholder="Confirm password" />
+                  <button type="button" class="toggle-password absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none flex justify-center items-start overflow-y-auto cursor-pointer" data-target="bpu-confirm">
+                    <span class="material-symbols-outlined text-[20px] select-none">visibility_off</span>
+                  </button>
                 </div>
-
-                <div>
-                  <label class="block text-[13px] font-semibold text-[#191c1e] mb-1.5" for="bpu-confirm">
-                    Confirm Password
-                  </label>
-                  <div class="relative">
-                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#564242] material-symbols-outlined text-[20px] opacity-70">
-                      lock_reset
-                    </span>
-                    <input
-                      class="w-full bg-[#f8f9fb] border border-[#dcc0c0] rounded-lg pl-10 pr-10 py-2.5 text-[#191c1e] text-[14px] focus:bg-white focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] focus:outline-none transition-all placeholder:text-[#897172] tracking-wide"
-                      id="bpu-confirm"
-                      type="password"
-                      placeholder="••••••••"
-                      required
-                    />
-                    <button type="button" class="toggle-password absolute right-3.5 top-1/2 -translate-y-1/2 text-[#564242] opacity-70 hover:opacity-100 transition-opacity focus:outline-none flex items-center justify-center cursor-pointer" data-target="bpu-confirm">
-                      <span class="material-symbols-outlined text-[20px] select-none">visibility_off</span>
-                    </button>
-                  </div>
-                </div>
+                <p id="err-confirm" class="hidden text-[12px] text-error mt-1 font-medium">Passwords do not match.</p>
               </div>
 
               <!-- Captcha -->
@@ -170,26 +149,20 @@
                 <p id="registerErrorAlertText" class="text-[12px] text-[#ba1a1a] leading-tight font-medium"></p>
               </div>
 
-              <button
-                class="w-full bg-[#7a2839] hover:bg-[#5b1e2a] text-white font-semibold text-[15px] py-3.5 px-4 rounded-lg shadow-sm flex items-center justify-center gap-2 transition-colors group mt-4"
-                type="submit"
-                id="btn-register"
-              >
-                <span>Register Account</span>
-                <span class="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">
-                  arrow_forward
-                </span>
+              <button class="w-full bg-[#7a2839] hover:bg-[#5b1e2a] text-white font-bold text-[15px] py-3.5 px-4 rounded-xl shadow-sm flex justify-center items-start overflow-y-auto gap-2 transition-colors group mt-2" type="submit" id="btn-register">
+                <span>Register</span>
+                <span class="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">arrow_forward</span>
               </button>
             </form>
 
-            <div class="mt-8 flex flex-col items-center justify-center gap-3">
-              <p class="text-[14px] text-gray-600 font-medium">
+            <div class="mt-8 flex flex-col items-center justify-center gap-4">
+              <p class="text-[14px] text-gray-500 font-medium">
                 Already have an account? 
                 <a href="index.html" class="text-[#7a1f2b] font-bold hover:underline ml-1">Sign In</a>
               </p>
-              <div class="flex items-center justify-center gap-1.5 text-gray-400 mt-2">
+              <div class="flex justify-center items-start overflow-y-auto gap-1.5 text-gray-400">
                 <span class="material-symbols-outlined text-[16px]">shield</span>
-                <span class="text-[12px] font-medium tracking-tight">Secured by BPU Central ICT</span>
+                <span class="text-[12px] font-medium tracking-tight">Secured by BPU Central ICT &bull; SSO Active</span>
               </div>
             </div>
             
@@ -198,8 +171,27 @@
       </div>
     </main>
 
-    <script src="js/auth.js"></script>
+    <!-- Load Google reCAPTCHA -->
+    <script src="https://www.google.com/recaptcha/api.js?render=explicit" async defer></script>
     <script>
+      const BASE = window.location.pathname.replace(/[^\/]*$/, '');
+
+      let recaptchaWidgetId = null;
+
+      window.onload = function() {
+        fetch(BASE + 'api/config')
+          .then(res => res.json())
+          .then(res => {
+            const config = res.data;
+            if (config && config.recaptcha_enabled && config.recaptcha_site_key && window.grecaptcha) {
+              recaptchaWidgetId = grecaptcha.render('registerRecaptcha', {
+                'sitekey': config.recaptcha_site_key,
+                'theme': 'light'
+              });
+            }
+          });
+      };
+
       // Eye Icon Password Toggle
       document.querySelectorAll('.toggle-password').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -216,75 +208,113 @@
         });
       });
 
+      const passInput = document.getElementById('bpu-password');
+      const critLength = document.getElementById('crit-length');
+      const critUpper = document.getElementById('crit-upper');
+      const critLower = document.getElementById('crit-lower');
+      const critNumber = document.getElementById('crit-number');
+      const critSpecial = document.getElementById('crit-special');
+
+      function updateCrit(el, passed) {
+        if (passed) {
+          el.className = 'criteria-met flex items-center gap-2 text-[13px] font-medium';
+          el.querySelector('span').textContent = 'check';
+        } else {
+          el.className = 'criteria-unmet flex items-center gap-2 text-[13px] font-medium';
+          el.querySelector('span').textContent = 'close';
+        }
+      }
+
+      passInput.addEventListener('input', () => {
+        const val = passInput.value;
+        updateCrit(critLength, val.length >= 8);
+        updateCrit(critUpper, /[A-Z]/.test(val));
+        updateCrit(critLower, /[a-z]/.test(val));
+        updateCrit(critNumber, /[0-9]/.test(val));
+        updateCrit(critSpecial, /[^A-Za-z0-9]/.test(val));
+      });
+
       const registerForm = document.getElementById('registerForm');
-      const errAlert = document.getElementById('registerErrorAlert');
-      const errText = document.getElementById('registerErrorAlertText');
-      const btn = document.getElementById('btn-register');
+      
+      function validateField(id, errId) {
+        const el = document.getElementById(id);
+        const err = document.getElementById(errId);
+        if (!el.value.trim()) {
+          el.classList.add('input-error');
+          err.classList.remove('hidden');
+          return false;
+        } else {
+          el.classList.remove('input-error');
+          err.classList.add('hidden');
+          return true;
+        }
+      }
 
       if (registerForm) {
         registerForm.addEventListener('submit', async (e) => {
           e.preventDefault();
-          errAlert.classList.add('hidden');
-          errAlert.classList.remove('flex');
           
+          let isValid = true;
+          isValid = validateField('bpu-fname', 'err-fname') && isValid;
+          isValid = validateField('bpu-lname', 'err-lname') && isValid;
+          isValid = validateField('bpu-email', 'err-email') && isValid;
+          
+          const pass = document.getElementById('bpu-password').value;
+          const conf = document.getElementById('bpu-confirm');
+          const errConf = document.getElementById('err-confirm');
+          
+          if (!pass || pass !== conf.value) {
+            conf.classList.add('input-error');
+            errConf.classList.remove('hidden');
+            isValid = false;
+          } else {
+            conf.classList.remove('input-error');
+            errConf.classList.add('hidden');
+          }
+
+          if (!isValid) return;
+
           const fname = document.getElementById('bpu-fname').value.trim();
           const lname = document.getElementById('bpu-lname').value.trim();
           const name = fname + ' ' + lname;
           const email = document.getElementById('bpu-email').value.trim();
-          const password = document.getElementById('bpu-password').value;
-          const confirm = document.getElementById('bpu-confirm').value;
-          if (!fname || !lname || !email || !password || !confirm) {
-            errText.textContent = "Please fill in all required fields.";
-            errAlert.classList.remove('hidden');
-            errAlert.classList.add('flex');
-            return;
-          }
-
-          if (password !== confirm) {
-            errText.textContent = "Passwords do not match.";
-            errAlert.classList.remove('hidden');
-            errAlert.classList.add('flex');
-            return;
-          }
-
-          if (password.length < 8) {
-            errText.textContent = "Password must be at least 8 characters.";
-            errAlert.classList.remove('hidden');
-            errAlert.classList.add('flex');
-            return;
-          }
-
+          
+          const btn = document.getElementById('btn-register');
+          const errAlert = document.getElementById('registerErrorAlert');
+          const errText = document.getElementById('registerErrorAlertText');
+          
+          errAlert.classList.add('hidden');
           btn.disabled = true;
-          btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span><span>Creating Account...</span>`;
+          btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span><span>Registering...</span>`;
 
           try {
-            const recaptchaToken = window.grecaptcha ? grecaptcha.getResponse() : '';
-            const BASE = window.location.pathname.replace(/[^\/]*$/, '');
+            const recaptchaToken = (recaptchaWidgetId !== null && window.grecaptcha) 
+              ? grecaptcha.getResponse(recaptchaWidgetId) 
+              : '';
+            
             const res = await fetch(BASE + 'api/auth/register', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name, email, password, recaptcha_token: recaptchaToken })
+              body: JSON.stringify({ name, email, password: pass, recaptcha_token: recaptchaToken })
             });
 
             const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-              if (window.grecaptcha) grecaptcha.reset();
+            if (!res.ok && res.status !== 403) {
               throw new Error(data.error || 'Registration failed.');
             }
 
-            const payload = data.data || {};
-            sessionStorage.setItem('otp_email', payload.email || email);
-            if (payload.dev_otp) {
-              sessionStorage.setItem('dev_otp', payload.dev_otp);
-            }
-
+            // Successfully registered and OTP sent
+            sessionStorage.setItem('otp_email', email);
+            if (data.dev_otp) sessionStorage.setItem('dev_otp', data.dev_otp);
             window.location.href = 'verify.html';
+            
           } catch (err) {
             errText.textContent = err.message;
             errAlert.classList.remove('hidden');
             errAlert.classList.add('flex');
             btn.disabled = false;
-            btn.innerHTML = `<span>Register Account</span><span class="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">arrow_forward</span>`;
+            btn.innerHTML = `<span>Register</span><span class="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">arrow_forward</span>`;
+            if (recaptchaWidgetId !== null && window.grecaptcha) grecaptcha.reset(recaptchaWidgetId);
           }
         });
       }

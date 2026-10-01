@@ -389,38 +389,116 @@
             </div>
 
             <!-- Grid: Room Selector & Date -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div class="flex flex-col space-y-2">
-                <label class="text-sm font-bold text-gray-800" for="roomSelect">Target Facility <span class="text-red-500">*</span></label>
+              <div class="flex flex-col gap-6">
+                <div class="flex flex-col space-y-2 ">
+                <span class="text-[10px] font-extrabold text-[#2a303c] uppercase tracking-widest mb-3 block">TARGET FACILITY <span class="text-red-500">*</span></span>
                 <div class="relative">
                   <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-400">location_city</span>
-                  <select id="roomSelect" class="w-full pl-10 pr-8 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none" required>
-                    <option value="">Loading rooms…</option>
-                  </select>
+                  <select id="roomSelect" class="w-full pl-10 pr-8 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none" required>
+                      <option value="">Loading rooms…</option>
+                    </select>
+                    <span class="absolute right-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-400 pointer-events-none">expand_more</span>
                 </div>
               </div>
 
-              <div class="flex flex-col space-y-2">
-                <span class="text-sm font-bold text-gray-800">Reservation Dates <span class="text-red-500">*</span></span>
-                <div class="grid grid-cols-2 gap-2">
-                  <div class="relative">
-                    <label for="resDate" class="sr-only">Start date</label>
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase tracking-wider text-gray-400">From</span>
-                    <input id="resDate" type="date" class="w-full pl-12 pr-2 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" required />
+              
+              <div class="flex flex-col mb-4 ">
+                  <span class="text-[10px] font-extrabold text-[#2a303c] uppercase tracking-widest mb-3 block">BOOKING TYPE</span>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <label class="cursor-pointer relative">
+                    <input type="radio" name="booking_mode" value="single" class="peer sr-only" checked>
+                    <div class="h-full p-3 sm:p-4 border border-gray-300 rounded-xl transition-all peer-checked:border-[#7a1f2b] peer-checked:border-2 peer-checked:bg-[#faf5f6]">
+                      <div class="font-bold text-[#1e293b] text-[13px] md:text-sm">One Day Booking</div>
+                      <div class="text-[11px] md:text-xs text-gray-500 mt-1">Reserve a room for one specific date.</div>
+                    </div>
+                  </label>
+                  <label class="cursor-pointer relative">
+                    <input type="radio" name="booking_mode" value="range" class="peer sr-only">
+                    <div class="h-full p-3 sm:p-4 border border-gray-300 rounded-xl transition-all peer-checked:border-[#7a1f2b] peer-checked:border-2 peer-checked:bg-[#faf5f6]">
+                      <div class="font-bold text-[#1e293b] text-[13px] md:text-sm">Consecutive Range</div>
+                      <div class="text-[11px] md:text-xs text-gray-500 mt-1">Reserve the same schedule across consecutive dates.</div>
+                    </div>
+                  </label>
+                  <label class="cursor-pointer relative">
+                    <input type="radio" name="booking_mode" value="specific" class="peer sr-only">
+                    <div class="h-full p-3 sm:p-4 border border-gray-300 rounded-xl transition-all peer-checked:border-[#7a1f2b] peer-checked:border-2 peer-checked:bg-[#faf5f6]">
+                      <div class="font-bold text-[#1e293b] text-[13px] md:text-sm">Specific Days</div>
+                      <div class="text-[11px] md:text-xs text-gray-500 mt-1">Choose specific days within a date range.</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div class="flex flex-col mb-4  mt-2">
+                  <span class="text-[10px] font-extrabold text-[#2a303c] uppercase tracking-widest mb-3 block">DATE</span>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="flex flex-col space-y-1.5 w-full" id="resDateWrapper">
+                    <label for="resDate" class="text-xs font-bold text-[#2a303c]" id="resDateLabel">Date</label>
+                    <div class="relative">
+                      <input id="resDate" type="date" class="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" required />
+                    </div>
                   </div>
-                  <div class="relative">
-                    <label for="resEndDate" class="sr-only">End date</label>
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase tracking-wider text-gray-400">To</span>
-                    <input id="resEndDate" type="date" class="w-full pl-12 pr-2 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" required />
+                  <div class="flex flex-col space-y-1.5 w-full hidden" id="resEndDateWrapper">
+                    <label for="resEndDate" class="text-xs font-bold text-[#2a303c]">To</label>
+                    <div class="relative">
+                      <input id="resEndDate" type="date" class="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" />
+                    </div>
                   </div>
                 </div>
-                <p id="dateRangeHint" class="text-xs text-gray-500">For one day, use the same date twice. The start and end times below apply to every day in the range.</p>
-                <p id="dateError" class="hidden text-xs font-semibold text-red-600"></p>
+                
+                <p id="dateRangeHint" class="text-xs text-gray-500 mt-2">Select one date for your reservation.</p>
+                <p id="dateError" class="hidden text-xs font-semibold text-red-600 mt-1"></p>
+
+                <div id="specificDaysWrapper" class="hidden flex-col mt-4">
+                  <div class="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-[#f8f9fb]">
+                      <span class="text-sm font-bold text-[#1e293b]">Select specific days</span>
+                      <span class="text-xs text-gray-500 font-medium" id="selectedDaysCount">0 selected</span>
+                    </div>
+                    <div class="p-4 sm:p-5">
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="dayCheckboxes">
+                        <!-- Populated by JS -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+
             </div>
 
+            <div class="flex flex-col mb-4 mt-6">
+                <span class="text-[10px] font-extrabold text-[#2a303c] uppercase tracking-widest mb-3 block">TIME</span>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="flex flex-col space-y-1.5 w-full">
+                    <label class="text-xs font-bold text-[#2a303c]" for="startTime">Start Time</label>
+                    <div class="relative">
+                      <select id="startTime" class="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none" required>
+                        <option value="">Select Start Time</option>
+                      </select>
+                      <span class="absolute right-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-400 pointer-events-none">expand_more</span>
+                    </div>
+                  </div>
+
+              
+                  <div class="flex flex-col space-y-1.5 w-full">
+                    <label class="text-xs font-bold text-[#2a303c]" for="endTime">End Time</label>
+                    <div class="relative">
+                      <select id="endTime" class="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none" required disabled>
+                        <option value="">Select End Time</option>
+                      </select>
+                      <span class="absolute right-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-400 pointer-events-none">expand_more</span>
+                    </div>
+                  </div>
+                </div>
+
+            
+              
+              </div>
+
+
             <!-- Facility Weekly Availability -->
-            <div id="room-calendar-container" class="rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-white">
+            <div id="room-calendar-container" class="rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-white mt-6">
               <!-- Static header — roomCalendar.js replaces the INNER content, not this wrapper -->
               <div class="p-8 text-center text-gray-400">
                 <span class="material-symbols-outlined text-[36px] opacity-40">calendar_view_week</span>
@@ -428,128 +506,41 @@
               </div>
             </div>
 
-            <!-- Time Selectors (6:00 AM - 9:00 PM) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#f8f9fb] p-5 rounded-xl border border-gray-200">
-              <div class="flex flex-col space-y-2">
-                <label class="text-sm font-bold text-gray-800" for="startTime">Start Time <span class="text-red-500">*</span></label>
-                <div class="relative">
-                  <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-400">login</span>
-                  <select id="startTime" class="w-full pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none" required>
-                    <option value="">Select Start Time</option>
-                    <option value="06:00">06:00 AM</option>
-                    <option value="06:30">06:30 AM</option>
-                    <option value="07:00">07:00 AM</option>
-                    <option value="07:30">07:30 AM</option>
-                    <option value="08:00">08:00 AM</option>
-                    <option value="08:30">08:30 AM</option>
-                    <option value="09:00">09:00 AM</option>
-                    <option value="09:30">09:30 AM</option>
-                    <option value="10:00">10:00 AM</option>
-                    <option value="10:30">10:30 AM</option>
-                    <option value="11:00">11:00 AM</option>
-                    <option value="11:30">11:30 AM</option>
-                    <option value="12:00">12:00 PM</option>
-                    <option value="12:30">12:30 PM</option>
-                    <option value="13:00">01:00 PM</option>
-                    <option value="13:30">01:30 PM</option>
-                    <option value="14:00">02:00 PM</option>
-                    <option value="14:30">02:30 PM</option>
-                    <option value="15:00">03:00 PM</option>
-                    <option value="15:30">03:30 PM</option>
-                    <option value="16:00">04:00 PM</option>
-                    <option value="16:30">04:30 PM</option>
-                    <option value="17:00">05:00 PM</option>
-                    <option value="17:30">05:30 PM</option>
-                    <option value="18:00">06:00 PM</option>
-                    <option value="18:30">06:30 PM</option>
-                    <option value="19:00">07:00 PM</option>
-                    <option value="19:30">07:30 PM</option>
-                    <option value="20:00">08:00 PM</option>
-                    <option value="20:30">08:30 PM</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="flex flex-col space-y-2">
-                <label class="text-sm font-bold text-gray-800" for="endTime">End Time <span class="text-red-500">*</span></label>
-                <div class="relative">
-                  <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-400">logout</span>
-                  <select id="endTime" class="w-full pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none" required>
-                    <option value="">Select End Time</option>
-                    <option value="06:30">06:30 AM</option>
-                    <option value="07:00">07:00 AM</option>
-                    <option value="07:30">07:30 AM</option>
-                    <option value="08:00">08:00 AM</option>
-                    <option value="08:30">08:30 AM</option>
-                    <option value="09:00">09:00 AM</option>
-                    <option value="09:30">09:30 AM</option>
-                    <option value="10:00">10:00 AM</option>
-                    <option value="10:30">10:30 AM</option>
-                    <option value="11:00">11:00 AM</option>
-                    <option value="11:30">11:30 AM</option>
-                    <option value="12:00">12:00 PM</option>
-                    <option value="12:30">12:30 PM</option>
-                    <option value="13:00">01:00 PM</option>
-                    <option value="13:30">01:30 PM</option>
-                    <option value="14:00">02:00 PM</option>
-                    <option value="14:30">02:30 PM</option>
-                    <option value="15:00">03:00 PM</option>
-                    <option value="15:30">03:30 PM</option>
-                    <option value="16:00">04:00 PM</option>
-                    <option value="16:30">04:30 PM</option>
-                    <option value="17:00">05:00 PM</option>
-                    <option value="17:30">05:30 PM</option>
-                    <option value="18:00">06:00 PM</option>
-                    <option value="18:30">06:30 PM</option>
-                    <option value="19:00">07:00 PM</option>
-                    <option value="19:30">07:30 PM</option>
-                    <option value="20:00">08:00 PM</option>
-                    <option value="20:30">08:30 PM</option>
-                    <option value="21:00">09:00 PM</option>
-                  </select>
-                </div>
-                <div id="timeErrorContainer" class="hidden items-center gap-1 mt-1 text-xs font-bold text-red-600">
-                  <span class="material-symbols-outlined text-[14px]">warning</span>
-                  <span id="timeErrorText">End time must be after start time.</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Classification Radios -->
+              <!-- Classification Radios -->
             <div class="space-y-3">
-              <label class="text-sm font-bold text-gray-800">Primary Reservation Classification <span class="text-red-500">*</span></label>
+              <span class="text-[10px] font-extrabold text-[#2a303c] uppercase tracking-widest mb-3 block">PRIMARY RESERVATION CLASSIFICATION <span class="text-red-500">*</span></span>
               <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                 <label class="relative cursor-pointer">
                   <input class="peer sr-only" name="reservation_purpose" type="radio" value="lecture" data-label="Academic Lecture" required />
-                  <div class="h-full px-2 py-4 rounded-xl border border-gray-200 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-gray-50 shadow-sm">
+                  <div class="h-full px-2 py-4 rounded-xl border border-gray-300 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-[#faf5f6] hover:border-[#7a1f2b]/30 shadow-sm">
                     <span class="material-symbols-outlined text-[24px]">menu_book</span>
                     <span class="text-xs font-semibold">Academic Lecture</span>
                   </div>
                 </label>
                 <label class="relative cursor-pointer">
                   <input class="peer sr-only" name="reservation_purpose" type="radio" value="defense" data-label="Faculty Defense" required />
-                  <div class="h-full px-2 py-4 rounded-xl border border-gray-200 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-gray-50 shadow-sm">
+                  <div class="h-full px-2 py-4 rounded-xl border border-gray-300 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-[#faf5f6] hover:border-[#7a1f2b]/30 shadow-sm">
                     <span class="material-symbols-outlined text-[24px]">workspace_premium</span>
                     <span class="text-xs font-semibold">Faculty Defense</span>
                   </div>
                 </label>
                 <label class="relative cursor-pointer">
                   <input class="peer sr-only" name="reservation_purpose" type="radio" value="student_org" data-label="Student Org Meeting" required />
-                  <div class="h-full px-2 py-4 rounded-xl border border-gray-200 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-gray-50 shadow-sm">
+                  <div class="h-full px-2 py-4 rounded-xl border border-gray-300 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-[#faf5f6] hover:border-[#7a1f2b]/30 shadow-sm">
                     <span class="material-symbols-outlined text-[24px]">diversity_3</span>
                     <span class="text-xs font-semibold">Student Org</span>
                   </div>
                 </label>
                 <label class="relative cursor-pointer">
                   <input class="peer sr-only" name="reservation_purpose" type="radio" value="workshop" data-label="Dept Workshop" required />
-                  <div class="h-full px-2 py-4 rounded-xl border border-gray-200 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-gray-50 shadow-sm">
+                  <div class="h-full px-2 py-4 rounded-xl border border-gray-300 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-[#faf5f6] hover:border-[#7a1f2b]/30 shadow-sm">
                     <span class="material-symbols-outlined text-[24px]">architecture</span>
                     <span class="text-xs font-semibold">Dept Workshop</span>
                   </div>
                 </label>
                 <label class="relative cursor-pointer col-span-2 sm:col-span-1">
                   <input class="peer sr-only" name="reservation_purpose" type="radio" value="exam" data-label="Exam / Quiz" required />
-                  <div class="h-full px-2 py-4 rounded-xl border border-gray-200 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-gray-50 shadow-sm">
+                  <div class="h-full px-2 py-4 rounded-xl border border-gray-300 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-[#faf5f6] hover:border-[#7a1f2b]/30 shadow-sm">
                     <span class="material-symbols-outlined text-[24px]">quiz</span>
                     <span class="text-xs font-semibold">Exam / Quiz</span>
                   </div>
@@ -559,12 +550,12 @@
 
             <!-- Purpose Textarea -->
             <div class="flex flex-col space-y-2">
-              <label class="text-sm font-bold text-gray-800" for="purpose">Detailed Purpose Description <span class="text-red-500">*</span></label>
+              <span class="text-[10px] font-extrabold text-[#2a303c] uppercase tracking-widest mb-3 block">DETAILED PURPOSE DESCRIPTION <span class="text-red-500">*</span></span>
               <textarea
                 id="purpose"
                 rows="3"
                 maxlength="200"
-                class="w-full p-4 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]"
+                class="w-full p-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]"
                 placeholder="e.g. Weekly officers' meeting — agenda review and budget planning"
                 required
               ></textarea>
@@ -572,23 +563,23 @@
 
             <!-- Equipment Checkboxes -->
             <div class="space-y-3">
-              <label class="text-sm font-bold text-gray-800">Special Equipment &amp; Technical Logistics</label>
+              <span class="text-[10px] font-extrabold text-[#2a303c] uppercase tracking-widest mb-3 block mt-6">SPECIAL EQUIPMENT &amp; TECHNICAL LOGISTICS</span>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-3" id="equipmentOptions">
-                <label class="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
+                <label class="flex items-start gap-3 p-4 bg-white border border-gray-300 rounded-xl cursor-pointer hover:border-[#7a1f2b]/30 hover:bg-[#faf5f6] transition-colors shadow-sm">
                   <input checked class="mt-0.5 rounded text-[#7a1f2b] focus:ring-[#7a1f2b] w-4 h-4" data-equipment="Wireless Lapel Mic" type="checkbox" />
                   <div class="flex flex-col">
                     <span class="text-sm font-bold text-gray-800">Wireless Lapel Mic</span>
                     <span class="text-xs text-gray-500 mt-0.5">2 Transmitters &amp; fresh batteries</span>
                   </div>
                 </label>
-                <label class="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
+                <label class="flex items-start gap-3 p-4 bg-white border border-gray-300 rounded-xl cursor-pointer hover:border-[#7a1f2b]/30 hover:bg-[#faf5f6] transition-colors shadow-sm">
                   <input checked class="mt-0.5 rounded text-[#7a1f2b] focus:ring-[#7a1f2b] w-4 h-4" data-equipment="HDMI Cable Kit" type="checkbox" />
                   <div class="flex flex-col">
                     <span class="text-sm font-bold text-gray-800">HDMI Cable Kit</span>
                     <span class="text-xs text-gray-500 mt-0.5">USB-C to 4K / DisplayPort</span>
                   </div>
                 </label>
-                <label class="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
+                <label class="flex items-start gap-3 p-4 bg-white border border-gray-300 rounded-xl cursor-pointer hover:border-[#7a1f2b]/30 hover:bg-[#faf5f6] transition-colors shadow-sm">
                   <input class="mt-0.5 rounded text-[#7a1f2b] focus:ring-[#7a1f2b] w-4 h-4" data-equipment="Archival Recording Pod" type="checkbox" />
                   <div class="flex flex-col">
                     <span class="text-sm font-bold text-gray-800">Archival Recording Pod</span>
@@ -614,11 +605,8 @@
           </form>
 
           <!-- Form Footer Actions -->
-          <div class="bg-gray-50 px-6 py-5 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p class="text-xs text-gray-500 flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-[16px]">info</span>
-              Requests are reviewed by the Registrar before approval.
-            </p>
+          <div class="bg-gray-50 px-6 py-5 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-end gap-4">
+            
             <div class="flex items-center gap-3 w-full sm:w-auto">
               <button id="cancelModalBtn" type="button" class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-200 text-gray-700 font-medium text-sm rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
                 Cancel
@@ -666,11 +654,28 @@
         if (!submitBtn || !form) return;
 
         function isFormReady() {
+          const mode = document.querySelector('input[name="booking_mode"]:checked')?.value || 'single';
+          if (mode === 'single' && resDate) {
+            resEndDate.value = resDate.value;
+          }
+          
           // 1. Facility selected
           if (!roomSelect || !roomSelect.value) return false;
           // 2. Dates selected
           if (!resDate || !resDate.value) return false;
           if (!resEndDate || !resEndDate.value) return false;
+          
+          // Validate 7-day limit in UI
+          const sDate = new Date(resDate.value);
+          const eDate = new Date(resEndDate.value);
+          if ((eDate - sDate) / (1000 * 60 * 60 * 24) > 6 && mode !== 'single') return false;
+
+          // Validate specific days
+          if (mode === 'specific') {
+             const checked = document.querySelectorAll('input[name="active_days"]:checked');
+             if (checked.length === 0) return false;
+          }
+
           // 3. Start time
           if (!startTime || !startTime.value) return false;
           // 4. End time AND end > start
