@@ -163,12 +163,22 @@
    * payload, or null on any failure — callers treat null as "can't pre-check;
    * let the server decide", never as "the room is free".
    */
+  const _cache = new Map();
   function fetchRange(baseUri, roomId, start, end) {
     const url = baseUri + 'api/rooms/' + encodeURIComponent(roomId) +
       '/calendar?start=' + encodeURIComponent(start) + '&end=' + encodeURIComponent(end);
+    
+    if (_cache.has(url)) {
+      return Promise.resolve(_cache.get(url));
+    }
+
     return fetch(url, { credentials: 'include' })
       .then(res => res.json())
-      .then(json => (json && json.success ? json.data : null))
+      .then(json => {
+        const data = (json && json.success) ? json.data : null;
+        if (data) _cache.set(url, data);
+        return data;
+      })
       .catch(() => null);
   }
 

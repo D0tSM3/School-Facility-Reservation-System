@@ -759,15 +759,27 @@ window.initBookingForm = function() {
   async function markTakenSlots() {
     if (!startTimeInput || !roomSelect || !resDateInput) return;
     const roomId = roomSelect.value, start = startDateValue(), end = endDateValue();
+    const mode = getBookingMode();
     if (!roomId || !isRealDate(start) || !isRealDate(end)) return;
     const dates = window.CampusSchedule.datesBetween(start, end);
     if (!dates.length || dates.length > MAX_RANGE_DAYS) return;
+
+    let fetchStart = start;
+    let fetchEnd = end;
+
+    // For single day mode, the calendar renders the full week. We must fetch the full
+    // week so we can pass the complete data to the calendar without a second request.
+    if (mode === 'single') {
+      const w = weekRangeFor(start);
+      fetchStart = w.start;
+      fetchEnd = w.end;
+    }
 
     const seq = ++takenSeq;
     rangeData = null;
 
     // Single fetch serves BOTH the time-slot greying AND the calendar grid.
-    const data = await window.CampusSchedule.fetchRange(BASE, roomId, start, end);
+    const data = await window.CampusSchedule.fetchRange(BASE, roomId, fetchStart, fetchEnd);
     if (seq !== takenSeq) return;   // superseded by a newer request
 
     if (!data) {
@@ -785,7 +797,7 @@ window.initBookingForm = function() {
       const calStart = calendarInstance.formatDateYMD(calDates[0]);
       const calEnd   = calendarInstance.formatDateYMD(calDates[calDates.length - 1]);
       // Only feed the data when the view window matches what we fetched
-      if (calStart === start && calEnd === end) {
+      if (calStart === fetchStart && calEnd === fetchEnd) {
         calendarInstance.ingestData(calDates, data);
       }
     }
