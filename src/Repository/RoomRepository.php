@@ -213,53 +213,49 @@ class RoomRepository
      */
     public function getRoomCalendar(string $roomId, string $startDate, string $endDate): array
     {
-        // 1. Fetch Reservations (Pending and Approved only, overlapping the date range)
-        $reservationsStmt = $this->db->query(
-            "SELECT r.reservation_id,
-                    r.customer_id,
-                    u.name AS customer_name,
-                    r.purpose, r.start_time, r.end_time, r.series_id, r.status
-               FROM Reservations r
-               JOIN Users u ON u.user_id = r.customer_id
-              WHERE r.room_id = :room_id
-                AND r.status IN ('Pending', 'Approved')
-                AND r.start_time < :end_date
-                AND r.end_time > :start_date
-              ORDER BY r.start_time",
+        // Consolidate 3 sequential network round-trips to the remote DB into 1 using JSON aggregation.
+        // This dramatically reduces latency since the database is hosted remotely on Supabase.
+        $stmt = $this->db->query(
+            "SELECT 
+                (SELECT COALESCE(json_agg(row_to_json(r)), '[]') FROM (
+                    SELECT r.reservation_id,
+                           r.customer_id,
+                           u.name AS customer_name,
+                           r.purpose, r.start_time, r.end_time, r.series_id, r.status
+                      FROM Reservations r
+                      JOIN Users u ON u.user_id = r.customer_id
+                     WHERE r.room_id = :room_id
+                       AND r.status IN ('Pending', 'Approved')
+                       AND r.start_time < :end_date
+                       AND r.end_time > :start_date
+                     ORDER BY r.start_time
+                ) r) AS reservations,
+                (SELECT COALESCE(json_agg(row_to_json(c)), '[]') FROM (
+                    SELECT schedule_id, course_code, section, day_of_week, start_time, end_time
+                      FROM ClassSchedules
+                     WHERE room_id = :room_id
+                ) c) AS class_schedules,
+                (SELECT COALESCE(json_agg(row_to_json(h)), '[]') FROM (
+                    SELECT holiday_date, name, type
+                      FROM Holidays
+                     WHERE holiday_date >= :start_date_date
+                       AND holiday_date <= :end_date_date
+                ) h) AS holidays",
             [
-                ':room_id'    => $roomId,
-                ':start_date' => $startDate . ' 00:00:00',
-                ':end_date'   => $endDate . ' 23:59:59'
+                ':room_id'         => $roomId,
+                ':start_date'      => $startDate . ' 00:00:00',
+                ':end_date'        => $endDate . ' 23:59:59',
+                ':start_date_date' => $startDate,
+                ':end_date_date'   => $endDate
             ]
         );
-        $reservations = $reservationsStmt->fetchAll();
 
-        // 2. Fetch Class Schedules (All recurring for this room)
-        $classSchedulesStmt = $this->db->query(
-            "SELECT schedule_id, course_code, section, day_of_week, start_time, end_time
-               FROM ClassSchedules
-              WHERE room_id = :room_id",
-            [':room_id' => $roomId]
-        );
-        $classSchedules = $classSchedulesStmt->fetchAll();
-
-        // 3. Fetch Holidays in the range
-        $holidaysStmt = $this->db->query(
-            "SELECT holiday_date, name, type
-               FROM Holidays
-              WHERE holiday_date >= :start_date
-                AND holiday_date <= :end_date",
-            [
-                ':start_date' => $startDate,
-                ':end_date'   => $endDate
-            ]
-        );
-        $holidays = $holidaysStmt->fetchAll();
-
+        $row = $stmt->fetch();
+        
         return [
-            'reservations'    => $reservations,
-            'class_schedules' => $classSchedules,
-            'holidays'        => $holidays
+            'reservations'    => json_decode($row['reservations'], true),
+            'class_schedules' => json_decode($row['class_schedules'], true),
+            'holidays'        => json_decode($row['holidays'], true)
         ];
     }
 }

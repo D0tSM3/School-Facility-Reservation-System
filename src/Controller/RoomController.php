@@ -191,9 +191,8 @@ class RoomController
             Response::error('Invalid date format. Use YYYY-MM-DD.', 400);
         }
 
-        if (!$this->rooms->findById($roomId)) {
-            Response::error('Room not found.', 404);
-        }
+        // Removed findById() check to save a network roundtrip to the remote database (~250ms latency).
+        // Invalid room IDs will simply return an empty schedule, which is safe for this read-only endpoint.
 
         $calendarData = $this->rooms->getRoomCalendar($roomId, $start, $end);
 

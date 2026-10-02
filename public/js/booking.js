@@ -89,11 +89,23 @@ window.initBookingForm = function() {
         label.className = 'flex items-center gap-2.5 bg-white px-3.5 py-2.5 rounded-lg cursor-pointer border border-gray-200 shadow-sm transition-colors hover:border-[#7a1f2b]/30';
         label.innerHTML = `<input type="checkbox" name="active_days" value="${dateStr}" class="w-4 h-4 text-[#7a1f2b] bg-white border-gray-300 rounded focus:ring-[#7a1f2b] focus:ring-1" checked><span class="text-[13px] font-bold text-[#1e293b]">${dayName} <span class="text-gray-400 font-normal ml-1">· ${curr.toLocaleString('en-US', {month:'short', day:'numeric'})}</span></span>`;
         
-        label.querySelector('input').addEventListener('change', () => { 
-            const count = typeof getSelectedDates === 'function' ? getSelectedDates().length : document.querySelectorAll('input[name="active_days"]:checked').length;
+        label.querySelector('input').addEventListener('change', () => {
+            // Immediately update the calendar highlight without re-rendering checkboxes
+            if (calendarInstance && typeof calendarInstance.setActiveDates === 'function') {
+              const checkedDates = Array.from(
+                document.querySelectorAll('input[name="active_days"]:checked')
+              ).map(cb => cb.value);
+              calendarInstance.setActiveDates(checkedDates);
+            }
+            // Update the "N selected" counter
+            const count = document.querySelectorAll('input[name="active_days"]:checked').length;
+            const counter = document.getElementById('selectedDaysCount');
             if (counter) counter.textContent = `${count} selected`;
-            onDatesChanged(); 
-            updateCalendarSelection(); 
+            // Also update times overlay in calendar
+            if (calendarInstance && startTimeInput && endTimeInput &&
+                typeof calendarInstance.setSelectionTimes === 'function') {
+              calendarInstance.setSelectionTimes(startTimeInput.value, endTimeInput.value);
+            }
         });
         dayCheckboxesContainer.appendChild(label);
         
@@ -296,12 +308,44 @@ window.initBookingForm = function() {
 
   // --- Room Calendar Integration ---
   let calendarInstance = null;
+
+  /**
+   * For One Day Booking: return the Mon–Sun week that contains `ymd`.
+   * The calendar shows this full 7-day window for context while only the
+   * single selected date is actually highlighted.
+   */
+  function weekRangeFor(ymd) {
+    const d = new Date(ymd + 'T00:00:00');
+    const day = d.getDay();                         // 0=Sun … 6=Sat
+    const diffToMon = (day === 0) ? -6 : 1 - day;  // shift to Monday
+    const mon = new Date(d);
+    mon.setDate(d.getDate() + diffToMon);
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    return { start: toYMD(mon), end: toYMD(sun) };
+  }
+
   function updateCalendarSelection() {
     if (!calendarInstance) return;
+    const mode     = getBookingMode();
+    const start    = startDateValue();
+    const end      = endDateValue();
     const selected = getSelectedDates();
-    if (typeof calendarInstance.setActiveDates === 'function') {
-      calendarInstance.setActiveDates(selected);
+
+    if (typeof calendarInstance.setRange === 'function') {
+      if (mode === 'single' && isRealDate(start)) {
+        // Show the full Mon–Sun week; only the one booked date is highlighted
+        const { start: wStart, end: wEnd } = weekRangeFor(start);
+        calendarInstance.setRange(wStart, wEnd, selected);
+      } else if (mode === 'specific') {
+        // Show the From→To range; highlight only the checked dates
+        calendarInstance.setRange(start, end, selected);
+      } else {
+        // Consecutive range: show and highlight the entire From→To span
+        calendarInstance.setRange(start, end, null);
+      }
     }
+
     if (startTimeInput && endTimeInput && typeof calendarInstance.setSelectionTimes === 'function') {
       calendarInstance.setSelectionTimes(startTimeInput.value, endTimeInput.value);
     }
@@ -310,27 +354,30 @@ window.initBookingForm = function() {
   function updateCalendar(roomId) {
     if (!roomId) return;
     if (calendarInstance && calendarInstance.roomId === roomId) {
-      if (typeof calendarInstance.setRange === 'function') {
-        calendarInstance.setRange(startDateValue(), endDateValue(), getSelectedDates());
-      } else {
-        calendarInstance.goToDate(startDateValue(), true);
-      }
-      if (startTimeInput && endTimeInput && typeof calendarInstance.setSelectionTimes === 'function') {
-        calendarInstance.setSelectionTimes(startTimeInput.value, endTimeInput.value);
-      }
+      // Same room — just update the date range and highlights
+      updateCalendarSelection();
       return;
     }
     const container = document.getElementById('room-calendar-container');
     if (container) {
       if (typeof RoomCalendar !== 'undefined') {
+        const mode  = getBookingMode();
+        const start = startDateValue();
+        let initStart = start, initEnd = endDateValue();
+        // For single mode, open the calendar on the full surrounding week
+        if (mode === 'single' && isRealDate(start)) {
+          const w = weekRangeFor(start);
+          initStart = w.start;
+          initEnd   = w.end;
+        }
         calendarInstance = new RoomCalendar({
-          containerId: 'room-calendar-container',
-          roomId: roomId,
-          initialDate: startDateValue(),
-          initialEndDate: endDateValue(),
-          minDate: resDateInput ? resDateInput.min : '',
-          activeDates: getSelectedDates(),
-          rules: rules
+          containerId:    'room-calendar-container',
+          roomId:         roomId,
+          initialDate:    initStart,
+          initialEndDate: initEnd,
+          minDate:        resDateInput ? resDateInput.min : '',
+          activeDates:    getSelectedDates(),
+          rules:          rules
         });
         updateCalendarSelection();
       }
@@ -385,22 +432,31 @@ window.initBookingForm = function() {
   function syncEndDate() {
     if (!resEndDateInput) return;
     const start = startDateValue();
+
+    // Set min = start date (cannot book end before start)
     resEndDateInput.min = start || (resDateInput ? resDateInput.min : '');
-    
+
     if (start) {
-      const d = new Date(start);
+      // max = start + 6 days = 7 days inclusive (Day 1 = start, Day 7 = start+6)
+      const d = new Date(start + 'T00:00:00');
       d.setDate(d.getDate() + 6);
-      resEndDateInput.max = toYMD(d);
+      const maxYMD = toYMD(d);
+      resEndDateInput.max = maxYMD;
+
+      // Clamp current end value: if outside [start, max] reset to start
+      if (resEndDateInput.value && (resEndDateInput.value < start || resEndDateInput.value > maxYMD)) {
+        resEndDateInput.value = start;
+      }
     } else {
       resEndDateInput.removeAttribute('max');
     }
-    
+
     if (isRebook) {
       resEndDateInput.value = start;
       resEndDateInput.disabled = true;
       return;
     }
-    if (start && (!resEndDateInput.value || resEndDateInput.value < start)) {
+    if (start && !resEndDateInput.value) {
       resEndDateInput.value = start;
     }
   }
@@ -461,16 +517,16 @@ window.initBookingForm = function() {
   }
 
   function onDatesChanged() {
-    const mode = getBookingMode();
+    const mode  = getBookingMode();
     const start = startDateValue();
-    const end = endDateValue();
+    const end   = endDateValue();
 
-    if (mode === 'single') {
-      if (resDateInput && resEndDateInput && resDateInput.value !== resEndDateInput.value) {
-        resEndDateInput.value = resDateInput.value;
-      }
+    // For single-day mode keep the end date in sync automatically
+    if (mode === 'single' && resDateInput && resEndDateInput) {
+      resEndDateInput.value = resDateInput.value;
     }
 
+    // Regenerate specific-day checkboxes whenever the date range changes
     if (mode === 'specific') {
       renderSpecificDays();
     }
@@ -483,8 +539,16 @@ window.initBookingForm = function() {
     setDateError(dateProblem(start, end));
 
     if (calendarInstance) {
+      const selected = getSelectedDates();
       if (typeof calendarInstance.setRange === 'function') {
-        calendarInstance.setRange(start, end, getSelectedDates());
+        if (mode === 'single' && isRealDate(start)) {
+          const { start: wStart, end: wEnd } = weekRangeFor(start);
+          calendarInstance.setRange(wStart, wEnd, selected);
+        } else if (mode === 'specific') {
+          calendarInstance.setRange(start, end, selected);
+        } else {
+          calendarInstance.setRange(start, end, null);
+        }
       } else {
         calendarInstance.goToDate(start);
       }
@@ -586,6 +650,7 @@ window.initBookingForm = function() {
     syncEndOptions = () => {
       const start = startTimeInput.value;
       const previous = endTimeInput.value;
+      endTimeInput.disabled = !start;
       endTimeInput.innerHTML = '<option value="">Select End</option>';
       ALL_END_OPTIONS.forEach(o => {
         const opt = document.createElement('option');
@@ -696,24 +761,36 @@ window.initBookingForm = function() {
     const roomId = roomSelect.value, start = startDateValue(), end = endDateValue();
     if (!roomId || !isRealDate(start) || !isRealDate(end)) return;
     const dates = window.CampusSchedule.datesBetween(start, end);
-    if (!dates.length || dates.length > MAX_RANGE_DAYS) return;   // dateProblem() already says why
-    const seq = ++takenSeq;
-    rangeData = null;   // whatever we knew belongs to the previous room/range
+    if (!dates.length || dates.length > MAX_RANGE_DAYS) return;
 
-    // null = couldn't load. Never treat that as "free": clear the greying so
-    // nothing stale stays on screen and let the server decide.
+    const seq = ++takenSeq;
+    rangeData = null;
+
+    // Single fetch serves BOTH the time-slot greying AND the calendar grid.
     const data = await window.CampusSchedule.fetchRange(BASE, roomId, start, end);
-    if (seq !== takenSeq) return;                              // a newer request superseded this one
+    if (seq !== takenSeq) return;   // superseded by a newer request
+
     if (!data) {
       resetStartOptions();
       syncEndOptions();
       return;
     }
+
     rangeData = { roomId, start, end, dates, data };
 
-    // A start block is only usable if the block itself is free on EVERY day
-    // of the range (the shortest booking is one block); which END times stay
-    // usable is decided in syncEndOptions() once a start is chosen.
+    // ---- Push data into the calendar grid to avoid a second identical fetch ----
+    if (calendarInstance && typeof calendarInstance.ingestData === 'function') {
+      // Build the same Date array the calendar would have computed itself
+      const calDates = calendarInstance.getDatesToRender();
+      const calStart = calendarInstance.formatDateYMD(calDates[0]);
+      const calEnd   = calendarInstance.formatDateYMD(calDates[calDates.length - 1]);
+      // Only feed the data when the view window matches what we fetched
+      if (calStart === start && calEnd === end) {
+        calendarInstance.ingestData(calDates, data);
+      }
+    }
+
+    // ---- Grey out start-time blocks that are taken on every day of the range ----
     Array.from(startTimeInput.options).forEach(opt => {
       if (!opt.value) return;
       const i = BLOCKS.indexOf(opt.value);
@@ -725,11 +802,9 @@ window.initBookingForm = function() {
         (!clash.length ? '' : overridable ? ' — booked (urgent override possible)' : ' — unavailable');
     });
 
-    // A start time that was valid for the previous dates may be taken on these.
     const chosen = startTimeInput.selectedOptions[0];
     if (chosen && chosen.disabled) startTimeInput.value = '';
 
-    // Re-derive the end options for the (possibly cleared) start against this day.
     syncEndOptions();
   }
 
