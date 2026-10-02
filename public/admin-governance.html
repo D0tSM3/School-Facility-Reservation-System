@@ -352,6 +352,7 @@
                         <th class="p-2">Room Name</th>
                         <th class="p-2">Capacity</th>
                         <th class="p-2">Status</th>
+                        <th class="p-2">Approval</th>
                         <th class="p-2">Active</th>
                         <th class="p-2 text-right">Actions</th>
                     </tr>
@@ -831,6 +832,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // is_active comes back as the normalized "0"/"1" shape (Section 6);
                 // coerce loosely since it may arrive as a string or a number.
                 const isActive = Number(r.is_active) !== 0;
+                // requires_approval arrives as the normalized "0"/"1" shape, like is_active.
+                const requiresApproval = Number(r.requires_approval) !== 0;
 
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-surface-variant" + (isActive ? '' : ' opacity-60');
@@ -844,6 +847,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             <option value="Available" ${r.status==='Available'?'selected':''}>Available</option>
                             <option value="Maintenance" ${r.status==='Maintenance'?'selected':''}>Maintenance</option>
                         </select>
+                    </td>
+                    <td class="p-2">
+                        <button class="toggle-approval px-2 py-0.5 rounded text-[11px] font-bold ${requiresApproval ? 'bg-[#FEF9C3] text-[#854D0E]' : 'bg-surface-container-highest text-on-surface-variant'}"
+                                data-id="${escapeHtml(r.room_id)}" data-next-approval="${requiresApproval ? 'false' : 'true'}" ${isActive ? '' : 'disabled'}
+                                title="${requiresApproval ? 'Bookings for this room always wait for Staff review. Click to allow auto-approval.' : 'Bookings for this room can be auto-approved. Click to always require Staff review.'}">
+                            ${requiresApproval ? 'REQUIRED' : 'STANDARD'}
+                        </button>
                     </td>
                     <td class="p-2">
                         ${isActive
@@ -926,6 +936,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     if (resp.ok) loadRooms();
                     else alert('Error updating room status.');
+                });
+            });
+
+            // Special-approval toggle: flip whether this room always needs Staff
+            // sign-off. Admin-only (the API enforces it too).
+            document.querySelectorAll('.toggle-approval').forEach(b => {
+                b.addEventListener('click', async (e) => {
+                    const btn = e.currentTarget;
+                    const id = btn.getAttribute('data-id');
+                    const nextApproval = btn.getAttribute('data-next-approval') === 'true';
+                    const resp = await fetch(BASE + 'api/rooms/' + id, {
+                        method: 'PATCH',
+                        credentials: 'same-origin',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({requires_approval: nextApproval})
+                    });
+                    if (resp.ok) return loadRooms();
+                    let msg = 'Error updating the approval requirement.';
+                    try { msg = (await resp.json()).error || msg; } catch (_) { /* non-JSON */ }
+                    alert(msg);
                 });
             });
         } catch(err) { console.error(err); }

@@ -10,6 +10,7 @@ use CampusRoom\Core\Response;
 use CampusRoom\Core\ReservationValidator;
 use CampusRoom\Repository\ConflictOverrideRepository;
 use CampusRoom\Repository\ReservationRepository;
+use CampusRoom\Repository\RoomRepository;
 use PDOException;
 
 /**
@@ -73,6 +74,34 @@ class ReservationController
 
         $list = $this->reservations->findAll($status, $limit, $offset);
         Response::json($list);
+    }
+
+    // ---------------------------------------------------------------
+    // Staff/Admin: GET /api/reservations/conflicts
+    // The Pending bookings that currently fail validation (a class or another
+    // booking landed on them since they were filed). Drives the "Conflict"
+    // badge and the "Find alternative" tool on the staff queue, so staff can
+    // resolve one day of a range instead of rejecting the whole booking.
+    // ---------------------------------------------------------------
+
+    public function conflicts(): never
+    {
+        Auth::requireRole(['Staff', 'Admin']);
+
+        $out = [];
+        foreach ($this->reservations->findAll('Pending', 500, 0) as $row) {
+            $reason = ReservationValidator::check(
+                $row['room_id'], $row['start_time'], $row['end_time'], $row['reservation_id']
+            );
+            if ($reason !== null) {
+                $out[] = [
+                    'reservation_id' => $row['reservation_id'],
+                    'reason'         => $reason,
+                ];
+            }
+        }
+
+        Response::json($out);
     }
 
     // ---------------------------------------------------------------
@@ -149,6 +178,14 @@ class ReservationController
     {
         Auth::requireRole(['Customer']);
         $body = $this->jsonBody();
+
+        // "Assign any available room matching my criteria": the customer gives
+        // filters instead of a specific room, and the server picks a free room
+        // for them — per day, so each day of a range can land in a different
+        // room when no single room is free throughout.
+        if (!empty($body['auto_assign'])) {
+            $this->storeAutoAssigned($body);
+        }
         [
             'room_id' => $roomId, 'purpose' => $purpose, 'category' => $category,
             'equipment_notes' => $equipmentNotes, 'start_time' => $startTime, 'end_time' => $endTime,
@@ -166,6 +203,11 @@ class ReservationController
             $this->conflictError($error, $roomId, $startTime, $endTime, $activeDates);
         }
 
+        // A clean single-day booking is approved on the spot unless the room
+        // asks for Staff review. A multi-day range is handled by storeSeries()
+        // above, which weighs its own length — so this is always 1 day.
+        [$status, $approvalType] = $this->approvalOutcome($roomId, 1);
+
         try {
             $reservation = $this->reservations->create(
                 Auth::userId(),
@@ -174,7 +216,10 @@ class ReservationController
                 $startTime,
                 $endTime,
                 $equipmentNotes !== '' ? $equipmentNotes : null,
-                $category
+                $category,
+                null,
+                $status,
+                $approvalType
             );
         } catch (PDOException $e) {
             // Fallback in case of race condition caught by the DB trigger
@@ -193,6 +238,7 @@ class ReservationController
             'Reservation submitted by requester',
             $reservation['reservation_id']
         );
+        $this->logAutoApproval($status, $approvalType, [$reservation['reservation_id']]);
 
         Response::json($reservation, 201);
     }
@@ -202,9 +248,11 @@ class ReservationController
      * /api/conflict-override-requests share them), validated and normalised.
      * Ends the request with 422 on the first problem.
      *
+     * @param bool $requireRoom false for the "any available facility" flow,
+     *        where the server assigns the room and the client sends none.
      * @return array{room_id: string, purpose: string, category: string, equipment_notes: string, start_time: string, end_time: string}
      */
-    private function bookingRequest(array $body): array
+    private function bookingRequest(array $body, bool $requireRoom = true): array
     {
         $roomId    = trim((string) ($body['room_id']    ?? ''));
         $purpose   = trim((string) ($body['purpose']    ?? ''));
@@ -213,8 +261,11 @@ class ReservationController
         $category  = trim((string) ($body['category']   ?? ''));
         $equipmentNotes = trim((string) ($body['equipment_notes'] ?? ''));
 
-        if ($roomId === '' || $purpose === '' || $startTime === '' || $endTime === '') {
-            Response::error('room_id, purpose, start_time, and end_time are required.', 422);
+        if ($requireRoom && $roomId === '') {
+            Response::error('room_id is required.', 422);
+        }
+        if ($purpose === '' || $startTime === '' || $endTime === '') {
+            Response::error('purpose, start_time, and end_time are required.', 422);
         }
 
         // Required rather than defaulted: silently filing an uncategorised
@@ -387,7 +438,8 @@ class ReservationController
         string $category,
         string $equipmentNotes,
         string $startTime,
-        string $endTime
+        string $endTime,
+        ?array $activeDates = null
     ): never {
         $startDate   = substr($startTime, 0, 10);
         $endDate     = substr($endTime, 0, 10);
@@ -399,10 +451,16 @@ class ReservationController
             $this->conflictError($error, $roomId, $startTime, $endTime, $activeDates);
         }
 
+        // Whole-range decision: a short, clean hold is auto-approved for every
+        // day; a range longer than the policy limit, or a room that asks for it,
+        // waits as Pending (see approvalOutcome()).
+        $dayCount = count(ReservationValidator::datesBetween($startDate, $endDate) ?? []);
+        [$status, $approvalType] = $this->approvalOutcome($roomId, $dayCount);
+
         try {
             $rows = $this->createBookingRows(
                 Auth::userId(), $roomId, $purpose, $category,
-                $equipmentNotes !== '' ? $equipmentNotes : null, $startTime, $endTime, $activeDates
+                $equipmentNotes !== '' ? $equipmentNotes : null, $startTime, $endTime, $status, $approvalType, $activeDates
             );
         } catch (PDOException $e) {
             if ($e->getCode() === '45000') {
@@ -422,6 +480,7 @@ class ReservationController
                 $row['reservation_id']
             );
         }
+        $this->logAutoApproval($status, $approvalType, array_column($rows, 'reservation_id'));
 
         Response::json($rows[0] + ['series' => $rows], 201);
     }
@@ -441,13 +500,16 @@ class ReservationController
         string $category,
         ?string $equipmentNotes,
         string $startTime,
-        string $endTime
+        string $endTime,
+        string $status = 'Pending',
+        string $approvalType = 'manual',
+        ?array $activeDates = null
     ): array {
         $startDate = substr($startTime, 0, 10);
         $endDate   = substr($endTime, 0, 10);
 
         if ($startDate === $endDate) {
-            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $activeDates, $equipmentNotes, $category)];
+            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $equipmentNotes, $category, null, $status, $approvalType)];
         }
 
         
@@ -463,12 +525,201 @@ class ReservationController
         $dailyEnd   = substr($endTime, 11);
         $seriesId   = $this->reservations->newSeriesId();
 
-        return $this->reservations->transaction(function () use ($days, $customerId, $roomId, $purpose, $category, $equipmentNotes, $dailyStart, $dailyEnd, $seriesId): array {
+        return $this->reservations->transaction(function () use ($days, $customerId, $roomId, $purpose, $category, $equipmentNotes, $dailyStart, $dailyEnd, $seriesId, $status, $approvalType): array {
             $rows = [];
             foreach ($days as $day) {
                 $rows[] = $this->reservations->create(
                     $customerId, $roomId, $purpose, "$day $dailyStart", "$day $dailyEnd",
-                    $equipmentNotes, $category, $seriesId
+                    $equipmentNotes, $category, $seriesId, $status, $approvalType
+                );
+            }
+            return $rows;
+        });
+    }
+
+    /**
+     * "Assign any available room matching my criteria." The customer sends
+     * optional filters (min capacity, room type, floor) instead of a room, and
+     * the server books a free room for them:
+     *   - single day: the first matching room with no conflict;
+     *   - a range: one room for the whole range when one is free throughout,
+     *     otherwise each day gets the first matching room free THAT day, so a
+     *     series can span several rooms;
+     *   - if any day has no free matching room, nothing is booked and the reply
+     *     names the date(s) with no options.
+     * Only standard rooms are considered — a requires_approval room is never
+     * auto-assigned, since those are meant to be chosen deliberately.
+     */
+    private function storeAutoAssigned(array $body): never
+    {
+        // Everything but the room is validated exactly as a normal booking.
+        [
+            'purpose' => $purpose, 'category' => $category, 'equipment_notes' => $equipmentNotes,
+            'start_time' => $startTime, 'end_time' => $endTime,
+        ] = $this->bookingRequest($body, false);
+
+        // Optional criteria. Absent / blank means "no preference".
+        $filters     = is_array($body['filters'] ?? null) ? $body['filters'] : [];
+        $minCapacity = isset($filters['min_capacity']) && ctype_digit((string) $filters['min_capacity']) && (int) $filters['min_capacity'] > 0
+            ? (int) $filters['min_capacity'] : null;
+        $roomType    = trim((string) ($filters['room_type'] ?? ''));
+        $roomType    = $roomType !== '' ? $roomType : null;
+        $floor       = isset($filters['floor']) && $filters['floor'] !== '' && is_numeric($filters['floor'])
+            ? (int) $filters['floor'] : null;
+
+        $candidates = (new RoomRepository())->findBookableByCriteria($minCapacity, $roomType, $floor);
+        if ($candidates === []) {
+            Response::error('No active room matches your criteria. Try a smaller capacity, a different type, or any floor.', 422);
+        }
+
+        $startDate  = substr($startTime, 0, 10);
+        $endDate    = substr($endTime, 0, 10);
+        $dailyStart = substr($startTime, 11); // 'HH:MM:SS'
+        $dailyEnd   = substr($endTime, 11);
+
+        $days = ReservationValidator::datesBetween($startDate, $endDate);
+        if ($days === null) {
+            Response::error('The end date must be on or after the start date.', 422);
+        }
+        if (count($days) > ReservationValidator::MAX_RANGE_DAYS) {
+            Response::error('A booking can cover at most ' . ReservationValidator::MAX_RANGE_DAYS . ' days.', 422);
+        }
+
+        // 1. Prefer ONE room free on every day of the range (nicer for the
+        //    customer, and the only option when it's a single day).
+        $wholeRange = null;
+        foreach ($candidates as $room) {
+            $freeAllDays = true;
+            foreach ($days as $day) {
+                if (ReservationValidator::checkRange($room['room_id'], $day, $day, $dailyStart, $dailyEnd) !== null) {
+                    $freeAllDays = false;
+                    break;
+                }
+            }
+            if ($freeAllDays) {
+                $wholeRange = $room;
+                break;
+            }
+        }
+
+        // dayRoom maps each 'Y-m-d' to the room assoc chosen for it.
+        $dayRoom     = [];
+        $unavailable = [];
+        if ($wholeRange !== null) {
+            foreach ($days as $day) {
+                $dayRoom[$day] = $wholeRange;
+            }
+        } else {
+            // 2. Per-day fallback: first matching room free on that specific day.
+            foreach ($days as $day) {
+                $chosen = null;
+                foreach ($candidates as $room) {
+                    if (ReservationValidator::checkRange($room['room_id'], $day, $day, $dailyStart, $dailyEnd) === null) {
+                        $chosen = $room;
+                        break;
+                    }
+                }
+                if ($chosen === null) {
+                    $unavailable[] = $day;
+                } else {
+                    $dayRoom[$day] = $chosen;
+                }
+            }
+        }
+
+        if ($unavailable !== []) {
+            $human = implode(', ', array_map(static fn(string $d): string => date('D, M j', (int) strtotime($d)), $unavailable));
+            Response::error(
+                "No room matching your criteria is free on: {$human}. Pick a different time, widen your criteria, or book the remaining days separately.",
+                409
+            );
+        }
+
+        // Every candidate is a standard room, so the only thing that can still
+        // hold the booking back is the long-range policy (approvalOutcome()).
+        [$status, $approvalType] = $this->approvalOutcome($dayRoom[$days[0]]['room_id'], count($days));
+
+        try {
+            $rows = $this->createAssignedRows(
+                Auth::userId(), $purpose, $category,
+                $equipmentNotes !== '' ? $equipmentNotes : null,
+                $dailyStart, $dailyEnd, $dayRoom, $status, $approvalType
+            );
+        } catch (PDOException $e) {
+            if ($e->getCode() === '45000') {
+                Response::error('A matching room was taken while we were assigning it. Please submit again.', 409);
+            }
+            throw $e;
+        }
+
+        $count = count($rows);
+        foreach ($rows as $i => $row) {
+            $this->reservations->insertLog(
+                Auth::userId(),
+                $count > 1
+                    ? 'Reservation submitted by requester (auto-assigned room, day ' . ($i + 1) . " of $count)"
+                    : 'Reservation submitted by requester (auto-assigned room)',
+                $row['reservation_id']
+            );
+        }
+        $this->logAutoApproval($status, $approvalType, array_column($rows, 'reservation_id'));
+
+        // Per-day room breakdown so the client can show which room(s) it got.
+        $assignments = [];
+        foreach ($days as $day) {
+            $assignments[] = [
+                'date'      => $day,
+                'room_id'   => $dayRoom[$day]['room_id'],
+                'room_name' => $dayRoom[$day]['name'],
+            ];
+        }
+
+        $response = $rows[0] + ['auto_assigned' => true, 'assignments' => $assignments];
+        if ($count > 1) {
+            $response['series'] = $rows;
+        }
+        Response::json($response, 201);
+    }
+
+    /**
+     * Insert the row(s) for an auto-assigned booking, each day carrying its own
+     * assigned room. One row (no series) for a single day; otherwise one row per
+     * day sharing a series_id, all in one transaction. Validation is the
+     * caller's job. $dayRoom maps 'Y-m-d' => room assoc (needs 'room_id').
+     *
+     * @param array<string, array<string, mixed>> $dayRoom
+     * @return array[] the created rows, earliest day first
+     */
+    private function createAssignedRows(
+        string $customerId,
+        string $purpose,
+        string $category,
+        ?string $equipmentNotes,
+        string $dailyStart,
+        string $dailyEnd,
+        array $dayRoom,
+        string $status,
+        string $approvalType
+    ): array {
+        $days = array_keys($dayRoom);
+
+        if (count($days) === 1) {
+            $day = $days[0];
+            return [$this->reservations->create(
+                $customerId, $dayRoom[$day]['room_id'], $purpose,
+                "$day $dailyStart", "$day $dailyEnd",
+                $equipmentNotes, $category, null, $status, $approvalType
+            )];
+        }
+
+        $seriesId = $this->reservations->newSeriesId();
+        return $this->reservations->transaction(function () use ($days, $dayRoom, $customerId, $purpose, $category, $equipmentNotes, $dailyStart, $dailyEnd, $seriesId, $status, $approvalType): array {
+            $rows = [];
+            foreach ($days as $day) {
+                $rows[] = $this->reservations->create(
+                    $customerId, $dayRoom[$day]['room_id'], $purpose,
+                    "$day $dailyStart", "$day $dailyEnd",
+                    $equipmentNotes, $category, $seriesId, $status, $approvalType
                 );
             }
             return $rows;
@@ -1338,6 +1589,50 @@ class ReservationController
     // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------
+
+    /**
+     * How a freshly submitted booking should land. The caller has already
+     * confirmed there are zero conflicts (validator returned null), so the
+     * only questions left are policy ones:
+     *   - a room flagged requires_approval always goes to Staff (auditoriums,
+     *     specialised labs): Pending with approval_type 'special';
+     *   - a range longer than 3 days is a sizeable hold — a human signs it off.
+     * Anything else is approved immediately.
+     *
+     * @return array{0: string, 1: string} [status, approval_type]
+     */
+    private function approvalOutcome(string $roomId, int $dayCount): array
+    {
+        // Some rooms always need Staff eyes, however clean the schedule is. The
+        // 'special' label is what tells the queue WHY this booking landed there.
+        if ((new RoomRepository())->requiresApproval($roomId)) {
+            return ['Pending', 'special'];
+        }
+
+        // A week-long room hold deserves human eyes, even with no conflict.
+        if ($dayCount > 3) {
+            return ['Pending', 'manual'];
+        }
+
+        return ['Approved', 'auto'];
+    }
+
+    /**
+     * Write the "Auto-approved" audit entry on each row of a booking that was
+     * approved at submission, so Staff and Admin can see it happened without a
+     * human. A no-op for bookings that entered the Pending queue.
+     *
+     * @param string[] $reservationIds
+     */
+    private function logAutoApproval(string $status, string $approvalType, array $reservationIds): void
+    {
+        if ($status !== 'Approved' || $approvalType !== 'auto') {
+            return;
+        }
+        foreach ($reservationIds as $id) {
+            $this->reservations->insertLog(Auth::userId(), 'Auto-approved: no conflicts found', $id);
+        }
+    }
 
     private function jsonBody(): array
     {

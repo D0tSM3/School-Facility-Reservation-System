@@ -246,32 +246,45 @@ class ReservationValidator
         }
 
         // 5. Class Schedule Overlap Check
-        // Extract time parts for comparison against TIME columns
-        $timeStart = date('H:i:s', $start);
-        $timeEnd = date('H:i:s', $end);
+        //
+        // ClassSchedules.day_of_week is a Postgres enum covering Monday–Saturday
+        // only: the university holds no Sunday classes. Feeding 'Sunday' (or any
+        // value outside the enum) into the query below is an invalid enum input
+        // and makes Postgres raise 22P02, turning the whole validation into a
+        // 500. There can be no class on such a day by definition, so we skip the
+        // class lookup — but NOT the reservation overlap check (6) below, or
+        // Sundays would silently allow double-booking. (This was masked while
+        // Sunday was a closed day and returned above; it stops being one the
+        // moment an admin clears closed_days.)
+        $classDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        if (in_array($dayOfWeek, $classDays, true)) {
+            // Extract time parts for comparison against TIME columns
+            $timeStart = date('H:i:s', $start);
+            $timeEnd = date('H:i:s', $end);
 
-        $stmtClass = $pdo->prepare("
-            SELECT course_code, section 
-            FROM ClassSchedules 
-            WHERE room_id = ? 
-              AND day_of_week = ?
-              AND (
-                (? >= start_time AND ? < end_time) OR
-                (? > start_time AND ? <= end_time) OR
-                (? <= start_time AND ? >= end_time)
-              )
-            LIMIT 1
-        ");
-        $stmtClass->execute([
-            $roomId, $dayOfWeek,
-            $timeStart, $timeStart,
-            $timeEnd, $timeEnd,
-            $timeStart, $timeEnd
-        ]);
-        $class = $stmtClass->fetch(PDO::FETCH_ASSOC);
+            $stmtClass = $pdo->prepare("
+                SELECT course_code, section
+                FROM ClassSchedules
+                WHERE room_id = ?
+                  AND day_of_week = ?
+                  AND (
+                    (? >= start_time AND ? < end_time) OR
+                    (? > start_time AND ? <= end_time) OR
+                    (? <= start_time AND ? >= end_time)
+                  )
+                LIMIT 1
+            ");
+            $stmtClass->execute([
+                $roomId, $dayOfWeek,
+                $timeStart, $timeStart,
+                $timeEnd, $timeEnd,
+                $timeStart, $timeEnd
+            ]);
+            $class = $stmtClass->fetch(PDO::FETCH_ASSOC);
 
-        if ($class) {
-            return "Scheduling Collision: Overlaps with an official class schedule ({$class['course_code']} - {$class['section']}).";
+            if ($class) {
+                return "Scheduling Collision: Overlaps with an official class schedule ({$class['course_code']} - {$class['section']}).";
+            }
         }
 
         // 6. Existing Reservation Overlap Check

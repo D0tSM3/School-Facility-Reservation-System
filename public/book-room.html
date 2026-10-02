@@ -192,9 +192,19 @@
               </button>
             </div>
 
-            <!-- Grid: Room Selector & Date -->
+            <!-- Any-available-facility toggle -->
+            <div id="autoAssignBlock" class="flex items-start gap-3 p-4 bg-[#f8f9fb] border border-gray-200 rounded-xl">
+              <input id="autoAssign" type="checkbox" class="mt-0.5 w-4 h-4 rounded text-[#7a1f2b] focus:ring-[#7a1f2b] cursor-pointer" />
+              <div class="flex flex-col">
+                <label for="autoAssign" class="text-sm font-bold text-gray-800 cursor-pointer">Assign any available room matching my criteria</label>
+                <p class="text-xs text-gray-500 mt-0.5">We'll pick a free room for you. For a date range, each day may be placed in a different room if no single room is free throughout.</p>
+              </div>
+            </div>
+
+            <!-- Grid: Room Selector / Criteria & Date -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div class="flex flex-col space-y-2">
+              <!-- Specific room picker (default) -->
+              <div id="roomSelectField" class="flex flex-col space-y-2">
                 <label class="text-sm font-bold text-gray-800" for="roomSelect">Target Facility <span class="text-red-500">*</span></label>
                 <div class="relative">
                   <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-400">location_city</span>
@@ -202,6 +212,30 @@
                     <option value="">Loading rooms…</option>
                   </select>
                 </div>
+              </div>
+
+              <!-- Criteria fields (shown only when "any available" is ticked) -->
+              <div id="criteriaFields" class="hidden flex-col space-y-2">
+                <span class="text-sm font-bold text-gray-800">Facility Criteria <span class="text-gray-400 font-normal">(all optional)</span></span>
+                <div class="grid grid-cols-3 gap-2">
+                  <div class="relative">
+                    <label for="critCapacity" class="sr-only">Minimum capacity</label>
+                    <input id="critCapacity" type="number" min="1" placeholder="Min seats" class="w-full px-3 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" />
+                  </div>
+                  <div class="relative">
+                    <label for="critRoomType" class="sr-only">Room type</label>
+                    <select id="critRoomType" class="w-full px-2 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none">
+                      <option value="">Any type</option>
+                    </select>
+                  </div>
+                  <div class="relative">
+                    <label for="critFloor" class="sr-only">Floor</label>
+                    <select id="critFloor" class="w-full px-2 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none">
+                      <option value="">Any floor</option>
+                    </select>
+                  </div>
+                </div>
+                <p class="text-xs text-gray-500">Leave a field blank for "no preference".</p>
               </div>
 
               <div class="flex flex-col space-y-2">
@@ -469,11 +503,13 @@
         const endTime = document.getElementById('endTime');
         const purposeInput = document.getElementById('purpose');
         const policyBox = document.getElementById('policyAcknowledgement');
+        const autoAssign = document.getElementById('autoAssign');
 
         if (!submitBtn || !form) return;
 
         function isFormReady() {
-          if (roomSelect && !roomSelect.value) return false;
+          // When "assign any available room" is on, no specific room is required.
+          if (!(autoAssign && autoAssign.checked) && roomSelect && !roomSelect.value) return false;
           if (resDate && !resDate.value) return false;
           if (resEndDate && !resEndDate.value) return false;
           if (startTime && !startTime.value) return false;
@@ -504,7 +540,7 @@
           }
         }
 
-        const watchTargets = [roomSelect, resDate, resEndDate, startTime, endTime, purposeInput, policyBox];
+        const watchTargets = [roomSelect, resDate, resEndDate, startTime, endTime, purposeInput, policyBox, autoAssign];
         watchTargets.forEach(el => {
           if (!el) return;
           el.addEventListener('change', updateBtn);

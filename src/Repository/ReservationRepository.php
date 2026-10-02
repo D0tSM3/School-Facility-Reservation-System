@@ -54,12 +54,21 @@ class ReservationRepository
         string $endTime,
         ?string $equipmentNotes = null,
         string $category = 'Academic Lecture',
-        ?string $seriesId = null
+        ?string $seriesId = null,
+        string $status = 'Pending',
+        string $approvalType = 'manual'
     ): array {
         $reservationId = self::uuidv4();
+
+        // A booking that lands Approved at submission (auto-approval) has been
+        // "processed" at that moment, so stamp processed_at the way updateStatus()
+        // does for a staff decision — "Approved for Today" KPIs count it. There is
+        // no staff member behind it, so processed_by stays NULL.
+        $processedAt = $status === 'Approved' ? date('Y-m-d H:i:s') : null;
+
         $this->db->query(
-            'INSERT INTO Reservations (reservation_id, customer_id, room_id, purpose, category, equipment_notes, start_time, end_time, series_id)
-             VALUES (:reservation_id, :customer_id, :room_id, :purpose, :category, :equipment_notes, :start_time, :end_time, :series_id)',
+            'INSERT INTO Reservations (reservation_id, customer_id, room_id, purpose, category, equipment_notes, start_time, end_time, series_id, status, approval_type, processed_at)
+             VALUES (:reservation_id, :customer_id, :room_id, :purpose, :category, :equipment_notes, :start_time, :end_time, :series_id, :status, :approval_type, :processed_at)',
             [
                 ':reservation_id'  => $reservationId,
                 ':customer_id'     => $customerId,
@@ -70,6 +79,9 @@ class ReservationRepository
                 ':start_time'      => $startTime,
                 ':end_time'        => $endTime,
                 ':series_id'       => $seriesId,
+                ':status'          => $status,
+                ':approval_type'   => $approvalType,
+                ':processed_at'    => $processedAt,
             ]
         );
         // Fetch by primary key — no more re-fetch-by-natural-key ambiguity.
@@ -116,6 +128,7 @@ class ReservationRepository
                     res.end_time,
                     res.series_id,
                     res.status,
+                    res.approval_type,
                     res.processed_by,
                     p.name          AS processed_by_name,
                     res.created_at,
@@ -192,6 +205,7 @@ class ReservationRepository
                     res.end_time,
                     res.series_id,
                     res.status,
+                    res.approval_type,
                     res.processed_by,
                     res.processed_at,
                     p.name          AS processed_by_name,
@@ -288,7 +302,7 @@ class ReservationRepository
     {
         $stmt = $this->db->query(
             'SELECT reservation_id, customer_id, room_id, purpose, category, equipment_notes,
-                    start_time, end_time, series_id, status, processed_by, processed_at,
+                    start_time, end_time, series_id, status, approval_type, processed_by, processed_at,
                     cancellation_reason, cancelled_by, created_at
                FROM Reservations
               WHERE reservation_id = :reservation_id
@@ -313,7 +327,7 @@ class ReservationRepository
     {
         $stmt = $this->db->query(
             'SELECT reservation_id, customer_id, room_id, purpose, category, equipment_notes,
-                    start_time, end_time, series_id, status, processed_by, processed_at,
+                    start_time, end_time, series_id, status, approval_type, processed_by, processed_at,
                     cancellation_reason, cancelled_by, created_at
                FROM Reservations
               WHERE series_id = :series_id
@@ -797,6 +811,20 @@ class ReservationRepository
             ]
         );
         return $this->findCancelRequestById($requestId);
+    }
+
+    /**
+     * Move a reservation to a different room (accepting a facility suggestion).
+     * The double-booking trigger re-checks overlap on UPDATE for a
+     * Pending/Approved row, so the caller must have confirmed the new room is
+     * free for this window first.
+     */
+    public function updateRoom(string $reservationId, string $roomId): void
+    {
+        $this->db->query(
+            'UPDATE Reservations SET room_id = :room_id WHERE reservation_id = :reservation_id',
+            [':room_id' => $roomId, ':reservation_id' => $reservationId]
+        );
     }
 
     public function updateTimes(string $reservationId, string $startTime, string $endTime): void

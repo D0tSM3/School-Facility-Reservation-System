@@ -29,6 +29,7 @@ use CampusRoom\Core\Settings;
 use CampusRoom\Controller\AuthController;
 use CampusRoom\Controller\RoomController;
 use CampusRoom\Controller\ReservationController;
+use CampusRoom\Controller\FacilitySuggestionController;
 use CampusRoom\Controller\ClassScheduleController;
 use CampusRoom\Controller\HolidayController;
 use CampusRoom\Controller\UserController;
@@ -117,6 +118,9 @@ $routes = [
     ['GET',   '#^/api/reservations/mine$#',          fn() => (new ReservationController())->mine()],
     ['GET',   '#^/api/reservations/move-requests$#', fn() => (new ReservationController())->getMoveRequests()],
     ['GET',   '#^/api/reservations/cancel-requests$#', fn() => (new ReservationController())->getCancelRequests()],
+    // Which Pending bookings currently fail validation (staff "conflict" badges).
+    // Literal, so it must precede the GET /{id} matcher below.
+    ['GET',   '#^/api/reservations/conflicts$#',     fn() => (new ReservationController())->conflicts()],
     ['GET',   '#^/api/reservations/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->show($id)],
     ['GET',   '#^/api/reservations$#',               fn() => (new ReservationController())->index()],
     ['POST',  '#^/api/reservations$#',               fn() => (new ReservationController())->store()],
@@ -135,6 +139,14 @@ $routes = [
     // Cancellation Requests (approved bookings)
     ['POST',  '#^/api/reservations/(?P<id>[^/]+)/cancel-request$#', fn(string $id) => (new ReservationController())->requestCancel($id)],
     ['PATCH', '#^/api/reservations/cancel-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->resolveCancelRequest($id)],
+
+    // Facility Suggestions (staff propose a room move for one conflicting day;
+    // the customer accepts or declines). Literal paths before the {id} PATCH.
+    ['GET',   '#^/api/facility-suggestions/alternatives$#', fn() => (new FacilitySuggestionController())->alternatives()],
+    ['GET',   '#^/api/facility-suggestions/mine$#',         fn() => (new FacilitySuggestionController())->mine()],
+    ['GET',   '#^/api/facility-suggestions$#',              fn() => (new FacilitySuggestionController())->index()],
+    ['POST',  '#^/api/facility-suggestions$#',              fn() => (new FacilitySuggestionController())->store()],
+    ['PATCH', '#^/api/facility-suggestions/(?P<id>[^/]+)$#', fn(string $id) => (new FacilitySuggestionController())->respond($id)],
 
     // Users (Admin)
     ['GET',   '#^/api/users$#',                      fn() => (new UserController())->index()],

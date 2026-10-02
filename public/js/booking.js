@@ -157,6 +157,17 @@ window.initBookingForm = function() {
   const submitBtn = document.querySelector('button[type="submit"][form="roomReservationForm"]');
   const errorBannerTitle = document.getElementById('collisionErrorTitle');
 
+  // "Assign any available room matching my criteria" (Step 3). Present only on
+  // book-room.html, not the rooms.html quick-book modal.
+  const autoAssignCheckbox = document.getElementById('autoAssign');
+  const autoAssignBlock    = document.getElementById('autoAssignBlock');
+  const criteriaFields     = document.getElementById('criteriaFields');
+  const roomSelectField    = document.getElementById('roomSelectField');
+  const critCapacity       = document.getElementById('critCapacity');
+  const critRoomType       = document.getElementById('critRoomType');
+  const critFloor          = document.getElementById('critFloor');
+  const calendarContainer  = document.getElementById('room-calendar-container');
+
   function navigateBack() {
     if (window.history.length > 1) {
       window.history.back();
@@ -191,6 +202,8 @@ window.initBookingForm = function() {
   if (isRebook && submitBtn) {
     submitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">sync</span> Submit Re-book';
   }
+  // A re-book targets one specific past booking, so "any available room" doesn't apply.
+  if (isRebook && autoAssignBlock) autoAssignBlock.classList.add('hidden');
   const rebookNoticeDismiss = document.getElementById('rebookNoticeDismiss');
 
   function showRebookNotice(title, message) {
@@ -235,6 +248,8 @@ window.initBookingForm = function() {
           }
           roomSelect.appendChild(opt);
         });
+
+        populateCriteriaOptions(json.data);
 
         // Only preselect a room that exists and is bookable.
         const wantedId = window.bookingModalTargetRoomId || preselectedRoom;
@@ -342,6 +357,65 @@ window.initBookingForm = function() {
       renderRoomSummary(e.target.value);
       updateCalendar(e.target.value);
     });
+  }
+
+  // --- "Assign any available room" (Step 3) ---
+
+  /** Fill the room-type and floor filter dropdowns with the distinct values
+   *  that actually exist, so the customer can't filter for something absent. */
+  function populateCriteriaOptions(roomList) {
+    if (critRoomType) {
+      Array.from(new Set((roomList || []).map(r => r.room_type).filter(Boolean)))
+        .sort()
+        .forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; critRoomType.appendChild(o); });
+    }
+    if (critFloor) {
+      Array.from(new Set((roomList || []).map(r => r.floor).filter(f => f !== null && f !== undefined && f !== '')))
+        .sort((a, b) => Number(a) - Number(b))
+        .forEach(f => { const o = document.createElement('option'); o.value = String(f); o.textContent = 'Floor ' + f; critFloor.appendChild(o); });
+    }
+  }
+
+  /** Swap between the specific-room picker and the criteria fields. */
+  function setAutoAssign(on) {
+    if (criteriaFields) {
+      criteriaFields.classList.toggle('hidden', !on);
+      criteriaFields.classList.toggle('flex', on);
+    }
+    if (roomSelectField) roomSelectField.classList.toggle('hidden', on);
+    if (roomSelect) roomSelect.required = !on;
+    // The weekly calendar is per-room, so it has nothing to show in auto mode.
+    if (calendarContainer) calendarContainer.classList.toggle('hidden', on);
+
+    if (on) {
+      // No specific room: drop the room-specific greying and let every in-hours
+      // block be selectable. The server validates each assigned room/day anyway.
+      rangeData = null;
+      if (startTimeInput) resetStartOptions();
+      syncEndOptions();
+    } else if (roomSelect && roomSelect.value) {
+      markTakenSlots();
+    }
+  }
+  if (autoAssignCheckbox) {
+    autoAssignCheckbox.addEventListener('change', () => setAutoAssign(autoAssignCheckbox.checked));
+  }
+
+  /** "Room 204 (Oct 1–2), Room 310 (Oct 3)" from the per-day assignment list. */
+  function formatAssignments(assignments) {
+    if (!Array.isArray(assignments) || !assignments.length) return '';
+    const mdy = (ymd) => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(ymd));
+      return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+        .toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : String(ymd);
+    };
+    const segs = [];
+    assignments.forEach(a => {
+      const last = segs[segs.length - 1];
+      if (last && last.room_id === a.room_id) last.end = a.date;
+      else segs.push({ room_id: a.room_id, room_name: a.room_name, start: a.date, end: a.date });
+    });
+    return segs.map(s => `${s.room_name} (${s.start === s.end ? mdy(s.start) : mdy(s.start) + '–' + mdy(s.end)})`).join(', ');
   }
 
   // --- Dates: local-time helpers (Fix Guide 1.5) ---
@@ -1126,6 +1200,8 @@ window.initBookingForm = function() {
       if (submitting) return;
       hideCollisionError();
 
+      // Auto-assign: the customer gave criteria, not a room. Never during a re-book.
+      const auto = !!(autoAssignCheckbox && autoAssignCheckbox.checked) && !isRebook;
       const roomId      = roomSelect ? roomSelect.value : '';
       const dateVal     = startDateValue();
       const endDateVal  = endDateValue();
@@ -1135,8 +1211,12 @@ window.initBookingForm = function() {
       const description = purposeInput ? purposeInput.value.trim() : '';
       const policyBox   = document.getElementById('policyAcknowledgement');
 
-      if (!roomId || !dateVal || !endDateVal || !startVal || !endVal) {
-        return showCollisionError('Please choose a room, dates, start time and end time.', 'Missing information');
+      if ((!auto && !roomId) || !dateVal || !endDateVal || !startVal || !endVal) {
+        return showCollisionError(
+          auto ? 'Please choose dates, a start time and an end time.'
+               : 'Please choose a room, dates, start time and end time.',
+          'Missing information'
+        );
       }
       const problem = dateProblem(dateVal, endDateVal);
       if (problem) {
@@ -1148,12 +1228,15 @@ window.initBookingForm = function() {
       }
       // The whole window must be free on every day, not just its first block.
       // (Only checked once the schedule has loaded; otherwise the server's
-      // 409 says the same.)
+      // 409 says the same.) Skipped in auto-assign: there is no single room to
+      // check against — the server picks a free room per day.
       // A clash with Approved bookings only goes on to the server, whose 409
       // offers the urgent-override choice.
-      const clash = rangeConflicts(startVal, endVal);
-      if (clash.length && (isRebook || !window.CampusSchedule.onlyApprovedConflicts(clash))) {
-        return showCollisionError(window.CampusSchedule.describeRange(clash, startVal, endVal), 'Scheduling conflict');
+      if (!auto) {
+        const clash = rangeConflicts(startVal, endVal);
+        if (clash.length && (isRebook || !window.CampusSchedule.onlyApprovedConflicts(clash))) {
+          return showCollisionError(window.CampusSchedule.describeRange(clash, startVal, endVal), 'Scheduling conflict');
+        }
       }
       if (!picked) {
         return showCollisionError('Please choose a reservation classification.', 'Missing information');
@@ -1166,14 +1249,28 @@ window.initBookingForm = function() {
       }
 
       const payload = {
-        room_id: roomId,
+        // `purpose` is now the requester's description only; the classification
+        // travels in its own column instead of being glued to the front.
         purpose: description,
         category: PURPOSE_LABELS[picked.value],
         start_time: `${dateVal}T${startVal}:00`,
         end_time: `${endDateVal}T${endVal}:00`,
         equipment_notes: collectEquipmentNotes() || 'Standard Academic Setup'
       };
-      if (getBookingMode() === 'specific') {
+      if (auto) {
+        // Server-side assignment: send criteria, no room_id. Blank fields are
+        // sent as null ("no preference").
+        payload.auto_assign = true;
+        payload.filters = {
+          min_capacity: critCapacity && critCapacity.value ? parseInt(critCapacity.value, 10) : null,
+          room_type:    critRoomType && critRoomType.value ? critRoomType.value : null,
+          floor:        critFloor && critFloor.value !== '' ? parseInt(critFloor.value, 10) : null
+        };
+      } else {
+        payload.room_id = roomId;
+      }
+      
+      if (typeof getBookingMode === 'function' && getBookingMode() === 'specific') {
         payload.active_dates = getSelectedDates();
       }
 
@@ -1206,9 +1303,15 @@ window.initBookingForm = function() {
           redirecting = true;
           const ref = 'REQ-' + String(json.data.reservation_id).substring(0, 8).toUpperCase();
           const dayCount = Array.isArray(json.data.series) ? json.data.series.length : 1;
-          const what = isRebook ? 'Re-booking created'
-            : dayCount > 1 ? `Reservation request created for ${dayCount} days` : 'Reservation request created';
-          showSuccess(`${what}: ${ref} is now in the staff queue for verification. Redirecting to My Reservations…`);
+
+          if (json.data.auto_assigned && Array.isArray(json.data.assignments)) {
+            const summary = formatAssignments(json.data.assignments);
+            showSuccess(`Your booking has been assigned to: ${summary}. (${ref}) Redirecting to My Reservations…`);
+          } else {
+            const what = isRebook ? 'Re-booking created'
+              : dayCount > 1 ? `Reservation request created for ${dayCount} days` : 'Reservation request created';
+            showSuccess(`${what}: ${ref} is now in the staff queue for verification. Redirecting to My Reservations…`);
+          }
           setTimeout(() => { window.location.href = 'my-reservations.html'; }, 1500);
         })
         .catch(() => showCollisionError('Could not reach the server. Check your connection and try again.', 'Network error'))

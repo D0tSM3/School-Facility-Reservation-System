@@ -118,6 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
     moveRequests: [],
     cancelRequests: [],
     overrideRequests: [],
+    conflicts: {},          // reservation_id -> conflict reason (Pending rows that fail validation)
+    suggestionsByRes: {},   // reservation_id -> latest facility suggestion for that booking
     activeTab: 'pending',
     wingFilter: 'all',
     allStatusFilter: 'all',
@@ -343,6 +345,16 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (isPending) badgeBg = 'bg-amber-100 text-amber-700';
       else if (reservation.status === 'Cancelled' || reservation.status === 'Rejected') badgeBg = 'bg-red-100 text-red-700';
 
+      // Step 4: this day can't currently be approved (a class/booking landed on
+      // it). Staff can resolve just this day with a facility suggestion.
+      const conflictReason = isPending ? state.conflicts[reservation.reservation_id] : null;
+      const suggestion = state.suggestionsByRes[reservation.reservation_id];
+      const sugMeta = {
+        Pending:  { bg: 'bg-sky-100 text-sky-800',       label: 'Suggestion sent — awaiting customer' },
+        Accepted: { bg: 'bg-emerald-100 text-emerald-800', label: 'Suggestion accepted' },
+        Declined: { bg: 'bg-rose-100 text-rose-800',       label: 'Suggestion declined' }
+      };
+
       return `
         <div class="relative bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md hover:border-gray-300 mb-4" data-card-id="${id}">
           <div class="p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
@@ -358,9 +370,15 @@ document.addEventListener('DOMContentLoaded', () => {
                   <h3 class="text-base font-bold text-gray-900 truncate">${requester}</h3>
                   ${reservation.customer_email ? `<span class="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold uppercase truncate">${escapeHtml(reservation.customer_email)}</span>` : ''}
                   <span class="px-2 py-0.5 rounded ${badgeBg} text-[10px] font-bold uppercase tracking-wider">${escapeHtml(reservation.status)}</span>
+                  ${reservation.approval_type === 'special' ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider" title="This room is flagged to always require Staff review."><span class="material-symbols-outlined text-[13px] leading-none">verified_user</span>Requires approval</span>` : ''}
                   ${reservation.category ? `<span class="px-2 py-0.5 rounded border border-gray-200 text-gray-500 text-xs">${escapeHtml(reservation.category)}</span>` : ''}
+                  ${conflictReason ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-bold uppercase tracking-wider"><span class="material-symbols-outlined text-[13px] leading-none">warning</span>Conflict</span>` : ''}
+                  ${suggestion ? `<span class="px-2 py-0.5 rounded ${(sugMeta[suggestion.status]||sugMeta.Pending).bg} text-[10px] font-bold uppercase tracking-wider">${(sugMeta[suggestion.status]||sugMeta.Pending).label}</span>` : ''}
                 </div>
-                
+
+                ${conflictReason ? `<p class="text-xs text-red-600 mb-2 flex items-start gap-1"><span class="material-symbols-outlined text-[14px] leading-none mt-px">error</span><span>${escapeHtml(conflictReason)}</span></p>` : ''}
+                ${suggestion ? `<p class="text-xs text-gray-500 mb-2">Suggested move: <span class="font-semibold text-gray-700">${escapeHtml(suggestion.suggested_room_name || '')}</span> for ${escapeHtml(suggestion.affected_date || '')}${suggestion.status === 'Declined' ? ' — customer declined; you may reject this day or try another room.' : ''}</p>` : ''}
+
                 <div class="flex items-center gap-2 text-sm text-gray-500 mt-1 mb-2">
                   <span class="material-symbols-outlined text-[16px] text-gray-400">event</span>
                   <span class="font-medium">${formatDateTime(reservation.start_time)} &rarr; ${formatTime(reservation.end_time)}</span>
@@ -376,6 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             <div class="flex flex-wrap items-center gap-2 shrink-0 border-t xl:border-t-0 border-gray-100 pt-4 xl:pt-0">
               <button type="button" onclick="window.CampusRoomStaff.openDetailModal('${id}')" class="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">Details</button>
+              ${isPending && conflictReason && (!suggestion || suggestion.status === 'Declined') ? `<button type="button" onclick="window.CampusRoomStaff.openFindAlternativeModal('${id}')" class="px-4 py-2 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors shadow-sm">Find alternative</button>` : ''}
               ${isPending ? `<button type="button" onclick="window.CampusRoomStaff.decide('${id}', 'Rejected', '${requester}', this)" class="px-4 py-2 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors shadow-sm">Reject</button>` : ''}
               ${isPending ? `<button type="button" onclick="window.CampusRoomStaff.decide('${id}', 'Approved', '${requester}', this)" class="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm">Approve</button>` : ''}
               ${!isPending && reservation.status === 'Approved' ? `<button type="button" onclick="window.CampusRoomStaff.openStaffCancelModal('${id}', ${escapeHtml(JSON.stringify(reservation))})" class="px-4 py-2 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors shadow-sm">Cancel Booking</button>` : ''}
@@ -723,16 +742,18 @@ document.addEventListener('DOMContentLoaded', () => {
     
     
 
-    const [reservations, rooms, moves, cancels, overrides] = await Promise.all([
+    const [reservations, rooms, moves, cancels, overrides, conflicts, suggestions] = await Promise.all([
       api('api/reservations'),
       api('api/rooms'),
       api('api/reservations/move-requests?status=Pending'),
       api('api/reservations/cancel-requests?status=Pending'),
-      api('api/conflict-override-requests?status=Pending')
+      api('api/conflict-override-requests?status=Pending'),
+      api('api/reservations/conflicts'),
+      api('api/facility-suggestions')
     ]);
 
     state.loading = false;
-    
+
 
     const failed = [reservations, rooms, moves, cancels, overrides].find((r) => !r.ok);
     if (failed && handleAuthFailure(failed)) return;
@@ -742,6 +763,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (moves.ok) state.moveRequests = moves.data || [];
     if (cancels.ok) state.cancelRequests = cancels.data || [];
     if (overrides.ok) state.overrideRequests = overrides.data || [];
+
+    // Conflict reasons keyed by reservation (Pending rows that fail validation now).
+    state.conflicts = {};
+    if (conflicts.ok) (conflicts.data || []).forEach((c) => { state.conflicts[c.reservation_id] = c.reason; });
+
+    // Latest facility suggestion per booking (the list is newest-first).
+    state.suggestionsByRes = {};
+    if (suggestions.ok) (suggestions.data || []).forEach((s) => {
+      if (!state.suggestionsByRes[s.reservation_id]) state.suggestionsByRes[s.reservation_id] = s;
+    });
 
     renderAll();
 
@@ -1763,6 +1794,127 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------------------------------------------------------------
   // Export Global API for inline HTML onclick handlers
   // ---------------------------------------------------------------
+  // ---------------------------------------------------------------
+  // Step 4: Find an alternative room for one conflicting booking day and
+  // suggest the move to the customer.
+  // ---------------------------------------------------------------
+
+  let findAltModal = null;
+
+  function buildFindAltModal() {
+    const wrap = document.createElement('div');
+    wrap.className = 'fixed inset-0 z-[120] hidden items-center justify-center bg-black/40 p-4';
+    wrap.setAttribute('role', 'dialog');
+    wrap.setAttribute('aria-modal', 'true');
+    wrap.innerHTML = `
+      <div class="w-full max-w-lg rounded-2xl bg-white shadow-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold text-gray-900">Suggest an alternative room</h2>
+            <p class="text-sm text-gray-600 mt-1" data-fa-sub></p>
+          </div>
+          <button type="button" data-fa-close class="text-gray-400 hover:text-gray-700"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div data-fa-conflict class="hidden text-sm bg-red-50 border border-red-200 text-red-700 rounded-xl p-3"></div>
+        <div data-fa-body class="space-y-2"></div>
+        <div class="space-y-1">
+          <label class="text-sm font-bold text-gray-800" for="faReason">Reason for the customer <span class="text-red-500">*</span></label>
+          <textarea id="faReason" rows="3" maxlength="500" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[#7a1f2b]" placeholder="Explain why this day needs to move and why this room fits."></textarea>
+        </div>
+        <p data-fa-error class="hidden text-sm font-semibold text-red-600"></p>
+        <div class="flex flex-col sm:flex-row gap-2 sm:justify-end pt-1">
+          <button type="button" data-fa-close class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button type="button" data-fa-send disabled class="px-5 py-2 rounded-xl bg-[#7a1f2b] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">Send suggestion</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const close = () => { wrap.classList.add('hidden'); wrap.classList.remove('flex'); };
+    wrap.querySelectorAll('[data-fa-close]').forEach((b) => b.addEventListener('click', close));
+    wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !wrap.classList.contains('hidden')) close(); });
+    return { wrap, close, reservationId: null, affectedDate: null };
+  }
+
+  async function openFindAlternativeModal(reservationId) {
+    if (!findAltModal) findAltModal = buildFindAltModal();
+    const m = findAltModal;
+    m.reservationId = reservationId;
+    const reservation = state.reservations.find((r) => r.reservation_id === reservationId);
+
+    const sub = m.wrap.querySelector('[data-fa-sub]');
+    const body = m.wrap.querySelector('[data-fa-body]');
+    const conflictBox = m.wrap.querySelector('[data-fa-conflict]');
+    const sendBtn = m.wrap.querySelector('[data-fa-send]');
+    const errEl = m.wrap.querySelector('[data-fa-error]');
+    const reasonEl = m.wrap.querySelector('#faReason');
+
+    sub.textContent = reservation
+      ? `${reservation.room_name} · ${formatDateTime(reservation.start_time)} → ${formatTime(reservation.end_time)}`
+      : 'Loading…';
+    conflictBox.classList.add('hidden');
+    errEl.classList.add('hidden');
+    sendBtn.disabled = true;
+    reasonEl.value = '';
+    body.innerHTML = '<p class="text-sm text-gray-500">Searching for matching rooms…</p>';
+
+    m.wrap.classList.remove('hidden');
+    m.wrap.classList.add('flex');
+
+    const res = await api(`api/facility-suggestions/alternatives?reservation_id=${encodeURIComponent(reservationId)}`);
+    if (!res.ok) { body.innerHTML = `<p class="text-sm text-red-600">${escapeHtml(res.error || 'Could not search for rooms.')}</p>`; return; }
+
+    const data = res.data || {};
+    m.affectedDate = data.affected_date || null;
+    if (data.conflict_reason) {
+      conflictBox.textContent = data.conflict_reason;
+      conflictBox.classList.remove('hidden');
+      reasonEl.value = `This day conflicts: ${data.conflict_reason} We can move it to a free room of the same type.`;
+    }
+
+    const alts = data.alternatives || [];
+    if (!alts.length) {
+      body.innerHTML = '<p class="text-sm text-gray-600">No matching room (same type, enough capacity) is free at this time on that day.</p>';
+      return;
+    }
+    body.innerHTML = '<p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Pick a room</p>' +
+      alts.map((a) => `
+        <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50">
+          <input type="radio" name="faRoom" value="${escapeHtml(a.room_id)}" class="w-4 h-4 text-[#7a1f2b] focus:ring-[#7a1f2b]">
+          <span class="flex-1"><span class="font-semibold text-gray-800">${escapeHtml(a.name)}</span>
+            <span class="text-xs text-gray-500">· ${escapeHtml(String(a.capacity))} seats${a.floor != null ? ' · Floor ' + escapeHtml(String(a.floor)) : ''}${a.room_type ? ' · ' + escapeHtml(a.room_type) : ''}</span></span>
+        </label>`).join('');
+
+    const refresh = () => { sendBtn.disabled = !(body.querySelector('input[name="faRoom"]:checked') && reasonEl.value.trim()); };
+    body.querySelectorAll('input[name="faRoom"]').forEach((r) => r.addEventListener('change', refresh));
+    reasonEl.addEventListener('input', refresh);
+
+    sendBtn.onclick = async () => {
+      const chosen = body.querySelector('input[name="faRoom"]:checked');
+      const reason = reasonEl.value.trim();
+      if (!chosen || !reason) return;
+      sendBtn.disabled = true;
+      errEl.classList.add('hidden');
+      const out = await api('api/facility-suggestions', {
+        method: 'POST',
+        body: JSON.stringify({
+          reservation_id: reservationId,
+          suggested_room_id: chosen.value,
+          affected_date: m.affectedDate,
+          reason
+        })
+      });
+      if (!out.ok) {
+        errEl.textContent = out.error || 'Could not send the suggestion.';
+        errEl.classList.remove('hidden');
+        sendBtn.disabled = false;
+        return;
+      }
+      m.close();
+      showToast('Suggestion sent to the customer.', 'success');
+      loadAll({ notify: false });
+    };
+  }
+
   window.CampusRoomStaff = {
     decide,
     openDetailModal,
@@ -1770,6 +1922,7 @@ document.addEventListener('DOMContentLoaded', () => {
     openMoveModal,
     openCancelRequestModal,
     openOverrideModal,
+    openFindAlternativeModal,
     toggleFacility,
     updateBatchButton
   };
