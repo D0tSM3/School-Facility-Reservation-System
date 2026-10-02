@@ -83,16 +83,10 @@ class ReservationValidator
             return $roomError;
         }
 
-        
-        
         $days = self::datesBetween($startDate, $endDate);
-        if ($activeDates !== null && count($activeDates) > 0) {
-            $days = array_values(array_intersect($days, $activeDates));
+        if ($days === null) {
+            return "The end date must be on or after the start date.";
         }
-        if ($activeDates !== null && count($activeDates) > 0) {
-            $days = array_values(array_intersect($days, $activeDates));
-        }
-
         if ($activeDates !== null && count($activeDates) > 0) {
             $days = array_values(array_intersect($days, $activeDates));
         }
