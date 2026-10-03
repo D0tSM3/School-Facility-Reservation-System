@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (remaining > 0) {
           updateButton();
           if (errorAlertText) {
-            errorAlertText.textContent = `Too many failed attempts. All 3 attempts exhausted. Please wait ${remaining}s before trying again.`;
+            errorAlertText.textContent = `Too many failed attempts. Please wait ${remaining}s before trying again.`;
           }
         } else {
           clearInterval(loginCooldownTimer);

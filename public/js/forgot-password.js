@@ -638,7 +638,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (remaining > 0) {
         updateBtn();
         if (resetErrorAlertText) {
-          resetErrorAlertText.textContent = `Too many failed attempts. All 3 attempts exhausted. Please wait ${remaining}s before trying again.`;
+          resetErrorAlertText.textContent = `Too many failed attempts. Please wait ${remaining}s before trying again.`;
         }
       } else {
         clearInterval(resetCooldownTimer);

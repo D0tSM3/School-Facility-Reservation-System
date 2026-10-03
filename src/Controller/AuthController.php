@@ -204,7 +204,7 @@ class AuthController
         if (RateLimiter::isLocked('login', $email)) {
             $remaining = RateLimiter::getRemainingSeconds('login', $email);
             Response::json([
-                'error' => "Too many failed attempts. All 3 attempts exhausted. Please wait {$remaining} seconds before trying again.",
+                'error' => "Too many failed attempts. Please wait {$remaining}s before trying again.",
                 'retry_after' => $remaining,
                 'remaining_attempts' => 0,
                 'attempts' => RateLimiter::MAX_ATTEMPTS,
@@ -218,7 +218,7 @@ class AuthController
             $failure = RateLimiter::recordFailure('login', $email, RateLimiter::MAX_ATTEMPTS, 30);
             if ($failure['is_locked']) {
                 Response::json([
-                    'error' => "Too many failed attempts. All {$failure['max_attempts']} attempts exhausted. Please wait {$failure['retry_after']} seconds before trying again.",
+                    'error' => "Too many failed attempts. Please wait {$failure['retry_after']}s before trying again.",
                     'retry_after' => $failure['retry_after'],
                     'remaining_attempts' => 0,
                     'attempts' => $failure['attempts'],
@@ -279,7 +279,7 @@ class AuthController
         if (RateLimiter::isLocked('verify_otp', $email)) {
             $remaining = RateLimiter::getRemainingSeconds('verify_otp', $email);
             Response::json([
-                'error' => "Too many failed attempts. All 3 attempts exhausted. Please wait {$remaining} seconds before trying again.",
+                'error' => "Too many failed attempts. Please wait {$remaining}s before trying again.",
                 'retry_after' => $remaining,
                 'remaining_attempts' => 0,
                 'attempts' => RateLimiter::MAX_ATTEMPTS,
@@ -305,7 +305,7 @@ class AuthController
             $failure = RateLimiter::recordFailure('verify_otp', $email, RateLimiter::MAX_ATTEMPTS, 30);
             if ($failure['is_locked']) {
                 Response::json([
-                    'error' => "Too many failed attempts. All {$failure['max_attempts']} attempts exhausted. Please wait {$failure['retry_after']} seconds before trying again.",
+                    'error' => "Too many failed attempts. Please wait {$failure['retry_after']}s before trying again.",
                     'retry_after' => $failure['retry_after'],
                     'remaining_attempts' => 0,
                     'attempts' => $failure['attempts'],
@@ -409,7 +409,7 @@ class AuthController
         if (RateLimiter::isLocked('reset_otp', $email)) {
             $remaining = RateLimiter::getRemainingSeconds('reset_otp', $email);
             Response::json([
-                'error' => "Too many failed attempts. All 3 attempts exhausted. Please wait {$remaining} seconds before trying again.",
+                'error' => "Too many failed attempts. Please wait {$remaining}s before trying again.",
                 'retry_after' => $remaining,
                 'remaining_attempts' => 0,
                 'attempts' => RateLimiter::MAX_ATTEMPTS,
@@ -427,7 +427,7 @@ class AuthController
             $failure = RateLimiter::recordFailure('reset_otp', $email, RateLimiter::MAX_ATTEMPTS, 30);
             if ($failure['is_locked']) {
                 Response::json([
-                    'error' => "Too many failed attempts. All {$failure['max_attempts']} attempts exhausted. Please wait {$failure['retry_after']} seconds before trying again.",
+                    'error' => "Too many failed attempts. Please wait {$failure['retry_after']}s before trying again.",
                     'retry_after' => $failure['retry_after'],
                     'remaining_attempts' => 0,
                     'attempts' => $failure['attempts'],
