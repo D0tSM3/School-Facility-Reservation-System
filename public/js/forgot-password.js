@@ -41,6 +41,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const devBanner = document.getElementById('forgotDevBanner');
   const devOtpDisplay = document.getElementById('forgotDevOtpDisplay');
   const otpInputs = document.querySelectorAll('.otp-digit');
+  const critLength = document.getElementById('crit-length');
+  const critUpper = document.getElementById('crit-upper');
+  const critLower = document.getElementById('crit-lower');
+  const critNumber = document.getElementById('crit-number');
+  const critSpecial = document.getElementById('crit-special');
+  const errConfirm = document.getElementById('err-confirm');
 
   // Step 3: Success Card
   const successCard = document.getElementById('forgotSuccessCard');
@@ -287,6 +293,11 @@ document.addEventListener('DOMContentLoaded', () => {
       confirmationCard.classList.add('flex');
     }
 
+    // Initialize criteria check for current password input value
+    checkPasswordCriteria(newPasswordInput ? newPasswordInput.value : '');
+    if (confirmPasswordInput) confirmPasswordInput.classList.remove('input-error');
+    if (errConfirm) errConfirm.classList.add('hidden');
+
     // Auto-focus first digit box
     const firstOtp = document.getElementById('otp0');
     if (firstOtp) {
@@ -306,6 +317,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function resetToFormView() {
+    sessionStorage.removeItem('otp_email');
+    sessionStorage.removeItem('dev_otp');
+
     if (confirmationCard) {
       confirmationCard.classList.add('hidden');
       confirmationCard.classList.remove('flex');
@@ -322,6 +336,9 @@ document.addEventListener('DOMContentLoaded', () => {
     clearOtpInputs();
     if (newPasswordInput) newPasswordInput.value = '';
     if (confirmPasswordInput) confirmPasswordInput.value = '';
+    checkPasswordCriteria('');
+    if (confirmPasswordInput) confirmPasswordInput.classList.remove('input-error');
+    if (errConfirm) errConfirm.classList.add('hidden');
 
     hideError();
     hideResetError();
@@ -385,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => {
       const targetId = btn.getAttribute('data-target');
       const input = document.getElementById(targetId);
-      const icon = btn.querySelector('.material-symbols-outlined');
+      const icon = btn.querySelector('.material-symbols-outlined') || btn.querySelector('span');
       if (input && icon) {
         const isPassword = input.type === 'password';
         input.type = isPassword ? 'text' : 'password';
@@ -393,6 +410,72 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  // Password Requirements Live Validation
+  function updateCrit(el, passed) {
+    if (!el) return;
+    if (passed) {
+      el.className = 'criteria-met flex items-center gap-2 text-[13px] font-medium';
+      const icon = el.querySelector('.material-symbols-outlined') || el.querySelector('span');
+      if (icon) icon.textContent = 'check';
+    } else {
+      el.className = 'criteria-unmet flex items-center gap-2 text-[13px] font-medium';
+      const icon = el.querySelector('.material-symbols-outlined') || el.querySelector('span');
+      if (icon) icon.textContent = 'close';
+    }
+  }
+
+  function checkPasswordCriteria(val) {
+    const str = val || '';
+    const hasLength = str.length >= 8 && str.length <= 72;
+    const hasUpper = /[A-Z]/.test(str);
+    const hasLower = /[a-z]/.test(str);
+    const hasNumber = /[0-9]/.test(str);
+    const hasSpecial = /[^A-Za-z0-9]/.test(str);
+
+    updateCrit(critLength, hasLength);
+    updateCrit(critUpper, hasUpper);
+    updateCrit(critLower, hasLower);
+    updateCrit(critNumber, hasNumber);
+    updateCrit(critSpecial, hasSpecial);
+
+    return hasLength && hasUpper && hasLower && hasNumber && hasSpecial;
+  }
+
+  if (newPasswordInput) {
+    ['input', 'keyup', 'change'].forEach(evt => {
+      newPasswordInput.addEventListener(evt, () => {
+        checkPasswordCriteria(newPasswordInput.value);
+        if (confirmPasswordInput && confirmPasswordInput.value.length > 0) {
+          if (newPasswordInput.value === confirmPasswordInput.value) {
+            confirmPasswordInput.classList.remove('input-error');
+            if (errConfirm) errConfirm.classList.add('hidden');
+          } else {
+            confirmPasswordInput.classList.add('input-error');
+            if (errConfirm) errConfirm.classList.remove('hidden');
+          }
+        }
+        hideResetError();
+      });
+    });
+  }
+
+  if (confirmPasswordInput) {
+    ['input', 'keyup', 'change'].forEach(evt => {
+      confirmPasswordInput.addEventListener(evt, () => {
+        const val = confirmPasswordInput.value;
+        const passVal = newPasswordInput ? newPasswordInput.value : '';
+        if (!val || val === passVal) {
+          confirmPasswordInput.classList.remove('input-error');
+          if (errConfirm) errConfirm.classList.add('hidden');
+        } else {
+          confirmPasswordInput.classList.add('input-error');
+          if (errConfirm) errConfirm.classList.remove('hidden');
+        }
+        hideResetError();
+      });
+    });
+  }
 
   // ==========================================
   // 5. Step 1: Request OTP Submission
@@ -479,13 +562,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      if (!newPassword || newPassword.length < 8) {
-        showResetError('Password must be at least 8 characters.');
+      if (!checkPasswordCriteria(newPassword)) {
+        showResetError('Password must meet all 5 security criteria (8 to 72 characters).');
         if (newPasswordInput) newPasswordInput.focus();
         return;
       }
 
       if (newPassword !== confirmPassword) {
+        if (confirmPasswordInput) confirmPasswordInput.classList.add('input-error');
+        if (errConfirm) errConfirm.classList.remove('hidden');
         showResetError('Passwords do not match. Please re-enter.');
         if (confirmPasswordInput) confirmPasswordInput.focus();
         return;
@@ -518,12 +603,54 @@ document.addEventListener('DOMContentLoaded', () => {
           setResetLoadingState(false);
           const errorMsg = data.error || (data.data && data.data.error) || 'Password reset failed. Please check the code and try again.';
           showResetError(errorMsg);
+          const retryAfter = data.retry_after || (data.data && data.data.retry_after);
+          const attempts = data.attempts || data.attempt_count || (data.data && (data.data.attempts || data.data.attempt_count));
+          if (retryAfter && Number(retryAfter) > 0) {
+            startResetOtpTimeout(Number(retryAfter), attempts);
+          }
         }
       } catch (err) {
         setResetLoadingState(false);
         showResetError('Network error. Please try again later.');
       }
     });
+  }
+
+  let resetCooldownTimer = null;
+  function startResetOtpTimeout(seconds, attempts) {
+    if (!resetSubmitBtn) return;
+    if (resetCooldownTimer) clearInterval(resetCooldownTimer);
+
+    let remaining = seconds;
+    resetSubmitBtn.disabled = true;
+    resetSubmitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+    otpInputs.forEach(i => { i.disabled = true; });
+
+    const originalText = resetSubmitText ? resetSubmitText.textContent : 'Reset Password & Sign In';
+
+    const updateBtn = () => {
+      if (resetSubmitText) resetSubmitText.textContent = `Try again in ${remaining}s`;
+    };
+    updateBtn();
+
+    resetCooldownTimer = setInterval(() => {
+      remaining--;
+      if (remaining > 0) {
+        updateBtn();
+        if (resetErrorAlertText) {
+          resetErrorAlertText.textContent = `Too many failed attempts. All 3 attempts exhausted. Please wait ${remaining}s before trying again.`;
+        }
+      } else {
+        clearInterval(resetCooldownTimer);
+        resetCooldownTimer = null;
+        resetSubmitBtn.disabled = false;
+        resetSubmitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        if (resetSubmitText) resetSubmitText.textContent = originalText;
+        otpInputs.forEach(i => { i.disabled = false; });
+        const firstOtp = document.getElementById('otp0');
+        if (firstOtp) firstOtp.focus();
+      }
+    }, 1000);
   }
 
   // Resend Code handler
@@ -572,5 +699,14 @@ document.addEventListener('DOMContentLoaded', () => {
     sendAnotherBtn.addEventListener('click', () => {
       resetToFormView();
     });
+  }
+
+  // Restore active recovery session or evaluate autofilled password
+  const savedOtpEmail = sessionStorage.getItem('otp_email');
+  if (savedOtpEmail) {
+    const savedDevOtp = sessionStorage.getItem('dev_otp');
+    showConfirmationState(savedOtpEmail, savedDevOtp);
+  } else {
+    checkPasswordCriteria(newPasswordInput ? newPasswordInput.value : '');
   }
 });

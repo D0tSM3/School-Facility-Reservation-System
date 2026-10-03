@@ -138,6 +138,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      if (email.length > 255) {
+        showLoginError('Email address must be 255 characters or fewer.');
+        return;
+      }
+
+      if (password.length > 72) {
+        showLoginError('Password must be 72 characters or fewer.');
+        return;
+      }
+
       // Caught here so the user is told to tick the box before a round trip.
       if (captcha.enabled && captcha.ready && !captchaToken('loginRecaptcha')) {
         showLoginError('Please confirm you are not a robot.');
@@ -172,7 +182,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           // Single-use token: clear it so a retry starts from a fresh tick.
           captchaReset('loginRecaptcha');
-          showLoginError(payload.error || json.error || 'Authentication failed: Invalid credentials provided.');
+          const errorMsg = payload.error || json.error || 'Authentication failed: Invalid credentials provided.';
+          showLoginError(errorMsg);
+          const retryAfter = json.retry_after || payload.retry_after;
+          const attempts = json.attempts || json.attempt_count || payload.attempts || payload.attempt_count;
+          if (retryAfter && Number(retryAfter) > 0) {
+            startLoginTimeout(Number(retryAfter), attempts);
+          }
         }
       })
       .catch((err) => {
@@ -180,6 +196,40 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoginError('Network error. Please try again later.');
       });
     });
+
+    let loginCooldownTimer = null;
+    function startLoginTimeout(seconds, attempts) {
+      const submitBtn = loginForm ? loginForm.querySelector('button[type="submit"]') : null;
+      if (!submitBtn) return;
+      if (loginCooldownTimer) clearInterval(loginCooldownTimer);
+
+      let remaining = seconds;
+      submitBtn.disabled = true;
+      submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+
+      const originalHtml = submitBtn.innerHTML;
+
+      const updateButton = () => {
+        submitBtn.innerHTML = `<span>Try again in ${remaining}s</span>`;
+      };
+      updateButton();
+
+      loginCooldownTimer = setInterval(() => {
+        remaining--;
+        if (remaining > 0) {
+          updateButton();
+          if (errorAlertText) {
+            errorAlertText.textContent = `Too many failed attempts. All 3 attempts exhausted. Please wait ${remaining}s before trying again.`;
+          }
+        } else {
+          clearInterval(loginCooldownTimer);
+          loginCooldownTimer = null;
+          submitBtn.disabled = false;
+          submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+          submitBtn.innerHTML = originalHtml;
+        }
+      }, 1000);
+    }
 
     function showLoginError(msg) {
       if (errorAlert) {

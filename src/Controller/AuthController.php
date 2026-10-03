@@ -6,6 +6,7 @@ namespace CampusRoom\Controller;
 
 use CampusRoom\Core\Auth;
 use CampusRoom\Core\Mailer;
+use CampusRoom\Core\RateLimiter;
 use CampusRoom\Core\Recaptcha;
 use CampusRoom\Core\Response;
 use CampusRoom\Repository\ReservationRepository;
@@ -130,12 +131,11 @@ class AuthController
             Response::error('Please register with your @' . ltrim($domain, '@') . ' email address.', 422);
         }
 
-        if (strlen($password) < 8) {
-            Response::error('Password must be at least 8 characters.', 422);
+        if (strlen($password) < 8 || strlen($password) > 72) {
+            Response::error('Password must be between 8 and 72 characters.', 422);
         }
-        // bcrypt silently ignores everything past 72 bytes.
-        if (strlen($password) > 72) {
-            Response::error('Password must be 72 characters or fewer.', 422);
+        if (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password) || !preg_match('/[^A-Za-z0-9]/', $password)) {
+            Response::error('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.', 422);
         }
 
         if ($this->users->findByEmail($email) !== null) {
@@ -193,22 +193,60 @@ class AuthController
             Response::error('email and password are required.', 422);
         }
 
+        if (strlen($email) > 255) {
+            Response::error('Email must be 255 characters or fewer.', 422);
+        }
+
+        if (strlen($password) > 72) {
+            Response::error('Invalid email or password.', 401);
+        }
+
+        if (RateLimiter::isLocked('login', $email)) {
+            $remaining = RateLimiter::getRemainingSeconds('login', $email);
+            Response::json([
+                'error' => "Too many failed attempts. All 3 attempts exhausted. Please wait {$remaining} seconds before trying again.",
+                'retry_after' => $remaining,
+                'remaining_attempts' => 0,
+                'attempts' => RateLimiter::MAX_ATTEMPTS,
+            ], 429);
+            exit;
+        }
+
         $user = $this->users->findByEmailFull($email);
 
         if ($user === null || empty($user['password_hash']) || !password_verify($password, $user['password_hash'])) {
-            Response::error('Invalid email or password.', 401);
+            $failure = RateLimiter::recordFailure('login', $email, RateLimiter::MAX_ATTEMPTS, 30);
+            if ($failure['is_locked']) {
+                Response::json([
+                    'error' => "Too many failed attempts. All {$failure['max_attempts']} attempts exhausted. Please wait {$failure['retry_after']} seconds before trying again.",
+                    'retry_after' => $failure['retry_after'],
+                    'remaining_attempts' => 0,
+                    'attempts' => $failure['attempts'],
+                ], 401);
+            } else {
+                $word = $failure['remaining_attempts'] === 1 ? 'attempt' : 'attempts';
+                Response::json([
+                    'error' => "Invalid email or password. {$failure['remaining_attempts']} {$word} remaining.",
+                    'retry_after' => 0,
+                    'remaining_attempts' => $failure['remaining_attempts'],
+                    'attempts' => $failure['attempts'],
+                ], 401);
+            }
+            exit;
         }
-        
+
+        RateLimiter::clear('login', $email);
+
         if (!(bool)$user['is_verified']) {
             $otp  = $this->issueOtp($user['user_id']);
             $sent = Mailer::sendOtp($email, $user['name'], $otp);
-            
+
             $payload = [
                 'error' => 'Please verify your email address to continue.',
                 'email' => $email,
                 'requires_verification' => true
             ];
-            
+
             if (!$sent || empty($_ENV['SMTP_HOST'] ?? '') || empty($_ENV['SMTP_USER'] ?? '')) {
                 $payload['dev_otp']  = $otp;
                 $payload['dev_note'] = 'SMTP not configured — OTP returned for development use only.';
@@ -238,6 +276,17 @@ class AuthController
             Response::error('email and otp are required.', 422);
         }
 
+        if (RateLimiter::isLocked('verify_otp', $email)) {
+            $remaining = RateLimiter::getRemainingSeconds('verify_otp', $email);
+            Response::json([
+                'error' => "Too many failed attempts. All 3 attempts exhausted. Please wait {$remaining} seconds before trying again.",
+                'retry_after' => $remaining,
+                'remaining_attempts' => 0,
+                'attempts' => RateLimiter::MAX_ATTEMPTS,
+            ], 429);
+            exit;
+        }
+
         $user = $this->users->findByEmailFull($email);
         if ($user === null) {
             Response::error('Invalid verification attempt.', 404);
@@ -245,6 +294,7 @@ class AuthController
 
         // Already verified — just log in (user may have submitted twice)
         if ((bool)$user['is_verified'] && empty($user['otp_code'])) {
+            RateLimiter::clear('verify_otp', $email);
             $this->startSession($user);
             unset($user['password_hash'], $user['otp_code'], $user['otp_expires_at']);
             Response::json($user);
@@ -252,7 +302,24 @@ class AuthController
 
         // Validate OTP
         if ($user['otp_code'] === null || $code !== $user['otp_code']) {
-            Response::error('Incorrect verification code. Please try again.', 422);
+            $failure = RateLimiter::recordFailure('verify_otp', $email, RateLimiter::MAX_ATTEMPTS, 30);
+            if ($failure['is_locked']) {
+                Response::json([
+                    'error' => "Too many failed attempts. All {$failure['max_attempts']} attempts exhausted. Please wait {$failure['retry_after']} seconds before trying again.",
+                    'retry_after' => $failure['retry_after'],
+                    'remaining_attempts' => 0,
+                    'attempts' => $failure['attempts'],
+                ], 422);
+            } else {
+                $word = $failure['remaining_attempts'] === 1 ? 'attempt' : 'attempts';
+                Response::json([
+                    'error' => "Incorrect verification code. {$failure['remaining_attempts']} {$word} remaining.",
+                    'retry_after' => 0,
+                    'remaining_attempts' => $failure['remaining_attempts'],
+                    'attempts' => $failure['attempts'],
+                ], 422);
+            }
+            exit;
         }
 
         // Check expiry
@@ -260,6 +327,9 @@ class AuthController
         if (time() > $expiresAt) {
             Response::error('This code has expired. Please request a new one.', 422);
         }
+
+        // Clear rate limit on successful verification
+        RateLimiter::clear('verify_otp', $email);
 
         // Mark verified, clear OTP, and log in
         $this->users->markVerified($user['user_id']);
@@ -329,11 +399,22 @@ class AuthController
             Response::error('Email, verification code, and new password are required.', 422);
         }
 
-        if (strlen($password) < 8) {
-            Response::error('Password must be at least 8 characters.', 422);
+        if (strlen($password) < 8 || strlen($password) > 72) {
+            Response::error('Password must be between 8 and 72 characters.', 422);
         }
-        if (strlen($password) > 72) {
-            Response::error('Password must be 72 characters or fewer.', 422);
+        if (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password) || !preg_match('/[^A-Za-z0-9]/', $password)) {
+            Response::error('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.', 422);
+        }
+
+        if (RateLimiter::isLocked('reset_otp', $email)) {
+            $remaining = RateLimiter::getRemainingSeconds('reset_otp', $email);
+            Response::json([
+                'error' => "Too many failed attempts. All 3 attempts exhausted. Please wait {$remaining} seconds before trying again.",
+                'retry_after' => $remaining,
+                'remaining_attempts' => 0,
+                'attempts' => RateLimiter::MAX_ATTEMPTS,
+            ], 429);
+            exit;
         }
 
         $user = $this->users->findByEmailFull($email);
@@ -343,7 +424,24 @@ class AuthController
 
         // Validate OTP
         if ($user['otp_code'] === null || $otp !== $user['otp_code']) {
-            Response::error('Incorrect verification code. Please check your email and try again.', 422);
+            $failure = RateLimiter::recordFailure('reset_otp', $email, RateLimiter::MAX_ATTEMPTS, 30);
+            if ($failure['is_locked']) {
+                Response::json([
+                    'error' => "Too many failed attempts. All {$failure['max_attempts']} attempts exhausted. Please wait {$failure['retry_after']} seconds before trying again.",
+                    'retry_after' => $failure['retry_after'],
+                    'remaining_attempts' => 0,
+                    'attempts' => $failure['attempts'],
+                ], 422);
+            } else {
+                $word = $failure['remaining_attempts'] === 1 ? 'attempt' : 'attempts';
+                Response::json([
+                    'error' => "Incorrect verification code. {$failure['remaining_attempts']} {$word} remaining.",
+                    'retry_after' => 0,
+                    'remaining_attempts' => $failure['remaining_attempts'],
+                    'attempts' => $failure['attempts'],
+                ], 422);
+            }
+            exit;
         }
 
         // Check expiry
@@ -351,6 +449,9 @@ class AuthController
         if (time() > $expiresAt) {
             Response::error('This verification code has expired. Please request a new one.', 422);
         }
+
+        // Clear rate limit on successful password reset
+        RateLimiter::clear('reset_otp', $email);
 
         // Update password and clear OTP
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);

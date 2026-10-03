@@ -165,97 +165,126 @@
         },
       };
     </script>
-  
-  <!-- FOUC Preventer -->
-  <script>
-    (function() {
-      const role = localStorage.getItem('campus_role');
-      if (role) {
-        document.documentElement.setAttribute('data-role', role.toLowerCase());
-      }
-    })();
-  </script>
-  <style>
-    /* Prevent sidebar flash */
-    html[data-role="staff"] aside nav a[data-path="customer-dashboard"],
-    html[data-role="staff"] aside nav a[data-path="rooms"],
-    html[data-role="staff"] aside nav a[data-path="my-reservations"],
-    html[data-role="admin"] aside nav a[data-path="customer-dashboard"],
-    html[data-role="admin"] aside nav a[data-path="rooms"],
-    html[data-role="admin"] aside nav a[data-path="my-reservations"] {
-      display: none !important;
-    }
-    
-    html[data-role="staff"] aside nav a[data-path="staff-dashboard"],
-    html[data-role="admin"] aside nav a[data-path="staff-dashboard"] {
-      display: flex !important;
-    }
-    
-    html[data-role="admin"] aside nav a[data-path="admin-governance"] {
-      display: flex !important;
-    }
-  </style>
 
- 
-    <style id="icon-fill">
-      .material-symbols-outlined {
-        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24 !important;
+    <!-- FOUC Preventer -->
+    <script>
+      (function () {
+        const role = localStorage.getItem("campus_role");
+        if (role) {
+          document.documentElement.setAttribute(
+            "data-role",
+            role.toLowerCase(),
+          );
+        }
+      })();
+    </script>
+    <style>
+      /* Prevent sidebar flash */
+      html[data-role="staff"] aside nav a[data-path="customer-dashboard"],
+      html[data-role="staff"] aside nav a[data-path="rooms"],
+      html[data-role="staff"] aside nav a[data-path="my-reservations"],
+      html[data-role="admin"] aside nav a[data-path="customer-dashboard"],
+      html[data-role="admin"] aside nav a[data-path="rooms"],
+      html[data-role="admin"] aside nav a[data-path="my-reservations"] {
+        display: none !important;
+      }
+
+      html[data-role="staff"] aside nav a[data-path="staff-dashboard"],
+      html[data-role="admin"] aside nav a[data-path="staff-dashboard"] {
+        display: flex !important;
+      }
+
+      html[data-role="admin"] aside nav a[data-path="admin-governance"] {
+        display: flex !important;
       }
     </style>
-</head>
+
+    <style id="icon-fill">
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 1,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24 !important;
+      }
+    </style>
+  </head>
   <body
     class="bg-background font-body-md text-on-surface antialiased min-h-screen flex justify-center items-start p-space-md py-10 overflow-y-auto"
   >
-        <main class="w-full max-w-[950px] my-auto">
-      <div class="flex flex-col w-full shadow-2xl rounded-2xl overflow-hidden bg-white">
+    <main class="w-full max-w-[950px] my-auto">
+      <div
+        class="flex flex-col w-full shadow-2xl rounded-2xl overflow-hidden bg-white"
+      >
         <div class="flex flex-col md:flex-row min-h-[600px]">
-          
           <!-- Left side -->
-          <div class="relative w-full md:w-[45%] bg-[#1a1a1a] p-10 flex flex-col">
+          <div
+            class="relative w-full md:w-[45%] bg-[#1a1a1a] p-10 flex flex-col"
+          >
             <div class="relative z-10 flex flex-col h-full">
               <!-- Top Left Header -->
               <div class="mb-auto">
-                <img alt="CampusRoom Logo" class="h-12 w-auto object-contain" src="assets/logo.svg" />
+                <img
+                  alt="CampusRoom Logo"
+                  class="h-12 w-auto object-contain"
+                  src="assets/logo.svg"
+                />
               </div>
-              
+
               <!-- Center Text -->
               <div class="my-auto py-8">
-                <h1 class="text-white text-5xl font-extrabold tracking-tight mb-4">
+                <h1
+                  class="text-white text-5xl font-extrabold tracking-tight mb-4"
+                >
                   CampusRoom
                 </h1>
                 <p class="text-white text-[15px] leading-relaxed max-w-[280px]">
-                  Centralized Space Reservation System replacing logbooks with streamlined academic facility scheduling.
+                  Centralized Space Reservation System replacing logbooks with
+                  streamlined academic facility scheduling.
                 </p>
               </div>
 
               <!-- Bottom Text -->
               <div class="mt-auto">
-                <p class="text-[10px] text-[#a3a3a3] uppercase tracking-wider font-semibold leading-relaxed">
-                  &copy; 2024 Buenavista Polytechnic University.<br/>All rights reserved.
+                <p
+                  class="text-[10px] text-[#a3a3a3] uppercase tracking-wider font-semibold leading-relaxed"
+                >
+                  &copy; 2024 Buenavista Polytechnic University.<br />All rights
+                  reserved.
                 </p>
               </div>
             </div>
           </div>
 
           <!-- Right side -->
-          <div class="w-full md:w-[55%] p-10 md:p-14 flex flex-col justify-center bg-white">
-            
+          <div
+            class="w-full md:w-[55%] p-10 md:p-14 flex flex-col justify-center bg-white"
+          >
             <div class="mb-8">
-              <h2 class="text-[32px] font-bold text-[#191c1e] mb-3 tracking-tight">
+              <h2
+                class="text-[32px] font-bold text-[#191c1e] mb-3 tracking-tight"
+              >
                 Institutional Sign In
               </h2>
-              <p class="text-[#564242] text-[15px] leading-relaxed max-w-[340px]">
+              <p
+                class="text-[#564242] text-[15px] leading-relaxed max-w-[340px]"
+              >
                 Access lecture halls, laboratories, and seminar spaces.
               </p>
             </div>
 
             <form id="loginForm" class="flex flex-col gap-5">
               <div>
-                <label class="block font-label-md text-[13px] font-semibold text-[#191c1e] mb-2" for="bpu-email">
+                <label
+                  class="block font-label-md text-[13px] font-semibold text-[#191c1e] mb-2"
+                  for="bpu-email"
+                >
                   University Email Address
                 </label>
                 <div class="relative">
-                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#564242] material-symbols-outlined text-[20px] opacity-70">
+                  <span
+                    class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#564242] material-symbols-outlined text-[20px] opacity-70"
+                  >
                     school
                   </span>
                   <input
@@ -263,17 +292,23 @@
                     id="bpu-email"
                     placeholder="id@bpu.edu.ph"
                     type="email"
+                    maxlength="255"
                     autocomplete="username"
                   />
                 </div>
               </div>
 
               <div>
-                <label class="block font-label-md text-[13px] font-semibold text-[#191c1e] mb-2" for="bpu-password">
+                <label
+                  class="block font-label-md text-[13px] font-semibold text-[#191c1e] mb-2"
+                  for="bpu-password"
+                >
                   Password
                 </label>
                 <div class="relative">
-                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#564242] material-symbols-outlined text-[20px] opacity-70">
+                  <span
+                    class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#564242] material-symbols-outlined text-[20px] opacity-70"
+                  >
                     lock
                   </span>
                   <input
@@ -281,6 +316,7 @@
                     id="bpu-password"
                     type="password"
                     placeholder="Enter your password"
+                    maxlength="72"
                     autocomplete="current-password"
                   />
                   <button
@@ -289,36 +325,52 @@
                     class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#564242] opacity-70 hover:opacity-100 transition-opacity focus:outline-none flex justify-center items-start overflow-y-auto cursor-pointer"
                     aria-label="Toggle password visibility"
                   >
-                    <span id="toggle-password-icon" class="material-symbols-outlined text-[20px] select-none">
+                    <span
+                      id="toggle-password-icon"
+                      class="material-symbols-outlined text-[20px] select-none"
+                    >
                       visibility_off
                     </span>
                   </button>
                 </div>
                 <div class="flex justify-end mt-2">
-                  <a class="font-label-sm text-[13px] text-[#7a1f2b] font-semibold hover:underline" href="forgot-password.html">
+                  <a
+                    class="font-label-sm text-[13px] text-[#7a1f2b] font-semibold hover:underline"
+                    href="forgot-password.html"
+                  >
                     Forgot password?
                   </a>
                 </div>
               </div>
 
-              <div id="authErrorAlert" class="bg-[#ffdad6] text-[#93000a] rounded-lg p-3 items-start gap-2 text-left hidden">
-                <span class="material-symbols-outlined text-[#ba1a1a] shrink-0 text-[18px] mt-0.5">error</span>
-                <p id="authErrorAlertText" class="font-body-sm text-[12px] text-[#ba1a1a] leading-tight font-medium">
-                  Authentication failed: Invalid credentials provided. Please verify your faculty/student institutional ID or password.
+              <div
+                id="authErrorAlert"
+                class="bg-[#ffdad6] text-[#93000a] rounded-lg p-3 items-start gap-2 text-left hidden"
+              >
+                <span
+                  class="material-symbols-outlined text-[#ba1a1a] shrink-0 text-[18px] mt-0.5"
+                  >error</span
+                >
+                <p
+                  id="authErrorAlertText"
+                  class="font-body-sm text-[12px] text-[#ba1a1a] leading-tight font-medium"
+                >
+                  Authentication failed: Invalid credentials provided. Please
+                  verify your faculty/student institutional ID or password.
                 </p>
               </div>
 
               <!-- reCAPTCHA mounts here -->
               <div id="loginRecaptcha" class="flex justify-start"></div>
 
-              
-
               <button
                 class="w-full bg-[#7a2839] hover:bg-[#5b1e2a] text-white font-label-lg text-[15px] py-3.5 px-4 rounded-lg shadow-sm flex justify-center items-start overflow-y-auto gap-2 transition-colors group mt-2"
                 type="submit"
               >
                 <span>Sign In to CampusRoom</span>
-                <span class="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">
+                <span
+                  class="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1"
+                >
                   login
                 </span>
               </button>
@@ -326,12 +378,18 @@
 
             <div class="mt-4 flex justify-center items-start overflow-y-auto">
               <p class="text-[14px] text-gray-600 font-medium">
-                Don't have an account? 
-                <a href="register.html" class="text-[#7a1f2b] font-bold hover:underline ml-1">Register</a>
+                Don't have an account?
+                <a
+                  href="register.html"
+                  class="text-[#7a1f2b] font-bold hover:underline ml-1"
+                  >Register</a
+                >
               </p>
             </div>
-            
-            <div class="mt-8 flex justify-center items-start overflow-y-auto gap-1.5 text-on-surface-variant opacity-70">
+
+            <div
+              class="mt-8 flex justify-center items-start overflow-y-auto gap-1.5 text-on-surface-variant opacity-70"
+            >
               <span class="material-symbols-outlined text-[16px]">
                 shield
               </span>
@@ -339,13 +397,11 @@
                 Secured by BPU Central ICT &bull; SSO Active
               </span>
             </div>
-            
           </div>
         </div>
       </div>
     </main>
 
-    <script src="js/auth.js"></script>
+    <script src="js/auth.js?v=20261003"></script>
   </body>
 </html>
-
