@@ -427,23 +427,42 @@ class ReservationRepository
     // ---------------------------------------------------------------
 
     /**
-     * Get the end_time of the first upcoming or currently blocking reservation.
-     * Returns "Available now" if there is no such reservation.
+     * Get the end_time of each room's first upcoming or currently blocking
+     * reservation. Rooms without one are omitted from the result.
+     *
+     * @param string[] $roomIds
+     * @return array<string, string> Room ID to end_time.
      */
-    public function getNextAvailableSlot(string $roomId): string
+    public function getNextAvailableSlots(array $roomIds): array
     {
+        $roomIds = array_values(array_unique($roomIds));
+        if ($roomIds === []) {
+            return [];
+        }
+
+        $placeholders = [];
+        $params = [];
+        foreach ($roomIds as $index => $roomId) {
+            $placeholder = ':room_' . $index;
+            $placeholders[] = $placeholder;
+            $params[$placeholder] = $roomId;
+        }
+
         $stmt = $this->db->query(
-            "SELECT end_time
+            "SELECT DISTINCT ON (room_id) room_id, end_time
                FROM Reservations
-              WHERE room_id = :room_id
+              WHERE room_id IN (" . implode(', ', $placeholders) . ")
                 AND status IN ('Pending', 'Approved')
                 AND end_time > NOW()
-           ORDER BY start_time ASC
-              LIMIT 1",
-            [':room_id' => $roomId]
+           ORDER BY room_id, start_time ASC",
+            $params
         );
-        $row = $stmt->fetch();
-        return $row ? $row['end_time'] : 'Available now';
+
+        $slots = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $slots[$row['room_id']] = $row['end_time'];
+        }
+        return $slots;
     }
 
     // ---------------------------------------------------------------

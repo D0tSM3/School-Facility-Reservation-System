@@ -9,7 +9,6 @@
  *   PATCH api/rooms/{id}                           → maintenance toggle
  *   GET   api/reservations/move-requests           → move request queue
  *   PATCH api/reservations/move-requests/{id}      → approve / reject a move
- *   GET   api/logs                                 → audit log archive (rendered by js/logArchive.js)
  *   GET   api/reservations/{id}/logs               → per-booking log timeline (rendered by js/logArchive.js)
  *   GET   api/reservations/{id}                    → confirmation slip (rendered by js/slip.js)
  *   POST  api/reservations/{id}/rebook             → staff re-book modal (rendered by js/rebook.js)
@@ -57,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const batchApproveBtn   = el('btn-batch-approve');
   const searchInput       = el('searchInput');
   const batchApproveLabel = el('batch-approve-label');
-      const exportLogBtn      = el('btn-export-log');
 
   const toast       = el('action-toast');
   const toastText   = el('action-toast-text');
@@ -819,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewCancels) viewCancels.innerHTML = '';
     if (viewOverrides) viewOverrides.innerHTML = '';
     if (facilityGrid) facilityGrid.innerHTML = '';
-    [batchApproveBtn, exportLogBtn].forEach((btn) => {
+    [batchApproveBtn].forEach((btn) => {
       if (btn) btn.disabled = true;
     });
     if (syncTimestamp) syncTimestamp.textContent = 'Dispatch offline';
@@ -1055,19 +1053,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------------------------------------------------------------
-  // Audit log archive (Section 13) — replaces the old direct CSV export,
-  // which pulled an unbounded/near-unbounded api/logs?limit=500 with no
-  // filters. The shared component (js/logArchive.js) has its own paging,
-  // date/actor/text filters, and CSV export (current page or all matching).
-  // ---------------------------------------------------------------
-
-  if (exportLogBtn) {
-    if (exportLogBtn) exportLogBtn.addEventListener('click', () => {
-      window.CampusRoomLogArchive.openGlobal();
-    });
-  }
-
-  // ---------------------------------------------------------------
   // Application detail modal
   // ---------------------------------------------------------------
 
@@ -1149,7 +1134,7 @@ document.addEventListener('DOMContentLoaded', () => {
       items.push({ key: 'slip', label: 'View Confirmation Slip', icon: 'receipt_long' });
     }
 
-    items.push({ key: 'logs', label: 'View Log Archive', icon: 'folder_open' });
+    items.push({ key: 'logs', label: 'View Booking History', icon: 'folder_open' });
 
     if (status === 'Pending' || status === 'Approved') {
       items.push({ key: 'cancel', label: 'Cancel Booking', icon: 'cancel', danger: true });

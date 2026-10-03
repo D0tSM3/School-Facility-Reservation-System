@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
         staffLink.style.setProperty('display', show ? 'flex' : 'none', 'important');
       }
       if (adminLink) {
-        const show = role === 'admin';
+        const show = role === 'staff' || role === 'admin';
         adminLink.hidden = !show;
         adminLink.style.setProperty('display', show ? 'flex' : 'none', 'important');
       }

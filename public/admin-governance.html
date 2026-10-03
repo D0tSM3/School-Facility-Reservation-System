@@ -208,6 +208,7 @@
       display: flex !important;
     }
     
+    html[data-role="staff"] aside nav a[data-path="admin-governance"],
     html[data-role="admin"] aside nav a[data-path="admin-governance"] {
       display: flex !important;
     }
@@ -304,11 +305,13 @@
         </div>
       </header>
       <main
+        id="governanceMain"
+        hidden
         class="w-full pt-16 bg-background px-space-lg py-space-lg min-h-screen"
       ><div class="flex flex-col w-full space-y-space-lg">
     <div class="flex flex-col space-y-space-xs">
-        <h1 class="font-headline-lg text-headline-lg text-primary tracking-tight font-bold">Admin Governance</h1>
-        <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">Manage users, rooms, class schedules, holidays and system settings, and view system logs.</p>
+        <h1 id="governanceTitle" class="font-headline-lg text-headline-lg text-primary tracking-tight font-bold">Admin Governance</h1>
+        <p id="governanceDescription" class="font-body-md text-body-md text-on-surface-variant max-w-2xl">Manage users, rooms, class schedules, holidays and system settings, and view system logs.</p>
     </div>
 
     <!-- Tabs -->
@@ -483,6 +486,7 @@
 
     <!-- Logs View (Hidden by default) -->
     <div id="viewLogs" class="hidden space-y-space-md">
+      <section id="systemLogsPanel">
         <h2 class="font-headline-sm text-headline-sm text-on-surface">System Logs</h2>
         <div class="bg-surface-container-lowest p-space-md rounded shadow-sm overflow-x-auto">
             <table class="w-full text-left font-body-sm text-on-surface border-collapse">
@@ -495,12 +499,40 @@
                 </thead>
                 <tbody id="logsTableBody"></tbody>
             </table>
-        </div>
+          </div>
+        </section>
+        <section id="bookingLogsPanel" hidden>
+          <h2 class="font-headline-sm text-headline-sm text-on-surface">Booking History</h2>
+          <div class="flex flex-col sm:flex-row sm:items-end gap-3 justify-between">
+            <label class="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+              Search bookings
+              <input id="bookingLogSearch" type="search" placeholder="Permit, requester, room, status" class="w-full sm:w-80 p-2 bg-surface border rounded font-normal normal-case tracking-normal text-on-surface" autocomplete="off">
+            </label>
+            <button id="loadMoreBookingLogs" type="button" class="hidden px-space-md py-2 bg-surface-container-high text-on-surface rounded font-label-sm">Load more</button>
+          </div>
+          <p id="bookingLogsStatus" class="text-sm text-on-surface-variant" role="status" aria-live="polite"></p>
+          <div class="bg-surface-container-lowest p-space-md rounded shadow-sm overflow-x-auto">
+            <table class="w-full text-left font-body-sm text-on-surface border-collapse">
+              <thead>
+                <tr class="border-b border-surface-variant text-on-surface-variant uppercase text-[11px] tracking-wider">
+                  <th class="p-2">Permit</th>
+                  <th class="p-2">Requester</th>
+                  <th class="p-2">Room</th>
+                  <th class="p-2">Start</th>
+                  <th class="p-2">Status</th>
+                  <th class="p-2 text-right">History</th>
+                </tr>
+              </thead>
+              <tbody id="bookingLogsTableBody"></tbody>
+            </table>
+          </div>
+        </section>
     </div>
 </div>
 
 <script src="js/util.js"></script>
 <script src="js/app.js"></script>
+<script src="js/logArchive.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     var BASE = window.location.pathname.replace(/[^\/]*$/, '');
@@ -756,17 +788,110 @@ document.addEventListener('DOMContentLoaded', () => {
     tabs.settings.btn.addEventListener('click', () => switchTab('settings'));
     tabs.logs.btn.addEventListener('click', () => switchTab('logs'));
 
-    // Admin-only page. The API refuses non-Admins either way; this just sends
-    // them somewhere useful instead of a page of load errors.
+    const governanceMain = document.getElementById('governanceMain');
+    const adminOnlyTabs = ['users', 'rooms', 'schedules', 'holidays', 'settings'];
+    const bookingLogPageSize = 200;
+    let bookingLogOffset = 0;
+    let bookingLogReservations = [];
+
+    function renderBookingLogReservations() {
+      const query = document.getElementById('bookingLogSearch').value.trim().toLowerCase();
+      const tbody = document.getElementById('bookingLogsTableBody');
+      const matches = bookingLogReservations.filter(reservation => [
+        reservation.reservation_id,
+        reservation.customer_name,
+        reservation.customer_email,
+        reservation.room_name,
+        reservation.status,
+        reservation.purpose
+      ].some(value => String(value || '').toLowerCase().includes(query)));
+
+      if (!matches.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-on-surface-variant">${bookingLogReservations.length ? 'No bookings match this search.' : 'No bookings found.'}</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = matches.map(reservation => {
+        const id = String(reservation.reservation_id || '');
+        const permit = `REQ-${id.substring(0, 8).toUpperCase()}`;
+        return `
+          <tr class="border-b border-surface-variant">
+            <td class="p-2 font-mono">${escapeHtml(permit)}</td>
+            <td class="p-2">${escapeHtml(reservation.customer_name || reservation.customer_email || '—')}</td>
+            <td class="p-2">${escapeHtml(reservation.room_name || '—')}</td>
+            <td class="p-2">${escapeHtml(String(reservation.start_time || '').replace('T', ' ') || '—')}</td>
+            <td class="p-2">${escapeHtml(reservation.status || '—')}</td>
+            <td class="p-2 text-right"><button type="button" class="booking-log-open px-3 py-1 text-primary font-bold" data-reservation-id="${escapeHtml(id)}">View history</button></td>
+          </tr>`;
+      }).join('');
+    }
+
+    async function loadBookingLogReservations(loadMore = false) {
+      const status = document.getElementById('bookingLogsStatus');
+      const moreButton = document.getElementById('loadMoreBookingLogs');
+      if (!loadMore) {
+        bookingLogOffset = 0;
+        bookingLogReservations = [];
+      }
+      status.textContent = 'Loading bookings…';
+      moreButton.disabled = true;
+
+      const res = await api(`api/reservations?limit=${bookingLogPageSize}&offset=${bookingLogOffset}`);
+      if (!res.ok) {
+        status.textContent = res.error || 'Could not load bookings.';
+        moreButton.hidden = true;
+        moreButton.classList.add('hidden');
+        moreButton.disabled = false;
+        renderBookingLogReservations();
+        return;
+      }
+
+      const page = Array.isArray(res.data) ? res.data : [];
+      bookingLogReservations.push(...page);
+      bookingLogOffset += page.length;
+      status.textContent = `${bookingLogReservations.length} bookings`;
+      moreButton.hidden = page.length < bookingLogPageSize;
+      moreButton.classList.toggle('hidden', moreButton.hidden);
+      moreButton.disabled = false;
+      renderBookingLogReservations();
+    }
+
+    document.getElementById('bookingLogSearch').addEventListener('input', renderBookingLogReservations);
+    document.getElementById('loadMoreBookingLogs').addEventListener('click', () => loadBookingLogReservations(true));
+    document.getElementById('bookingLogsTableBody').addEventListener('click', event => {
+      const button = event.target.closest('.booking-log-open');
+      if (button && window.CampusRoomLogArchive) {
+        window.CampusRoomLogArchive.open(button.dataset.reservationId);
+      }
+    });
+
+    // Keep the page hidden until the server confirms which role may use it.
     fetch(BASE + 'api/auth/me', { credentials: 'same-origin' })
         .then(res => res.json().then(json => ({ status: res.status, json })))
         .then(({ status, json }) => {
             if (status === 401) return window.location.replace(BASE + 'index.html');
             const role = json && json.data && json.data.role;
-            if (role === 'Admin') return switchTab('users');
-            window.location.replace(BASE + (role === 'Staff' ? 'staff-dashboard.html' : 'dashboard.html'));
-        })
-        .catch(() => switchTab('users'));   // offline: the API still guards the data
+        if (role === 'Admin') {
+          governanceMain.hidden = false;
+          return switchTab('users');
+        }
+        if (role === 'Staff') {
+          document.getElementById('governanceTitle').textContent = 'Booking History';
+          document.getElementById('governanceDescription').textContent = 'Review audit history for individual reservations.';
+          adminOnlyTabs.forEach(key => {
+            tabs[key].btn.hidden = true;
+            tabs[key].view.hidden = true;
+          });
+          tabs.logs.btn.textContent = 'Booking History';
+          tabs.logs.load = () => loadBookingLogReservations();
+          document.getElementById('systemLogsPanel').hidden = true;
+          document.getElementById('bookingLogsPanel').hidden = false;
+          governanceMain.hidden = false;
+          return switchTab('logs');
+        }
+        window.location.replace(BASE + 'dashboard.html');
+      })
+      .catch(err => console.error('Failed to verify governance access', err));
 
     async function loadUsers() {
         try {

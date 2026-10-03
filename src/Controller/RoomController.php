@@ -41,8 +41,9 @@ class RoomController
             ? $this->rooms->findAllForManagement()
             : $this->rooms->findAllActive();
 
+        $nextAvailable = $this->reservations->getNextAvailableSlots(array_column($rooms, 'room_id'));
         foreach ($rooms as &$room) {
-            $room['next_available'] = $this->reservations->getNextAvailableSlot($room['room_id']);
+            $room['next_available'] = $nextAvailable[$room['room_id']] ?? 'Available now';
         }
         unset($room);
         

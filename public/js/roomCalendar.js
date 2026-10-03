@@ -217,14 +217,15 @@ class RoomCalendar {
 
   loadData() {
     const dates = this.getDatesToRender();
+    const lastDate = dates[dates.length - 1];
     const startStr = this.formatDateYMD(dates[0]);
-    const endStr = this.formatDateYMD(dates[6]);   // through Sunday: closed days are configurable
+    const endStr = this.formatDateYMD(lastDate);
 
     const opts = { month: 'short', day: 'numeric' };
     const weekLabel = this.container.querySelector('.week-label');
     if (weekLabel) {
       weekLabel.textContent =
-        `${dates[0].toLocaleDateString('en-US', opts)} – ${dates[6].toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`;
+        `${dates[0].toLocaleDateString('en-US', opts)} – ${lastDate.toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`;
     }
 
     const seq = ++this.requestSeq;
@@ -396,7 +397,7 @@ class RoomCalendar {
               ? 'bg-[#f8f0f1] text-[#7a1f2b]'
               : 'text-gray-700');
       th.innerHTML = `
-        <div class="text-[11px] font-bold uppercase tracking-wider">${days[i]}</div>
+        <div class="text-[11px] font-bold uppercase tracking-wider">${dayShort}</div>
         <div class="text-[13px] font-semibold mt-0.5">${date.getDate()}</div>
         <div class="text-[10px] font-medium opacity-70">${date.toLocaleDateString('en-US', { month: 'short' })}</div>`;
       headerRow.appendChild(th);

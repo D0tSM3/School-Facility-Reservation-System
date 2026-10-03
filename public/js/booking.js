@@ -235,9 +235,21 @@ window.initBookingForm = function() {
         if (!json.success || !Array.isArray(json.data)) {
           throw new Error(json.error || 'Could not load rooms.');
         }
+        return json.data;
+      })
+      .catch(err => {
+        console.error('Error fetching rooms:', err);
+        roomSelect.innerHTML = '<option value="">Could not load rooms</option>';
+        renderRoomSummary('');
+        showCollisionError('We couldn’t load the room list. Please refresh the page.', 'Unable to load rooms');
+        if (submitBtn) submitBtn.disabled = true;
+        return null;
+      })
+      .then(rooms => {
+        if (!rooms) return;
 
         roomSelect.innerHTML = '<option value="">Select a room</option>';
-        json.data.forEach(r => {
+        rooms.forEach(r => {
           roomsById[r.room_id] = r;
           const opt = document.createElement('option');
           opt.value = r.room_id;
@@ -249,7 +261,7 @@ window.initBookingForm = function() {
           roomSelect.appendChild(opt);
         });
 
-        populateCriteriaOptions(json.data);
+        populateCriteriaOptions(rooms);
 
         // Only preselect a room that exists and is bookable.
         const wantedId = window.bookingModalTargetRoomId || preselectedRoom;
@@ -265,10 +277,8 @@ window.initBookingForm = function() {
         markTakenSlots();
       })
       .catch(err => {
-        console.error('Error fetching rooms:', err);
-        roomSelect.innerHTML = '<option value="">Could not load rooms</option>';
-        renderRoomSummary('');
-        showCollisionError('We couldn’t load the room list. Please refresh the page.', 'Unable to load rooms');
+        console.error('Error initializing the booking form:', err);
+        showCollisionError('The room list loaded, but the booking form could not initialize. Please refresh the page.', 'Unable to prepare booking form');
         if (submitBtn) submitBtn.disabled = true;
       });
   }
@@ -612,13 +622,17 @@ window.initBookingForm = function() {
   const validateTime = () => {
     if (startTimeInput && endTimeInput && startTimeInput.value && endTimeInput.value) {
       if (endTimeInput.value <= startTimeInput.value) {
-        timeErrorContainer.classList.remove('hidden');
-        timeErrorContainer.classList.add('flex');
-        timeErrorText.textContent = 'End time must be after start time.';
+        if (timeErrorContainer) {
+          timeErrorContainer.classList.remove('hidden');
+          timeErrorContainer.classList.add('flex');
+        }
+        if (timeErrorText) timeErrorText.textContent = 'End time must be after start time.';
         return false;
       } else {
-        timeErrorContainer.classList.add('hidden');
-        timeErrorContainer.classList.remove('flex');
+        if (timeErrorContainer) {
+          timeErrorContainer.classList.add('hidden');
+          timeErrorContainer.classList.remove('flex');
+        }
         return true;
       }
     }
@@ -661,6 +675,7 @@ window.initBookingForm = function() {
       const start = startTimeInput.value;
       const previous = endTimeInput.value;
       endTimeInput.innerHTML = '<option value="">Select End</option>';
+      endTimeInput.disabled = !start;
       ALL_END_OPTIONS.forEach(o => {
         const opt = document.createElement('option');
         opt.value = o.value;
