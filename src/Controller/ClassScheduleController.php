@@ -115,11 +115,34 @@ class ClassScheduleController
             Response::error('Class schedule not found.', 404);
         }
 
+        $userId = Auth::userId();
+        $summary = "Class: {$deleted['course_code']} {$deleted['section']} ({$deleted['day_of_week']} {$deleted['start_time']}-{$deleted['end_time']})";
+
+        // Institutional 30-day archival policy
+        try {
+            (new \CampusRoom\Repository\ArchiveRepository())->archive(
+                'classschedules',
+                $id,
+                $summary,
+                $deleted,
+                $userId,
+                'Admin removed weekly class schedule block'
+            );
+        } catch (\Throwable $e) {
+            // Keep going even if archival fails, but log the error
+            error_log('[ClassScheduleController] Failed to archive deleted class: ' . $e->getMessage());
+        }
+
         (new ReservationRepository())->insertLog(
-            Auth::userId(),
-            "Admin removed class {$deleted['course_code']} {$deleted['section']} ({$deleted['day_of_week']})"
+            $userId,
+            "Admin archived class schedule {$deleted['course_code']} {$deleted['section']} ({$deleted['day_of_week']}) — retained for 30 days"
         );
-        Response::json(['success' => true]);
+        Response::json([
+            'success'        => true,
+            'archived'       => true,
+            'retention_days' => 30,
+            'message'        => 'Class schedule moved to archive (retained for 30 days before permanent deletion).',
+        ]);
     }
 
     private static function isUuid(string $value): bool

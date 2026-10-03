@@ -530,8 +530,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (removeModalText) {
       removeModalText.textContent = isPending
-        ? `${ref} is still awaiting review. Cancelling it withdraws the request and immediately frees ${reservation.room_name || 'the room'} for other departments. Staff keep a record of it.`
-        : `${ref} will be cleared from your list. Nothing is deleted â€” staff keep the record, and you can still re-book the space.`;
+        ? `${ref} is still awaiting review. Cancelling it withdraws the request and immediately frees ${reservation.room_name || 'the room'}. It will be preserved in the system archive for 30 days before permanent deletion.`
+        : `${ref} will be cleared from your active list and preserved in the system archive for 30 days before permanent deletion. Staff keep the record, and you can still re-book the space.`;
     }
     if (modalConfirm) modalConfirm.textContent = isPending ? 'Cancel' : 'Remove';
     if (modal) modal.classList.remove('hidden');
@@ -1027,8 +1027,8 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .then(res => res.json())
       .then(json => {
-        if (json.success) {
-          showToast(wasPending ? 'Request cancelled and the room released.' : 'Booking removed from your list.', 'success');
+        if (json.success || json.removed) {
+          showToast(wasPending ? 'Request cancelled and moved to archive (retained for 30 days).' : 'Booking moved to archive (retained for 30 days before permanent deletion).', 'success');
           fetchReservations(); // reload entirely
         } else {
           showToast(json.error || 'Failed to remove the booking.', 'error');

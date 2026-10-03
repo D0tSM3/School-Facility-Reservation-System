@@ -845,6 +845,22 @@ class ReservationController
             $reservationId
         );
 
+        if ($role === 'Admin' || $role === 'Staff') {
+            try {
+                $summary = "Reservation: " . ($existing['purpose'] ?? 'Booking') . " (" . ($existing['room_name'] ?? 'Facility') . ")";
+                (new \CampusRoom\Repository\ArchiveRepository())->archive(
+                    'reservations',
+                    $reservationId,
+                    $summary,
+                    $existing,
+                    $userId,
+                    "Revoked/Cancelled by {$role}" . ($reason !== '' ? ": {$reason}" : '')
+                );
+            } catch (\Throwable $e) {
+                error_log('[ReservationController] Failed to archive cancelled reservation: ' . $e->getMessage());
+            }
+        }
+
         Response::json($reservation);
     }
 
@@ -1014,13 +1030,34 @@ class ReservationController
         }
 
         $this->reservations->hideFromCustomer($reservationId);
+
+        try {
+            $summary = "Reservation: " . ($existing['purpose'] ?? 'Booking') . " (" . ($existing['room_name'] ?? 'Facility') . ")";
+            (new \CampusRoom\Repository\ArchiveRepository())->archive(
+                'reservations',
+                $reservationId,
+                $summary,
+                $existing,
+                $userId,
+                'Requester removed booking from active list (30-day retention)'
+            );
+        } catch (\Throwable $e) {
+            error_log('[ReservationController] Failed to archive removed reservation: ' . $e->getMessage());
+        }
+
         $this->reservations->insertLog(
             $userId,
-            'Reservation removed from the requester\'s list',
+            'Reservation removed from requester list and moved to archive (retained for 30 days)',
             $reservationId
         );
 
-        Response::json(['reservation_id' => $reservationId, 'removed' => true]);
+        Response::json([
+            'reservation_id' => $reservationId,
+            'removed'        => true,
+            'archived'       => true,
+            'retention_days' => 30,
+            'message'        => 'Booking moved to archive (retained for 30 days before permanent deletion).',
+        ]);
     }
 
     // ---------------------------------------------------------------

@@ -163,6 +163,11 @@ $routes = [
 
     // Logs (Admin)
     ['GET',   '#^/api/logs$#',                       fn() => (new UserController())->logs()],
+
+    // Data Archives (Admin - 30-day retention governance)
+    ['GET',   '#^/api/archives$#',                   fn() => (new \CampusRoom\Controller\ArchiveController())->index()],
+    ['GET',   '#^/api/archives/(?P<id>[^/]+)$#',     fn(string $id) => (new \CampusRoom\Controller\ArchiveController())->show($id)],
+    ['POST',  '#^/api/archives/purge$#',             fn() => (new \CampusRoom\Controller\ArchiveController())->purge()],
 ];
 
 // -----------------------------------------------------------------------
