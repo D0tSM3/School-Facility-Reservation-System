@@ -597,18 +597,26 @@ window.initBookingForm = function() {
     });
   }
 
-  const timeErrorContainer = document.getElementById('timeErrorContainer');
-  const timeErrorText = document.getElementById('timeErrorText');
   const validateTime = () => {
-    if (startTimeInput && endTimeInput && startTimeInput.value && endTimeInput.value) {
-      if (endTimeInput.value <= startTimeInput.value) {
-        timeErrorContainer.classList.remove('hidden');
-        timeErrorContainer.classList.add('flex');
-        timeErrorText.textContent = 'End time must be after start time.';
+    if (startTimeInput && endTimeInput && startTimeInput.value) {
+      const mode = getBookingMode();
+      const start = startDateValue();
+      const now = new Date();
+      const todayStr = toYMD(now);
+      const nowTimeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      
+      if (mode === 'single' && start === todayStr && startTimeInput.value <= nowTimeStr) {
+        showCollisionError('Reservations must start in the future.', 'Invalid time');
+        return false;
+      }
+
+      if (endTimeInput.value && endTimeInput.value <= startTimeInput.value) {
+        // Use the collision error banner already present in rooms.html
+        showCollisionError('End time must be after the start time.', 'Invalid time');
         return false;
       } else {
-        timeErrorContainer.classList.add('hidden');
-        timeErrorContainer.classList.remove('flex');
+        // Clear any time-related error if times are now valid
+        hideCollisionError();
         return true;
       }
     }
@@ -1231,7 +1239,7 @@ window.initBookingForm = function() {
         return showCollisionError(problem, 'Invalid date');
       }
       if (!validateTime()) {
-        return showCollisionError('End time must be after the start time.', 'Invalid time');
+        return;
       }
       // The whole window must be free on every day, not just its first block.
       // (Only checked once the schedule has loaded; otherwise the server's

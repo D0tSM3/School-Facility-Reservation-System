@@ -157,11 +157,11 @@ class ReservationController
         // Different dates = a multi-day booking: start_time's date to
         // end_time's date, using start_time's clock to end_time's clock as the
         // window on every one of those days.
-        if (substr($startTime, 0, 10) !== substr($endTime, 0, 10)) {
-            $this->storeSeries($roomId, $purpose, $category, $equipmentNotes, $startTime, $endTime, $activeDates, $body['active_dates'] ?? null);
+        $activeDates = $body['active_dates'] ?? null; if (substr($startTime, 0, 10) !== substr($endTime, 0, 10)) {
+            $this->storeSeries($roomId, $purpose, $category, $equipmentNotes, $startTime, $endTime, $activeDates);
         }
 
-        $error = ReservationValidator::check($roomId, $startTime, $endTime, $activeDates);
+        $error = ReservationValidator::check($roomId, $startTime, $endTime);
         if ($error !== null) {
             $this->conflictError($error, $roomId, $startTime, $endTime, $activeDates);
         }
@@ -447,7 +447,7 @@ class ReservationController
         $endDate   = substr($endTime, 0, 10);
 
         if ($startDate === $endDate) {
-            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $activeDates, $equipmentNotes, $category)];
+            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $equipmentNotes, $category)];
         }
 
         
@@ -845,22 +845,6 @@ class ReservationController
             $reservationId
         );
 
-        if ($role === 'Admin' || $role === 'Staff') {
-            try {
-                $summary = "Reservation: " . ($existing['purpose'] ?? 'Booking') . " (" . ($existing['room_name'] ?? 'Facility') . ")";
-                (new \CampusRoom\Repository\ArchiveRepository())->archive(
-                    'reservations',
-                    $reservationId,
-                    $summary,
-                    $existing,
-                    $userId,
-                    "Revoked/Cancelled by {$role}" . ($reason !== '' ? ": {$reason}" : '')
-                );
-            } catch (\Throwable $e) {
-                error_log('[ReservationController] Failed to archive cancelled reservation: ' . $e->getMessage());
-            }
-        }
-
         Response::json($reservation);
     }
 
@@ -949,7 +933,7 @@ class ReservationController
         // this because "it was valid before". This also covers the
         // Maintenance / is_active check via ReservationValidator's own
         // step 0, so no separate room-status check is needed here.
-        $error = ReservationValidator::check($roomId, $startTime, $endTime, $activeDates);
+        $error = ReservationValidator::check($roomId, $startTime, $endTime);
         if ($error !== null) {
             Response::error($error, 409);
         }
@@ -1030,34 +1014,13 @@ class ReservationController
         }
 
         $this->reservations->hideFromCustomer($reservationId);
-
-        try {
-            $summary = "Reservation: " . ($existing['purpose'] ?? 'Booking') . " (" . ($existing['room_name'] ?? 'Facility') . ")";
-            (new \CampusRoom\Repository\ArchiveRepository())->archive(
-                'reservations',
-                $reservationId,
-                $summary,
-                $existing,
-                $userId,
-                'Requester removed booking from active list (30-day retention)'
-            );
-        } catch (\Throwable $e) {
-            error_log('[ReservationController] Failed to archive removed reservation: ' . $e->getMessage());
-        }
-
         $this->reservations->insertLog(
             $userId,
-            'Reservation removed from requester list and moved to archive (retained for 30 days)',
+            'Reservation removed from the requester\'s list',
             $reservationId
         );
 
-        Response::json([
-            'reservation_id' => $reservationId,
-            'removed'        => true,
-            'archived'       => true,
-            'retention_days' => 30,
-            'message'        => 'Booking moved to archive (retained for 30 days before permanent deletion).',
-        ]);
+        Response::json(['reservation_id' => $reservationId, 'removed' => true]);
     }
 
     // ---------------------------------------------------------------

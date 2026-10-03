@@ -195,10 +195,10 @@ foreach ($routes as [$routeMethod, $pattern, $handler]) {
     } catch (\PDOException $e) {
         // Unhandled DB error — log internally, return generic 500.
         error_log('[CampusRoom] PDOException: ' . $e->getMessage());
-        Response::error('A database error occurred. Please try again later.', 500);
+        Response::error('A database error occurred: ' . $e->getMessage(), 500);
     } catch (\Throwable $e) {
         error_log('[CampusRoom] Uncaught exception: ' . $e->getMessage());
-        Response::error('An unexpected error occurred.', 500);
+        Response::error('An unexpected error occurred: ' . $e->getMessage(), 500);
     }
 
     // If we reach here the handler returned without calling Response (shouldn't
