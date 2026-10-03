@@ -264,6 +264,9 @@ class RoomCalendar {
           <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#7a1f2b]/40 bg-[#fdf5f6] text-[11px] font-semibold text-[#7a1f2b]">
             <span class="w-2 h-2 rounded-full bg-[#7a1f2b] inline-block"></span>Your Selection
           </span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-orange-200 bg-orange-50 text-[11px] font-semibold text-orange-700">
+            <span class="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>Conflict
+          </span>
           <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-blue-200 bg-blue-50 text-[11px] font-semibold text-blue-700">
             <span class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>Class
           </span>
@@ -559,9 +562,13 @@ class RoomCalendar {
 
         const overlapsSelected = isSelected && this.selectedStartTime && this.selectedEndTime &&
                                  overlaps(this.selectedStartTime, this.selectedEndTime);
+                                 
+        const hasClass = (data.class_schedules || []).some(c => c.day_of_week === dayName && overlaps(c.start_time.slice(0, 5), c.end_time.slice(0, 5)));
+        const hasReservation = (data.reservations || []).some(r => r.start_time.startsWith(dateYMD) && overlaps(r.start_time.slice(11, 16), r.end_time.slice(11, 16)));
+        const isConflict = overlapsSelected && (hasClass || hasReservation);
 
         let baseBg = isSelected
-          ? (overlapsSelected ? 'bg-rose-100 shadow-[inset_0_0_0_2px_#7a1f2b] relative z-10' : 'bg-[#fdf5f6]')
+          ? (isConflict ? 'bg-orange-50 shadow-[inset_0_0_0_2px_#f97316] relative z-10' : (overlapsSelected ? 'bg-rose-100 shadow-[inset_0_0_0_2px_#7a1f2b] relative z-10' : 'bg-[#fdf5f6]'))
           : beforeOpen ? 'bg-gray-50' : 'bg-white';
 
         td.className = `p-0.5 border-r border-gray-200 last:border-r-0 align-top h-[42px] transition-all ${baseBg}`;

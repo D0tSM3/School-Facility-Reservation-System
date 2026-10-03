@@ -597,6 +597,51 @@ window.initBookingForm = function() {
     });
   }
 
+    const requestSlipBtn = document.getElementById('requestSlipBtn');
+  const rsModal = document.getElementById('requestSlipModalOverlay');
+  const closeRsBtn = document.getElementById('closeRequestSlipModalBtn');
+  const cancelRsBtn = document.getElementById('cancelRequestSlipBtn');
+  const rsAltSchedule = document.getElementById('rsAltSchedule');
+  const rsAltFields = document.getElementById('rsAltScheduleFields');
+
+  if (requestSlipBtn && rsModal) {
+    requestSlipBtn.addEventListener('click', () => {
+      rsModal.classList.remove('hidden');
+      rsModal.classList.add('flex');
+    });
+    
+    const closeRs = () => {
+      rsModal.classList.add('hidden');
+      rsModal.classList.remove('flex');
+    };
+    
+    if (closeRsBtn) closeRsBtn.addEventListener('click', closeRs);
+    if (cancelRsBtn) cancelRsBtn.addEventListener('click', closeRs);
+    
+    if (rsAltSchedule && rsAltFields) {
+      rsAltSchedule.addEventListener('change', () => {
+        if (rsAltSchedule.value === 'Yes') {
+          rsAltFields.classList.remove('hidden');
+        } else {
+          rsAltFields.classList.add('hidden');
+        }
+      });
+    }
+    
+    const rsForm = document.getElementById('requestSlipForm');
+    if (rsForm) {
+      rsForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        alert('Request Slip submitted successfully. Staff will review it shortly.');
+        closeRs();
+        const mainModal = document.getElementById('bookingModalOverlay');
+        if (mainModal) {
+            mainModal.classList.add('hidden');
+            mainModal.classList.remove('flex');
+        }
+      });
+    }
+  }
   const validateTime = () => {
     if (startTimeInput && endTimeInput && startTimeInput.value) {
       const mode = getBookingMode();
@@ -606,18 +651,57 @@ window.initBookingForm = function() {
       const nowTimeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
       
       if (mode === 'single' && start === todayStr && startTimeInput.value <= nowTimeStr) {
+          const conflictBanner = document.getElementById('conflictBanner');
+          const requestSlipBtn = document.getElementById('requestSlipBtn');
+          if (conflictBanner) conflictBanner.classList.add('hidden');
+          if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
         showCollisionError('Reservations must start in the future.', 'Invalid time');
         return false;
       }
 
-      if (endTimeInput.value && endTimeInput.value <= startTimeInput.value) {
-        // Use the collision error banner already present in rooms.html
-        showCollisionError('End time must be after the start time.', 'Invalid time');
-        return false;
-      } else {
-        // Clear any time-related error if times are now valid
+      if (endTimeInput.value) {
+        if (endTimeInput.value <= startTimeInput.value) {
+          const conflictBanner = document.getElementById('conflictBanner');
+          const requestSlipBtn = document.getElementById('requestSlipBtn');
+          if (conflictBanner) conflictBanner.classList.add('hidden');
+          if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
+          showCollisionError('End time must be after the start time.', 'Invalid time');
+          return false;
+        }
+
+        // Time boundaries are valid, check for conflict over the requested range
         hideCollisionError();
-        return true;
+        const clash = rangeConflicts(startTimeInput.value, endTimeInput.value);
+        if (clash.length) {
+          // Show conflict UI
+          const conflictBanner = document.getElementById('conflictBanner');
+          const requestSlipBtn = document.getElementById('requestSlipBtn');
+          if (conflictBanner) conflictBanner.classList.remove('hidden');
+          if (requestSlipBtn) requestSlipBtn.classList.remove('hidden');
+          
+          // Populate Request Slip details
+          const facilitySpan = document.getElementById('rsFacility');
+          const dateSpan = document.getElementById('rsDate');
+          const timeSpan = document.getElementById('rsTime');
+          const conflictSpan = document.getElementById('rsConflictInfo');
+          if (facilitySpan && roomSelect && roomSelect.options[roomSelect.selectedIndex]) {
+             facilitySpan.textContent = roomSelect.options[roomSelect.selectedIndex].text;
+          }
+          if (dateSpan) dateSpan.textContent = mode === 'single' ? start : (start + ' to ' + endDateValue());
+          if (timeSpan) timeSpan.textContent = startTimeInput.options[startTimeInput.selectedIndex].text + ' - ' + endTimeInput.options[endTimeInput.selectedIndex].text;
+          if (conflictSpan) conflictSpan.textContent = window.CampusSchedule.describeRange(clash, startTimeInput.value, endTimeInput.value);
+
+          const evt = new Event('change'); document.getElementById('roomReservationForm')?.dispatchEvent(evt);
+          return false; // blocks normal submit
+        } else {
+          // Hide conflict UI
+          const conflictBanner = document.getElementById('conflictBanner');
+          const requestSlipBtn = document.getElementById('requestSlipBtn');
+          if (conflictBanner) conflictBanner.classList.add('hidden');
+          if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
+          const evt = new Event('change'); document.getElementById('roomReservationForm')?.dispatchEvent(evt);
+          return true;
+        }
       }
     }
     return true;
@@ -672,13 +756,8 @@ window.initBookingForm = function() {
           // Start is free, but is [start, this end) free?
           const clash = rangeConflicts(start, o.value);
           if (clash.length) {
-            // Only another Approved booking in the way: still selectable, so
-            // the customer can reach the urgent-override option on submit.
-            const overridable = !isRebook && window.CampusSchedule.onlyApprovedConflicts(clash);
-            opt.disabled = !overridable;
-            opt.textContent = o.text + (overridable ? ' — booked (urgent override possible)' : ' — unavailable');
-            opt.title = window.CampusSchedule.describeRange(clash, start, o.value);
-          }
+              // The UI is now handled by validateTime() on selection.
+            }
         }
         endTimeInput.appendChild(opt);
       });
@@ -816,10 +895,7 @@ window.initBookingForm = function() {
       const i = BLOCKS.indexOf(opt.value);
       const [bs, be] = [BLOCKS[i], BLOCKS[i + 1] || rules.close];
       const clash = window.CampusSchedule.findRangeConflicts(data, dates, bs, be);
-      const overridable = !isRebook && window.CampusSchedule.onlyApprovedConflicts(clash);
-      opt.disabled = clash.length > 0 && !overridable;
-      opt.textContent = opt.dataset.label +
-        (!clash.length ? '' : overridable ? ' — booked (urgent override possible)' : ' — unavailable');
+      // The UI is now handled by validateTime() on selection.
     });
 
     const chosen = startTimeInput.selectedOptions[0];
