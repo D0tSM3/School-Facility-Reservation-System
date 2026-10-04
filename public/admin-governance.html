@@ -136,11 +136,10 @@
                </button>
                <button
                  type="button"
-                 data-nav="approval-queue"
-                 data-hash="#staff-queue"
-                 class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-400 font-medium text-[13px] hover:bg-white/5 hover:text-white transition-all text-left group"
+                 onclick="document.querySelector('[data-nav=\'reservations\']').click(); setTimeout(() => document.querySelector('[data-res-subtab=\'Pending\']').click(), 10)"
+                 class="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-400 font-medium text-[13px] hover:bg-white/5 hover:text-white transition-all text-left group"
                >
-                 <span>Approval Queue</span>
+                 <span>Pending Approvals</span>
                  <span id="badge-approval-queue-count" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-white">0</span>
                </button>
                <button
@@ -938,6 +937,27 @@
             >
               Completed
             </button>
+            <button
+              type="button"
+              data-res-subtab="moves"
+              class="res-subtab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 hover:bg-gray-100 flex items-center gap-1.5"
+            >
+              Move Requests
+            </button>
+            <button
+              type="button"
+              data-res-subtab="cancels"
+              class="res-subtab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 hover:bg-gray-100 flex items-center gap-1.5"
+            >
+              Cancel Requests
+            </button>
+            <button
+              type="button"
+              data-res-subtab="overrides"
+              class="res-subtab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 hover:bg-gray-100 flex items-center gap-1.5"
+            >
+              Overrides
+            </button>
           </div>
 
           <!-- Standard Reservations Master Table Card -->
@@ -976,157 +996,11 @@
               </table>
             </div>
           </div>
-        </section>
-
-        <!-- ===================================================================== -->
-        <!-- VIEW: APPROVAL QUEUE (Native Staff Approval Queue)                    -->
-        <!-- ===================================================================== -->
-        <section
-          id="view-approval-queue"
-          class="dashboard-view hidden space-y-6"
-        >
-          <!-- Info / Operational Header Banner Card -->
-          <div
-            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-          >
-            <div class="flex items-start gap-4">
-              <div
-                class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 mt-0.5"
-              >
-                <span class="material-symbols-outlined text-[26px]"
-                  >hourglass_top</span
-                >
-              </div>
-              <div>
-                <div class="flex items-center gap-2.5 mb-1">
-                  <h2 class="text-base sm:text-lg font-bold text-gray-900">
-                    Pending Reservation Approvals Queue
-                  </h2>
-                  <span
-                    id="approvalQueueHeaderBadge"
-                    class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold"
-                    >0 Pending</span
-                  >
-                </div>
-                <p class="text-xs text-gray-500 leading-relaxed">
-                  Administrative approval authority over pending facility reservation
-                  applications. Approving immediately reserves the slot and
-                  issues notification; rejecting releases the hold.
-                </p>
-              </div>
-            </div>
-            <div
-              class="flex items-center gap-2 shrink-0 self-start sm:self-auto"
-            >
-              <button
-                type="button"
-                id="btnRefreshApprovalQueue"
-                class="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl border border-gray-200 transition-all flex items-center gap-1.5 shadow-sm"
-                title="Refresh approval queue"
-              >
-                <span class="material-symbols-outlined text-[17px]">sync</span>
-                <span>Refresh Queue</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Search & Filter Controls Card -->
-          <div
-            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
-          >
-            <div class="relative flex-1">
-              <span
-                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[19px]"
-                >search</span
-              >
-              <input
-                type="text"
-                id="approvalQueueSearchInput"
-                placeholder="Filter pending requests by requester, email, room, or purpose..."
-                class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] transition-all"
-              />
-            </div>
-            <div class="flex items-center gap-3">
-              <select
-                id="approvalQueueCategoryFilter"
-                class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 font-medium focus:outline-none focus:border-[#7a1f2b]"
-              >
-                <option value="all">All Classifications</option>
-                <option value="Academic Lecture">Academic Lecture</option>
-                <option value="Faculty Defense">Faculty Defense</option>
-                <option value="Student Org Meeting">Student Org Meeting</option>
-                <option value="Dept Workshop">Dept Workshop</option>
-                <option value="Exam/Quiz">Exam/Quiz</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Approval Queue Table Container Card -->
-          <div
-            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
-          >
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-sm text-gray-700">
-                <thead
-                  class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
-                >
-                  <tr>
-                    <th class="py-3.5 px-6">Booking Ref</th>
-                    <th class="py-3.5 px-6">Requester</th>
-                    <th class="py-3.5 px-6">Facility</th>
-                    <th class="py-3.5 px-6">Schedule Window</th>
-                    <th class="py-3.5 px-6">Purpose / Classification</th>
-                    <th class="py-3.5 px-6 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody
-                  id="approvalQueueTableBody"
-                  class="divide-y divide-gray-100 font-normal"
-                >
-                  <tr>
-                    <td
-                      colspan="6"
-                      class="p-8 text-center text-gray-400 text-xs"
-                    >
-                      Loading pending approvals...
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- ===================================================================== -->
-        <!-- VIEW 4: MOVE REQUESTS (Dedicated Sidebar View)                         -->
-        <!-- ===================================================================== -->
-        <section id="view-moves" class="dashboard-view hidden space-y-6">
-          <!-- Info Banner Card -->
-          <div
-            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex items-start gap-4"
-          >
-            <div
-              class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5"
-            >
-              <span class="material-symbols-outlined text-[22px]"
-                >edit_calendar</span
-              >
-            </div>
-            <div>
-              <h2 class="text-base font-bold text-gray-900">
-                Customer Move &amp; Reschedule Requests
-              </h2>
-              <p class="text-xs text-gray-500 mt-1 leading-relaxed">
-                Review reschedule requests submitted by customers for approved
-                reservations. Approving updates the booking times automatically.
-              </p>
-            </div>
-          </div>
-
+        
           <!-- Moves Table Card -->
-          <div
+<div
             id="movesTableViewContainer"
-            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+            class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
           >
             <div class="overflow-x-auto">
               <table class="w-full text-left text-sm text-gray-700">
@@ -1158,38 +1032,11 @@
               </table>
             </div>
           </div>
-        </section>
-
-        <!-- ===================================================================== -->
-        <!-- VIEW 5: CANCELLATION REQUESTS (Dedicated Sidebar View)                 -->
-        <!-- ===================================================================== -->
-        <section id="view-cancels" class="dashboard-view hidden space-y-6">
-          <!-- Info Banner Card -->
-          <div
-            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex items-start gap-4"
-          >
-            <div
-              class="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 mt-0.5"
-            >
-              <span class="material-symbols-outlined text-[22px]"
-                >event_busy</span
-              >
-            </div>
-            <div>
-              <h2 class="text-base font-bold text-gray-900">
-                Customer Cancellation Requests
-              </h2>
-              <p class="text-xs text-gray-500 mt-1 leading-relaxed">
-                Cancellation requests submitted by customers for approved
-                bookings. Approval officially cancels and releases the room.
-              </p>
-            </div>
-          </div>
 
           <!-- Cancels Table Card -->
-          <div
+<div
             id="cancelsTableViewContainer"
-            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+            class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
           >
             <div class="overflow-x-auto">
               <table class="w-full text-left text-sm text-gray-700">
@@ -1221,39 +1068,11 @@
               </table>
             </div>
           </div>
-        </section>
-
-        <!-- ===================================================================== -->
-        <!-- VIEW 6: CONFLICT OVERRIDE REQUESTS (Dedicated Sidebar View)           -->
-        <!-- ===================================================================== -->
-        <section id="view-overrides" class="dashboard-view hidden space-y-6">
-          <!-- Info Banner Card -->
-          <div
-            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex items-start gap-4"
-          >
-            <div
-              class="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0 mt-0.5"
-            >
-              <span class="material-symbols-outlined text-[22px]"
-                >priority_high</span
-              >
-            </div>
-            <div>
-              <h2 class="text-base font-bold text-gray-900">
-                Conflict Override Requests Queue
-              </h2>
-              <p class="text-xs text-gray-500 mt-1 leading-relaxed">
-                Requests submitted by users when their desired slot was already
-                occupied. Approving proposes moving the conflicting reservation;
-                rejecting requires a staff note.
-              </p>
-            </div>
-          </div>
 
           <!-- Overrides Table Card -->
-          <div
+<div
             id="overridesTableViewContainer"
-            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+            class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
           >
             <div class="overflow-x-auto">
               <table class="w-full text-left text-sm text-gray-700">
@@ -1286,7 +1105,16 @@
               </table>
             </div>
           </div>
+
         </section>
+
+        
+
+        
+
+        
+
+        
 
         <!-- ===================================================================== -->
         <!-- VIEW 7: USER DIRECTORY (Dedicated Sidebar View)                       -->

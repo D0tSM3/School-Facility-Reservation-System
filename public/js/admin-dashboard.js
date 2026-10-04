@@ -431,6 +431,19 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   function switchView(viewName) {
+    // Intercept legacy queue views and map them to All Reservations subtabs
+    const legacyMap = {
+        'approval-queue': 'Pending',
+        'moves': 'moves',
+        'cancels': 'cancels',
+        'overrides': 'overrides'
+    };
+    if (legacyMap[viewName]) {
+        switchView('reservations');
+        switchResSubtab(legacyMap[viewName]);
+        return;
+    }
+    
     if (!viewTitles[viewName]) return;
     state.activeView = viewName;
 
@@ -467,10 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewName === 'overview') renderOverview();
     if (viewName === 'facilities') renderFacilities();
     if (viewName === 'reservations') renderReservations();
-    if (viewName === 'approval-queue') renderApprovalQueue();
-    if (viewName === 'moves') renderMovesTable();
-    if (viewName === 'cancels') renderCancelsTable();
-    if (viewName === 'overrides') renderOverridesTable();
+    // Legacy views are handled via subtabs now
     if (viewName === 'users') renderUsers();
     if (viewName === 'classes') loadClasses();
     if (viewName === 'holidays') loadHolidays();
@@ -1187,8 +1197,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const standardTable = document.getElementById('resTableViewContainer');
-    if (standardTable) standardTable.classList.remove('hidden');
-    filterAndRenderReservations();
+    const movesTable = document.getElementById('movesTableViewContainer');
+    const cancelsTable = document.getElementById('cancelsTableViewContainer');
+    const overridesTable = document.getElementById('overridesTableViewContainer');
+    const searchInput = document.getElementById('resSearchInput');
+    const categoryFilter = document.getElementById('resCategoryFilter');
+    
+    if (standardTable) standardTable.classList.add('hidden');
+    if (movesTable) movesTable.classList.add('hidden');
+    if (cancelsTable) cancelsTable.classList.add('hidden');
+    if (overridesTable) overridesTable.classList.add('hidden');
+    
+    // Hide standard filters if viewing moves/cancels/overrides
+    if (subtabName === 'moves' || subtabName === 'cancels' || subtabName === 'overrides') {
+        if (searchInput) searchInput.parentElement.classList.add('hidden');
+        if (categoryFilter) categoryFilter.parentElement.classList.add('hidden');
+    } else {
+        if (searchInput) searchInput.parentElement.classList.remove('hidden');
+        if (categoryFilter) categoryFilter.parentElement.classList.remove('hidden');
+    }
+
+    if (subtabName === 'moves') {
+        if (movesTable) movesTable.classList.remove('hidden');
+        renderMovesTable();
+    } else if (subtabName === 'cancels') {
+        if (cancelsTable) cancelsTable.classList.remove('hidden');
+        renderCancelsTable();
+    } else if (subtabName === 'overrides') {
+        if (overridesTable) overridesTable.classList.remove('hidden');
+        renderOverridesTable();
+    } else {
+        if (standardTable) standardTable.classList.remove('hidden');
+        filterAndRenderReservations();
+    }
   }
 
   document.querySelectorAll('[data-res-subtab]').forEach(btn => {
