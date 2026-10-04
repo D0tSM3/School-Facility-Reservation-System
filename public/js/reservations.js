@@ -194,6 +194,11 @@ document.addEventListener('DOMContentLoaded', () => {
             request_id: o.request_id,
             room_id: o.room_id,
             room_name: o.room_name,
+            room_type: o.room_type,
+            floor: o.floor,
+            capacity: o.capacity,
+            customer_name: o.customer_name,
+            customer_email: o.customer_email,
             start_time: o.start_time,
             end_time: o.end_time,
             purpose: o.purpose,
@@ -231,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (reservationListRetry) reservationListRetry.addEventListener('click', fetchReservations);
 
   function withdrawRequestSlip(id) {
-    if (!confirm('Are you sure you want to withdraw this Request Slip? This will cancel your conflict override request.')) {
+    if (!confirm('Are you sure you want to cancel this Request Slip? This will cancel your conflict override request.')) {
       return;
     }
     fetch(BASE + 'api/conflict-override-requests/' + encodeURIComponent(id), {
@@ -241,105 +246,165 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(res => res.json())
       .then(json => {
         if (json && json.success) {
-          showToast('Request Slip withdrawn successfully.', 'success');
+          showToast('Request Slip cancelled successfully.', 'success');
           fetchReservations();
         } else {
-          showToast((json && json.error) || 'Could not withdraw Request Slip.', 'error');
+          showToast((json && json.error) || 'Could not cancel Request Slip.', 'error');
         }
       })
       .catch(() => {
-        showToast('Network error while withdrawing Request Slip.', 'error');
+        showToast('Network error while cancelling Request Slip.', 'error');
       });
   }
 
   // ---------------------------------------------------------------
-  // View Request Slip Modal
+  // View Request Slip Modal (Conformed to Confirmation Slip Design)
   // ---------------------------------------------------------------
 
   const requestSlipViewModal = document.getElementById('requestSlipViewModal');
   const closeRequestSlipViewBtn = document.getElementById('closeRequestSlipViewBtn');
   const closeRequestSlipViewFooterBtn = document.getElementById('closeRequestSlipViewFooterBtn');
   const rsvWithdrawBtn = document.getElementById('rsvWithdrawBtn');
+  const rsvPrintBtn = document.getElementById('rsvPrintBtn');
+  let rsvTitleBeforePrint = null;
+
+  const SLIP_DATETIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/;
+
+  function slipWallClock(value) {
+    const m = SLIP_DATETIME_PATTERN.exec(String(value ?? ''));
+    if (!m) return null;
+    return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)));
+  }
+
+  function formatSlipDateTime(value) {
+    const d = slipWallClock(value);
+    return d ? d.toLocaleString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      hour: 'numeric', minute: '2-digit', timeZone: 'UTC'
+    }) : '—';
+  }
+
+  function formatSlipTime(value) {
+    const d = slipWallClock(value);
+    return d ? d.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }) : '—';
+  }
 
   function openRequestSlipViewModal(id) {
     const item = allReservations.find(r => r.is_override && (r.request_id === id || r.reservation_id === id));
     if (!item || !requestSlipViewModal) return;
 
     const rsvCodeBadge = document.getElementById('rsvCodeBadge');
+    const rsvUuid = document.getElementById('rsvUuid');
+    const rsvStatusChip = document.getElementById('rsvStatusChip');
+    const rsvRequesterName = document.getElementById('rsvRequesterName');
+    const rsvRequesterEmail = document.getElementById('rsvRequesterEmail');
     const rsvRoomName = document.getElementById('rsvRoomName');
-    const rsvRequestType = document.getElementById('rsvRequestType');
-    const rsvDates = document.getElementById('rsvDates');
-    const rsvTimes = document.getElementById('rsvTimes');
+    const rsvRoomDetails = document.getElementById('rsvRoomDetails');
+    const rsvCategory = document.getElementById('rsvCategory');
+    const rsvPurpose = document.getElementById('rsvPurpose');
+    const rsvEquipment = document.getElementById('rsvEquipment');
+    const rsvStarts = document.getElementById('rsvStarts');
+    const rsvEnds = document.getElementById('rsvEnds');
     const rsvReason = document.getElementById('rsvReason');
-    const rsvAltScheduleText = document.getElementById('rsvAltScheduleText');
-    const rsvAdditionalBlock = document.getElementById('rsvAdditionalBlock');
-    const rsvAdditionalText = document.getElementById('rsvAdditionalText');
-    const rsvStatusBanner = document.getElementById('rsvStatusBanner');
-    const rsvStatusIcon = document.getElementById('rsvStatusIcon');
-    const rsvStatusTitle = document.getElementById('rsvStatusTitle');
-    const rsvStatusDesc = document.getElementById('rsvStatusDesc');
+    const rsvAltSchedule = document.getElementById('rsvAltSchedule');
+    const rsvAdditionalRow = document.getElementById('rsvAdditionalRow');
+    const rsvAdditional = document.getElementById('rsvAdditional');
+    const rsvFiledOn = document.getElementById('rsvFiledOn');
+    const rsvReviewStatus = document.getElementById('rsvReviewStatus');
+    const rsvGeneratedTime = document.getElementById('rsvGeneratedTime');
 
-    if (rsvCodeBadge) rsvCodeBadge.textContent = '#REQ-SLIP-' + String(item.request_id).substring(0, 8).toUpperCase();
+    // Reference & UUID
+    const code = '#REQ-SLIP-' + String(item.request_id || '').substring(0, 8).toUpperCase();
+    if (rsvCodeBadge) rsvCodeBadge.textContent = code;
+    if (rsvUuid) rsvUuid.textContent = item.request_id || '—';
+
+    // Status Chip
+    if (rsvStatusChip) {
+      if (item.status === 'Pending') {
+        rsvStatusChip.textContent = 'Under Review';
+        rsvStatusChip.className = 'px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-amber-100 text-amber-800';
+      } else if (item.status === 'Approved') {
+        rsvStatusChip.textContent = 'Approved (Awaiting Move)';
+        rsvStatusChip.className = 'px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-violet-100 text-violet-800';
+      } else if (item.status === 'Rejected') {
+        rsvStatusChip.textContent = 'Declined';
+        rsvStatusChip.className = 'px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-red-100 text-red-800';
+      } else if (item.status === 'Cancelled') {
+        rsvStatusChip.textContent = 'Cancelled';
+        rsvStatusChip.className = 'px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-gray-100 text-gray-700';
+      } else {
+        rsvStatusChip.textContent = item.status || 'Under Review';
+        rsvStatusChip.className = 'px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-amber-100 text-amber-800';
+      }
+    }
+
+    // Requester
+    const requesterName = item.customer_name || (window.currentUser && window.currentUser.name) || '—';
+    const requesterEmail = item.customer_email || (window.currentUser && window.currentUser.email) || '—';
+    if (rsvRequesterName) rsvRequesterName.textContent = requesterName;
+    if (rsvRequesterEmail) rsvRequesterEmail.textContent = requesterEmail;
+
+    // Facility
     if (rsvRoomName) rsvRoomName.textContent = item.room_name || item.room_id || '—';
-    if (rsvRequestType) rsvRequestType.textContent = item.request_type || item.category || 'Conflict Override';
+    if (rsvRoomDetails) {
+      const parts = [];
+      if (item.room_type) parts.push(item.room_type);
+      if (item.floor != null) parts.push('Floor ' + item.floor);
+      if (item.capacity) parts.push('Capacity ' + item.capacity);
+      rsvRoomDetails.textContent = parts.join(' • ') || '—';
+    }
 
-    const startDateObj = formatDate(item.start_time);
-    const multi = String(item.start_time).slice(0, 10) !== String(item.end_time).slice(0, 10);
-    const endDateObj = multi ? formatDate(item.end_time) : null;
-    const dateStr = multi
-      ? `${startDateObj.month} ${startDateObj.day}, ${startDateObj.year} – ${endDateObj.month} ${endDateObj.day}, ${endDateObj.year}`
-      : `${startDateObj.month} ${startDateObj.day}, ${startDateObj.year}`;
-
-    if (rsvDates) rsvDates.textContent = dateStr;
-    if (rsvTimes) rsvTimes.textContent = `${formatTime(item.start_time)} – ${formatTime(item.end_time)}`;
+    // Booking
+    if (rsvCategory) rsvCategory.textContent = item.category || item.request_type || 'Academic / Institutional';
+    if (rsvPurpose) rsvPurpose.textContent = item.purpose || 'Campus facility usage';
+    if (rsvEquipment) rsvEquipment.textContent = item.equipment_notes || 'Standard Academic Setup';
+    if (rsvStarts) rsvStarts.textContent = formatSlipDateTime(item.start_time);
+    if (rsvEnds) rsvEnds.textContent = formatSlipDateTime(item.end_time);
     if (rsvReason) rsvReason.textContent = item.reason || 'No justification provided.';
 
-    if (rsvAltScheduleText) {
+    if (rsvAltSchedule) {
       if (item.alt_start_time) {
-        const altStartObj = formatDate(item.alt_start_time);
-        rsvAltScheduleText.textContent = `${altStartObj.month} ${altStartObj.day}, ${altStartObj.year} (${formatTime(item.alt_start_time)} – ${formatTime(item.alt_end_time)})`;
+        rsvAltSchedule.textContent = `${formatSlipDateTime(item.alt_start_time)} – ${formatSlipTime(item.alt_end_time)}`;
       } else {
-        rsvAltScheduleText.textContent = 'None provided (Strictly requesting the original slot).';
+        rsvAltSchedule.textContent = 'None provided (Strictly requesting the original slot).';
       }
     }
 
-    if (rsvAdditionalBlock && rsvAdditionalText) {
-      const extraParts = [];
-      if (item.additional_info) extraParts.push(item.additional_info);
-      if (item.equipment_notes && item.equipment_notes !== 'Standard Academic Setup') {
-        extraParts.push('Equipment: ' + item.equipment_notes);
-      }
-      if (extraParts.length > 0) {
-        rsvAdditionalText.textContent = extraParts.join('\n\n');
-        rsvAdditionalBlock.classList.remove('hidden');
+    if (rsvAdditionalRow && rsvAdditional) {
+      if (item.additional_info && String(item.additional_info).trim()) {
+        rsvAdditional.textContent = String(item.additional_info).trim();
+        rsvAdditionalRow.classList.remove('hidden');
       } else {
-        rsvAdditionalBlock.classList.add('hidden');
+        rsvAdditionalRow.classList.add('hidden');
       }
     }
 
-    // Status banner styling
-    if (rsvStatusBanner && rsvStatusIcon && rsvStatusTitle && rsvStatusDesc) {
+    // Record
+    if (rsvFiledOn) rsvFiledOn.textContent = formatSlipDateTime(item.created_at);
+    if (rsvReviewStatus) {
       if (item.status === 'Pending') {
-        rsvStatusBanner.className = 'p-3.5 rounded-xl border flex items-start gap-3 bg-amber-50 border-amber-200 text-amber-900';
-        rsvStatusIcon.textContent = 'hourglass_top';
-        rsvStatusIcon.className = 'material-symbols-outlined text-[20px] text-amber-700 shrink-0 mt-0.5';
-        rsvStatusTitle.textContent = 'Status: Under Review by Campus Staff';
-        rsvStatusDesc.textContent = 'Staff will evaluate your request to determine if the conflicting booking can be relocated or rescheduled.';
+        rsvReviewStatus.textContent = 'Under Review by Campus Staff (Evaluating relocation / reschedule)';
       } else if (item.status === 'Approved') {
-        rsvStatusBanner.className = 'p-3.5 rounded-xl border flex items-start gap-3 bg-violet-50 border-violet-200 text-violet-900';
-        rsvStatusIcon.textContent = 'sync';
-        rsvStatusIcon.className = 'material-symbols-outlined text-[20px] text-violet-700 shrink-0 mt-0.5';
-        rsvStatusTitle.textContent = 'Status: Approved (Awaiting Move Completion)';
-        rsvStatusDesc.textContent = 'Staff has approved your request and initiated a relocation of the conflicting booking. Once completed, your reservation will be scheduled.';
+        rsvReviewStatus.textContent = 'Approved by Campus Staff (Conflicting reservation rescheduled)';
       } else if (item.status === 'Rejected') {
-        rsvStatusBanner.className = 'p-3.5 rounded-xl border flex items-start gap-3 bg-red-50 border-red-200 text-red-900';
-        rsvStatusIcon.textContent = 'cancel';
-        rsvStatusIcon.className = 'material-symbols-outlined text-[20px] text-red-700 shrink-0 mt-0.5';
-        rsvStatusTitle.textContent = 'Status: Declined';
-        rsvStatusDesc.textContent = item.staff_comment || 'Staff was unable to approve this conflict override request.';
+        rsvReviewStatus.textContent = 'Declined' + (item.staff_comment ? ` — Note: ${item.staff_comment}` : '');
+      } else if (item.status === 'Cancelled') {
+        rsvReviewStatus.textContent = 'Cancelled by Requester';
+      } else {
+        rsvReviewStatus.textContent = item.status || '—';
       }
     }
 
+    // Generated Time (Manila wall-clock)
+    if (rsvGeneratedTime) {
+      rsvGeneratedTime.textContent = new Date().toLocaleString('en-US', {
+        timeZone: 'Asia/Manila',
+        year: 'numeric', month: 'long', day: 'numeric',
+        hour: 'numeric', minute: '2-digit'
+      });
+    }
+
+    // Action button in footer
     if (rsvWithdrawBtn) {
       if (item.status === 'Pending') {
         rsvWithdrawBtn.classList.remove('hidden');
@@ -361,6 +426,40 @@ document.addEventListener('DOMContentLoaded', () => {
     requestSlipViewModal.classList.add('hidden');
     requestSlipViewModal.classList.remove('flex');
   }
+
+  function printRequestSlip() {
+    if (!requestSlipViewModal || requestSlipViewModal.classList.contains('hidden')) return;
+    const badgeText = document.getElementById('rsvCodeBadge')?.textContent || '';
+    rsvTitleBeforePrint = document.title;
+    document.title = `CampusRoom Request Slip ${badgeText}`.trim();
+    document.body.classList.add('cr-request-slip-printing');
+    window.print();
+  }
+
+  if (rsvPrintBtn) {
+    rsvPrintBtn.addEventListener('click', printRequestSlip);
+  }
+
+  window.addEventListener('beforeprint', () => {
+    if (requestSlipViewModal && !requestSlipViewModal.classList.contains('hidden')) {
+      const badgeText = document.getElementById('rsvCodeBadge')?.textContent || '';
+      if (!rsvTitleBeforePrint) {
+        rsvTitleBeforePrint = document.title;
+        document.title = `CampusRoom Request Slip ${badgeText}`.trim();
+      }
+      document.body.classList.add('cr-request-slip-printing');
+    }
+  });
+
+  window.addEventListener('afterprint', () => {
+    if (document.body.classList.contains('cr-request-slip-printing')) {
+      document.body.classList.remove('cr-request-slip-printing');
+      if (rsvTitleBeforePrint !== null) {
+        document.title = rsvTitleBeforePrint;
+        rsvTitleBeforePrint = null;
+      }
+    }
+  });
 
   if (closeRequestSlipViewBtn) closeRequestSlipViewBtn.addEventListener('click', closeRequestSlipViewModal);
   if (closeRequestSlipViewFooterBtn) closeRequestSlipViewFooterBtn.addEventListener('click', closeRequestSlipViewModal);
@@ -407,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const ACTION_STYLES = {
     cancel:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
-    remove:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    remove:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
     reqcancel: 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
     move:      'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-600 border border-gray-200 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
     slip:      'inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#7a1f2b] text-white hover:bg-[#5e1821] border border-transparent text-xs font-semibold rounded-lg transition-all shadow-sm',
@@ -417,7 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const ACTION_ICONS = {
     cancel: 'cancel',
-    remove: 'delete',
+    remove: 'free_cancellation',
     reqcancel: 'free_cancellation',
     move: 'edit_calendar',
     slip: 'receipt_long',
@@ -487,10 +586,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function buildActions(reservation) {
     if (reservation.is_override) {
       const buttons = [];
-      buttons.push(`<button type="button" data-action="view-override-slip" data-id="${escapeHtml(reservation.request_id)}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#7a1f2b] text-white hover:bg-[#5e1821] text-xs font-semibold rounded-lg transition-all shadow-sm cursor-pointer"><span class="material-symbols-outlined text-[14px]">receipt_long</span>View Slip</button>`);
       if (reservation.status === 'Pending') {
-        buttons.push(`<button type="button" data-action="withdraw-slip" data-id="${escapeHtml(reservation.request_id)}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm cursor-pointer"><span class="material-symbols-outlined text-[14px]">cancel</span>Withdraw</button>`);
+        buttons.push(`<button type="button" data-action="withdraw-slip" data-id="${escapeHtml(reservation.request_id)}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm cursor-pointer"><span class="material-symbols-outlined text-[14px]">free_cancellation</span>Cancel</button>`);
       }
+      buttons.push(`<button type="button" data-action="view-override-slip" data-id="${escapeHtml(reservation.request_id)}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#7a1f2b] text-white hover:bg-[#5e1821] border border-transparent text-xs font-semibold rounded-lg transition-all shadow-sm cursor-pointer"><span class="material-symbols-outlined text-[14px]">receipt_long</span>View Slip</button>`);
       return buttons.join('');
     }
 
@@ -500,7 +599,8 @@ document.addEventListener('DOMContentLoaded', () => {
     switch (reservation.status) {
       case 'Pending':
         buttons.push(actionButton('move', id, 'Move', moveRequestBlockedReason(reservation)));
-        buttons.push(actionButton('remove', id, 'Withdraw'));
+        buttons.push(actionButton('remove', id, 'Cancel'));
+        buttons.push(actionButton('slip', id, 'View Slip'));
         break;
       case 'Approved':
         buttons.push(actionButton('move', id, 'Move', moveRequestBlockedReason(reservation)));
@@ -887,15 +987,94 @@ function renderReservations() {
 
   let moveCalendarInstance = null;
 
+  function findReservation(id) {
+    if (!id || !Array.isArray(allReservations)) return null;
+    for (const r of allReservations) {
+      if (r.reservation_id === id) return r;
+      if (Array.isArray(r.series_rows)) {
+        const match = r.series_rows.find(row => row.reservation_id === id);
+        if (match) return match;
+      }
+    }
+    return null;
+  }
+
+  function nowHHMM() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  function refreshMoveTimeOptions() {
+    const dateInput = document.getElementById('moveDate');
+    const startSelect = document.getElementById('moveStartTime');
+    const endSelect = document.getElementById('moveEndTime');
+    if (!dateInput || !startSelect || !endSelect) return;
+
+    const isToday = dateInput.value === todayYMD();
+    const cutoff = isToday ? nowHHMM() : null;
+
+    [startSelect, endSelect].forEach(select => {
+      let clearedSelection = false;
+      Array.from(select.options).forEach(opt => {
+        if (!opt.value) return; // leave the blank placeholder alone
+        const isPastSlot = cutoff !== null && opt.value <= cutoff;
+        opt.disabled = isPastSlot;
+        if (isPastSlot && select.value === opt.value) clearedSelection = true;
+      });
+      if (clearedSelection) select.value = '';
+    });
+  }
+
   function openMoveModal(id) {
     currentTargetReservationId = id;
+    const target = findReservation(id);
     const moveModalOverlay = document.getElementById('moveModalOverlay');
     const moveErrorMsg = document.getElementById('moveErrorMsg');
+    const moveConflictBanner = document.getElementById('moveConflictBanner');
     const moveDateInput = document.getElementById('moveDate');
+    const moveStartTimeSelect = document.getElementById('moveStartTime');
+    const moveEndTimeSelect = document.getElementById('moveEndTime');
+
     if (moveErrorMsg) moveErrorMsg.classList.add('hidden');
-    // Can't pick a date before today at all; native browser UI enforces this.
-    if (moveDateInput) moveDateInput.min = todayYMD();
+    if (moveConflictBanner) moveConflictBanner.classList.add('hidden');
+
+    if (moveDateInput) {
+      moveDateInput.min = todayYMD();
+      if (target && target.start_time) {
+        const curDate = String(target.start_time).slice(0, 10);
+        moveDateInput.value = (curDate >= todayYMD()) ? curDate : todayYMD();
+      } else {
+        moveDateInput.value = todayYMD();
+      }
+    }
+
+    if (target && target.start_time && target.end_time) {
+      const curStart = String(target.start_time).slice(11, 16);
+      const curEnd = String(target.end_time).slice(11, 16);
+      if (moveStartTimeSelect) moveStartTimeSelect.value = curStart;
+      if (moveEndTimeSelect) moveEndTimeSelect.value = curEnd;
+    }
+
     refreshMoveTimeOptions();
+
+    // Initialize RoomCalendar in move modal if available
+    if (typeof RoomCalendar !== 'undefined' && target && target.room_id) {
+      const calendarContainer = document.getElementById('move-room-calendar-container');
+      if (calendarContainer) {
+        calendarContainer.innerHTML = '';
+        const initialDate = (moveDateInput && moveDateInput.value) || todayYMD();
+        moveCalendarInstance = new RoomCalendar({
+          containerId: 'move-room-calendar-container',
+          roomId: target.room_id,
+          initialDate: initialDate,
+          minDate: todayYMD(),
+        });
+        if (moveStartTimeSelect && moveEndTimeSelect && typeof moveCalendarInstance.setSelectionTimes === 'function') {
+          moveCalendarInstance.setSelectionTimes(moveStartTimeSelect.value, moveEndTimeSelect.value);
+        }
+      }
+    }
+
     if (moveModalOverlay) {
       moveModalOverlay.classList.remove('opacity-0', 'pointer-events-none');
     }
@@ -1169,12 +1348,18 @@ function renderReservations() {
   if (moveModalCloseIcon) moveModalCloseIcon.addEventListener('click', closeModal);
   const moveModalCancelBtn = document.getElementById('moveModalCancelBtn');
   if (moveModalCancelBtn) moveModalCancelBtn.addEventListener('click', closeModal);
+  const moveModalOverlay = document.getElementById('moveModalOverlay');
+  if (moveModalOverlay) {
+    moveModalOverlay.addEventListener('click', (e) => {
+      if (e.target === moveModalOverlay) closeModal();
+    });
+  }
 
   const moveForm = document.getElementById('moveForm');
 
   /**
    * Why the requested move can't work, or '' if it can (or can't be checked).
-   * The new start..end must be free for its WHOLE length â€” no class, holiday or
+   * The new start..end must be free for its WHOLE length — no class, holiday or
    * other reservation may touch any part of it. The reservation being moved is
    * ignored, so sliding it 30 minutes doesn't "conflict" with its own old slot.
    * Convenience only; the server re-validates on submit and again on approval.
@@ -1183,25 +1368,51 @@ function renderReservations() {
     const date = document.getElementById('moveDate').value;
     const start = document.getElementById('moveStartTime').value;
     const end = document.getElementById('moveEndTime').value;
-    if (!date || !start || !end) return '';
-    if (end <= start) return 'End time must be after start time.';
+    if (!date || !start || !end) return null;
+    if (end <= start) return { message: 'End time must be after start time.', isOverrideEligible: false };
 
-    const target = allReservations.find(r => r.reservation_id === currentTargetReservationId);
-    if (!target || !window.CampusSchedule) return '';
+    const target = findReservation(currentTargetReservationId);
+    if (!target || !window.CampusSchedule) return null;
 
     const data = await window.CampusSchedule.fetchDay(BASE, target.room_id, date);
-    if (!data) return '';   // can't pre-check; the server will
+    if (!data) return null;   // can't pre-check; the server will
     const clash = window.CampusSchedule.findConflicts(
       data, date, start, end, { excludeReservationId: target.reservation_id }
     );
-    return window.CampusSchedule.describe(clash, start, end);
+    if (!clash || !clash.length) return null;
+
+    // A conflict is overridable via Request Slip if it is with another reservation (not an official class or holiday)
+    const isOverrideEligible = clash.every(c => c.kind === 'reservation');
+    const message = window.CampusSchedule.describe(clash, start, end);
+    return { message, isOverrideEligible, clash };
   }
 
-  function showMoveError(message) {
+  function showMoveError(problem) {
     const moveErrorMsg = document.getElementById('moveErrorMsg');
-    if (!moveErrorMsg) return;
-    moveErrorMsg.textContent = message;
-    moveErrorMsg.classList.toggle('hidden', !message);
+    const moveConflictBanner = document.getElementById('moveConflictBanner');
+    const moveConflictText = document.getElementById('moveConflictText');
+    const moveRequestSlipPrompt = document.getElementById('moveRequestSlipPrompt');
+
+    if (!problem) {
+      if (moveErrorMsg) moveErrorMsg.classList.add('hidden');
+      if (moveConflictBanner) moveConflictBanner.classList.add('hidden');
+      return;
+    }
+
+    const message = typeof problem === 'string' ? problem : (problem.message || '');
+    const isOverride = typeof problem === 'object' && problem !== null && Boolean(problem.isOverrideEligible);
+
+    if (moveConflictBanner && moveConflictText) {
+      moveConflictText.textContent = message;
+      moveConflictBanner.classList.remove('hidden');
+      if (moveRequestSlipPrompt) {
+        moveRequestSlipPrompt.classList.toggle('hidden', !isOverride);
+      }
+      if (moveErrorMsg) moveErrorMsg.classList.add('hidden');
+    } else if (moveErrorMsg) {
+      moveErrorMsg.textContent = message;
+      moveErrorMsg.classList.remove('hidden');
+    }
   }
 
   if (moveForm) {
@@ -1269,16 +1480,11 @@ function renderReservations() {
 
     moveForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      console.log('[Move] submit clicked'); // remove once confirmed fixed
 
       const moveDate = document.getElementById('moveDate').value;
       const moveStartTime = document.getElementById('moveStartTime').value;
       const moveEndTime = document.getElementById('moveEndTime').value;
-      const moveErrorMsg = document.getElementById('moveErrorMsg');
 
-      // Previously a bare `return` here - with the form's `novalidate`
-      // attribute disabling native "please fill this field" prompts, a
-      // missing field made the button look completely dead. Now it says why.
       if (!currentTargetReservationId) {
         showMoveError('No reservation selected. Please close and reopen this dialog.');
         return;
@@ -1288,19 +1494,14 @@ function renderReservations() {
         return;
       }
 
-      // Visible feedback the instant the click registers, so a slow
-      // pre-check or request never again looks like a dead button.
       if (moveSubmitBtn) {
         moveSubmitBtn.disabled = true;
         moveSubmitBtn.textContent = 'Checking availability…';
       }
 
       try {
-        moveCheckSeq++;   // any in-flight live check is now stale
+        moveCheckSeq++;
 
-        // moveRangeProblem() calls out to the room-calendar endpoint with no
-        // timeout of its own; race it so a hung request can't leave the
-        // button stuck forever with no explanation.
         const timeout = new Promise(resolve => setTimeout(() => resolve(undefined), 8000));
         const rangeProblem = await Promise.race([moveRangeProblem(), timeout]);
         if (rangeProblem === undefined) {
@@ -1310,12 +1511,10 @@ function renderReservations() {
           return;
         }
 
-        // Same shape booking.js sends. (The server accepts either; 'T' is used
-        // because new Date() parses it in every browser, the space form is not.)
         const requestedStart = `${moveDate}T${moveStartTime}:00`;
         const requestedEnd = `${moveDate}T${moveEndTime}:00`;
 
-        if (moveSubmitBtn) moveSubmitBtn.textContent = 'Submitting…';
+        if (moveSubmitBtn) moveSubmitBtn.textContent = 'Rescheduling…';
 
         const res = await fetch(`${BASE}api/reservations/${currentTargetReservationId}/move-request`, {
           method: 'POST',
@@ -1328,24 +1527,210 @@ function renderReservations() {
         const json = await res.json();
 
         if (json.success) {
-          fetchReservations(); // reload to show pending badge
+          const successMsg = (json.data && json.data.message) || 'Reservation successfully moved to the new schedule (Auto-approved).';
+          showToast(successMsg, 'success');
           closeModal();
+          fetchReservations();
         } else {
-          moveErrorMsg.textContent = json.error || 'Failed to submit move request.';
-          moveErrorMsg.classList.remove('hidden');
+          const errMsg = json.error || 'The requested slot is unavailable.';
+          const isEligible = json.data && json.data.override_eligible;
+          showMoveError({ message: errMsg, isOverrideEligible: Boolean(isEligible) });
         }
       } catch (err) {
         console.error('[Move] submit failed:', err);
-        moveErrorMsg.textContent = 'Network error.';
-        moveErrorMsg.classList.remove('hidden');
+        showMoveError('Network error while rescheduling.');
       } finally {
         if (moveSubmitBtn) {
           moveSubmitBtn.disabled = false;
-          moveSubmitBtn.textContent = 'Submit Move';
+          moveSubmitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">event_repeat</span> Confirm Reschedule';
         }
       }
     });
   }
+
+  // ---------------------------------------------------------------
+  // Move Request Slip Modal Wiring
+  // ---------------------------------------------------------------
+  const moveOpenRequestSlipBtn = document.getElementById('moveOpenRequestSlipBtn');
+  const moveRequestSlipModalOverlay = document.getElementById('moveRequestSlipModalOverlay');
+  const closeMoveRequestSlipModalBtn = document.getElementById('closeMoveRequestSlipModalBtn');
+  const cancelMoveRequestSlipBtn = document.getElementById('cancelMoveRequestSlipBtn');
+  const moveRequestSlipForm = document.getElementById('moveRequestSlipForm');
+  const mrsAltSchedule = document.getElementById('mrsAltSchedule');
+  const mrsAltScheduleFields = document.getElementById('mrsAltScheduleFields');
+  const mrsErrorBanner = document.getElementById('mrsErrorBanner');
+  const submitMoveRequestSlipBtn = document.getElementById('submitMoveRequestSlipBtn');
+
+  if (mrsAltSchedule && mrsAltScheduleFields) {
+    mrsAltSchedule.addEventListener('change', () => {
+      mrsAltScheduleFields.classList.toggle('hidden', mrsAltSchedule.value !== 'Yes');
+    });
+  }
+
+  function closeMoveRequestSlipModal() {
+    if (!moveRequestSlipModalOverlay) return;
+    moveRequestSlipModalOverlay.classList.add('hidden');
+    moveRequestSlipModalOverlay.classList.remove('flex');
+    if (mrsErrorBanner) mrsErrorBanner.classList.add('hidden');
+  }
+
+  if (closeMoveRequestSlipModalBtn) closeMoveRequestSlipModalBtn.addEventListener('click', closeMoveRequestSlipModal);
+  if (cancelMoveRequestSlipBtn) cancelMoveRequestSlipBtn.addEventListener('click', closeMoveRequestSlipModal);
+  if (moveRequestSlipModalOverlay) {
+    moveRequestSlipModalOverlay.addEventListener('click', (e) => {
+      if (e.target === moveRequestSlipModalOverlay) closeMoveRequestSlipModal();
+    });
+  }
+
+  if (moveOpenRequestSlipBtn) {
+    moveOpenRequestSlipBtn.addEventListener('click', () => {
+      const target = findReservation(currentTargetReservationId);
+      const moveDate = document.getElementById('moveDate').value;
+      const moveStartTime = document.getElementById('moveStartTime').value;
+      const moveEndTime = document.getElementById('moveEndTime').value;
+      const moveConflictText = document.getElementById('moveConflictText');
+
+      if (!target || !moveDate || !moveStartTime || !moveEndTime) {
+        return;
+      }
+
+      // Populate preview in Request Slip modal
+      const mrsFacility = document.getElementById('mrsFacility');
+      const mrsDate = document.getElementById('mrsDate');
+      const mrsTime = document.getElementById('mrsTime');
+      const mrsConflictInfo = document.getElementById('mrsConflictInfo');
+
+      if (mrsFacility) mrsFacility.textContent = target.room_name || target.room_id || '—';
+      if (mrsDate) mrsDate.textContent = moveDate;
+      if (mrsTime) mrsTime.textContent = `${moveStartTime} – ${moveEndTime}`;
+      if (mrsConflictInfo) mrsConflictInfo.textContent = (moveConflictText && moveConflictText.textContent) || 'Scheduling Conflict';
+
+      // Reset form
+      if (moveRequestSlipForm) moveRequestSlipForm.reset();
+      if (mrsAltScheduleFields) mrsAltScheduleFields.classList.add('hidden');
+      if (mrsErrorBanner) mrsErrorBanner.classList.add('hidden');
+
+      // Close move modal and open request slip modal
+      closeModal();
+      if (moveRequestSlipModalOverlay) {
+        moveRequestSlipModalOverlay.classList.remove('hidden');
+        moveRequestSlipModalOverlay.classList.add('flex');
+      }
+    });
+  }
+
+  if (moveRequestSlipForm) {
+    moveRequestSlipForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const target = findReservation(currentTargetReservationId);
+      const moveDate = document.getElementById('moveDate').value;
+      const moveStartTime = document.getElementById('moveStartTime').value;
+      const moveEndTime = document.getElementById('moveEndTime').value;
+
+      const setMrsError = (msg) => {
+        if (mrsErrorBanner) {
+          mrsErrorBanner.textContent = msg;
+          mrsErrorBanner.classList.remove('hidden');
+        } else {
+          showToast(msg, 'error');
+        }
+      };
+
+      if (mrsErrorBanner) mrsErrorBanner.classList.add('hidden');
+
+      const ack = document.getElementById('mrsAcknowledgement');
+      if (ack && !ack.checked) {
+        return setMrsError('Please acknowledge that submitting this request does not guarantee approval.');
+      }
+
+      const reasonEl = moveRequestSlipForm.querySelector('textarea[name="reason"]');
+      const reason = reasonEl ? reasonEl.value.trim() : '';
+      if (!reason) {
+        return setMrsError('Please provide a justification for this conflict override request.');
+      }
+
+      const reqTypeEl = moveRequestSlipForm.querySelector('select[name="request_type"]');
+      const requestType = reqTypeEl ? reqTypeEl.value : 'Schedule Conflict';
+
+      const addInfoEl = moveRequestSlipForm.querySelector('textarea[name="additional_info"]');
+      const additionalInfo = addInfoEl ? addInfoEl.value.trim() : '';
+
+      const altSchedule = mrsAltSchedule ? mrsAltSchedule.value : 'No';
+      const altDateInput = moveRequestSlipForm.querySelector('input[name="alt_date"]');
+      const altStartInput = moveRequestSlipForm.querySelector('input[name="alt_start"]');
+      const altEndInput = moveRequestSlipForm.querySelector('input[name="alt_end"]');
+
+      const altDate = altDateInput ? altDateInput.value : '';
+      const altStart = altStartInput ? altStartInput.value : '';
+      const altEnd = altEndInput ? altEndInput.value : '';
+
+      if (altSchedule === 'Yes') {
+        if (!altDate || !altStart || !altEnd) {
+          return setMrsError('Please fill out all fields for the alternative schedule proposal.');
+        }
+        if (altEnd <= altStart) {
+          return setMrsError('Alternative end time must be after the alternative start time.');
+        }
+      }
+
+      const payload = {
+        room_id: target.room_id,
+        purpose: `${target.purpose || requestType}: ${reason}`.substring(0, 250),
+        category: target.category || 'Academic Lecture',
+        start_time: `${moveDate}T${moveStartTime}:00`,
+        end_time: `${moveDate}T${moveEndTime}:00`,
+        equipment_notes: target.equipment_notes || 'Standard Academic Setup',
+        reason: reason,
+        request_type: requestType,
+        additional_info: additionalInfo || null,
+        alt_start_time: (altSchedule === 'Yes' && altDate && altStart) ? `${altDate} ${altStart}:00` : null,
+        alt_end_time: (altSchedule === 'Yes' && altDate && altEnd) ? `${altDate} ${altEnd}:00` : null
+      };
+
+      if (submitMoveRequestSlipBtn) {
+        submitMoveRequestSlipBtn.disabled = true;
+        submitMoveRequestSlipBtn.textContent = 'Submitting…';
+      }
+
+      try {
+        const res = await fetch(BASE + 'api/conflict-override-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+
+        if (json.success) {
+          closeMoveRequestSlipModal();
+          showToast('Request Slip submitted successfully! Staff will evaluate the conflict. Your current booking remains active.', 'success');
+          fetchReservations();
+        } else {
+          setMrsError(json.error || 'Failed to submit Request Slip. Please try again.');
+        }
+      } catch (err) {
+        setMrsError('Network error while submitting Request Slip.');
+      } finally {
+        if (submitMoveRequestSlipBtn) {
+          submitMoveRequestSlipBtn.disabled = false;
+          submitMoveRequestSlipBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">send</span><span>Submit Request Slip</span>';
+        }
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (moveRequestSlipModalOverlay && !moveRequestSlipModalOverlay.classList.contains('hidden')) {
+        closeMoveRequestSlipModal();
+      }
+      const moveModalOverlay = document.getElementById('moveModalOverlay');
+      if (moveModalOverlay && !moveModalOverlay.classList.contains('pointer-events-none')) {
+        closeModal();
+      }
+    }
+  });
 
   // Remove = DELETE. The server soft-hides the row (and cancels it first if it
   // was still Pending), so nothing is destroyed.

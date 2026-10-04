@@ -815,4 +815,49 @@ class ReservationRepository
             ]
         );
     }
+
+    /**
+     * Reschedules an existing reservation immediately with auto-approval.
+     * Updates Reservations table times, records an Approved MoveRequest,
+     * and logs the event in System_Logs.
+     */
+    public function createApprovedMove(
+        string $reservationId,
+        string $requestedStart,
+        string $requestedEnd,
+        string $userId,
+        ?string $comment = 'Auto-approved (No scheduling conflict)'
+    ): array {
+        return $this->transaction(function () use ($reservationId, $requestedStart, $requestedEnd, $userId, $comment) {
+            $this->updateTimes($reservationId, $requestedStart, $requestedEnd);
+
+            $requestId = self::uuidv4();
+            $this->db->query(
+                'INSERT INTO ReservationMoveRequests (request_id, reservation_id, requested_start_time, requested_end_time, status, processed_by, staff_comment, reason)
+                 VALUES (:request_id, :reservation_id, :requested_start_time, :requested_end_time, :status, :processed_by, :staff_comment, :reason)',
+                [
+                    ':request_id'           => $requestId,
+                    ':reservation_id'       => $reservationId,
+                    ':requested_start_time' => $requestedStart,
+                    ':requested_end_time'   => $requestedEnd,
+                    ':status'               => 'Approved',
+                    ':processed_by'         => $userId,
+                    ':staff_comment'        => $comment,
+                    ':reason'               => 'Customer requested reschedule',
+                ]
+            );
+
+            $this->insertLog(
+                $userId,
+                "Reservation rescheduled to {$requestedStart} - {$requestedEnd} (Auto-approved)",
+                $reservationId
+            );
+
+            $stmt = $this->db->query(
+                'SELECT * FROM ReservationMoveRequests WHERE request_id = :request_id LIMIT 1',
+                [':request_id' => $requestId]
+            );
+            return $stmt->fetch() ?: [];
+        });
+    }
 }

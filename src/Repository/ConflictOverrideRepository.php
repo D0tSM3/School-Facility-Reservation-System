@@ -91,13 +91,16 @@ class ConflictOverrideRepository
     public function findByRequester(string $requestedBy): array
     {
         $stmt = $this->db->query(
-            'SELECT o.request_id, o.room_id, r.name AS room_name, o.start_time, o.end_time,
+            'SELECT o.request_id, o.room_id, r.name AS room_name, r.room_type, r.floor, r.capacity,
+                    o.start_time, o.end_time,
                     o.purpose, o.category, o.reason, o.status, o.staff_comment,
                     o.outcome, o.outcome_note, o.created_reservation_id,
                     o.processed_at, o.created_at, o.request_type, o.alt_start_time, o.alt_end_time,
-                    o.additional_info, o.equipment_notes, o.conflicting_reservation_id
+                    o.additional_info, o.equipment_notes, o.conflicting_reservation_id,
+                    u.name AS customer_name, u.email AS customer_email
                FROM ConflictOverrideRequests o
                JOIN Rooms r ON r.room_id = o.room_id
+               JOIN Users u ON u.user_id = o.requested_by
               WHERE o.requested_by = :requested_by
            ORDER BY o.created_at DESC',
             [':requested_by' => $requestedBy]
