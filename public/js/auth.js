@@ -157,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const BASE = window.location.pathname.replace(/[^\/]*$/, '');
       fetch(BASE + 'api/auth/login', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, recaptcha_token: captchaToken('loginRecaptcha') })
       })

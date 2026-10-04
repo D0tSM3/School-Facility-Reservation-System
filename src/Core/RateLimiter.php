@@ -10,6 +10,10 @@ use PDO;
  * RateLimiter — manages cooldown timeouts and failed attempt thresholds
  * for sensitive authentication flows (login, registration OTP verification,
  * and forgot-password OTP reset).
+ *
+ * Scoped to the visitor's existing session by default (session_id()) rather than
+ * per user account. This prevents denial-of-service / account-lockout attacks
+ * while still enforcing the 3-attempt limit and 30-second cooldown on the client session.
  */
 class RateLimiter
 {
@@ -23,26 +27,54 @@ class RateLimiter
     public const ATTEMPT_WINDOW_SECONDS = 900;
 
     /**
-     * Generate a canonical, normalized cache key for action + identifier.
+     * Resolve the rate limiting identifier.
+     * When $identifier is omitted or null, defaults to the current visitor's
+     * session ID ('sess_' . session_id()).
+     *
+     * @param string|null $identifier Explicit identifier override (e.g. for testing)
      */
-    public static function makeKey(string $action, string $identifier): string
+    public static function resolveIdentifier(?string $identifier = null): string
     {
-        return strtolower(trim($action)) . ':' . strtolower(trim($identifier));
+        if ($identifier !== null && trim($identifier) !== '') {
+            return trim($identifier);
+        }
+
+        if (session_status() === PHP_SESSION_NONE) {
+            Auth::startSession();
+        }
+
+        $sid = session_id();
+        if ($sid !== '' && $sid !== false) {
+            return 'sess_' . $sid;
+        }
+
+        // Fallback to client IP if session ID is empty (e.g. CLI or non-cookie client)
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        return 'ip_' . $ip;
     }
 
     /**
-     * Check if an action + identifier is currently locked out.
+     * Generate a canonical, normalized cache key for action + identifier.
      */
-    public static function isLocked(string $action, string $identifier): bool
+    public static function makeKey(string $action, ?string $identifier = null): string
+    {
+        $id = self::resolveIdentifier($identifier);
+        return strtolower(trim($action)) . ':' . strtolower(trim($id));
+    }
+
+    /**
+     * Check if an action is currently locked out for the session (or specified identifier).
+     */
+    public static function isLocked(string $action, ?string $identifier = null): bool
     {
         return self::getRemainingSeconds($action, $identifier) > 0;
     }
 
     /**
-     * Get remaining lockout seconds for an action + identifier.
+     * Get remaining lockout seconds for an action.
      * Returns 0 if not locked.
      */
-    public static function getRemainingSeconds(string $action, string $identifier): int
+    public static function getRemainingSeconds(string $action, ?string $identifier = null): int
     {
         $key = self::makeKey($action, $identifier);
         $pdo = Database::getInstance()->getPdo();
@@ -59,10 +91,10 @@ class RateLimiter
     }
 
     /**
-     * Get total recorded failed attempt count for an action + identifier.
+     * Get total recorded failed attempt count for an action.
      * Returns 0 if no record exists or if lockout/window has expired.
      */
-    public static function getAttempts(string $action, string $identifier): int
+    public static function getAttempts(string $action, ?string $identifier = null): int
     {
         $key = self::makeKey($action, $identifier);
         $pdo = Database::getInstance()->getPdo();
@@ -88,10 +120,10 @@ class RateLimiter
     }
 
     /**
-     * Get remaining attempts before lockout for an action + identifier.
+     * Get remaining attempts before lockout for an action.
      * Returns MAX_ATTEMPTS (3) if no failures recorded.
      */
-    public static function getRemainingAttempts(string $action, string $identifier): int
+    public static function getRemainingAttempts(string $action, ?string $identifier = null): int
     {
         $used = self::getAttempts($action, $identifier);
         return max(0, self::MAX_ATTEMPTS - $used);
@@ -103,19 +135,20 @@ class RateLimiter
      * - Attempt 2 -> 1 remaining, no timer.
      * - Attempt 3 -> 0 remaining, 30s cooldown timer begins.
      *
-     * @param string $action         Action name (e.g. 'login', 'verify_otp', 'reset_otp')
-     * @param string $identifier     Target user email or IP
-     * @param int    $maxAttempts    Maximum attempts allowed (default 3)
-     * @param int    $lockoutSeconds Cooldown duration once exhausted (default 30)
+     * @param string      $action         Action name (e.g. 'login', 'verify_otp', 'reset_otp')
+     * @param string|null $identifier     Optional identifier override; defaults to visitor's session
+     * @param int         $maxAttempts    Maximum attempts allowed (default 3)
+     * @param int         $lockoutSeconds Cooldown duration once exhausted (default 30)
      * @return array Status array with attempts, remaining_attempts, is_locked, and retry_after
      */
     public static function recordFailure(
         string $action,
-        string $identifier,
+        ?string $identifier = null,
         int $maxAttempts = self::MAX_ATTEMPTS,
         int $lockoutSeconds = self::DEFAULT_LOCKOUT_SECONDS
     ): array {
-        $key = self::makeKey($action, $identifier);
+        $id = self::resolveIdentifier($identifier);
+        $key = self::makeKey($action, $id);
         $pdo = Database::getInstance()->getPdo();
 
         $stmt = $pdo->prepare('SELECT failed_attempts, locked_until, updated_at FROM auth_rate_limits WHERE rate_key = :key');
@@ -154,7 +187,7 @@ class RateLimiter
             $stmt->execute([
                 ':key'        => $key,
                 ':action'     => $action,
-                ':identifier' => $identifier,
+                ':identifier' => $id,
                 ':attempts'   => $attempts,
                 ':seconds'    => $lockoutSeconds,
             ]);
@@ -171,7 +204,7 @@ class RateLimiter
             $stmt->execute([
                 ':key'        => $key,
                 ':action'     => $action,
-                ':identifier' => $identifier,
+                ':identifier' => $id,
                 ':attempts'   => $attempts,
             ]);
             $remainingCooldown = 0;
@@ -191,7 +224,7 @@ class RateLimiter
      * Clear all recorded failed attempts and lockouts for an action + identifier
      * (called upon successful authentication or OTP verification).
      */
-    public static function clear(string $action, string $identifier): void
+    public static function clear(string $action, ?string $identifier = null): void
     {
         $key = self::makeKey($action, $identifier);
         $pdo = Database::getInstance()->getPdo();

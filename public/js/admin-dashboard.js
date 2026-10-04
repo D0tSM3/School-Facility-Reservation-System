@@ -357,15 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Logout Handler (support both #logoutBtn and #btn-logout)
   async function performLogout() {
-    const ok = await confirmAction({
-      title: 'Sign Out of CampusRoom',
-      message: 'Are you sure you want to end your active administrator session?',
-      proceedText: 'Sign Out',
-      icon: 'logout',
-      isDestructive: false,
-    });
-    if (!ok) return;
-
     try {
       await apiFetch('api/auth/logout', { method: 'POST' });
     } catch (err) {

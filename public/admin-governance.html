@@ -403,62 +403,26 @@
     <!-- 2. TOP FIXED HEADER (offset 250px)                                        -->
     <!-- ========================================================================= -->
     <header
-      class="fixed top-0 left-[250px] right-0 h-16 bg-white border-b border-gray-100 z-40 flex items-center justify-between px-8 shadow-[0_1px_8px_rgba(0,0,0,0.02)]"
+      class="fixed top-0 left-[250px] right-0 h-16 bg-white border-b border-gray-100 z-40 flex items-center justify-end px-8 shadow-[0_1px_8px_rgba(0,0,0,0.02)]"
     >
-      <!-- Breadcrumb & Active View Title -->
+      <!-- User Profile Pill (matching other interfaces) -->
       <div class="flex items-center gap-3">
-        <span class="material-symbols-outlined text-[#7a1f2b] text-[20px]"
-          >admin_panel_settings</span
-        >
-        <span class="text-gray-300 text-sm">/</span>
-        <h1
-          id="headerViewTitle"
-          class="text-sm sm:text-base font-bold text-gray-900 tracking-tight"
-        >
-          Dashboard Overview
-        </h1>
-      </div>
-
-      <!-- Right Header Actions & Profile Pill -->
-      <div class="flex items-center gap-4">
-        <!-- Global Refresh Button -->
-        <button
-          type="button"
-          id="btn-refresh"
-          class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors shadow-sm"
-          title="Refresh all data"
-        >
-          <span class="material-symbols-outlined text-[18px]">sync</span>
-          <span class="hidden md:inline">Sync Data</span>
-        </button>
-
-        <!-- Current Date Pill -->
-        <div
-          class="text-xs font-medium text-gray-500 hidden lg:block"
-          id="headerDateDisplay"
-        >
-          Today
-        </div>
-
-        <!-- User Profile Pill (matching dashboard.html) -->
-        <div class="flex items-center gap-3 pl-2 border-l border-gray-100">
-          <div class="flex flex-col text-right">
-            <span id="adminUserName" class="font-semibold text-sm text-gray-800"
-              >Administrator</span
-            >
-            <span
-              class="text-[10px] font-bold uppercase tracking-wider text-gray-500"
-              >Admin</span
-            >
-          </div>
-          <div
-            id="adminAvatarInitials"
-            class="w-9 h-9 rounded-full bg-[#7a1f2b] text-white font-bold flex items-center justify-center text-xs shadow-sm header-initials"
+        <div class="flex flex-col text-right">
+          <span id="adminUserName" class="font-semibold text-sm text-gray-800"
+            >Administrator</span
           >
-            AD
-          </div>
-          <span id="adminUserEmail" class="hidden">admin@bpu.edu.ph</span>
+          <span
+            class="text-[10px] font-bold uppercase tracking-wider text-gray-500"
+            >Admin</span
+          >
         </div>
+        <div
+          id="adminAvatarInitials"
+          class="w-9 h-9 rounded-full bg-[#7a1f2b] text-white font-bold flex items-center justify-center text-xs shadow-sm header-initials"
+        >
+          AD
+        </div>
+        <span id="adminUserEmail" class="hidden">admin@bpu.edu.ph</span>
       </div>
     </header>
 

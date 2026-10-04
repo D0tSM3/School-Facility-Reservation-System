@@ -201,8 +201,8 @@ class AuthController
             Response::error('Invalid email or password.', 401);
         }
 
-        if (RateLimiter::isLocked('login', $email)) {
-            $remaining = RateLimiter::getRemainingSeconds('login', $email);
+        if (RateLimiter::isLocked('login')) {
+            $remaining = RateLimiter::getRemainingSeconds('login');
             Response::json([
                 'error' => "Too many failed attempts. Please wait {$remaining}s before trying again.",
                 'retry_after' => $remaining,
@@ -215,7 +215,7 @@ class AuthController
         $user = $this->users->findByEmailFull($email);
 
         if ($user === null || empty($user['password_hash']) || !password_verify($password, $user['password_hash'])) {
-            $failure = RateLimiter::recordFailure('login', $email, RateLimiter::MAX_ATTEMPTS, 30);
+            $failure = RateLimiter::recordFailure('login');
             if ($failure['is_locked']) {
                 Response::json([
                     'error' => "Too many failed attempts. Please wait {$failure['retry_after']}s before trying again.",
@@ -235,7 +235,7 @@ class AuthController
             exit;
         }
 
-        RateLimiter::clear('login', $email);
+        RateLimiter::clear('login');
 
         if (!(bool)$user['is_verified']) {
             $otp  = $this->issueOtp($user['user_id']);
@@ -276,8 +276,8 @@ class AuthController
             Response::error('email and otp are required.', 422);
         }
 
-        if (RateLimiter::isLocked('verify_otp', $email)) {
-            $remaining = RateLimiter::getRemainingSeconds('verify_otp', $email);
+        if (RateLimiter::isLocked('verify_otp')) {
+            $remaining = RateLimiter::getRemainingSeconds('verify_otp');
             Response::json([
                 'error' => "Too many failed attempts. Please wait {$remaining}s before trying again.",
                 'retry_after' => $remaining,
@@ -294,7 +294,7 @@ class AuthController
 
         // Already verified — just log in (user may have submitted twice)
         if ((bool)$user['is_verified'] && empty($user['otp_code'])) {
-            RateLimiter::clear('verify_otp', $email);
+            RateLimiter::clear('verify_otp');
             $this->startSession($user);
             unset($user['password_hash'], $user['otp_code'], $user['otp_expires_at']);
             Response::json($user);
@@ -302,7 +302,7 @@ class AuthController
 
         // Validate OTP
         if ($user['otp_code'] === null || $code !== $user['otp_code']) {
-            $failure = RateLimiter::recordFailure('verify_otp', $email, RateLimiter::MAX_ATTEMPTS, 30);
+            $failure = RateLimiter::recordFailure('verify_otp');
             if ($failure['is_locked']) {
                 Response::json([
                     'error' => "Too many failed attempts. Please wait {$failure['retry_after']}s before trying again.",
@@ -329,7 +329,7 @@ class AuthController
         }
 
         // Clear rate limit on successful verification
-        RateLimiter::clear('verify_otp', $email);
+        RateLimiter::clear('verify_otp');
 
         // Mark verified, clear OTP, and log in
         $this->users->markVerified($user['user_id']);
@@ -406,8 +406,8 @@ class AuthController
             Response::error('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.', 422);
         }
 
-        if (RateLimiter::isLocked('reset_otp', $email)) {
-            $remaining = RateLimiter::getRemainingSeconds('reset_otp', $email);
+        if (RateLimiter::isLocked('reset_otp')) {
+            $remaining = RateLimiter::getRemainingSeconds('reset_otp');
             Response::json([
                 'error' => "Too many failed attempts. Please wait {$remaining}s before trying again.",
                 'retry_after' => $remaining,
@@ -424,7 +424,7 @@ class AuthController
 
         // Validate OTP
         if ($user['otp_code'] === null || $otp !== $user['otp_code']) {
-            $failure = RateLimiter::recordFailure('reset_otp', $email, RateLimiter::MAX_ATTEMPTS, 30);
+            $failure = RateLimiter::recordFailure('reset_otp');
             if ($failure['is_locked']) {
                 Response::json([
                     'error' => "Too many failed attempts. Please wait {$failure['retry_after']}s before trying again.",
@@ -451,7 +451,7 @@ class AuthController
         }
 
         // Clear rate limit on successful password reset
-        RateLimiter::clear('reset_otp', $email);
+        RateLimiter::clear('reset_otp');
 
         // Update password and clear OTP
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
