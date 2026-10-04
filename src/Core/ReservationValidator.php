@@ -260,7 +260,7 @@ class ReservationValidator
                 SELECT course_code, section
                 FROM ClassSchedules
                 WHERE room_id = ?
-                  AND day_of_week = ?
+                  AND day_of_week::text = ?
                   AND (
                     (? >= start_time AND ? < end_time) OR
                     (? > start_time AND ? <= end_time) OR

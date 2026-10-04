@@ -15,16 +15,18 @@ class Auth
     public static function startSession(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
-            session_set_cookie_params([
-                'lifetime' => 0,
-                'path'     => '/',
-                'domain'   => '',
-                'secure'   => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on', // false on local HTTP, true on HTTPS
-                'httponly' => true,
-                'samesite' => 'Strict',
-            ]);
+            if (!headers_sent()) {
+                session_set_cookie_params([
+                    'lifetime' => 0,
+                    'path'     => '/',
+                    'domain'   => '',
+                    'secure'   => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on', // false on local HTTP, true on HTTPS
+                    'httponly' => true,
+                    'samesite' => 'Strict',
+                ]);
+            }
 
-            session_start();
+            @session_start();
         }
     }
 

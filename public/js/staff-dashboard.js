@@ -28,31 +28,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const el = (id) => document.getElementById(id);
 
-  const tabPending      = el('tab-pending');
-  const tabMoves        = el('tab-moves');
-  const tabCancels      = el('tab-cancels');
-  const tabOverrides    = el('tab-overrides');
-  const tabAll          = el('tab-all');
-  const tabMaintenance  = el('tab-maintenance');
-  const viewPending     = el('view-pending');
+  const viewPending     = el('pendingQueueList');
   const viewMoves       = el('view-moves');
   const viewCancels     = el('view-cancels');
   const viewOverrides   = el('view-overrides');
-  const viewAll         = el('view-all');
-  const viewAllList     = el('view-all-list');
-  const viewMaintenance = el('view-maintenance');
-  const allStatusFilter = el('all-status-filter');
 
   const pendingBadge     = el('pending-badge-count');
   const moveBadge        = el('move-badge-count');
   const cancelReqBadge   = el('cancel-badge-count');
   const overrideBadge    = el('override-badge-count');
-  const allBadge         = el('all-badge-count');
   const maintenanceBadge = el('maintenance-badge-count');
-  const kpiPending       = el('kpi-pending-count');
-  const kpiMaintenance   = el('kpi-maintenance-count');
-  const kpiAuth          = el('kpi-auth-count');
-
+  const queueToolbar      = el('queue-toolbar');
   const batchApproveBtn   = el('btn-batch-approve');
   const searchInput       = el('searchInput');
   const batchApproveLabel = el('batch-approve-label');
@@ -112,15 +98,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const state = {
     reservations: [],
+    pendingApprovals: [],
     rooms: [],
     moveRequests: [],
     cancelRequests: [],
     overrideRequests: [],
     conflicts: {},          // reservation_id -> conflict reason (Pending rows that fail validation)
     suggestionsByRes: {},   // reservation_id -> latest facility suggestion for that booking
-    activeTab: 'pending',
+    activeView: 'overview',
     wingFilter: 'all',
-    allStatusFilter: 'all',
+    overviewError: '',
+    currentUserId: null,
     currentMoveId: null,
     currentCancelReqId: null,
     currentCancelId: null,
@@ -155,13 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
     return date ? `${formatDay(value)} ${formatTime(value)}` : '—';
   }
 
-  function isToday(value) {
-    const date = parseDate(value);
-    if (!date) return false;
-    const now = new Date();
-    return date.getFullYear() === now.getFullYear()
-      && date.getMonth() === now.getMonth()
-      && date.getDate() === now.getDate();
+  function formatRange(start, end) {
+    if (!start || !end) return '—';
+    return `${formatDay(start)}, ${formatTime(start)} – ${formatTime(end)}`;
   }
 
   /** "Lab • Floor 2 • Cap 36" from whatever room fields are populated. */
@@ -276,51 +260,90 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------------------------------------------------------------
-  // Tabs
+  // Navigation & view routing
   // ---------------------------------------------------------------
 
-  
-  
+  const viewTitles = {
+    overview: 'Dashboard',
+    pending: 'Pending Approvals',
+    moves: 'Move Requests',
+    cancels: 'Cancellation Requests',
+    overrides: 'Override Requests',
+    maintenance: 'Facility Grid',
+  };
 
-  function switchTab(tab) {
-    state.activeTab = tab;
+  const hashToView = {
+    '#dashboard': 'overview',
+    '#overview': 'overview',
+    '#pending-approvals': 'pending',
+    '#staff-queue': 'pending',
+    '#approval-queue': 'pending',
+    '#move-requests': 'moves',
+    '#moves': 'moves',
+    '#cancellations': 'cancels',
+    '#cancels': 'cancels',
+    '#overrides': 'overrides',
+    '#facility-grid': 'maintenance',
+    '#rooms': 'maintenance',
+    '#facilities': 'maintenance',
+  };
 
-    const pairs = [
-      ['pending', tabPending, viewPending, 'Pending Approvals'],
-      ['moves', tabMoves, viewMoves, 'Move Requests'],
-      ['cancels', tabCancels, viewCancels, 'Cancellation Requests'],
-      ['overrides', tabOverrides, viewOverrides, 'Conflict Override Requests'],
-      ['all', tabAll, viewAll, 'All Requests'],
-      ['maintenance', tabMaintenance, viewMaintenance, 'Facility State Grid']
-    ];
+  const viewToHash = {
+    overview: '#dashboard',
+    pending: '#pending-approvals',
+    moves: '#move-requests',
+    cancels: '#cancellations',
+    overrides: '#overrides',
+    maintenance: '#facility-grid',
+  };
 
-    pairs.forEach(([name, tabEl, viewEl, title]) => {
-      const active = name === tab;
-      if (tabEl) {
-        tabEl.classList.toggle('active-tab', active);
-        tabEl.classList.toggle('ring-2', active);
-        tabEl.classList.toggle('ring-[#7a1f2b]', active);
-        tabEl.setAttribute('aria-selected', active ? 'true' : 'false');
-      }
-      if (viewEl) viewEl.classList.toggle('hidden', !active);
-      
-      if (active) {
-         const titleEl = document.getElementById('viewport-title');
-         if (titleEl) titleEl.textContent = title;
-      }
+  function switchView(viewName, syncHash = true) {
+    if (!viewTitles[viewName]) return;
+    state.activeView = viewName;
+
+    if (syncHash && window.location.hash !== viewToHash[viewName]) {
+      history.replaceState(null, '', viewToHash[viewName]);
+    }
+
+    document.querySelectorAll('.nav-item').forEach((navItem) => {
+      const active = navItem.getAttribute('data-nav') === viewName;
+      navItem.classList.toggle('active-nav-link', active);
+      if (active) navItem.setAttribute('aria-current', 'page');
+      else navItem.removeAttribute('aria-current');
     });
 
+    document.querySelectorAll('.dashboard-view').forEach((view) => {
+      view.classList.add('hidden');
+    });
+    const targetView = el(`view-${viewName}`);
+    if (targetView) targetView.classList.remove('hidden');
+
+    const titleEl = el('viewport-title');
+    if (titleEl) titleEl.textContent = viewTitles[viewName];
+
+    const isQueueView = ['pending', 'moves', 'cancels', 'overrides'].includes(viewName);
+    if (queueToolbar) {
+      queueToolbar.classList.toggle('hidden', !isQueueView);
+      queueToolbar.classList.toggle('flex', isQueueView);
+    }
+    if (batchApproveBtn) {
+      batchApproveBtn.classList.toggle('hidden', viewName !== 'pending');
+      batchApproveBtn.classList.toggle('flex', viewName === 'pending');
+    }
+
     if (alertBox) {
-      alertBox.classList.toggle('hidden', tab !== 'maintenance' || !alertBtn.dataset.roomId);
+      alertBox.classList.toggle('hidden', viewName !== 'maintenance' || !alertBtn.dataset.roomId);
     }
   }
 
-  if (tabPending) tabPending.addEventListener('click', () => switchTab('pending'));
-  if (tabMoves) tabMoves.addEventListener('click', () => switchTab('moves'));
-  if (tabCancels) tabCancels.addEventListener('click', () => switchTab('cancels'));
-  if (tabOverrides) tabOverrides.addEventListener('click', () => switchTab('overrides'));
-  if (tabAll) tabAll.addEventListener('click', () => switchTab('all'));
-  if (tabMaintenance) tabMaintenance.addEventListener('click', () => switchTab('maintenance'));
+  document.querySelectorAll('[data-nav]').forEach((navItem) => {
+    navItem.addEventListener('click', () => switchView(navItem.dataset.nav));
+  });
+
+  window.addEventListener('hashchange', () => {
+    const viewName = hashToView[window.location.hash];
+    if (viewName) switchView(viewName, false);
+  });
 
   // ---------------------------------------------------------------
   // Renderers
@@ -335,8 +358,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function reservationCard(reservation) {
       const id = escapeHtml(reservation.reservation_id);
-      const requester = escapeHtml(reservation.customer_name || reservation.customer_email || 'Unknown requester');
+      const requester = escapeHtml(reservation.customer_name || reservation.user_name || reservation.customer_email || reservation.user_email || 'Unknown requester');
+      const requesterEmail = reservation.customer_email || reservation.user_email;
       const isPending = reservation.status === 'Pending';
+      const isOwnRequest = state.currentUserId !== null
+        && String(reservation.customer_id) === String(state.currentUserId);
       
       let badgeBg = 'bg-gray-100 text-gray-700';
       if (reservation.status === 'Approved') badgeBg = 'bg-green-100 text-green-700';
@@ -358,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
             <div class="flex flex-col md:flex-row md:items-center gap-5 flex-1">
               <div class="flex-shrink-0 flex items-center gap-3">
-                  ${isPending ? `<input type="checkbox" value="${id}" class="batch-checkbox w-4 h-4 text-[#7a1f2b] bg-gray-50 border-gray-300 rounded focus:ring-[#7a1f2b] cursor-pointer" onchange="window.CampusRoomStaff.updateBatchButton()">` : ""}
+                  ${isPending && !isOwnRequest ? `<input type="checkbox" value="${id}" class="batch-checkbox w-4 h-4 text-[#7a1f2b] bg-gray-50 border-gray-300 rounded focus:ring-[#7a1f2b] cursor-pointer" onchange="window.CampusRoomStaff.updateBatchButton()">` : ""}
                   <span class="px-2.5 py-1.5 rounded-lg bg-[#FDF2F4] text-[#7a1f2b] text-xs font-bold tracking-wide border border-[#FDF2F4]">
                     #${shortId(reservation.reservation_id)}
                   </span>
@@ -366,10 +392,12 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="flex-1 min-w-0">
                 <div class="flex flex-wrap items-center gap-2 mb-2">
                   <h3 class="text-base font-bold text-gray-900 truncate">${requester}</h3>
-                  ${reservation.customer_email ? `<span class="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold uppercase truncate">${escapeHtml(reservation.customer_email)}</span>` : ''}
+                  ${requesterEmail ? `<span class="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold uppercase truncate">${escapeHtml(requesterEmail)}</span>` : ''}
                   <span class="px-2 py-0.5 rounded ${badgeBg} text-[10px] font-bold uppercase tracking-wider">${escapeHtml(reservation.status)}</span>
+                  ${isOwnRequest ? '<span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold uppercase tracking-wider">Your booking · peer review required</span>' : ''}
                   ${reservation.approval_type === 'special' ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider" title="This room is flagged to always require Staff review."><span class="material-symbols-outlined text-[13px] leading-none">verified_user</span>Requires approval</span>` : ''}
-                  ${reservation.category ? `<span class="px-2 py-0.5 rounded border border-gray-200 text-gray-500 text-xs">${escapeHtml(reservation.category)}</span>` : ''}
+                  <span class="px-2 py-0.5 rounded border border-gray-200 text-gray-500 text-xs">${escapeHtml(reservation.category || 'Standard')}</span>
+                  ${reservation.is_recurring ? '<span class="text-[10px] text-blue-600 font-semibold">Recurring</span>' : ''}
                   ${conflictReason ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-bold uppercase tracking-wider"><span class="material-symbols-outlined text-[13px] leading-none">warning</span>Conflict</span>` : ''}
                   ${suggestion ? `<span class="px-2 py-0.5 rounded ${(sugMeta[suggestion.status]||sugMeta.Pending).bg} text-[10px] font-bold uppercase tracking-wider">${(sugMeta[suggestion.status]||sugMeta.Pending).label}</span>` : ''}
                 </div>
@@ -379,13 +407,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 <div class="flex items-center gap-2 text-sm text-gray-500 mt-1 mb-2">
                   <span class="material-symbols-outlined text-[16px] text-gray-400">event</span>
-                  <span class="font-medium">${formatDateTime(reservation.start_time)} &rarr; ${formatTime(reservation.end_time)}</span>
+                  <span class="font-medium">${formatRange(reservation.start_time, reservation.end_time)}</span>
                   <span class="mx-1">&bull;</span>
                   <span class="material-symbols-outlined text-[16px] text-gray-400">meeting_room</span>
-                  <span class="font-semibold text-gray-700">${escapeHtml(reservation.room_name)}</span>
+                  <span class="font-semibold text-gray-700">${escapeHtml(reservation.room_name || 'Facility')}</span>
                 </div>
                 
-                <p class="text-sm text-gray-600 truncate w-full max-w-2xl"><span class="font-semibold text-gray-700">Purpose:</span> ${escapeHtml(reservation.purpose)}</p>
+                <p class="text-sm text-gray-600 truncate w-full max-w-2xl"><span class="font-semibold text-gray-700">Purpose:</span> ${escapeHtml(reservation.purpose || 'No purpose stated')}</p>
                 ${reservation.equipment_notes ? `<p class="text-sm text-gray-600 mt-1 truncate"><span class="font-semibold text-gray-700">Equip/Notes:</span> ${escapeHtml(reservation.equipment_notes)}</p>` : ''}
               </div>
             </div>
@@ -393,8 +421,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="flex flex-wrap items-center gap-2 shrink-0 border-t xl:border-t-0 border-gray-100 pt-4 xl:pt-0">
               <button type="button" onclick="window.CampusRoomStaff.openDetailModal('${id}')" class="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">Details</button>
               ${isPending && conflictReason && (!suggestion || suggestion.status === 'Declined') ? `<button type="button" onclick="window.CampusRoomStaff.openFindAlternativeModal('${id}')" class="px-4 py-2 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors shadow-sm">Find alternative</button>` : ''}
-              ${isPending ? `<button type="button" onclick="window.CampusRoomStaff.decide('${id}', 'Rejected', '${requester}', this)" class="px-4 py-2 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors shadow-sm">Reject</button>` : ''}
-              ${isPending ? `<button type="button" onclick="window.CampusRoomStaff.decide('${id}', 'Approved', '${requester}', this)" class="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm">Approve</button>` : ''}
+              ${isPending && !isOwnRequest ? `<button type="button" onclick="window.CampusRoomStaff.decide('${id}', 'Rejected', '${requester}', this)" class="px-4 py-2 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors shadow-sm">Reject</button>` : ''}
+              ${isPending && !isOwnRequest ? `<button type="button" onclick="window.CampusRoomStaff.decide('${id}', 'Approved', '${requester}', this)" class="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm">Approve</button>` : ''}
               ${!isPending && reservation.status === 'Approved' ? `<button type="button" onclick="window.CampusRoomStaff.openStaffCancelModal('${id}', ${escapeHtml(JSON.stringify(reservation))})" class="px-4 py-2 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors shadow-sm">Cancel Booking</button>` : ''}
             </div>
           </div>
@@ -421,65 +449,98 @@ document.addEventListener('DOMContentLoaded', () => {
     return fields.some(f => f && String(f).toLowerCase().includes(q));
   }
 
+  function updateBadge(badge, count) {
+    if (!badge) return;
+    badge.textContent = String(count);
+    badge.classList.remove('hidden');
+  }
+
+  function renderOverview() {
+    const today = new Date();
+    const isToday = (value) => {
+      const date = parseDate(value);
+      return date
+        && date.getFullYear() === today.getFullYear()
+        && date.getMonth() === today.getMonth()
+        && date.getDate() === today.getDate();
+    };
+    const maintenanceCount = state.rooms.filter((room) =>
+      room.status === 'Maintenance' && Number(room.is_active) !== 0
+    ).length;
+    const counts = {
+      'kpi-pending-count': state.pendingApprovals.length,
+      'kpi-moves-count': state.moveRequests.filter((request) => request.status === 'Pending').length,
+      'kpi-cancels-count': state.cancelRequests.filter((request) => request.status === 'Pending').length,
+      'kpi-overrides-count': state.overrideRequests.filter((request) => request.status === 'Pending').length,
+      'kpi-maintenance-count': maintenanceCount,
+      'kpi-approved-today-count': state.reservations.filter((reservation) =>
+        reservation.status === 'Approved' && isToday(reservation.processed_at)
+      ).length,
+    };
+
+    Object.entries(counts).forEach(([id, count]) => {
+      const element = el(id);
+      if (element) element.textContent = String(count);
+    });
+
+    const error = el('overview-error');
+    if (error) {
+      error.textContent = state.overviewError;
+      error.classList.toggle('hidden', !state.overviewError);
+    }
+  }
+
   function renderPending() {
     if (!viewPending) return;
 
-    const pending = state.reservations.filter((r) => r.status === 'Pending' && matchSearch(r));
+    const pending = state.pendingApprovals.filter(matchSearch);
 
     viewPending.innerHTML = pending.length
       ? pending.map(reservationCard).join('')
       : emptyState('No pending applications. The dispatch queue is clear.', 'task_alt');
 
-    if (pendingBadge) pendingBadge.textContent = `${pending.length} Requests`;
-    
-  }
-
-  function renderAllRequests() {
-    if (!viewAllList) return;
-
-    const filtered = state.allStatusFilter === 'all'
-      ? state.reservations
-      : state.reservations.filter((r) => r.status === state.allStatusFilter);
-
-    viewAllList.innerHTML = filtered.length
-      ? filtered.map(reservationCard).join('')
-      : emptyState('No reservations match this filter.', 'search_off');
-
-    if (allBadge) allBadge.textContent = `${state.reservations.length} Total`;
-  }
-
-  if (allStatusFilter) {
-    if (allStatusFilter) allStatusFilter.addEventListener('change', () => {
-      state.allStatusFilter = allStatusFilter.value;
-      renderAllRequests();
-    });
   }
 
   function moveCard(request) {
       const id = escapeHtml(request.request_id);
       const resId = escapeHtml(request.reservation_id);
+      const requester = escapeHtml(request.customer_name || 'Requester');
+      const email = escapeHtml(request.customer_email || '—');
+      const currentStart = request.current_start_time || request.original_start_time;
+      const currentEnd = request.current_end_time || request.original_end_time;
+      const statusClass = request.status === 'Approved'
+        ? 'bg-emerald-100 text-emerald-800'
+        : request.status === 'Rejected'
+          ? 'bg-red-100 text-red-800'
+          : 'bg-amber-100 text-amber-800';
       return `
         <div class="relative bg-white rounded-2xl border border-blue-200 shadow-sm overflow-hidden transition-all hover:shadow-md mb-4" data-move-id="${id}">
           <div class="p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-3">
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-2 mb-3">
                 <span class="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-bold tracking-wide border border-blue-100">Move REQ #${shortId(id)}</span>
                 <span class="text-xs text-gray-500 font-semibold">Ref: <a href="#" onclick="window.CampusRoomStaff.openDetailModal('${resId}')" class="text-[#7a1f2b] hover:underline">#${shortId(resId)}</a></span>
+                <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusClass}">${escapeHtml(request.status || 'Pending')}</span>
                 ${request.reason ? '<span class="px-2 py-1 rounded bg-violet-50 text-violet-700 text-[10px] font-bold uppercase tracking-wide border border-violet-100">Staff-proposed · override</span>' : ''}
+              </div>
+              <div class="mb-3">
+                <h3 class="text-base font-bold text-gray-900">${requester}</h3>
+                <p class="text-[11px] text-gray-400">${email}</p>
               </div>
               ${request.reason ? `<div class="text-xs text-gray-500">${escapeHtml(request.reason)} Approving it also books the override requester.</div>` : ''}
               <div class="flex flex-col md:flex-row gap-4 text-sm mt-3 items-stretch">
                  <div class="flex-1 p-4 bg-gray-50 rounded-xl border border-gray-100 relative">
-                    <div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Current Booking</div>
-                    <div class="font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
-                    <div class="text-xs text-gray-600 mt-1">${formatDateTime(request.original_start_time)} - ${formatTime(request.original_end_time)}</div>
+                   <div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Current Booking</div>
+                   <div class="font-bold text-gray-900">${escapeHtml(request.room_name || 'Facility')}</div>
+                   <div class="text-xs text-gray-600 mt-1">${formatRange(currentStart, currentEnd)}</div>
                  </div>
                  <div class="flex-1 p-4 bg-blue-50 rounded-xl border border-blue-100 relative">
-                    <div class="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Requested Move</div>
-                    <div class="font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
-                    <div class="text-xs text-gray-600 mt-1">${formatDateTime(request.requested_start_time)} - ${formatTime(request.requested_end_time)}</div>
+                   <div class="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Requested Move</div>
+                   <div class="font-bold text-gray-900">${escapeHtml(request.room_name || 'Facility')}</div>
+                   <div class="text-xs text-gray-600 mt-1">${formatRange(request.requested_start_time, request.requested_end_time)}</div>
                  </div>
               </div>
+              <div class="text-xs text-gray-400 mt-2">Requested on ${formatDateTime(request.created_at)}</div>
             </div>
             
             <div class="flex flex-wrap items-center gap-2 shrink-0 border-t xl:border-t-0 border-gray-100 pt-4 xl:pt-0">
@@ -497,7 +558,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ? moves.map(moveCard).join('')
       : emptyState('No pending move requests.', 'event_available');
 
-    if (moveBadge) moveBadge.textContent = `${state.moveRequests.length}`;
   }
 
   /**
@@ -508,20 +568,39 @@ document.addEventListener('DOMContentLoaded', () => {
   function cancelRequestCard(request) {
       const id = escapeHtml(request.request_id);
       const resId = escapeHtml(request.reservation_id);
+      const requester = escapeHtml(request.customer_name || 'Requester');
+      const email = escapeHtml(request.customer_email || '—');
+      const reason = request.reason || request.customer_reason || '—';
+      const statusClass = request.status === 'Approved'
+        ? 'bg-emerald-100 text-emerald-800'
+        : request.status === 'Rejected'
+          ? 'bg-red-100 text-red-800'
+          : 'bg-amber-100 text-amber-800';
       return `
         <div class="relative bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden transition-all hover:shadow-md mb-4" data-cancel-id="${id}">
-          <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="px-2 py-1 rounded bg-red-50 text-red-700 text-xs font-bold tracking-wide border border-red-100">Cancel REQ #${id}</span>
+          <div class="p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-2 mb-2">
+                <span class="px-2 py-1 rounded bg-red-50 text-red-700 text-xs font-bold tracking-wide border border-red-100">Cancel REQ #${shortId(id)}</span>
                 <span class="text-xs text-gray-500 font-semibold">Ref: <a href="#" onclick="window.CampusRoomStaff.openDetailModal('${resId}')" class="text-[#7a1f2b] hover:underline">#${shortId(resId)}</a></span>
+                <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusClass}">${escapeHtml(request.status || 'Pending')}</span>
               </div>
-              <div class="text-sm text-gray-600 mt-3">
-                 <span class="font-semibold text-gray-700">Reason given:</span> ${escapeHtml(request.customer_reason)}
+              <div class="mb-3">
+                <h3 class="text-base font-bold text-gray-900">${requester}</h3>
+                <p class="text-[11px] text-gray-400">${email}</p>
               </div>
-              <div class="text-xs text-gray-400 mt-2">
-                 Requested on ${formatDateTime(request.created_at)}
+              <div class="flex flex-col md:flex-row gap-4 text-sm mt-3 items-stretch">
+                <div class="flex-1 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Facility &amp; Scheduled Slot</div>
+                  <div class="font-bold text-gray-900">${escapeHtml(request.room_name || 'Facility')}</div>
+                  <div class="text-xs text-gray-600 mt-1">${formatRange(request.start_time, request.end_time)}</div>
+                </div>
+                <div class="flex-1 p-4 bg-red-50 rounded-xl border border-red-100">
+                  <div class="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1">Customer Reason</div>
+                  <div class="text-sm text-gray-700 italic" title="${escapeHtml(reason)}">"${escapeHtml(reason)}"</div>
+                </div>
               </div>
+              <div class="text-xs text-gray-400 mt-2">Requested on ${formatDateTime(request.created_at)}</div>
             </div>
             <div class="flex items-center gap-2 shrink-0 border-t sm:border-t-0 border-gray-100 pt-4 sm:pt-0">
                <button type="button" onclick="window.CampusRoomStaff.openCancelRequestModal('${id}')" class="px-5 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors shadow-sm">Review Request</button>
@@ -538,7 +617,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ? cancels.map(cancelRequestCard).join('')
       : emptyState('No pending cancellation requests.', 'assignment_turned_in');
 
-    if (cancelReqBadge) cancelReqBadge.textContent = `${state.cancelRequests.length}`;
   }
 
   /** "Mar 10, 2031 · 9:00 AM – 11:00 AM", or a range "Mar 10 – Mar 12, 2031 · 9:00 AM – 11:00 AM daily". */
@@ -559,6 +637,11 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function overrideCard(request) {
     const id = escapeHtml(request.request_id);
+    const statusClass = request.status === 'Approved'
+      ? 'bg-emerald-100 text-emerald-800'
+      : request.status === 'Rejected'
+        ? 'bg-red-100 text-red-800'
+        : 'bg-amber-100 text-amber-800';
     return `
       <div class="relative bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden transition-all hover:shadow-md mb-4" data-override-id="${id}">
         <div class="p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
@@ -568,20 +651,21 @@ document.addEventListener('DOMContentLoaded', () => {
               <h3 class="text-base font-bold text-gray-900 truncate">${escapeHtml(request.requester_name || 'Requester')}</h3>
               ${request.requester_email ? `<span class="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold uppercase truncate">${escapeHtml(request.requester_email)}</span>` : ''}
               ${request.category ? `<span class="px-2 py-0.5 rounded border border-gray-200 text-gray-500 text-xs">${escapeHtml(request.category)}</span>` : ''}
+              <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusClass}">${escapeHtml(request.status || 'Pending')}</span>
             </div>
             <div class="text-sm text-gray-700 mt-2">
-              <span class="font-semibold text-violet-700">Urgency reason:</span> ${escapeHtml(request.reason)}
+              <span class="font-semibold text-violet-700">Urgency reason:</span> ${escapeHtml(request.reason || '—')}
             </div>
-            <div class="text-xs text-gray-500 mt-1">Purpose: ${escapeHtml(request.purpose)}</div>
+            <div class="text-xs text-gray-500 mt-1">Purpose: ${escapeHtml(request.purpose || '—')}</div>
             <div class="flex flex-col md:flex-row gap-4 text-sm mt-4 items-stretch">
               <div class="flex-1 p-4 bg-violet-50 rounded-xl border border-violet-100">
                 <div class="text-[10px] font-bold text-violet-600 uppercase tracking-wider mb-1">Requested slot</div>
-                <div class="font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
+                <div class="font-bold text-gray-900">${escapeHtml(request.room_name || 'Facility')}</div>
                 <div class="text-xs text-gray-600 mt-1">${escapeHtml(formatWindow(request.start_time, request.end_time))}</div>
               </div>
               <div class="flex-1 p-4 bg-gray-50 rounded-xl border border-gray-100">
                 <div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Conflicting booking (${escapeHtml(request.conflict_status || 'Approved')})</div>
-                <div class="font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
+                <div class="font-bold text-gray-900">${escapeHtml(request.room_name || 'Facility')}</div>
                 <div class="text-xs text-gray-600 mt-1">${escapeHtml(formatWindow(request.conflict_start_time, request.conflict_end_time))}</div>
               </div>
             </div>
@@ -602,7 +686,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ? overrides.map(overrideCard).join('')
       : emptyState('No pending override requests.', 'verified');
 
-    if (overrideBadge) overrideBadge.textContent = `${state.overrideRequests.length}`;
   }
 
   function facilityCard(room) {
@@ -652,7 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ? filtered.map(facilityCard).join('')
       : `<div class="p-5 text-gray-500 text-sm ">No rooms match this filter.</div>`;
 
-    if (maintenanceBadge) maintenanceBadge.textContent = `${state.rooms.length} Rooms`;
+    updateBadge(maintenanceBadge, state.rooms.length);
   }
 
   function renderFacilityFilter() {
@@ -700,31 +783,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (alertBtnLabel) alertBtnLabel.textContent = `Toggle ${offline.name} to Available (Active)`;
 
-    alertBox.classList.toggle('hidden', state.activeTab !== 'maintenance');
+    alertBox.classList.toggle('hidden', state.activeView !== 'maintenance');
   }
 
-  function renderKpis() {
-    const pending = state.reservations.filter((r) => r.status === 'Pending').length;
-    const offline = state.rooms.filter((r) => r.status === 'Maintenance' && Number(r.is_active) !== 0).length;
-    const approvedToday = state.reservations.filter(
-      (r) => r.status === 'Approved' && isToday(r.processed_at)
-    ).length;
-
-    if (kpiPending) kpiPending.textContent = String(pending);
-    if (kpiMaintenance) kpiMaintenance.textContent = String(offline);
-    if (kpiAuth) kpiAuth.textContent = String(approvedToday);
+  function renderSidebarCounts() {
+    updateBadge(pendingBadge, state.pendingApprovals.length);
+    updateBadge(moveBadge, state.moveRequests.filter((request) => request.status === 'Pending').length);
+    updateBadge(cancelReqBadge, state.cancelRequests.filter((request) => request.status === 'Pending').length);
+    updateBadge(overrideBadge, state.overrideRequests.filter((request) => request.status === 'Pending').length);
+    updateBadge(maintenanceBadge, state.rooms.length);
   }
 
   function renderAll() {
+    renderOverview();
     renderPending();
     renderMoves();
     renderCancelRequests();
     renderOverrides();
-    renderAllRequests();
     renderFacilityFilter();
     renderFacilities();
     renderMaintenanceAlert();
-    renderKpis();
+    renderSidebarCounts();
     stampSync();
   }
 
@@ -740,8 +819,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     
 
-    const [reservations, rooms, moves, cancels, overrides, conflicts, suggestions] = await Promise.all([
+    const [reservations, pendingApprovals, rooms, moves, cancels, overrides, conflicts, suggestions] = await Promise.all([
       api('api/reservations'),
+      api('api/reservations?status=Pending&limit=500'),
       api('api/rooms'),
       api('api/reservations/move-requests?status=Pending'),
       api('api/reservations/cancel-requests?status=Pending'),
@@ -753,10 +833,12 @@ document.addEventListener('DOMContentLoaded', () => {
     state.loading = false;
 
 
-    const failed = [reservations, rooms, moves, cancels, overrides].find((r) => !r.ok);
+    const failed = [reservations, pendingApprovals, rooms, moves, cancels, overrides].find((r) => !r.ok);
     if (failed && handleAuthFailure(failed)) return;
+    state.overviewError = failed ? `Some dashboard metrics could not be refreshed: ${failed.error}` : '';
 
     if (reservations.ok) state.reservations = reservations.data || [];
+    if (pendingApprovals.ok) state.pendingApprovals = pendingApprovals.data || [];
     if (rooms.ok) state.rooms = rooms.data || [];
     if (moves.ok) state.moveRequests = moves.data || [];
     if (cancels.ok) state.cancelRequests = cancels.data || [];
@@ -805,7 +887,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    switchTab('pending');
+    state.currentUserId = me.data.user_id ? String(me.data.user_id) : null;
+    switchView(hashToView[window.location.hash] || 'overview');
     await loadAll();
   }
 
@@ -950,7 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (batchApproveBtn) batchApproveBtn.addEventListener('click', async () => {
-      const pending = state.reservations.filter((r) => r.status === 'Pending' && matchSearch(r));
+      const pending = state.pendingApprovals.filter(matchSearch);
       if (!pending.length) {
         showToast('No pending reservations available for batch approval.');
         return;
@@ -1918,4 +2001,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
   start();
 });
-

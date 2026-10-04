@@ -11,6 +11,7 @@ use CampusRoom\Core\ReservationValidator;
 use CampusRoom\Repository\ConflictOverrideRepository;
 use CampusRoom\Repository\ReservationRepository;
 use CampusRoom\Repository\RoomRepository;
+use CampusRoom\Repository\UserRepository;
 use PDOException;
 
 /**
@@ -171,19 +172,48 @@ class ReservationController
     }
 
     // ---------------------------------------------------------------
-    // Customer: POST /api/reservations
+    // Customer/Staff: POST /api/reservations
     // ---------------------------------------------------------------
 
     public function store(): never
     {
-        Auth::requireRole(['Customer']);
+        Auth::requireRole(['Customer', 'Staff']);
         $body = $this->jsonBody();
+        $isStaffSubmission = Auth::role() === 'Staff';
+        $requesterId = Auth::userId();
+        if ($requesterId === null) {
+            Response::error('Unauthenticated.', 401);
+        }
+
+        if ($isStaffSubmission) {
+            $requesterIdentifier = trim((string) ($body['requester_identifier'] ?? ''));
+            if ($requesterIdentifier === '') {
+                Response::error('A customer email address or user ID is required.', 422);
+            }
+
+            $users = new UserRepository();
+            if (filter_var($requesterIdentifier, FILTER_VALIDATE_EMAIL)) {
+                $requester = $users->findByEmail(strtolower($requesterIdentifier));
+            } elseif (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $requesterIdentifier)) {
+                $requester = $users->findById($requesterIdentifier);
+            } else {
+                Response::error('Enter a valid customer email address or user ID.', 422);
+            }
+
+            if (!$requester || $requester['role'] !== 'Customer' || (int) $requester['is_verified'] !== 1) {
+                Response::error('No verified Customer account matches that email address or user ID.', 422);
+            }
+            $requesterId = (string) $requester['user_id'];
+        }
 
         // "Assign any available room matching my criteria": the customer gives
         // filters instead of a specific room, and the server picks a free room
         // for them — per day, so each day of a range can land in a different
         // room when no single room is free throughout.
         if (!empty($body['auto_assign'])) {
+            if ($isStaffSubmission) {
+                Response::error('Staff must select a room from the Rooms Directory.', 422);
+            }
             $this->storeAutoAssigned($body);
         }
         [
@@ -200,8 +230,8 @@ class ReservationController
         // Different dates = a multi-day booking: start_time's date to
         // end_time's date, using start_time's clock to end_time's clock as the
         // window on every one of those days.
-        if (substr($startTime, 0, 10) !== substr($endTime, 0, 10)) {
-            $this->storeSeries($roomId, $purpose, $category, $equipmentNotes, $startTime, $endTime, $activeDates);
+        $activeDates = $body['active_dates'] ?? null; if (substr($startTime, 0, 10) !== substr($endTime, 0, 10)) {
+            $this->storeSeries($roomId, $purpose, $category, $equipmentNotes, $startTime, $endTime, $activeDates, $requesterId, $isStaffSubmission);
         }
 
         $error = ReservationValidator::check($roomId, $startTime, $endTime);
@@ -212,11 +242,13 @@ class ReservationController
         // A clean single-day booking is approved on the spot unless the room
         // asks for Staff review. A multi-day range is handled by storeSeries()
         // above, which weighs its own length — so this is always 1 day.
-        [$status, $approvalType] = $this->approvalOutcome($roomId, 1);
+        [$status, $approvalType] = $isStaffSubmission
+            ? ['Pending', 'manual']
+            : $this->approvalOutcome($roomId, 1);
 
         try {
             $reservation = $this->reservations->create(
-                Auth::userId(),
+                $requesterId,
                 $roomId,
                 $purpose,
                 $startTime,
@@ -241,7 +273,9 @@ class ReservationController
         // The booking's audit trail now starts at submission, not approval.
         $this->reservations->insertLog(
             Auth::userId(),
-            'Reservation submitted by requester',
+            $isStaffSubmission
+                ? 'Reservation submitted by staff on behalf of customer'
+                : 'Reservation submitted by requester',
             $reservation['reservation_id']
         );
         $this->logAutoApproval($status, $approvalType, [$reservation['reservation_id']]);
@@ -445,7 +479,9 @@ class ReservationController
         string $equipmentNotes,
         string $startTime,
         string $endTime,
-        ?array $activeDates = null
+        ?array $activeDates = null,
+        ?string $requesterId = null,
+        bool $isStaffSubmission = false
     ): never {
         $startDate   = substr($startTime, 0, 10);
         $endDate     = substr($endTime, 0, 10);
@@ -461,11 +497,13 @@ class ReservationController
         // day; a range longer than the policy limit, or a room that asks for it,
         // waits as Pending (see approvalOutcome()).
         $dayCount = count(ReservationValidator::datesBetween($startDate, $endDate) ?? []);
-        [$status, $approvalType] = $this->approvalOutcome($roomId, $dayCount);
+        [$status, $approvalType] = $isStaffSubmission
+            ? ['Pending', 'manual']
+            : $this->approvalOutcome($roomId, $dayCount);
 
         try {
             $rows = $this->createBookingRows(
-                Auth::userId(), $roomId, $purpose, $category,
+                $requesterId ?? Auth::userId(), $roomId, $purpose, $category,
                 $equipmentNotes !== '' ? $equipmentNotes : null, $startTime, $endTime, $status, $approvalType, $activeDates
             );
         } catch (PDOException $e) {
@@ -482,7 +520,9 @@ class ReservationController
         foreach ($rows as $i => $row) {
             $this->reservations->insertLog(
                 Auth::userId(),
-                'Reservation submitted by requester (day ' . ($i + 1) . " of $count)",
+                $isStaffSubmission
+                    ? 'Reservation submitted by staff on behalf of customer (day ' . ($i + 1) . " of $count)"
+                    : 'Reservation submitted by requester (day ' . ($i + 1) . " of $count)",
                 $row['reservation_id']
             );
         }
@@ -924,6 +964,10 @@ class ReservationController
         $existing = $this->reservations->findById($reservationId);
         if ($existing === null) {
             Response::error('Reservation not found.', 404);
+        }
+
+        if (Auth::role() === 'Staff' && (string) $existing['customer_id'] === Auth::userId()) {
+            Response::error('You cannot review your own reservation. Another staff member must decide it.', 403);
         }
 
         // Approving or rejecting one day of a multi-day booking decides the

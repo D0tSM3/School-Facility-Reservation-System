@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let actionBtn = '';
       if (isUnavailable) {
         actionBtn = `<button disabled class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 rounded-lg bg-gray-100 text-gray-400 text-xs font-semibold cursor-not-allowed min-w-[100px]" type="button">Unavailable</button>`;
-      } else if (currentRole === 'staff' || currentRole === 'admin') {
+      } else if (currentRole === 'admin') {
         actionBtn = `<div class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-semibold min-w-[100px]">View Only</div>`;
       } else {
         actionBtn = `<button type="button" onclick="window.openBookingModal('${r.room_id}')" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 rounded-lg bg-[#7A1F2B] hover:bg-[#5e1821] text-white text-xs font-semibold transition-colors shadow-xs min-w-[100px] cursor-pointer">Reserve</button>`;

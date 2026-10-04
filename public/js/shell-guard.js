@@ -53,7 +53,7 @@
     role = String(role || '').toLowerCase();
     if ((role === 'staff' || role === 'admin') &&
         /\/my-reservations\.html$/i.test(window.location.pathname)) {
-      window.location.replace(BASE + 'staff-dashboard.html');
+      window.location.replace(BASE + 'staff-dashboard.html#dashboard');
       return true;
     }
     return false;
@@ -78,6 +78,7 @@
     'html[data-role="customer"] aside nav a[data-path="customer-dashboard"],' +
     'html[data-role="customer"] aside nav a[data-path="rooms"],' +
     'html[data-role="customer"] aside nav a[data-path="my-reservations"],' +
+    'html[data-role="staff"] aside nav a[data-path="rooms"],' +
     'html[data-role="staff"] aside nav a[data-path="staff-dashboard"],' +
     'html[data-role="admin"] aside nav a[data-path="staff-dashboard"],' +
     'html[data-role="staff"] aside nav a[data-path="admin-governance"],' +
@@ -158,7 +159,7 @@
     if (bounceIfStaff(role)) return false;
 
     setLink('aside nav a[data-path="customer-dashboard"]', role === 'customer');
-    setLink('aside nav a[data-path="rooms"]', role === 'customer');
+    setLink('aside nav a[data-path="rooms"]', role === 'customer' || role === 'staff');
     setLink('aside nav a[data-path="staff-dashboard"]', role === 'staff' || role === 'admin');
     setLink('aside nav a[data-path="admin-governance"]', role === 'staff' || role === 'admin');
     setLink('aside nav a[data-path="my-reservations"]', role === 'customer');

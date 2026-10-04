@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8" />
+  <title>CampusRoom — Staff Dashboard | BPU Facility Gateway</title>
+  <meta name="description" content="Staff operations overview for Buenavista Polytechnic University's facility reservation system." />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <meta http-equiv="refresh" content="0;url=staff-dashboard.html#dashboard" />
+  <script>window.location.replace('staff-dashboard.html#dashboard');</script>
+  <script src="js/shell-guard.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script id="tailwind-config">
+   tailwind.config = {
+    darkMode: "class",
+    theme: {
+     extend: {
+      colors: {
+       primary: "#5b0617",
+       "primary-container": "#7a1f2b",
+       "on-primary": "#ffffff",
+       secondary: "#795900",
+       "secondary-container": "#ffc641",
+       tertiary: "#1c1c1e",
+       background: "#f8f9fb",
+       surface: "#f8f9fb",
+       "on-surface": "#191c1e",
+       "on-surface-variant": "#564242",
+      },
+      fontFamily: { sans: ["Inter", "sans-serif"] },
+     },
+    },
+   };
+  </script>
+  <style>
+    .active-nav-link {
+      background-color: #7a1f2b !important;
+      color: #ffffff !important;
+    }
+    .active-nav-link .nav-icon {
+      color: #ffc641 !important;
+    }
+  </style>
+ </head>
+ <body class="bg-[#F8F9FA] font-sans text-gray-900 antialiased min-h-screen">
+  <aside class="fixed left-0 top-0 h-full w-[250px] bg-[#1c1c1e] text-white z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+    <div class="h-16 px-6 flex items-center shrink-0">
+      <a href="staff-overview.html" class="flex items-center">
+        <img alt="CampusRoom Logo" class="h-7 w-auto object-contain" src="assets/logo.svg" />
+      </a>
+    </div>
+
+    <nav class="px-3 overflow-y-auto flex-1 space-y-4 py-2" aria-label="Staff dashboard navigation">
+      <div class="space-y-1">
+        <div class="px-3.5 pt-1 pb-1">
+          <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">WORKSPACE</span>
+        </div>
+        <a href="staff-overview.html" aria-current="page"
+          class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group active-nav-link">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[20px] nav-icon text-gray-400 group-hover:text-white transition-colors">grid_view</span>
+            <span>Dashboard</span>
+          </span>
+        </a>
+      </div>
+
+      <div class="space-y-1">
+        <div class="px-3.5 pt-2 pb-1 border-t border-white/5">
+          <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">RESERVATIONS &amp; QUEUES</span>
+        </div>
+        <a href="staff-dashboard.html#pending-approvals" class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">hourglass_top</span>
+            <span>Pending Approvals</span>
+          </span>
+          <span id="pending-badge-count" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-white">0</span>
+        </a>
+        <a href="staff-dashboard.html#move-requests" class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">edit_calendar</span>
+            <span>Move Requests</span>
+          </span>
+          <span id="move-badge-count" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500 text-white">0</span>
+        </a>
+        <a href="staff-dashboard.html#cancellations" class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">event_busy</span>
+            <span>Cancellation Requests</span>
+          </span>
+          <span id="cancel-badge-count" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white">0</span>
+        </a>
+        <a href="staff-dashboard.html#overrides" class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">priority_high</span>
+            <span>Override Requests</span>
+          </span>
+          <span id="override-badge-count" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-600 text-white">0</span>
+        </a>
+      </div>
+
+        <a href="staff-dashboard.html#facility-grid" class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">room_preferences</span>
+            <span>Facility Grid</span>
+          </span>
+          <span id="facility-badge-count" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-600 text-white">0</span>
+        </a>
+
+      <div class="space-y-1 pb-2">
+        <div class="px-3.5 pt-2 pb-1 border-t border-white/5">
+          <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">RESOURCES</span>
+        </div>
+        <a href="handbook.html" target="_blank" class="flex items-center gap-3 px-3.5 py-2 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors">
+          <span class="material-symbols-outlined text-[19px]">menu_book</span>
+          <span>Policy Handbook</span>
+        </a>
+      </div>
+    </nav>
+
+    <div id="logout-banner" class="mt-auto p-4 border-t border-white/5 shrink-0">
+      <button id="logoutBtn" class="flex items-center gap-2.5 text-sm text-gray-400 hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg" type="button">
+        <span class="material-symbols-outlined text-[18px]">logout</span>
+        <span class="font-medium">Sign Out</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="pl-[250px]">
+    <header class="fixed top-0 left-[250px] right-0 h-16 bg-white border-b border-gray-100 z-40 flex items-center justify-end px-8 shadow-[0_1px_8px_rgba(0,0,0,0.02)]">
+      <div class="flex items-center gap-3">
+        <div class="flex flex-col text-right">
+          <span class="header-name text-sm font-semibold text-gray-800">Staff Member</span>
+          <span class="header-role text-[10px] font-bold uppercase tracking-wider text-gray-500">Staff / Registrar</span>
+        </div>
+        <div class="w-9 h-9 rounded-full bg-[#7a1f2b] text-white font-bold flex items-center justify-center text-xs shadow-sm header-initials">ST</div>
+      </div>
+    </header>
+
+    <main class="w-full pt-20 px-8 pb-12 max-w-[1400px] mx-auto min-h-screen">
+      <h1 class="text-2xl font-bold text-gray-900 tracking-tight mb-6">Dashboard</h1>
+      <div id="overview-error" class="hidden mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert"></div>
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-7 mb-7">
+        <h2 class="text-lg font-bold text-gray-900">Staff Operations</h2>
+        <p class="text-sm text-gray-500 mt-1.5">Monitor approvals, reservation changes, and facility status across campus.</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+        <a href="staff-dashboard.html#pending-approvals" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
+          <div class="flex items-center justify-between"><span class="text-xs font-semibold text-gray-500">Pending Approvals</span><span class="material-symbols-outlined text-amber-500">assignment</span></div>
+          <p id="kpi-pending-count" class="text-3xl font-extrabold text-gray-900 mt-3">—</p>
+        </a>
+        <a href="staff-dashboard.html#move-requests" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
+          <div class="flex items-center justify-between"><span class="text-xs font-semibold text-gray-500">Move Requests</span><span class="material-symbols-outlined text-blue-500">edit_calendar</span></div>
+          <p id="kpi-moves-count" class="text-3xl font-extrabold text-gray-900 mt-3">—</p>
+        </a>
+        <a href="staff-dashboard.html#cancellations" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
+          <div class="flex items-center justify-between"><span class="text-xs font-semibold text-gray-500">Cancellation Requests</span><span class="material-symbols-outlined text-red-500">event_busy</span></div>
+          <p id="kpi-cancels-count" class="text-3xl font-extrabold text-gray-900 mt-3">—</p>
+        </a>
+        <a href="staff-dashboard.html#overrides" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
+          <div class="flex items-center justify-between"><span class="text-xs font-semibold text-gray-500">Override Requests</span><span class="material-symbols-outlined text-violet-500">priority_high</span></div>
+          <p id="kpi-overrides-count" class="text-3xl font-extrabold text-gray-900 mt-3">—</p>
+        </a>
+        <a href="staff-dashboard.html#facility-grid" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
+          <div class="flex items-center justify-between"><span class="text-xs font-semibold text-gray-500">Facilities in Maintenance</span><span class="material-symbols-outlined text-emerald-500">room_preferences</span></div>
+          <p id="kpi-maintenance-count" class="text-3xl font-extrabold text-gray-900 mt-3">—</p>
+        </a>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div class="flex items-center justify-between"><span class="text-xs font-semibold text-gray-500">Approvals Today</span><span class="material-symbols-outlined text-[#7a1f2b]">task_alt</span></div>
+          <p id="kpi-approved-today-count" class="text-3xl font-extrabold text-gray-900 mt-3">—</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/staff-overview.js"></script>
+ </body>
+</html>

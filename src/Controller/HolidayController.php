@@ -80,8 +80,30 @@ class HolidayController
             Response::error('Holiday not found.', 404);
         }
 
+        $userId = Auth::userId();
+        $summary = "Holiday: {$holiday['name']} ({$date})";
+
+        // Institutional 30-day archival policy
+        try {
+            (new \CampusRoom\Repository\ArchiveRepository())->archive(
+                'holidays',
+                $date,
+                $summary,
+                $holiday,
+                $userId,
+                'Admin removed university holiday closure'
+            );
+        } catch (\Throwable $e) {
+            error_log('[HolidayController] Failed to archive deleted holiday: ' . $e->getMessage());
+        }
+
         $this->repo->delete($date);
-        (new ReservationRepository())->insertLog(Auth::userId(), "Admin removed holiday {$holiday['name']} ({$date})");
-        Response::json(['success' => true]);
+        (new ReservationRepository())->insertLog($userId, "Admin archived holiday {$holiday['name']} ({$date}) — retained for 30 days");
+        Response::json([
+            'success'        => true,
+            'archived'       => true,
+            'retention_days' => 30,
+            'message'        => 'Holiday closure moved to archive (retained for 30 days before permanent deletion).',
+        ]);
     }
 }

@@ -21,20 +21,25 @@ class RoomCalendar {
     this.container = document.getElementById(config.containerId);
     this.roomId = config.roomId;
     this.baseUri = window.location.pathname.replace(/[^\/]*$/, '');
-    this.selectedDate = config.initialDate || '';
+    this.selectedDate    = config.initialDate    || '';
     this.selectedEndDate = config.initialEndDate || this.selectedDate;
-    this.minDate = config.minDate || '';
-    this.requestSeq = 0;          // guards against out-of-order responses
-    this.loadingTimer = null;     // delays the "Loading…" row so fast responses don't flash it
-    this.lastDates = null;
-    this.lastData = null;
+    this.minDate         = config.minDate        || '';
+    this.requestSeq      = 0;
+    this.loadingTimer    = null;
+    this.lastDates       = null;
+    this.lastData        = null;
 
-    // Open on the week of the date being booked, not on "today's" week.
+    // activeDates: when set, ONLY these specific dates are highlighted.
+    // When null, every date from selectedDate to selectedEndDate is highlighted.
+    this.activeDates = Array.isArray(config.activeDates) ? config.activeDates : null;
+
+    // Open on the first date of the selected range, not necessarily Monday.
     const anchor = this.parseYMD(this.selectedDate) || this.parseYMD(this.minDate) || new Date();
-    this.currentDate = this.mondayOf(anchor);
+    this.currentDate = new Date(anchor);
+    this.currentDate.setHours(0, 0, 0, 0);
 
     const S = window.CampusSchedule;
-    this.buildBlocks(config.rules || (S ? S.DEFAULT_RULES : { open: '06:00', close: '21:00', closedDays: ['Sunday'] }));
+    this.buildBlocks(config.rules || (S ? S.DEFAULT_RULES : { open: '06:00', close: '21:00', closedDays: [] }));
 
     if (!this.container) {
       console.error('RoomCalendar: Container not found');
@@ -74,39 +79,6 @@ class RoomCalendar {
     return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   }
 
-  mondayOf(date) {
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
-    const day = d.getDay();
-    d.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
-    return d;
-  }
-
-  getDatesToRender() {
-    const dates = [];
-    let startD = new Date(this.currentDate);
-    let count = 7;
-    
-    if (this.selectedDate && this.selectedEndDate) {
-        const s = this.parseYMD(this.selectedDate);
-        const e = this.parseYMD(this.selectedEndDate);
-        if (s && e && s <= e) {
-            const diff = Math.round((e - s) / 86400000) + 1;
-            if (diff >= 1 && diff <= 7) {
-                startD = s;
-                count = diff;
-            }
-        }
-    }
-    
-    for (let i = 0; i < count; i++) {
-      const d = new Date(startD);
-      d.setDate(d.getDate() + i);
-      dates.push(d);
-    }
-    return dates;
-  }
-
   formatDateYMD(date) {
     return date.getFullYear() + '-' +
            String(date.getMonth() + 1).padStart(2, '0') + '-' +
@@ -120,24 +92,128 @@ class RoomCalendar {
   }
 
   /**
+   * Compute the list of Date objects to show in the grid.
+   * Always starts at this.currentDate.
+   * If selectedDate..selectedEndDate is a valid 1-7 day range, it shows exactly
+   * those columns (snapping currentDate to selectedDate automatically).
+   * Otherwise it shows 7 columns from currentDate.
+   */
+  getDatesToRender() {
+    let startD = new Date(this.currentDate);
+    startD.setHours(0, 0, 0, 0);
+    let count = 7;
+
+    // When the user is browsing (prev/next arrows), show 7 days from currentDate.
+    // When viewing their selected range, snap to exactly that range.
+    if (!this.browsing && this.selectedDate && this.selectedEndDate) {
+      const s = this.parseYMD(this.selectedDate);
+      const e = this.parseYMD(this.selectedEndDate);
+      if (s && e && s <= e) {
+        const diff = Math.round((e - s) / 86400000) + 1; // inclusive
+        if (diff >= 1 && diff <= 7) {
+          startD = s;
+          count  = diff;
+        }
+      }
+    }
+
+    const dates = [];
+    for (let i = 0; i < count; i++) {
+      const d = new Date(startD);
+      d.setDate(d.getDate() + i);
+      dates.push(d);
+    }
+    return dates;
+  }
+
+  /**
    * Called by booking.js when the Reservation Date input changes.
-   * Jumps to that date's week (if it is a different week) and highlights the column.
+   * Jumps to that date and highlights the column.
    */
   goToDate(ymd, force = false) {
     const d = this.parseYMD(ymd);
     if (!d) {
-      if (force) this.loadData();      // nothing to jump to; just refresh
+      if (force) this.loadData();
       return;
     }
     this.selectedDate = ymd;
     if (!this.selectedEndDate || this.selectedEndDate < ymd) this.selectedEndDate = ymd;
-    const monday = this.mondayOf(d);
-    if (!force && this.formatDateYMD(monday) === this.formatDateYMD(this.currentDate)) {
-      if (this.lastData) this.renderGrid(this.lastDates, this.lastData);   // just move the highlight
+    // activeDates reset: if we only call goToDate the range highlight takes over
+    this.activeDates = null;
+
+    // Snap currentDate to the start of the selected range
+    this.currentDate = new Date(d);
+    this.currentDate.setHours(0, 0, 0, 0);
+
+    this.loadData();
+  }
+
+  /**
+   * Set the calendar to show exactly the selected date range.
+   * activeDates (if provided) defines which specific dates are highlighted.
+   * When activeDates is null/empty, every date in start..end is highlighted.
+   */
+  setRange(start, end, activeDates) {
+    const sDate = this.parseYMD(start);
+    if (!sDate) return;
+
+    this.selectedDate    = start || '';
+    this.selectedEndDate = (end && end >= start) ? end : start;
+    this.activeDates     = Array.isArray(activeDates) ? activeDates : null;
+    this.browsing        = false;   // return to selection-snap mode
+
+    // Snap view to the start date
+    this.currentDate = new Date(sDate);
+    this.currentDate.setHours(0, 0, 0, 0);
+
+    const newDates = this.getDatesToRender();
+    const newStart = this.formatDateYMD(newDates[0]);
+    const newEnd   = this.formatDateYMD(newDates[newDates.length - 1]);
+    const oldStart = this.lastDates && this.lastDates.length ? this.formatDateYMD(this.lastDates[0]) : '';
+    const oldEnd   = this.lastDates && this.lastDates.length ? this.formatDateYMD(this.lastDates[this.lastDates.length - 1]) : '';
+
+    if (newStart === oldStart && newEnd === oldEnd) {
+      // Same window — just re-paint highlights with the cached data, no fetch
+      this.renderGrid(this.lastDates, this.lastData);
       return;
     }
-    this.currentDate = monday;
-    this.loadData();
+
+    // Window changed: update the header label now so it doesn't lag, then
+    // show a loading placeholder. booking.js's markTakenSlots will call
+    // ingestData() with the real data; if for some reason it doesn't (e.g.
+    // user navigated using the prev/next week buttons directly), loadData()
+    // kicks in as a fallback via the prev/next click handlers.
+    const opts = { month: 'short', day: 'numeric' };
+    const weekLabel = this.container.querySelector('.week-label');
+    if (weekLabel) {
+      weekLabel.textContent =
+        `${newDates[0].toLocaleDateString('en-US', opts)} – ${newDates[newDates.length - 1].toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`;
+    }
+    const colgroup = this.container.querySelector('colgroup');
+    if (colgroup) {
+      colgroup.innerHTML = `<col style="width:68px">` +
+        newDates.map(() => `<col>`).join('');
+    }
+    // Clear stale cache so we don't briefly flash old data
+    this.lastDates = null;
+    this.lastData  = null;
+    // Cancel any old in-flight fetch
+    const seq = ++this.requestSeq;
+    clearTimeout(this.loadingTimer);
+    this.loadingTimer = setTimeout(() => {
+      if (seq === this.requestSeq) this.showLoading();
+    }, 200);
+  }
+
+  /**
+   * Update ONLY the active-date highlights without refetching.
+   * Used when the user ticks/unticks a specific-day checkbox.
+   */
+  setActiveDates(activeDatesArray) {
+    this.activeDates = Array.isArray(activeDatesArray) ? activeDatesArray : null;
+    if (this.lastDates && this.lastData) {
+      this.renderGrid(this.lastDates, this.lastData);
+    }
   }
 
   // ---- layout ------------------------------------------------------------
@@ -164,10 +240,9 @@ class RoomCalendar {
 
         <!-- Scrollable grid -->
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[640px] table-fixed border-collapse text-xs" id="calendarTable">
+          <table class="w-full min-w-[480px] table-fixed border-collapse text-xs" id="calendarTable">
             <colgroup>
               <col style="width:68px" />
-              <col /><col /><col /><col /><col /><col /><col />
             </colgroup>
             <thead>
               <tr id="calendarHeaderRow" class="bg-gray-50 border-b border-gray-200">
@@ -186,6 +261,12 @@ class RoomCalendar {
           <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-gray-200 bg-white text-[11px] font-semibold text-gray-600">
             <span class="w-2 h-2 rounded-full bg-white border border-gray-300 inline-block"></span>Available
           </span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#7a1f2b]/40 bg-[#fdf5f6] text-[11px] font-semibold text-[#7a1f2b]">
+            <span class="w-2 h-2 rounded-full bg-[#7a1f2b] inline-block"></span>Your Selection
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-orange-200 bg-orange-50 text-[11px] font-semibold text-orange-700">
+            <span class="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>Conflict
+          </span>
           <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-blue-200 bg-blue-50 text-[11px] font-semibold text-blue-700">
             <span class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>Class
           </span>
@@ -203,11 +284,13 @@ class RoomCalendar {
     `;
 
     this.container.querySelector('.btn-prev-week').addEventListener('click', () => {
+      this.browsing = true;
       this.currentDate.setDate(this.currentDate.getDate() - 7);
       this.loadData();
     });
 
     this.container.querySelector('.btn-next-week').addEventListener('click', () => {
+      this.browsing = true;
       this.currentDate.setDate(this.currentDate.getDate() + 7);
       this.loadData();
     });
@@ -216,7 +299,7 @@ class RoomCalendar {
   // ---- data --------------------------------------------------------------
 
   loadData() {
-    const dates = this.getDatesToRender();
+    const dates    = this.getDatesToRender();
     const lastDate = dates[dates.length - 1];
     const startStr = this.formatDateYMD(dates[0]);
     const endStr = this.formatDateYMD(lastDate);
@@ -225,7 +308,14 @@ class RoomCalendar {
     const weekLabel = this.container.querySelector('.week-label');
     if (weekLabel) {
       weekLabel.textContent =
-        `${dates[0].toLocaleDateString('en-US', opts)} – ${lastDate.toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`;
+        `${dates[0].toLocaleDateString('en-US', opts)} – ${dates[dates.length - 1].toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`;
+    }
+
+    // Update colgroup to match the actual number of date columns
+    const colgroup = this.container.querySelector('colgroup');
+    if (colgroup) {
+      colgroup.innerHTML = `<col style="width:68px">` +
+        dates.map(() => `<col>`).join('');
     }
 
     const seq = ++this.requestSeq;
@@ -243,8 +333,10 @@ class RoomCalendar {
         clearTimeout(this.loadingTimer);
         if (json.success) {
           this.lastDates = dates;
-          this.lastData = json.data;
+          this.lastData  = json.data;
           this.renderGrid(dates, json.data);
+          // Notify booking.js that fresh data is available (for time-slot greying)
+          if (typeof this.onDataLoaded === 'function') this.onDataLoaded(dates, json.data);
         } else {
           console.error('Calendar fetch error:', json.error);
           this.showLoadError();
@@ -256,6 +348,36 @@ class RoomCalendar {
         console.error('Calendar fetch error:', err);
         this.showLoadError();
       });
+  }
+
+  /**
+   * Accept already-fetched data from an external source (booking.js) and
+   * render it directly — skipping an otherwise duplicate network request.
+   * `dates` must be an array of Date objects matching the current view window.
+   */
+  ingestData(dates, data) {
+    // Update the label and colgroup for this window
+    const opts = { month: 'short', day: 'numeric' };
+    const weekLabel = this.container.querySelector('.week-label');
+    if (weekLabel) {
+      weekLabel.textContent =
+        `${dates[0].toLocaleDateString('en-US', opts)} – ${dates[dates.length - 1].toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`;
+    }
+    const colgroup = this.container.querySelector('colgroup');
+    if (colgroup) {
+      colgroup.innerHTML = `<col style="width:68px">` +
+        dates.map(() => `<col>`).join('');
+    }
+
+    // Cancel any in-flight fetch — we already have the data
+    clearTimeout(this.loadingTimer);
+    this.requestSeq++;           // any pending fetch callback sees an old seq and discards itself
+
+    // Return to selection-snap mode (browsing mode was set by prev/next, not by ingestData)
+    this.browsing  = false;
+    this.lastDates = dates;
+    this.lastData  = data;
+    this.renderGrid(dates, data);
   }
 
   showLoading() {
@@ -278,6 +400,31 @@ class RoomCalendar {
     }
   }
 
+  // ---- highlight logic ---------------------------------------------------
+
+  /**
+   * Returns true if a given date (YYYY-MM-DD) should be highlighted.
+   *
+   * When activeDates is set (Specific Days mode): only dates in that array.
+   * When activeDates is null: all dates in the selectedDate..selectedEndDate range.
+   */
+  isInSelection(ymd) {
+    if (this.activeDates !== null) {
+      return this.activeDates.includes(ymd);
+    }
+    return !!this.selectedDate &&
+      ymd >= this.selectedDate &&
+      ymd <= (this.selectedEndDate || this.selectedDate);
+  }
+
+  setSelectionTimes(startTime, endTime) {
+    this.selectedStartTime = startTime;
+    this.selectedEndTime   = endTime;
+    if (this.lastDates && this.lastData) {
+      this.renderGrid(this.lastDates, this.lastData);
+    }
+  }
+
   // ---- grid --------------------------------------------------------------
 
   chip(cls, line1, line2, title) {
@@ -295,42 +442,6 @@ class RoomCalendar {
       div.appendChild(b);
     }
     return div;
-  }
-
-  setSelectionTimes(startTime, endTime) {
-    this.selectedStartTime = startTime;
-    this.selectedEndTime = endTime;
-    if (this.lastDates && this.lastData) {
-      this.renderGrid(this.lastDates, this.lastData);
-    }
-  }
-
-  /** Highlight every column from start to end ('YYYY-MM-DD', inclusive). */
-  setSelectionRange(start, end) {
-    this.activeDates = null;
-    this.selectedDate = start || '';
-    this.selectedEndDate = end && end >= this.selectedDate ? end : this.selectedDate;
-    if (this.lastDates && this.lastData) {
-      this.renderGrid(this.lastDates, this.lastData);
-    }
-  }
-
-  setSelectionActiveDates(activeDatesArray) {
-    this.activeDates = activeDatesArray;
-    if (activeDatesArray && activeDatesArray.length > 0) {
-        this.selectedDate = activeDatesArray[0];
-        this.selectedEndDate = activeDatesArray[activeDatesArray.length - 1];
-    }
-    if (this.lastDates && this.lastData) {
-      this.renderGrid(this.lastDates, this.lastData);
-    }
-  }
-
-  isInSelection(ymd) {
-    if (this.activeDates) {
-        return this.activeDates.includes(ymd);
-    }
-    return !!this.selectedDate && ymd >= this.selectedDate && ymd <= (this.selectedEndDate || this.selectedDate);
   }
 
   /** 'YYYY-MM-DD' shifted by n days. */
@@ -361,14 +472,15 @@ class RoomCalendar {
   }
 
   renderGrid(dates, data) {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const days     = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const todayYMD = this.formatDateYMD(new Date());
 
-    // --- Colgroups ---
+    // --- Update colgroup to reflect the actual number of date columns ---
     const colgroup = this.container.querySelector('colgroup');
     if (colgroup) {
-        colgroup.innerHTML = `<col class="w-16 sm:w-20">` + dates.map(() => `<col class="w-[${(100/dates.length).toFixed(2)}%]">`).join('');
+      colgroup.innerHTML = `<col style="width:68px">` +
+        dates.map(() => `<col style="width:${(100 / dates.length).toFixed(2)}%">`).join('');
     }
 
     // --- Headers ---
@@ -380,14 +492,14 @@ class RoomCalendar {
     dates.forEach((date) => {
       const dayIndex = date.getDay();
       const dayShort = days[dayIndex];
-      const dayFull = dayNames[dayIndex];
-      
-      const ymd = this.formatDateYMD(date);
-      const isToday = ymd === todayYMD;
+      const dayFull  = dayNames[dayIndex];
+      const ymd      = this.formatDateYMD(date);
+      const isToday  = ymd === todayYMD;
       const isSelected = this.isInSelection(ymd);
+      const isClosed = this.rules.closedDays.includes(dayFull);
+
       const th = document.createElement('th');
       th.dataset.date = ymd;
-      const isClosed = this.rules.closedDays.includes(dayFull);
       th.className = 'py-2 px-1 text-center border-r border-gray-200 last:border-r-0 ' +
         (isSelected
           ? 'bg-[#7a1f2b] text-white'
@@ -411,9 +523,9 @@ class RoomCalendar {
       const tr = document.createElement('tr');
       tr.className = 'border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors';
 
-      const nextBlock = this.blocks[index + 1];
-      const blockEnd = nextBlock ? nextBlock.start : this.dayEnd;
-      const endLabel = nextBlock ? nextBlock.label : this.fmt12(this.dayEnd);
+      const nextBlock  = this.blocks[index + 1];
+      const blockEnd   = nextBlock ? nextBlock.start : this.dayEnd;
+      const endLabel   = nextBlock ? nextBlock.label : this.fmt12(this.dayEnd);
 
       // Time cell
       const tdTime = document.createElement('td');
@@ -426,10 +538,10 @@ class RoomCalendar {
       const overlaps = (s, e) => s < blockEnd && e > block.start;
 
       dates.forEach((date) => {
-        const dateYMD = this.formatDateYMD(date);
-        const dayName = dayNames[date.getDay()];
-        const isSelected = this.isInSelection(dateYMD);
-        const beforeOpen = this.minDate && dateYMD < this.minDate;
+        const dateYMD  = this.formatDateYMD(date);
+        const dayName  = dayNames[date.getDay()];
+        const isSelected  = this.isInSelection(dateYMD);
+        const beforeOpen  = this.minDate && dateYMD < this.minDate;
 
         // Closed day (System Configuration) — single merged "Closed" cell
         if (this.rules.closedDays.includes(dayName)) {
@@ -451,11 +563,15 @@ class RoomCalendar {
 
         const overlapsSelected = isSelected && this.selectedStartTime && this.selectedEndTime &&
                                  overlaps(this.selectedStartTime, this.selectedEndTime);
+                                 
+        const hasClass = (data.class_schedules || []).some(c => c.day_of_week === dayName && overlaps(c.start_time.slice(0, 5), c.end_time.slice(0, 5)));
+        const hasReservation = (data.reservations || []).some(r => r.start_time.startsWith(dateYMD) && overlaps(r.start_time.slice(11, 16), r.end_time.slice(11, 16)));
+        const isConflict = overlapsSelected && (hasClass || hasReservation);
 
-        let baseBg = isSelected 
-          ? (overlapsSelected ? 'bg-rose-100 shadow-[inset_0_0_0_2px_#7a1f2b] relative z-10' : 'bg-[#fdf5f6]') 
+        let baseBg = isSelected
+          ? (isConflict ? 'bg-orange-50 shadow-[inset_0_0_0_2px_#f97316] relative z-10' : (overlapsSelected ? 'bg-rose-100 shadow-[inset_0_0_0_2px_#7a1f2b] relative z-10' : 'bg-[#fdf5f6]'))
           : beforeOpen ? 'bg-gray-50' : 'bg-white';
-          
+
         td.className = `p-0.5 border-r border-gray-200 last:border-r-0 align-top h-[42px] transition-all ${baseBg}`;
 
         // Holiday
@@ -503,9 +619,6 @@ class RoomCalendar {
               return;
             }
 
-            // One continuous bar across the series' days: square off and
-            // stretch over the column border on each side the series
-            // continues, and label only its first day in view.
             const span = pos.first === pos.last ? '' :
               ` (${this.parseYMD(pos.first).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ` +
               `${this.parseYMD(pos.last).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} this week)`;
@@ -515,7 +628,7 @@ class RoomCalendar {
               pos.hasNext ? 'rounded-r-none border-r-0 -mr-[3px]' : 'border-r'
             ].join(' ');
             const chip = this.chip(`${colors} ${shape}`,
-              pos.hasPrev ? ' ' : r.purpose,
+              pos.hasPrev ? ' ' : r.purpose,
               pos.hasPrev ? '' : (r.customer_name || r.status) + ' · multi-day',
               `${r.status}: ${r.purpose}, ${times} daily — multi-day booking${span}`);
             chip.dataset.seriesId = r.series_id;

@@ -7,8 +7,11 @@ window.initBookingForm = function() {
   'use strict';
 
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
+  let bookingRole = window.currentUser?.role || '';
 
   const form = document.getElementById('roomReservationForm');
+  const staffRequesterField = document.getElementById('staffRequesterField');
+  const staffRequesterInput = document.getElementById('staffRequesterIdentifier');
     const bookingModeRadios = document.querySelectorAll('input[name="booking_mode"]');
     const resDateWrapper = document.getElementById('resDateWrapper');
     const resEndDateWrapper = document.getElementById('resEndDateWrapper');
@@ -89,11 +92,23 @@ window.initBookingForm = function() {
         label.className = 'flex items-center gap-2.5 bg-white px-3.5 py-2.5 rounded-lg cursor-pointer border border-gray-200 shadow-sm transition-colors hover:border-[#7a1f2b]/30';
         label.innerHTML = `<input type="checkbox" name="active_days" value="${dateStr}" class="w-4 h-4 text-[#7a1f2b] bg-white border-gray-300 rounded focus:ring-[#7a1f2b] focus:ring-1" checked><span class="text-[13px] font-bold text-[#1e293b]">${dayName} <span class="text-gray-400 font-normal ml-1">· ${curr.toLocaleString('en-US', {month:'short', day:'numeric'})}</span></span>`;
         
-        label.querySelector('input').addEventListener('change', () => { 
-            const count = typeof getSelectedDates === 'function' ? getSelectedDates().length : document.querySelectorAll('input[name="active_days"]:checked').length;
+        label.querySelector('input').addEventListener('change', () => {
+            // Immediately update the calendar highlight without re-rendering checkboxes
+            if (calendarInstance && typeof calendarInstance.setActiveDates === 'function') {
+              const checkedDates = Array.from(
+                document.querySelectorAll('input[name="active_days"]:checked')
+              ).map(cb => cb.value);
+              calendarInstance.setActiveDates(checkedDates);
+            }
+            // Update the "N selected" counter
+            const count = document.querySelectorAll('input[name="active_days"]:checked').length;
+            const counter = document.getElementById('selectedDaysCount');
             if (counter) counter.textContent = `${count} selected`;
-            onDatesChanged(); 
-            updateCalendarSelection(); 
+            // Also update times overlay in calendar
+            if (calendarInstance && startTimeInput && endTimeInput &&
+                typeof calendarInstance.setSelectionTimes === 'function') {
+              calendarInstance.setSelectionTimes(startTimeInput.value, endTimeInput.value);
+            }
         });
         dayCheckboxesContainer.appendChild(label);
         
@@ -321,12 +336,44 @@ window.initBookingForm = function() {
 
   // --- Room Calendar Integration ---
   let calendarInstance = null;
+
+  /**
+   * For One Day Booking: return the Mon–Sun week that contains `ymd`.
+   * The calendar shows this full 7-day window for context while only the
+   * single selected date is actually highlighted.
+   */
+  function weekRangeFor(ymd) {
+    const d = new Date(ymd + 'T00:00:00');
+    const day = d.getDay();                         // 0=Sun … 6=Sat
+    const diffToMon = (day === 0) ? -6 : 1 - day;  // shift to Monday
+    const mon = new Date(d);
+    mon.setDate(d.getDate() + diffToMon);
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    return { start: toYMD(mon), end: toYMD(sun) };
+  }
+
   function updateCalendarSelection() {
     if (!calendarInstance) return;
+    const mode     = getBookingMode();
+    const start    = startDateValue();
+    const end      = endDateValue();
     const selected = getSelectedDates();
-    if (typeof calendarInstance.setActiveDates === 'function') {
-      calendarInstance.setActiveDates(selected);
+
+    if (typeof calendarInstance.setRange === 'function') {
+      if (mode === 'single' && isRealDate(start)) {
+        // Show the full Mon–Sun week; only the one booked date is highlighted
+        const { start: wStart, end: wEnd } = weekRangeFor(start);
+        calendarInstance.setRange(wStart, wEnd, selected);
+      } else if (mode === 'specific') {
+        // Show the From→To range; highlight only the checked dates
+        calendarInstance.setRange(start, end, selected);
+      } else {
+        // Consecutive range: show and highlight the entire From→To span
+        calendarInstance.setRange(start, end, null);
+      }
     }
+
     if (startTimeInput && endTimeInput && typeof calendarInstance.setSelectionTimes === 'function') {
       calendarInstance.setSelectionTimes(startTimeInput.value, endTimeInput.value);
     }
@@ -335,27 +382,30 @@ window.initBookingForm = function() {
   function updateCalendar(roomId) {
     if (!roomId) return;
     if (calendarInstance && calendarInstance.roomId === roomId) {
-      if (typeof calendarInstance.setRange === 'function') {
-        calendarInstance.setRange(startDateValue(), endDateValue(), getSelectedDates());
-      } else {
-        calendarInstance.goToDate(startDateValue(), true);
-      }
-      if (startTimeInput && endTimeInput && typeof calendarInstance.setSelectionTimes === 'function') {
-        calendarInstance.setSelectionTimes(startTimeInput.value, endTimeInput.value);
-      }
+      // Same room — just update the date range and highlights
+      updateCalendarSelection();
       return;
     }
     const container = document.getElementById('room-calendar-container');
     if (container) {
       if (typeof RoomCalendar !== 'undefined') {
+        const mode  = getBookingMode();
+        const start = startDateValue();
+        let initStart = start, initEnd = endDateValue();
+        // For single mode, open the calendar on the full surrounding week
+        if (mode === 'single' && isRealDate(start)) {
+          const w = weekRangeFor(start);
+          initStart = w.start;
+          initEnd   = w.end;
+        }
         calendarInstance = new RoomCalendar({
-          containerId: 'room-calendar-container',
-          roomId: roomId,
-          initialDate: startDateValue(),
-          initialEndDate: endDateValue(),
-          minDate: resDateInput ? resDateInput.min : '',
-          activeDates: getSelectedDates(),
-          rules: rules
+          containerId:    'room-calendar-container',
+          roomId:         roomId,
+          initialDate:    initStart,
+          initialEndDate: initEnd,
+          minDate:        resDateInput ? resDateInput.min : '',
+          activeDates:    getSelectedDates(),
+          rules:          rules
         });
         updateCalendarSelection();
       }
@@ -469,22 +519,31 @@ window.initBookingForm = function() {
   function syncEndDate() {
     if (!resEndDateInput) return;
     const start = startDateValue();
+
+    // Set min = start date (cannot book end before start)
     resEndDateInput.min = start || (resDateInput ? resDateInput.min : '');
-    
+
     if (start) {
-      const d = new Date(start);
+      // max = start + 6 days = 7 days inclusive (Day 1 = start, Day 7 = start+6)
+      const d = new Date(start + 'T00:00:00');
       d.setDate(d.getDate() + 6);
-      resEndDateInput.max = toYMD(d);
+      const maxYMD = toYMD(d);
+      resEndDateInput.max = maxYMD;
+
+      // Clamp current end value: if outside [start, max] reset to start
+      if (resEndDateInput.value && (resEndDateInput.value < start || resEndDateInput.value > maxYMD)) {
+        resEndDateInput.value = start;
+      }
     } else {
       resEndDateInput.removeAttribute('max');
     }
-    
+
     if (isRebook) {
       resEndDateInput.value = start;
       resEndDateInput.disabled = true;
       return;
     }
-    if (start && (!resEndDateInput.value || resEndDateInput.value < start)) {
+    if (start && !resEndDateInput.value) {
       resEndDateInput.value = start;
     }
   }
@@ -545,16 +604,16 @@ window.initBookingForm = function() {
   }
 
   function onDatesChanged() {
-    const mode = getBookingMode();
+    const mode  = getBookingMode();
     const start = startDateValue();
-    const end = endDateValue();
+    const end   = endDateValue();
 
-    if (mode === 'single') {
-      if (resDateInput && resEndDateInput && resDateInput.value !== resEndDateInput.value) {
-        resEndDateInput.value = resDateInput.value;
-      }
+    // For single-day mode keep the end date in sync automatically
+    if (mode === 'single' && resDateInput && resEndDateInput) {
+      resEndDateInput.value = resDateInput.value;
     }
 
+    // Regenerate specific-day checkboxes whenever the date range changes
     if (mode === 'specific') {
       renderSpecificDays();
     }
@@ -567,8 +626,16 @@ window.initBookingForm = function() {
     setDateError(dateProblem(start, end));
 
     if (calendarInstance) {
+      const selected = getSelectedDates();
       if (typeof calendarInstance.setRange === 'function') {
-        calendarInstance.setRange(start, end, getSelectedDates());
+        if (mode === 'single' && isRealDate(start)) {
+          const { start: wStart, end: wEnd } = weekRangeFor(start);
+          calendarInstance.setRange(wStart, wEnd, selected);
+        } else if (mode === 'specific') {
+          calendarInstance.setRange(start, end, selected);
+        } else {
+          calendarInstance.setRange(start, end, null);
+        }
       } else {
         calendarInstance.goToDate(start);
       }
@@ -617,23 +684,111 @@ window.initBookingForm = function() {
     });
   }
 
-  const timeErrorContainer = document.getElementById('timeErrorContainer');
-  const timeErrorText = document.getElementById('timeErrorText');
+    const requestSlipBtn = document.getElementById('requestSlipBtn');
+  const rsModal = document.getElementById('requestSlipModalOverlay');
+  const closeRsBtn = document.getElementById('closeRequestSlipModalBtn');
+  const cancelRsBtn = document.getElementById('cancelRequestSlipBtn');
+  const rsAltSchedule = document.getElementById('rsAltSchedule');
+  const rsAltFields = document.getElementById('rsAltScheduleFields');
+
+  if (requestSlipBtn && rsModal) {
+    requestSlipBtn.addEventListener('click', () => {
+      rsModal.classList.remove('hidden');
+      rsModal.classList.add('flex');
+    });
+    
+    const closeRs = () => {
+      rsModal.classList.add('hidden');
+      rsModal.classList.remove('flex');
+    };
+    
+    if (closeRsBtn) closeRsBtn.addEventListener('click', closeRs);
+    if (cancelRsBtn) cancelRsBtn.addEventListener('click', closeRs);
+    
+    if (rsAltSchedule && rsAltFields) {
+      rsAltSchedule.addEventListener('change', () => {
+        if (rsAltSchedule.value === 'Yes') {
+          rsAltFields.classList.remove('hidden');
+        } else {
+          rsAltFields.classList.add('hidden');
+        }
+      });
+    }
+    
+    const rsForm = document.getElementById('requestSlipForm');
+    if (rsForm) {
+      rsForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        alert('Request Slip submitted successfully. Staff will review it shortly.');
+        closeRs();
+        const mainModal = document.getElementById('bookingModalOverlay');
+        if (mainModal) {
+            mainModal.classList.add('hidden');
+            mainModal.classList.remove('flex');
+        }
+      });
+    }
+  }
   const validateTime = () => {
-    if (startTimeInput && endTimeInput && startTimeInput.value && endTimeInput.value) {
-      if (endTimeInput.value <= startTimeInput.value) {
-        if (timeErrorContainer) {
-          timeErrorContainer.classList.remove('hidden');
-          timeErrorContainer.classList.add('flex');
-        }
-        if (timeErrorText) timeErrorText.textContent = 'End time must be after start time.';
+    if (startTimeInput && endTimeInput && startTimeInput.value) {
+      const mode = getBookingMode();
+      const start = startDateValue();
+      const now = new Date();
+      const todayStr = toYMD(now);
+      const nowTimeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      
+      if (mode === 'single' && start === todayStr && startTimeInput.value <= nowTimeStr) {
+          const conflictBanner = document.getElementById('conflictBanner');
+          const requestSlipBtn = document.getElementById('requestSlipBtn');
+          if (conflictBanner) conflictBanner.classList.add('hidden');
+          if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
+        showCollisionError('Reservations must start in the future.', 'Invalid time');
         return false;
-      } else {
-        if (timeErrorContainer) {
-          timeErrorContainer.classList.add('hidden');
-          timeErrorContainer.classList.remove('flex');
+      }
+
+      if (endTimeInput.value) {
+        if (endTimeInput.value <= startTimeInput.value) {
+          const conflictBanner = document.getElementById('conflictBanner');
+          const requestSlipBtn = document.getElementById('requestSlipBtn');
+          if (conflictBanner) conflictBanner.classList.add('hidden');
+          if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
+          showCollisionError('End time must be after the start time.', 'Invalid time');
+          return false;
         }
-        return true;
+
+        // Time boundaries are valid, check for conflict over the requested range
+        hideCollisionError();
+        const clash = rangeConflicts(startTimeInput.value, endTimeInput.value);
+        if (clash.length) {
+          // Show conflict UI
+          const conflictBanner = document.getElementById('conflictBanner');
+          const requestSlipBtn = document.getElementById('requestSlipBtn');
+          if (conflictBanner) conflictBanner.classList.remove('hidden');
+          if (requestSlipBtn) requestSlipBtn.classList.toggle('hidden', bookingRole === 'Staff');
+          
+          // Populate Request Slip details
+          const facilitySpan = document.getElementById('rsFacility');
+          const dateSpan = document.getElementById('rsDate');
+          const timeSpan = document.getElementById('rsTime');
+          const conflictSpan = document.getElementById('rsConflictInfo');
+          if (facilitySpan && roomSelect && roomSelect.options[roomSelect.selectedIndex]) {
+             facilitySpan.textContent = roomSelect.options[roomSelect.selectedIndex].text;
+          }
+          if (dateSpan) dateSpan.textContent = mode === 'single' ? start : (start + ' to ' + endDateValue());
+          if (timeSpan) timeSpan.textContent = startTimeInput.options[startTimeInput.selectedIndex].text + ' - ' + endTimeInput.options[endTimeInput.selectedIndex].text;
+          if (conflictSpan) conflictSpan.textContent = window.CampusSchedule.describeRange(clash, startTimeInput.value, endTimeInput.value);
+
+          const evt = new Event('change'); document.getElementById('roomReservationForm')?.dispatchEvent(evt);
+          return false; // blocks normal submit
+        } else {
+          // Hide conflict UI
+          const conflictBanner = document.getElementById('conflictBanner');
+          const requestSlipBtn = document.getElementById('requestSlipBtn');
+          if (conflictBanner) conflictBanner.classList.add('hidden');
+          if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
+          const evt = new Event('change'); document.getElementById('roomReservationForm')?.dispatchEvent(evt);
+          return true;
+        }
       }
     }
     return true;
@@ -674,6 +829,7 @@ window.initBookingForm = function() {
     syncEndOptions = () => {
       const start = startTimeInput.value;
       const previous = endTimeInput.value;
+      endTimeInput.disabled = !start;
       endTimeInput.innerHTML = '<option value="">Select End</option>';
       endTimeInput.disabled = !start;
       ALL_END_OPTIONS.forEach(o => {
@@ -688,13 +844,8 @@ window.initBookingForm = function() {
           // Start is free, but is [start, this end) free?
           const clash = rangeConflicts(start, o.value);
           if (clash.length) {
-            // Only another Approved booking in the way: still selectable, so
-            // the customer can reach the urgent-override option on submit.
-            const overridable = !isRebook && window.CampusSchedule.onlyApprovedConflicts(clash);
-            opt.disabled = !overridable;
-            opt.textContent = o.text + (overridable ? ' — booked (urgent override possible)' : ' — unavailable');
-            opt.title = window.CampusSchedule.describeRange(clash, start, o.value);
-          }
+              // The UI is now handled by validateTime() on selection.
+            }
         }
         endTimeInput.appendChild(opt);
       });
@@ -783,42 +934,61 @@ window.initBookingForm = function() {
   async function markTakenSlots() {
     if (!startTimeInput || !roomSelect || !resDateInput) return;
     const roomId = roomSelect.value, start = startDateValue(), end = endDateValue();
+    const mode = getBookingMode();
     if (!roomId || !isRealDate(start) || !isRealDate(end)) return;
     const dates = window.CampusSchedule.datesBetween(start, end);
-    if (!dates.length || dates.length > MAX_RANGE_DAYS) return;   // dateProblem() already says why
-    const seq = ++takenSeq;
-    rangeData = null;   // whatever we knew belongs to the previous room/range
+    if (!dates.length || dates.length > MAX_RANGE_DAYS) return;
 
-    // null = couldn't load. Never treat that as "free": clear the greying so
-    // nothing stale stays on screen and let the server decide.
-    const data = await window.CampusSchedule.fetchRange(BASE, roomId, start, end);
-    if (seq !== takenSeq) return;                              // a newer request superseded this one
+    let fetchStart = start;
+    let fetchEnd = end;
+
+    // For single day mode, the calendar renders the full week. We must fetch the full
+    // week so we can pass the complete data to the calendar without a second request.
+    if (mode === 'single') {
+      const w = weekRangeFor(start);
+      fetchStart = w.start;
+      fetchEnd = w.end;
+    }
+
+    const seq = ++takenSeq;
+    rangeData = null;
+
+    // Single fetch serves BOTH the time-slot greying AND the calendar grid.
+    const data = await window.CampusSchedule.fetchRange(BASE, roomId, fetchStart, fetchEnd);
+    if (seq !== takenSeq) return;   // superseded by a newer request
+
     if (!data) {
       resetStartOptions();
       syncEndOptions();
       return;
     }
+
     rangeData = { roomId, start, end, dates, data };
 
-    // A start block is only usable if the block itself is free on EVERY day
-    // of the range (the shortest booking is one block); which END times stay
-    // usable is decided in syncEndOptions() once a start is chosen.
+    // ---- Push data into the calendar grid to avoid a second identical fetch ----
+    if (calendarInstance && typeof calendarInstance.ingestData === 'function') {
+      // Build the same Date array the calendar would have computed itself
+      const calDates = calendarInstance.getDatesToRender();
+      const calStart = calendarInstance.formatDateYMD(calDates[0]);
+      const calEnd   = calendarInstance.formatDateYMD(calDates[calDates.length - 1]);
+      // Only feed the data when the view window matches what we fetched
+      if (calStart === fetchStart && calEnd === fetchEnd) {
+        calendarInstance.ingestData(calDates, data);
+      }
+    }
+
+    // ---- Grey out start-time blocks that are taken on every day of the range ----
     Array.from(startTimeInput.options).forEach(opt => {
       if (!opt.value) return;
       const i = BLOCKS.indexOf(opt.value);
       const [bs, be] = [BLOCKS[i], BLOCKS[i + 1] || rules.close];
       const clash = window.CampusSchedule.findRangeConflicts(data, dates, bs, be);
-      const overridable = !isRebook && window.CampusSchedule.onlyApprovedConflicts(clash);
-      opt.disabled = clash.length > 0 && !overridable;
-      opt.textContent = opt.dataset.label +
-        (!clash.length ? '' : overridable ? ' — booked (urgent override possible)' : ' — unavailable');
+      // The UI is now handled by validateTime() on selection.
     });
 
-    // A start time that was valid for the previous dates may be taken on these.
     const chosen = startTimeInput.selectedOptions[0];
     if (chosen && chosen.disabled) startTimeInput.value = '';
 
-    // Re-derive the end options for the (possibly cleared) start against this day.
     syncEndOptions();
   }
 
@@ -857,20 +1027,28 @@ window.initBookingForm = function() {
     hideCollisionError();
   }
 
-  // Fix Guide 5.4: POST /api/reservations is Customer-only, so a Staff/Admin
-  // account that opens this page can fill the whole form in and only find
-  // out it's forbidden after submitting. Go view-only for them instead,
-  // except during a rebook (rebook() explicitly allows Staff/Admin).
+  // Staff may submit new reservations; Admin accounts remain view-only except
+  // during a re-book (which explicitly allows Staff/Admin).
   function applyRole(user) {
-    if (!user || user.role === 'Customer' || isRebook) return;
+    if (!user) return;
+    bookingRole = String(user.role || '');
+    const staffBooking = bookingRole === 'Staff' && !isRebook;
+    if (staffRequesterField) staffRequesterField.classList.toggle('hidden', !staffBooking);
+    if (staffRequesterInput) {
+      staffRequesterInput.required = staffBooking;
+      if (!staffBooking) staffRequesterInput.value = '';
+    }
+    if (bookingRole === 'Customer' || bookingRole === 'Staff' || isRebook) return;
     if (submitBtn) submitBtn.disabled = true;
     showCollisionError(
-      'Staff and admin accounts can view room availability but can\u2019t create reservations.',
+      'Admin accounts can view room availability but can\u2019t create reservations.',
       'View only'
     );
   }
   if (window.currentUser) applyRole(window.currentUser);
-  document.addEventListener('campusroom:user', (e) => applyRole(e.detail));
+  document.addEventListener('campusroom:user', (e) => {
+    applyRole(e.detail);
+  });
 
   /**
    * Equipment notes = the ticked AV items, by their canonical data-equipment
@@ -1225,6 +1403,7 @@ window.initBookingForm = function() {
       const picked      = form.querySelector('input[name="reservation_purpose"]:checked');
       const description = purposeInput ? purposeInput.value.trim() : '';
       const policyBox   = document.getElementById('policyAcknowledgement');
+      const requesterIdentifier = staffRequesterInput ? staffRequesterInput.value.trim() : '';
 
       if ((!auto && !roomId) || !dateVal || !endDateVal || !startVal || !endVal) {
         return showCollisionError(
@@ -1239,7 +1418,7 @@ window.initBookingForm = function() {
         return showCollisionError(problem, 'Invalid date');
       }
       if (!validateTime()) {
-        return showCollisionError('End time must be after the start time.', 'Invalid time');
+        return;
       }
       // The whole window must be free on every day, not just its first block.
       // (Only checked once the schedule has loaded; otherwise the server's
@@ -1261,6 +1440,10 @@ window.initBookingForm = function() {
       }
       if (policyBox && !policyBox.checked) {
         return showCollisionError('Please acknowledge the Institutional Space Policy to continue.', 'Acknowledgement required');
+      }
+      if (bookingRole === 'Staff' && !isRebook && !requesterIdentifier) {
+        staffRequesterInput?.focus();
+        return showCollisionError('Enter the customer’s email address or user ID before submitting this booking.', 'Customer required');
       }
 
       const payload = {
@@ -1284,6 +1467,9 @@ window.initBookingForm = function() {
       } else {
         payload.room_id = roomId;
       }
+      if (bookingRole === 'Staff' && !isRebook) {
+        payload.requester_identifier = requesterIdentifier;
+      }
       
       if (typeof getBookingMode === 'function' && getBookingMode() === 'specific') {
         payload.active_dates = getSelectedDates();
@@ -1306,6 +1492,9 @@ window.initBookingForm = function() {
             return showCollisionError(`The server sent an unexpected response (HTTP ${status}). Please try again.`, 'Something went wrong');
           }
           if (!json.success && status === 409 && !isRebook && json.data && json.data.override_eligible) {
+            if (bookingRole === 'Staff') {
+              return showCollisionError('Staff bookings cannot request a conflict override. Please choose an available time.', 'Scheduling conflict');
+            }
             return openOverrideModal(payload, json.data.conflict, json.error);
           }
           if (!json.success) {
@@ -1319,7 +1508,19 @@ window.initBookingForm = function() {
           const ref = 'REQ-' + String(json.data.reservation_id).substring(0, 8).toUpperCase();
           const dayCount = Array.isArray(json.data.series) ? json.data.series.length : 1;
 
-          if (json.data.auto_assigned && Array.isArray(json.data.assignments)) {
+          if (bookingRole === 'Staff') {
+            const isApproved = json.data.status === 'Approved';
+            const resultMessage = isApproved
+              ? 'Booking approved automatically'
+              : 'Booking submitted for peer review';
+            showSuccess(`${resultMessage}: ${ref}. Redirecting to Staff Dashboard…`);
+            setTimeout(() => {
+              window.location.href = isApproved
+                ? 'staff-dashboard.html#dashboard'
+                : 'staff-dashboard.html#pending-approvals';
+            }, 1500);
+            return;
+          } else if (json.data.auto_assigned && Array.isArray(json.data.assignments)) {
             const summary = formatAssignments(json.data.assignments);
             showSuccess(`Your booking has been assigned to: ${summary}. (${ref}) Redirecting to My Reservations…`);
           } else {

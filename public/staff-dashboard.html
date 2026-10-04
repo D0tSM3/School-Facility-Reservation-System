@@ -42,118 +42,110 @@
     },
    };
   </script>
- 
   <style>
-    /* Prevent sidebar flash */
-    html[data-role="staff"] aside nav a[data-path="customer-dashboard"],
-    html[data-role="staff"] aside nav a[data-path="rooms"],
-    html[data-role="staff"] aside nav a[data-path="my-reservations"],
-    html[data-role="admin"] aside nav a[data-path="customer-dashboard"],
-    html[data-role="admin"] aside nav a[data-path="rooms"],
-    html[data-role="admin"] aside nav a[data-path="my-reservations"] {
-      display: none !important;
+    .active-nav-link {
+      background-color: #7a1f2b !important;
+      color: #ffffff !important;
     }
-    
-    aside nav a[data-path="staff-dashboard"],
-    aside nav a[data-path="admin-governance"] {
-      display: none !important;
+    .active-nav-link .nav-icon {
+      color: #ffc641 !important;
     }
-
   </style>
 
  </head>
  <body class="bg-[#F8F9FA] font-sans text-gray-900 antialiased min-h-screen"> 
   <!-- Left Sidebar -->
-  <aside
-   class="fixed left-0 top-0 h-full w-[250px] bg-[#1c1c1e] text-white z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
-  >
-   <!-- Upper Left Logo -->
-   <div class="h-16 px-6 flex items-center">
-    <a href="dashboard.html" class="flex items-center">
-     <img
-      alt="CampusRoom Logo"
-      class="h-7 w-auto object-contain"
-      src="assets/logo.svg"
-     />
-    </a>
-   </div>
+  <aside class="fixed left-0 top-0 h-full w-[250px] bg-[#1c1c1e] text-white z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+    <div class="h-16 px-6 flex items-center shrink-0">
+      <a href="staff-dashboard.html#dashboard" class="flex items-center">
+        <img alt="CampusRoom Logo" class="h-7 w-auto object-contain" src="assets/logo.svg" />
+      </a>
+    </div>
 
-   <!-- WORKSPACE Section -->
-   <div class="px-5 pt-3 pb-2">
-    <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">WORKSPACE</span>
-   </div>
-   <nav class="px-3 space-y-1">
-    <a
-     aria-current="page"
-     class="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors bg-[#7a1f2b] text-white font-medium text-sm"
-     data-path="customer-dashboard"
-     href="dashboard.html"
-    >
-     <span class="material-symbols-outlined text-[20px]">grid_view</span>
-     <span>Dashboard</span>
-    </a>
-    <a
-     class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
-     data-path="rooms"
-     href="rooms.html"
-    >
-     <span class="material-symbols-outlined text-[20px]">meeting_room</span>
-     <span>Rooms Directory</span>
-    </a>
-    <a
-     class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
-     data-path="my-reservations"
-     href="my-reservations.html"
-    >
-     <span class="material-symbols-outlined text-[20px]">event_available</span>
-     <span>My Reservations</span>
-    </a>
-    <a
-     hidden
-     class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
-     data-path="staff-dashboard"
-     href="staff-dashboard.html"
-    >
-     <span class="material-symbols-outlined text-[20px]">assignment</span>
-     <span>Staff Dashboard</span>
-    </a>
-    <a
-     hidden
-     class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
-     data-path="admin-governance"
-     href="admin-governance.html"
-    >
-     <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
-     <span>Admin Governance</span>
-    </a>
-   </nav>
+    <nav class="px-3 overflow-y-auto flex-1 space-y-4 py-2" aria-label="Staff dashboard navigation">
+      <div class="space-y-1">
+        <div class="px-3.5 pt-1 pb-1">
+          <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">WORKSPACE</span>
+        </div>
+        <button type="button" data-nav="overview" data-hash="#dashboard"
+          class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[20px] nav-icon text-gray-400 group-hover:text-white transition-colors">grid_view</span>
+            <span>Dashboard</span>
+          </span>
+        </button>
+        <a href="rooms.html"
+          class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[20px] nav-icon text-gray-400 group-hover:text-white transition-colors">meeting_room</span>
+            <span>Rooms Directory</span>
+          </span>
+        </a>
+      </div>
 
-   <!-- RESOURCES Section -->
-   <div class="px-5 pt-6 pb-2">
-    <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">RESOURCES</span>
-   </div>
-   <nav class="px-3 space-y-1">
-    <a
-     class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
-     data-path="handbook"
-     href="handbook.html"
-    >
-     <span class="material-symbols-outlined text-[20px]">menu_book</span>
-     <span>Policy Handbook</span>
-    </a>
-   </nav>
+      <div class="space-y-1">
+        <div class="px-3.5 pt-1 pb-1">
+          <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">RESERVATIONS &amp; QUEUES</span>
+        </div>
+        <button type="button" id="tab-pending" data-nav="pending" data-hash="#pending-approvals"
+          class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">hourglass_top</span>
+            <span>Approval Queue</span>
+          </span>
+          <span id="pending-badge-count" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-white">0</span>
+        </button>
+        <button type="button" id="tab-moves" data-nav="moves" data-hash="#move-requests"
+          class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">edit_calendar</span>
+            <span>Move Requests</span>
+          </span>
+          <span id="move-badge-count" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500 text-white">0</span>
+        </button>
+        <button type="button" id="tab-cancels" data-nav="cancels" data-hash="#cancellations"
+          class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">event_busy</span>
+            <span>Cancellations</span>
+          </span>
+          <span id="cancel-badge-count" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white">0</span>
+        </button>
+        <button type="button" id="tab-overrides" data-nav="overrides" data-hash="#overrides"
+          class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">priority_high</span>
+            <span>Overrides</span>
+          </span>
+          <span id="override-badge-count" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-600 text-white">0</span>
+        </button>
+        <button type="button" id="tab-maintenance" data-nav="maintenance" data-hash="#facility-grid"
+          class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">room_preferences</span>
+            <span>Facility Grid</span>
+          </span>
+          <span id="maintenance-badge-count" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-600 text-white">0</span>
+        </button>
+      </div>
 
-   <!-- Sign Out Footer -->
-   <div id="logout-banner" class="mt-auto p-4 border-t border-white/5">
-    <button
-     id="logoutBtn"
-     class="flex items-center gap-2.5 text-sm text-gray-400 hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg"
-     type="button"
-    >
-     <span class="material-symbols-outlined text-[18px]">logout</span>
-     <span class="font-medium">Sign Out</span>
-    </button>
-   </div>
+      <div class="space-y-1 pb-2">
+        <div class="px-3.5 pt-2 pb-1 border-t border-white/5">
+          <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">RESOURCES</span>
+        </div>
+        <a href="handbook.html" target="_blank" class="flex items-center gap-3 px-3.5 py-2 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors">
+          <span class="material-symbols-outlined text-[19px]">menu_book</span>
+          <span>Policy Handbook</span>
+        </a>
+      </div>
+    </nav>
+
+    <div id="logout-banner" class="mt-auto p-4 border-t border-white/5 shrink-0">
+      <button id="logoutBtn" class="flex items-center gap-2.5 text-sm text-gray-400 hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg" type="button">
+        <span class="material-symbols-outlined text-[18px]">logout</span>
+        <span class="font-medium">Sign Out</span>
+      </button>
+    </div>
   </aside>
 
   <!-- Main Content Area -->
@@ -166,159 +158,112 @@
     <!-- User Profile -->
     <div class="flex items-center gap-3">
      <div class="flex flex-col text-right">
-      <span class="text-xs font-semibold text-gray-900 font-semibold text-sm text-gray-800">Dr. Edgardo Valderama</span>
-      <span class="text-[10px] font-bold uppercase tracking-wider text-gray-900 text-xs text-gray-500">Student</span>
+      <span class="header-name text-sm font-semibold text-gray-800">Staff Member</span>
+      <span class="header-role text-[10px] font-bold uppercase tracking-wider text-gray-500">Staff / Registrar</span>
      </div>
      <div
       class="w-9 h-9 rounded-full bg-[#7a1f2b] text-white font-bold flex items-center justify-center text-xs shadow-sm header-initials"
      >
-      EV
+      ST
      </div>
     </div>
    </header>
 
-   <!-- Dashboard Main View -->
-   <main class="w-full pt-20 px-8 pb-12 max-w-[1400px] mx-auto">
-        <!-- Operational Header Banner -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-7 mb-7 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            
-            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-              Staff Approval Dashboard
-            </h1>
-            <p class="text-sm text-gray-500 mt-1.5 leading-relaxed">
-              Review incoming faculty space applications and toggle room maintenance states across campus.
-            </p>
+   <main class="w-full pt-20 px-8 pb-12 max-w-[1400px] mx-auto min-h-screen">
+      <div id="access-notice" class="hidden mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <p id="access-notice-text"></p>
+      </div>
+
+      <div class="bg-transparent mb-4" id="active-viewport-title-container">
+        <h1 class="text-2xl font-bold text-gray-900 tracking-tight" id="viewport-title">Dashboard</h1>
+      </div>
+
+      <section id="view-overview" class="dashboard-view hidden space-y-6 mb-8">
+        <div id="overview-error" class="hidden rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert"></div>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-7">
+          <h2 class="text-lg font-bold text-gray-900">Staff Operations</h2>
+          <p class="text-sm text-gray-500 mt-1.5">Monitor approvals, reservation changes, and facility status across campus.</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+          <a href="#pending-approvals" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
+            <div class="flex items-center justify-between"><span class="text-xs font-semibold text-gray-500">Pending Approvals</span><span class="material-symbols-outlined text-amber-500">assignment</span></div>
+            <p id="kpi-pending-count" class="text-3xl font-extrabold text-gray-900 mt-3">—</p>
+          </a>
+          <a href="#move-requests" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
+            <div class="flex items-center justify-between"><span class="text-xs font-semibold text-gray-500">Move Requests</span><span class="material-symbols-outlined text-blue-500">edit_calendar</span></div>
+            <p id="kpi-moves-count" class="text-3xl font-extrabold text-gray-900 mt-3">—</p>
+          </a>
+          <a href="#cancellations" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
+            <div class="flex items-center justify-between"><span class="text-xs font-semibold text-gray-500">Cancellation Requests</span><span class="material-symbols-outlined text-red-500">event_busy</span></div>
+            <p id="kpi-cancels-count" class="text-3xl font-extrabold text-gray-900 mt-3">—</p>
+          </a>
+          <a href="#overrides" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
+            <div class="flex items-center justify-between"><span class="text-xs font-semibold text-gray-500">Override Requests</span><span class="material-symbols-outlined text-violet-500">priority_high</span></div>
+            <p id="kpi-overrides-count" class="text-3xl font-extrabold text-gray-900 mt-3">—</p>
+          </a>
+          <a href="#facility-grid" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
+            <div class="flex items-center justify-between"><span class="text-xs font-semibold text-gray-500">Facilities in Maintenance</span><span class="material-symbols-outlined text-emerald-500">room_preferences</span></div>
+            <p id="kpi-maintenance-count" class="text-3xl font-extrabold text-gray-900 mt-3">—</p>
+          </a>
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div class="flex items-center justify-between"><span class="text-xs font-semibold text-gray-500">Approvals Today</span><span class="material-symbols-outlined text-[#7a1f2b]">task_alt</span></div>
+            <p id="kpi-approved-today-count" class="text-3xl font-extrabold text-gray-900 mt-3">—</p>
           </div>
-          <div class="flex items-center gap-3 shrink-0 w-full md:w-auto">
-              <!-- Search Bar -->
-              <div class="relative flex-1 md:w-64">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">search</span>
-                <input type="text" id="searchInput" placeholder="Search name, room, or ID..." class="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] transition-colors">
-              </div>
-              
-              <!-- Batch Approve Button -->
-              <button type="button" id="btn-batch-approve" disabled class="px-5 py-2 bg-[#7a1f2b] text-white font-semibold rounded-xl shadow-sm hover:bg-[#5e1821] transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                <span class="material-symbols-outlined text-[20px]">done_all</span>
-                <span id="batch-approve-label">Approve Selected</span>
-              </button>
-            </div>
         </div>
+      </section>
 
-        <!-- 4-Column Metric Cards (Act as Tabs) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8" id="staffTabsContainer">
-          
-          <!-- Card 1: Pending Approvals -->
-          <button type="button" id="tab-pending" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-all cursor-pointer relative overflow-hidden group focus:outline-none">
-            <div class="absolute bottom-0 left-0 right-0 h-1 bg-[#F59E0B] opacity-0 group-[.active-tab]:opacity-100 transition-opacity"></div>
-            <div class="w-12 h-12 rounded-xl bg-amber-50 group-[.active-tab]:bg-[#F59E0B] flex items-center justify-center text-[#F59E0B] group-[.active-tab]:text-white mb-4 transition-colors">
-              <span class="material-symbols-outlined text-[24px]">assignment</span>
-            </div>
-            <p class="text-4xl font-extrabold text-gray-900 mb-2 leading-none" id="kpi-pending-count">0</p>
-            <p class="text-xs font-semibold text-gray-500">Pending Approvals</p>
-          </button>
-
-          <!-- Card 2: Move Requests -->
-          <button type="button" id="tab-moves" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-all cursor-pointer relative overflow-hidden group focus:outline-none">
-            <div class="absolute bottom-0 left-0 right-0 h-1 bg-blue-500 opacity-0 group-[.active-tab]:opacity-100 transition-opacity"></div>
-            <div class="w-12 h-12 rounded-xl bg-blue-50 group-[.active-tab]:bg-blue-500 flex items-center justify-center text-blue-500 group-[.active-tab]:text-white mb-4 transition-colors">
-              <span class="material-symbols-outlined text-[24px]">edit_calendar</span>
-            </div>
-            <p class="text-4xl font-extrabold text-gray-900 mb-2 leading-none" id="move-badge-count">0</p>
-            <p class="text-xs font-semibold text-gray-500">Move Requests</p>
-          </button>
-
-          <!-- Card 3: Cancellations -->
-          <button type="button" id="tab-cancels" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-all cursor-pointer relative overflow-hidden group focus:outline-none">
-            <div class="absolute bottom-0 left-0 right-0 h-1 bg-red-500 opacity-0 group-[.active-tab]:opacity-100 transition-opacity"></div>
-            <div class="w-12 h-12 rounded-xl bg-red-50 group-[.active-tab]:bg-red-500 flex items-center justify-center text-red-500 group-[.active-tab]:text-white mb-4 transition-colors">
-              <span class="material-symbols-outlined text-[24px]">event_busy</span>
-            </div>
-            <p class="text-4xl font-extrabold text-gray-900 mb-2 leading-none" id="cancel-badge-count">0</p>
-            <p class="text-xs font-semibold text-gray-500">Cancellation Requests</p>
-          </button>
-
-          <!-- Card: Conflict Override Requests -->
-          <button type="button" id="tab-overrides" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-all cursor-pointer relative overflow-hidden group focus:outline-none">
-            <div class="absolute bottom-0 left-0 right-0 h-1 bg-violet-500 opacity-0 group-[.active-tab]:opacity-100 transition-opacity"></div>
-            <div class="w-12 h-12 rounded-xl bg-violet-50 group-[.active-tab]:bg-violet-500 flex items-center justify-center text-violet-500 group-[.active-tab]:text-white mb-4 transition-colors">
-              <span class="material-symbols-outlined text-[24px]">priority_high</span>
-            </div>
-            <p class="text-4xl font-extrabold text-gray-900 mb-2 leading-none" id="override-badge-count">0</p>
-            <p class="text-xs font-semibold text-gray-500">Override Requests</p>
-          </button>
-
-          <!-- Card 4: Facility Status -->
-          <button type="button" id="tab-maintenance" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-all cursor-pointer relative overflow-hidden group focus:outline-none">
-            <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500 opacity-0 group-[.active-tab]:opacity-100 transition-opacity"></div>
-            <div class="w-12 h-12 rounded-xl bg-emerald-50 group-[.active-tab]:bg-emerald-500 flex items-center justify-center text-emerald-500 group-[.active-tab]:text-white mb-4 transition-colors">
-              <span class="material-symbols-outlined text-[24px]">room_preferences</span>
-            </div>
-            <p class="text-4xl font-extrabold text-gray-900 mb-2 leading-none" id="kpi-maintenance-count">0</p>
-            <p class="text-xs font-semibold text-gray-500">Facility Status Grid</p>
+      <div id="queue-toolbar" class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <p class="text-sm text-gray-500">Search reservation and request queues.</p>
+        <div class="flex items-center gap-3 shrink-0 w-full md:w-auto">
+          <div class="relative flex-1 md:w-64">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">search</span>
+            <input type="text" id="searchInput" placeholder="Search name, room, or ID..." class="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] transition-colors">
+          </div>
+          <button type="button" id="btn-batch-approve" disabled class="hidden px-5 py-2 bg-[#7a1f2b] text-white font-semibold rounded-xl shadow-sm hover:bg-[#5e1821] transition-colors items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span class="material-symbols-outlined text-[20px]">done_all</span>
+            <span id="batch-approve-label">Approve Selected</span>
           </button>
         </div>
-        
-        <!-- Viewport Container -->
-        <div class="bg-transparent" id="active-viewport-title-container">
-            <h2 class="text-lg font-bold text-gray-900 mb-4 px-2" id="viewport-title">Pending Approvals</h2>
-        </div>
+      </div>
 
-        <!-- Viewports -->
-        <div id="view-pending" class="space-y-4 mb-8">
+      <section id="view-pending" class="dashboard-view hidden space-y-4 mb-8">
+        <div id="pendingQueueList" class="space-y-4">
             <div class="p-8 text-center text-gray-500 bg-white border border-gray-100 rounded-2xl shadow-sm text-sm">Loading pending applications...</div>
         </div>
         
-        <div id="view-moves" class="hidden space-y-4 mb-8">
-            <div class="p-8 text-center text-gray-500 bg-white border border-gray-100 rounded-2xl shadow-sm text-sm">Loading move requests...</div>
-        </div>
-        
-        <div id="view-cancels" class="hidden space-y-4 mb-8">
-            <div class="p-8 text-center text-gray-500 bg-white border border-gray-100 rounded-2xl shadow-sm text-sm">Loading cancellations...</div>
-        </div>
+      </section>
 
-        <div id="view-overrides" class="hidden space-y-4 mb-8">
-            <div class="p-8 text-center text-gray-500 bg-white border border-gray-100 rounded-2xl shadow-sm text-sm">Loading override requests...</div>
-        </div>
+      <section id="view-moves" class="dashboard-view hidden space-y-4 mb-8">
+            <div class="p-8 text-center text-gray-500 bg-white border border-gray-100 rounded-2xl shadow-sm text-sm">Loading move requests...</div>
+      </section>
         
-        <div id="view-all" class="hidden space-y-4 mb-8">
-            <!-- Legacy all tab structure for JS compatibility but hidden from UI mostly -->
-            <div class="flex items-center justify-end gap-2 mb-2">
-              <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider" for="all-status-filter">Filter:</label>
-              <select id="all-status-filter" class="bg-white border border-gray-200 px-2 py-1 rounded text-xs text-gray-800 focus:outline-none focus:border-[#7a1f2b]">
-                <option value="all">All Statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Cancelled">Cancelled</option>
-                <option value="Completed">Completed</option>
+      <section id="view-cancels" class="dashboard-view hidden space-y-4 mb-8">
+            <div class="p-8 text-center text-gray-500 bg-white border border-gray-100 rounded-2xl shadow-sm text-sm">Loading cancellations...</div>
+      </section>
+
+      <section id="view-overrides" class="dashboard-view hidden space-y-4 mb-8">
+            <div class="p-8 text-center text-gray-500 bg-white border border-gray-100 rounded-2xl shadow-sm text-sm">Loading override requests...</div>
+      </section>
+      <section id="view-maintenance" class="dashboard-view hidden space-y-6 mb-8">
+        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="font-bold text-gray-900 text-lg">Facility State Grid</h2>
+              <p class="text-xs text-gray-500 mt-0.5">Toggle spaces between operational, maintenance, and locked.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <label for="facility-filter" class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Filter:</label>
+              <select id="facility-filter" class="bg-[#f8f9fb] border border-gray-200 px-2.5 py-1.5 rounded-lg text-xs text-gray-800 focus:outline-none focus:border-[#7a1f2b]">
+                <option value="all">All Locations</option>
               </select>
             </div>
-            <div id="view-all-list" class="space-y-4"></div>
+          </div>
+          <div id="maintenance-alert-container" class="hidden mb-4"></div>
+          <div id="view-maintenance-list" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div class="p-8 text-center text-gray-500 bg-white border border-gray-100 rounded-2xl shadow-sm text-sm lg:col-span-2 xl:col-span-3">Loading facilities...</div>
+          </div>
         </div>
-        
-        <div id="view-maintenance" class="hidden space-y-6 mb-8">
-            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-               <div class="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 class="font-bold text-gray-900 text-lg">Facility State Grid</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">Toggle spaces between operational, maintenance, and locked.</p>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Filter:</label>
-                    <select id="facility-filter" class="bg-[#f8f9fb] border border-gray-200 px-2.5 py-1.5 rounded-lg text-xs text-gray-800 focus:outline-none focus:border-[#7a1f2b]">
-                      <option value="all">All Locations</option>
-                    </select>
-                  </div>
-               </div>
-               
-               <div id="maintenance-alert-container" class="hidden mb-4"></div>
-               
-               <div id="view-maintenance-list" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                 <div class="p-8 text-center text-gray-500 bg-white border border-gray-100 rounded-2xl shadow-sm text-sm lg:col-span-2 xl:col-span-3">Loading facilities...</div>
-               </div>
-            </div>
-        </div>
+      </section>
 
 <!-- Move Request Review Modal -->
 <div id="moveReviewModalOverlay" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200" aria-hidden="true">

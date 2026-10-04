@@ -56,18 +56,30 @@ class UserController
             Response::error('User not found.', 404);
         }
 
+        $currentAdminId = Auth::userId();
+        if ($userId === $currentAdminId && $role !== 'Admin') {
+            Response::error('Administrative safeguard: You cannot remove the Admin role from your own active account.', 422);
+        }
+
+        $oldRole = (string) $existing['role'];
         $user = $this->users->updateRole($userId, $role);
         if ($user === null) {
             Response::error('User not found.', 404);
         }
 
-        // Audit log
+        // Detailed audit log
         $this->reservations->insertLog(
-            Auth::userId(),
-            "Admin changed role of user {$userId} to {$role}"
+            $currentAdminId,
+            "Admin changed role of user {$existing['name']} ({$existing['email']}) from {$oldRole} to {$role}"
         );
 
-        Response::json($user);
+        Response::json([
+            'success'       => true,
+            'user'          => $user,
+            'previous_role' => $oldRole,
+            'new_role'      => $role,
+            'message'       => "User role for {$existing['name']} successfully changed from {$oldRole} to {$role}.",
+        ]);
     }
 
     // ---------------------------------------------------------------

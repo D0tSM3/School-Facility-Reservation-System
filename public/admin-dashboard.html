@@ -1,0 +1,3120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>
+      CampusRoom — Institutional Administration | BPU Facility Gateway
+    </title>
+    <meta
+      name="description"
+      content="Unified administrative management interface for Buenavista Polytechnic University CampusRoom facility reservation system."
+    />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/theme.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#5b0617",
+              "primary-container": "#7a1f2b",
+              "primary-hover": "#5e1821",
+              "on-primary": "#ffffff",
+              secondary: "#795900",
+              "secondary-container": "#ffc641",
+              tertiary: "#1c1c1e",
+              background: "#f8f9fb",
+              surface: "#f8f9fb",
+              "on-surface": "#191c1e",
+              "on-surface-variant": "#564242",
+            },
+            fontFamily: {
+              sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+        vertical-align: middle;
+      }
+      .active-nav-link {
+        background-color: #7a1f2b !important;
+        color: #ffffff !important;
+      }
+      .active-nav-link .nav-icon {
+        color: #ffc641 !important;
+      }
+    </style>
+  </head>
+  <body class="bg-[#F8F9FA] font-sans text-gray-900 antialiased min-h-screen">
+    <!-- ========================================================================= -->
+    <!-- 1. LEFT SIDEBAR NAVIGATION (250px width, matching client portal)          -->
+    <!-- ========================================================================= -->
+    <aside
+      class="fixed left-0 top-0 h-full w-[250px] bg-[#1c1c1e] text-white z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+    >
+      <!-- Upper Logo -->
+      <div class="h-16 px-6 flex items-center shrink-0">
+        <a href="admin-dashboard.html" class="flex items-center">
+          <img
+            alt="CampusRoom Logo"
+            class="h-7 w-auto object-contain"
+            src="assets/logo.svg"
+          />
+        </a>
+      </div>
+
+      <!-- Dedicated Admin Nav Items (Categorized Groups) -->
+      <nav class="px-3 overflow-y-auto flex-1 space-y-4 py-2">
+        <!-- 0. Main Dashboard Home -->
+        <button
+          type="button"
+          data-nav="overview"
+          data-hash="#overview"
+          class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group active-nav-link"
+        >
+          <div class="flex items-center gap-3">
+            <span
+              class="material-symbols-outlined text-[20px] nav-icon text-gray-400 group-hover:text-white transition-colors"
+              >grid_view</span
+            >
+            <span>Dashboard</span>
+          </div>
+        </button>
+
+        <!-- GROUP 1: RESERVATIONS & QUEUES (Active Operations) -->
+        <div class="space-y-1">
+          <div class="px-3.5 pt-1 pb-1">
+            <span
+              class="text-[10px] font-bold text-gray-500 uppercase tracking-wider"
+              >RESERVATIONS &amp; QUEUES</span
+            >
+          </div>
+          <!-- 1. All Reservations -->
+          <button
+            type="button"
+            data-nav="reservations"
+            data-hash="#reservations"
+            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
+                >assignment</span
+              >
+              <span>All Reservations</span>
+            </div>
+            <span
+              id="badge-pending-count"
+              class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-white"
+              >0</span
+            >
+          </button>
+
+          <!-- 2. Approval Queue (Fixed replacement for Staff Queue) -->
+          <button
+            type="button"
+            data-nav="approval-queue"
+            data-hash="#staff-queue"
+            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
+                >hourglass_top</span
+              >
+              <span>Approval Queue</span>
+            </div>
+            <span
+              id="badge-approval-queue-count"
+              class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-white"
+              >0</span
+            >
+          </button>
+
+          <!-- 3. Move Requests -->
+          <button
+            type="button"
+            data-nav="moves"
+            data-hash="#move-requests"
+            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
+                >edit_calendar</span
+              >
+              <span>Move Requests</span>
+            </div>
+            <span
+              id="badge-moves-count"
+              class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500 text-white"
+              >0</span
+            >
+          </button>
+
+          <!-- 4. Cancellations -->
+          <button
+            type="button"
+            data-nav="cancels"
+            data-hash="#cancellations"
+            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
+                >event_busy</span
+              >
+              <span>Cancellations</span>
+            </div>
+            <span
+              id="badge-cancels-count"
+              class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white"
+              >0</span
+            >
+          </button>
+
+          <!-- 5. Overrides -->
+          <button
+            type="button"
+            data-nav="overrides"
+            data-hash="#overrides"
+            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
+                >priority_high</span
+              >
+              <span>Overrides</span>
+            </div>
+            <span
+              id="badge-overrides-count"
+              class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-600 text-white"
+              >0</span
+            >
+          </button>
+        </div>
+
+        <!-- GROUP 2: FACILITY & ACADEMIC GOVERNANCE (Catalog & Scheduling) -->
+        <div class="space-y-1">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5">
+            <span
+              class="text-[10px] font-bold text-gray-500 uppercase tracking-wider"
+              >FACILITY &amp; ACADEMIC</span
+            >
+          </div>
+          <!-- 6. Rooms Directory -->
+          <button
+            type="button"
+            data-nav="facilities"
+            data-hash="#rooms"
+            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
+                >meeting_room</span
+              >
+              <span>Rooms Directory</span>
+            </div>
+            <span
+              id="badge-facilities-count"
+              class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-gray-300"
+              >0</span
+            >
+          </button>
+
+          <!-- 7. Class Schedules -->
+          <button
+            type="button"
+            data-nav="classes"
+            data-hash="#classes"
+            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
+                >calendar_month</span
+              >
+              <span>Class Schedules</span>
+            </div>
+          </button>
+
+          <!-- 8. Holidays & Closures -->
+          <button
+            type="button"
+            data-nav="holidays"
+            data-hash="#holidays"
+            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
+                >holiday_village</span
+              >
+              <span>Holidays &amp; Closures</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- GROUP 3: SYSTEM & ACCOUNTS (Administration) -->
+        <div class="space-y-1">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5">
+            <span
+              class="text-[10px] font-bold text-gray-500 uppercase tracking-wider"
+              >ADMINISTRATION</span
+            >
+          </div>
+          <!-- 9. User Directory -->
+          <button
+            type="button"
+            data-nav="users"
+            data-hash="#users"
+            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
+                >group</span
+              >
+              <span>User Directory</span>
+            </div>
+            <span
+              id="badge-users-count"
+              class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-gray-300"
+              >0</span
+            >
+          </button>
+
+          <!-- 10. Data Archives (30-Day Retention) -->
+          <button
+            type="button"
+            data-nav="archives"
+            data-hash="#archives"
+            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
+                >inventory_2</span
+              >
+              <span>Data Archives</span>
+            </div>
+            <span
+              id="badge-archives-count"
+              class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300"
+              >0</span
+            >
+          </button>
+
+          <!-- 11. Configuration -->
+          <button
+            type="button"
+            data-nav="config"
+            data-hash="#config"
+            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
+                >tune</span
+              >
+              <span>Configuration</span>
+            </div>
+          </button>
+
+          <!-- 11. Audit Logs -->
+          <button
+            type="button"
+            data-nav="logs"
+            data-hash="#logs"
+            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
+                >history_edu</span
+              >
+              <span>Audit Logs</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- GROUP 4: RESOURCES (Informational) -->
+        <div class="space-y-1 pb-2">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5">
+            <span
+              class="text-[10px] font-bold text-gray-500 uppercase tracking-wider"
+              >RESOURCES</span
+            >
+          </div>
+          <!-- Policy Handbook -->
+          <a
+            href="handbook.html"
+            target="_blank"
+            class="flex items-center gap-3 px-3.5 py-2 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          >
+            <span class="material-symbols-outlined text-[19px]">menu_book</span>
+            <span>Policy Handbook</span>
+          </a>
+        </div>
+      </nav>
+
+      <!-- Sign Out Footer -->
+      <div
+        id="logout-banner"
+        class="mt-auto p-4 border-t border-white/5 shrink-0"
+      >
+        <button
+          id="logoutBtn"
+          class="flex items-center gap-2.5 text-sm text-gray-400 hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg"
+          type="button"
+        >
+          <span class="material-symbols-outlined text-[18px]">logout</span>
+          <span class="font-medium">Sign Out</span>
+        </button>
+        <button id="btn-logout" type="button" class="hidden"></button>
+      </div>
+    </aside>
+
+    <!-- ========================================================================= -->
+    <!-- 2. TOP FIXED HEADER (offset 250px)                                        -->
+    <!-- ========================================================================= -->
+    <header
+      class="fixed top-0 left-[250px] right-0 h-16 bg-white border-b border-gray-100 z-40 flex items-center justify-end px-8 shadow-[0_1px_8px_rgba(0,0,0,0.02)]"
+    >
+      <!-- User Profile Pill (matching other interfaces) -->
+      <div class="flex items-center gap-3">
+        <div class="flex flex-col text-right">
+          <span id="adminUserName" class="font-semibold text-sm text-gray-800"
+            >Administrator</span
+          >
+          <span
+            class="text-[10px] font-bold uppercase tracking-wider text-gray-500"
+            >Admin</span
+          >
+        </div>
+        <div
+          id="adminAvatarInitials"
+          class="w-9 h-9 rounded-full bg-[#7a1f2b] text-white font-bold flex items-center justify-center text-xs shadow-sm header-initials"
+        >
+          AD
+        </div>
+        <span id="adminUserEmail" class="hidden">admin@bpu.edu.ph</span>
+      </div>
+    </header>
+
+    <!-- ========================================================================= -->
+    <!-- 3. MAIN CONTENT CONTAINER (Client design standards, rounded cards)        -->
+    <!-- ========================================================================= -->
+    <main
+      class="pl-[250px] pt-20 px-8 pb-12 max-w-[1400px] mx-auto min-h-screen"
+    >
+      <div class="space-y-7">
+        <!-- ===================================================================== -->
+        <!-- VIEW 1: OVERVIEW / DASHBOARD                                          -->
+        <!-- ===================================================================== -->
+        <section id="view-overview" class="dashboard-view space-y-7">
+          <!-- Operational Header Banner (Matching dashboard.html) -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-6"
+          >
+            <div>
+              <div class="flex items-center gap-2 mb-2">
+                <span
+                  class="inline-block w-2 h-2 rounded-full bg-emerald-500"
+                ></span>
+                <span
+                  class="text-[11px] font-bold uppercase tracking-wider text-emerald-600"
+                  >Institutional Administration</span
+                >
+              </div>
+              <h1
+                class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight"
+              >
+                Welcome, <span id="overviewAdminName">Administrator</span>
+              </h1>
+              <p class="text-sm text-gray-500 mt-1.5 leading-relaxed">
+                Administrative oversight and governance over facility schedules, active
+                reservations, user accounts, and university calendar locks.
+              </p>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                id="quickAddRoomBtn"
+                class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#7a1f2b] hover:bg-[#5e1821] text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
+              >
+                <span class="material-symbols-outlined text-[18px]">add</span>
+                <span>Add Facility</span>
+              </button>
+              <button
+                type="button"
+                id="quickAddClassBtn"
+                class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-semibold rounded-xl shadow-sm transition-all"
+              >
+                <span class="material-symbols-outlined text-[18px]"
+                  >schedule</span
+                >
+                <span>Add Class Block</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 6-Column KPI Stat Cards (Matching client card standards) -->
+          <div
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6"
+          >
+            <!-- Card 1: Pending Approvals Queue -->
+            <button
+              type="button"
+              data-jump-nav="approval-queue"
+              class="bg-white rounded-2xl shadow-sm border border-gray-100 border-b-4 border-b-amber-400 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-shadow cursor-pointer focus:outline-none"
+            >
+              <div
+                class="w-12 h-12 rounded-xl bg-[#FDF2F4] flex items-center justify-center text-[#7a1f2b] mb-3"
+              >
+                <span class="material-symbols-outlined text-[24px]"
+                  >hourglass_top</span
+                >
+              </div>
+              <p
+                class="text-3xl font-extrabold text-gray-900 mb-1 leading-none"
+                id="kpi-pending-total"
+              >
+                0
+              </p>
+              <p class="text-xs font-semibold text-gray-500">
+                Pending Approvals
+              </p>
+            </button>
+
+            <!-- Card 2: Move Requests -->
+            <button
+              type="button"
+              data-jump-nav="moves"
+              class="bg-white rounded-2xl shadow-sm border border-gray-100 border-b-4 border-b-blue-400 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-shadow cursor-pointer focus:outline-none"
+            >
+              <div
+                class="w-12 h-12 rounded-xl bg-[#FDF2F4] flex items-center justify-center text-[#7a1f2b] mb-3"
+              >
+                <span class="material-symbols-outlined text-[24px]"
+                  >edit_calendar</span
+                >
+              </div>
+              <p
+                class="text-3xl font-extrabold text-gray-900 mb-1 leading-none"
+                id="kpi-moves-total"
+              >
+                0
+              </p>
+              <p class="text-xs font-semibold text-gray-500">Move Requests</p>
+            </button>
+
+            <!-- Card 3: Cancellation Requests -->
+            <button
+              type="button"
+              data-jump-nav="cancels"
+              class="bg-white rounded-2xl shadow-sm border border-gray-100 border-b-4 border-b-red-400 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-shadow cursor-pointer focus:outline-none"
+            >
+              <div
+                class="w-12 h-12 rounded-xl bg-[#FDF2F4] flex items-center justify-center text-[#7a1f2b] mb-3"
+              >
+                <span class="material-symbols-outlined text-[24px]"
+                  >event_busy</span
+                >
+              </div>
+              <p
+                class="text-3xl font-extrabold text-gray-900 mb-1 leading-none"
+                id="kpi-cancels-total"
+              >
+                0
+              </p>
+              <p class="text-xs font-semibold text-gray-500">
+                Cancellation Requests
+              </p>
+            </button>
+
+            <!-- Card 4: Override Requests -->
+            <button
+              type="button"
+              data-jump-nav="overrides"
+              class="bg-white rounded-2xl shadow-sm border border-gray-100 border-b-4 border-b-violet-400 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-shadow cursor-pointer focus:outline-none"
+            >
+              <div
+                class="w-12 h-12 rounded-xl bg-[#FDF2F4] flex items-center justify-center text-[#7a1f2b] mb-3"
+              >
+                <span class="material-symbols-outlined text-[24px]"
+                  >priority_high</span
+                >
+              </div>
+              <p
+                class="text-3xl font-extrabold text-gray-900 mb-1 leading-none"
+                id="kpi-overrides-total"
+              >
+                0
+              </p>
+              <p class="text-xs font-semibold text-gray-500">
+                Conflict Overrides
+              </p>
+            </button>
+
+            <!-- Card 5: Facilities -->
+            <button
+              type="button"
+              data-jump-nav="facilities"
+              class="bg-white rounded-2xl shadow-sm border border-gray-100 border-b-4 border-b-emerald-400 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-shadow cursor-pointer focus:outline-none"
+            >
+              <div
+                class="w-12 h-12 rounded-xl bg-[#FDF2F4] flex items-center justify-center text-[#7a1f2b] mb-3"
+              >
+                <span class="material-symbols-outlined text-[24px]"
+                  >meeting_room</span
+                >
+              </div>
+              <p
+                class="text-3xl font-extrabold text-gray-900 mb-1 leading-none"
+                id="kpi-rooms-total"
+              >
+                0
+              </p>
+              <p class="text-xs font-semibold text-gray-500">
+                Active Facilities
+              </p>
+              <span
+                id="kpi-rooms-maintenance-note"
+                class="text-[10px] text-gray-400 mt-1"
+                >0 in maintenance</span
+              >
+            </button>
+
+            <!-- Card 6: Users -->
+            <button
+              type="button"
+              data-jump-nav="users"
+              class="bg-white rounded-2xl shadow-sm border border-gray-100 border-b-4 border-b-purple-400 p-6 flex flex-col items-center justify-center text-center h-[200px] hover:shadow-md transition-shadow cursor-pointer focus:outline-none"
+            >
+              <div
+                class="w-12 h-12 rounded-xl bg-[#FDF2F4] flex items-center justify-center text-[#7a1f2b] mb-3"
+              >
+                <span class="material-symbols-outlined text-[24px]">group</span>
+              </div>
+              <p
+                class="text-3xl font-extrabold text-gray-900 mb-1 leading-none"
+                id="kpi-users-total"
+              >
+                0
+              </p>
+              <p class="text-xs font-semibold text-gray-500">
+                Registered Users
+              </p>
+            </button>
+          </div>
+
+          <!-- 2 Elevated Breakdown Cards -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Card: Reservation Categories Distribution -->
+            <div
+              class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between"
+            >
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <h3
+                    class="text-base font-bold text-gray-900 flex items-center gap-2"
+                  >
+                    <span
+                      class="material-symbols-outlined text-[#7a1f2b] text-[20px]"
+                      >donut_large</span
+                    >
+                    <span>Reservations by Category</span>
+                  </h3>
+                  <span class="text-xs text-gray-400 font-medium"
+                    >Historical Breakdown</span
+                  >
+                </div>
+                <div id="categoryStatsList" class="space-y-3.5 pt-2">
+                  <div class="skeleton h-10 w-full"></div>
+                  <div class="skeleton h-10 w-full"></div>
+                  <div class="skeleton h-10 w-full"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card: Facility Lifecycle & Health -->
+            <div
+              class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between"
+            >
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <h3
+                    class="text-base font-bold text-gray-900 flex items-center gap-2"
+                  >
+                    <span
+                      class="material-symbols-outlined text-[#7a1f2b] text-[20px]"
+                      >pie_chart</span
+                    >
+                    <span>Facility Operational State</span>
+                  </h3>
+                  <span class="text-xs text-gray-400 font-medium"
+                    >Real-Time Status</span
+                  >
+                </div>
+                <div id="facilityStatusStatsList" class="space-y-3.5 pt-2">
+                  <div class="skeleton h-10 w-full"></div>
+                  <div class="skeleton h-10 w-full"></div>
+                  <div class="skeleton h-10 w-full"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card: Live Institutional Activity Feed -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div
+              class="p-6 border-b border-gray-100 flex items-center justify-between"
+            >
+              <div class="flex items-center gap-2">
+                <span
+                  class="material-symbols-outlined text-[#7a1f2b] text-[22px]"
+                  >history</span
+                >
+                <div>
+                  <h3 class="text-base font-bold text-gray-900">
+                    Recent Institutional Activity
+                  </h3>
+                  <p class="text-xs text-gray-500 mt-0.5">
+                    Real-time audit log of approvals, cancellations, and
+                    governance events
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                data-nav="logs"
+                class="text-xs font-bold text-[#7a1f2b] hover:text-[#5b0617] flex items-center gap-1 transition-colors"
+              >
+                <span>View Full Audit Log</span>
+                <span class="material-symbols-outlined text-[16px]"
+                  >arrow_forward</span
+                >
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-700">
+                <thead
+                  class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
+                >
+                  <tr>
+                    <th class="py-3 px-6">Timestamp</th>
+                    <th class="py-3 px-6">User / Actor</th>
+                    <th class="py-3 px-6">Action Performed</th>
+                    <th class="py-3 px-6 text-right">Reference</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="overviewRecentLogsTable"
+                  class="divide-y divide-gray-100 font-normal"
+                >
+                  <tr>
+                    <td
+                      colspan="4"
+                      class="p-6 text-center text-gray-400 text-xs"
+                    >
+                      Loading activity log...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VIEW 2: FACILITIES INVENTORY                                          -->
+        <!-- ===================================================================== -->
+        <section id="view-facilities" class="dashboard-view hidden space-y-6">
+          <!-- Control Bar Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+          >
+            <div class="flex flex-1 flex-wrap items-center gap-3">
+              <!-- Search Bar -->
+              <div class="relative w-full sm:w-64">
+                <span
+                  class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[19px]"
+                  >search</span
+                >
+                <input
+                  type="text"
+                  id="facilitySearchInput"
+                  placeholder="Search facility name, type..."
+                  class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] transition-all"
+                />
+              </div>
+
+              <!-- Filter: Room Type -->
+              <select
+                id="facilityTypeFilter"
+                class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 font-medium focus:outline-none focus:border-[#7a1f2b]"
+              >
+                <option value="all">All Room Types</option>
+              </select>
+
+              <!-- Filter: Status -->
+              <select
+                id="facilityStatusFilter"
+                class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 font-medium focus:outline-none focus:border-[#7a1f2b]"
+              >
+                <option value="all">All Statuses</option>
+                <option value="Available">Available Only</option>
+                <option value="Maintenance">Maintenance Only</option>
+                <option value="Inactive">Decommissioned Only</option>
+              </select>
+            </div>
+
+            <!-- View Switch & Add Facility Button -->
+            <div class="flex items-center gap-3 shrink-0">
+              <div class="bg-gray-100 p-1 rounded-xl flex items-center">
+                <button
+                  type="button"
+                  id="btn-view-table"
+                  class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-gray-900 shadow-sm flex items-center gap-1 transition-all"
+                  title="Table View"
+                >
+                  <span class="material-symbols-outlined text-[17px]"
+                    >table_rows</span
+                  >
+                  <span class="hidden sm:inline">Table</span>
+                </button>
+                <button
+                  type="button"
+                  id="btn-view-grid"
+                  class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-900 flex items-center gap-1 transition-all"
+                  title="Grid View"
+                >
+                  <span class="material-symbols-outlined text-[17px]"
+                    >grid_view</span
+                  >
+                  <span class="hidden sm:inline">Grid</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                id="openAddFacilityModalBtn"
+                class="px-4 py-2 bg-[#7a1f2b] hover:bg-[#5b0617] text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2"
+              >
+                <span class="material-symbols-outlined text-[18px]">add</span>
+                <span>Add Facility</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Facilities Table Container Card -->
+          <div
+            id="facilitiesTableView"
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-700">
+                <thead
+                  class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
+                >
+                  <tr>
+                    <th class="py-3.5 px-6">Facility Name</th>
+                    <th class="py-3.5 px-6">Type &amp; Floor</th>
+                    <th class="py-3.5 px-6">Capacity</th>
+                    <th class="py-3.5 px-6">Operational Status</th>
+                    <th class="py-3.5 px-6">Lifecycle</th>
+                    <th class="py-3.5 px-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="facilitiesTableBody"
+                  class="divide-y divide-gray-100 font-normal"
+                >
+                  <tr>
+                    <td
+                      colspan="6"
+                      class="p-8 text-center text-gray-400 text-xs"
+                    >
+                      Loading facilities inventory...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Facilities Grid Container Card (Hidden by default) -->
+          <div
+            id="facilitiesGridView"
+            class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+          >
+            <!-- Dynamically injected facility cards -->
+          </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VIEW 3: RESERVATIONS MASTER MANAGEMENT                                -->
+        <!-- ===================================================================== -->
+        <section id="view-reservations" class="dashboard-view hidden space-y-6">
+          <!-- Filter & Search Controls Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+          >
+            <div class="relative flex-1">
+              <span
+                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[19px]"
+                >search</span
+              >
+              <input
+                type="text"
+                id="resSearchInput"
+                placeholder="Filter by requester name, email, facility, or purpose..."
+                class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] transition-all"
+              />
+            </div>
+            <div class="flex items-center gap-3">
+              <!-- Filter by Category -->
+              <select
+                id="resCategoryFilter"
+                class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 font-medium focus:outline-none focus:border-[#7a1f2b]"
+              >
+                <option value="all">All Classifications</option>
+                <option value="Academic Lecture">Academic Lecture</option>
+                <option value="Faculty Defense">Faculty Defense</option>
+                <option value="Student Org Meeting">Student Org Meeting</option>
+                <option value="Dept Workshop">Dept Workshop</option>
+                <option value="Exam/Quiz">Exam/Quiz</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Status Filter Tabs Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 overflow-x-auto flex items-center gap-1.5"
+            id="resSubTabsContainer"
+          >
+            <button
+              type="button"
+              data-res-subtab="all"
+              class="res-subtab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all bg-[#7a1f2b] text-white"
+            >
+              All Bookings
+            </button>
+            <button
+              type="button"
+              data-res-subtab="Pending"
+              class="res-subtab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 hover:bg-gray-100 flex items-center gap-1.5"
+            >
+              <span>Pending Review</span>
+              <span
+                id="subtab-pending-badge"
+                class="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px]"
+                >0</span
+              >
+            </button>
+            <button
+              type="button"
+              data-res-subtab="Approved"
+              class="res-subtab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 hover:bg-gray-100"
+            >
+              Approved
+            </button>
+            <button
+              type="button"
+              data-res-subtab="Rejected"
+              class="res-subtab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 hover:bg-gray-100"
+            >
+              Rejected
+            </button>
+            <button
+              type="button"
+              data-res-subtab="Cancelled"
+              class="res-subtab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 hover:bg-gray-100"
+            >
+              Cancelled
+            </button>
+            <button
+              type="button"
+              data-res-subtab="Completed"
+              class="res-subtab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 hover:bg-gray-100"
+            >
+              Completed
+            </button>
+          </div>
+
+          <!-- Standard Reservations Master Table Card -->
+          <div
+            id="resTableViewContainer"
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-700">
+                <thead
+                  class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
+                >
+                  <tr>
+                    <th class="py-3.5 px-6">Booking Ref / ID</th>
+                    <th class="py-3.5 px-6">Requester</th>
+                    <th class="py-3.5 px-6">Facility</th>
+                    <th class="py-3.5 px-6">Schedule Window</th>
+                    <th class="py-3.5 px-6">Purpose / Category</th>
+                    <th class="py-3.5 px-6">Status</th>
+                    <th class="py-3.5 px-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="reservationsTableBody"
+                  class="divide-y divide-gray-100 font-normal"
+                >
+                  <tr>
+                    <td
+                      colspan="7"
+                      class="p-8 text-center text-gray-400 text-xs"
+                    >
+                      Loading bookings data...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VIEW: APPROVAL QUEUE (Native Staff Approval Queue)                    -->
+        <!-- ===================================================================== -->
+        <section
+          id="view-approval-queue"
+          class="dashboard-view hidden space-y-6"
+        >
+          <!-- Info / Operational Header Banner Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          >
+            <div class="flex items-start gap-4">
+              <div
+                class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 mt-0.5"
+              >
+                <span class="material-symbols-outlined text-[26px]"
+                  >hourglass_top</span
+                >
+              </div>
+              <div>
+                <div class="flex items-center gap-2.5 mb-1">
+                  <h2 class="text-base sm:text-lg font-bold text-gray-900">
+                    Pending Reservation Approvals Queue
+                  </h2>
+                  <span
+                    id="approvalQueueHeaderBadge"
+                    class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold"
+                    >0 Pending</span
+                  >
+                </div>
+                <p class="text-xs text-gray-500 leading-relaxed">
+                  Administrative approval authority over pending facility reservation
+                  applications. Approving immediately reserves the slot and
+                  issues notification; rejecting releases the hold.
+                </p>
+              </div>
+            </div>
+            <div
+              class="flex items-center gap-2 shrink-0 self-start sm:self-auto"
+            >
+              <button
+                type="button"
+                id="btnRefreshApprovalQueue"
+                class="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl border border-gray-200 transition-all flex items-center gap-1.5 shadow-sm"
+                title="Refresh approval queue"
+              >
+                <span class="material-symbols-outlined text-[17px]">sync</span>
+                <span>Refresh Queue</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Search & Filter Controls Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+          >
+            <div class="relative flex-1">
+              <span
+                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[19px]"
+                >search</span
+              >
+              <input
+                type="text"
+                id="approvalQueueSearchInput"
+                placeholder="Filter pending requests by requester, email, room, or purpose..."
+                class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] transition-all"
+              />
+            </div>
+            <div class="flex items-center gap-3">
+              <select
+                id="approvalQueueCategoryFilter"
+                class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 font-medium focus:outline-none focus:border-[#7a1f2b]"
+              >
+                <option value="all">All Classifications</option>
+                <option value="Academic Lecture">Academic Lecture</option>
+                <option value="Faculty Defense">Faculty Defense</option>
+                <option value="Student Org Meeting">Student Org Meeting</option>
+                <option value="Dept Workshop">Dept Workshop</option>
+                <option value="Exam/Quiz">Exam/Quiz</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Approval Queue Table Container Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-700">
+                <thead
+                  class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
+                >
+                  <tr>
+                    <th class="py-3.5 px-6">Booking Ref</th>
+                    <th class="py-3.5 px-6">Requester</th>
+                    <th class="py-3.5 px-6">Facility</th>
+                    <th class="py-3.5 px-6">Schedule Window</th>
+                    <th class="py-3.5 px-6">Purpose / Classification</th>
+                    <th class="py-3.5 px-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="approvalQueueTableBody"
+                  class="divide-y divide-gray-100 font-normal"
+                >
+                  <tr>
+                    <td
+                      colspan="6"
+                      class="p-8 text-center text-gray-400 text-xs"
+                    >
+                      Loading pending approvals...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VIEW 4: MOVE REQUESTS (Dedicated Sidebar View)                         -->
+        <!-- ===================================================================== -->
+        <section id="view-moves" class="dashboard-view hidden space-y-6">
+          <!-- Info Banner Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex items-start gap-4"
+          >
+            <div
+              class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5"
+            >
+              <span class="material-symbols-outlined text-[22px]"
+                >edit_calendar</span
+              >
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-gray-900">
+                Customer Move &amp; Reschedule Requests
+              </h2>
+              <p class="text-xs text-gray-500 mt-1 leading-relaxed">
+                Review reschedule requests submitted by customers for approved
+                reservations. Approving updates the booking times automatically.
+              </p>
+            </div>
+          </div>
+
+          <!-- Moves Table Card -->
+          <div
+            id="movesTableViewContainer"
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-700">
+                <thead
+                  class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
+                >
+                  <tr>
+                    <th class="py-3.5 px-6">Requester</th>
+                    <th class="py-3.5 px-6">Facility</th>
+                    <th class="py-3.5 px-6">Current Schedule</th>
+                    <th class="py-3.5 px-6">Requested New Times</th>
+                    <th class="py-3.5 px-6">Status</th>
+                    <th class="py-3.5 px-6 text-right">Decision</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="movesTableBody"
+                  class="divide-y divide-gray-100 font-normal"
+                >
+                  <tr>
+                    <td
+                      colspan="6"
+                      class="p-8 text-center text-gray-400 text-xs"
+                    >
+                      Loading move requests...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VIEW 5: CANCELLATION REQUESTS (Dedicated Sidebar View)                 -->
+        <!-- ===================================================================== -->
+        <section id="view-cancels" class="dashboard-view hidden space-y-6">
+          <!-- Info Banner Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex items-start gap-4"
+          >
+            <div
+              class="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 mt-0.5"
+            >
+              <span class="material-symbols-outlined text-[22px]"
+                >event_busy</span
+              >
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-gray-900">
+                Customer Cancellation Requests
+              </h2>
+              <p class="text-xs text-gray-500 mt-1 leading-relaxed">
+                Cancellation requests submitted by customers for approved
+                bookings. Approval officially cancels and releases the room.
+              </p>
+            </div>
+          </div>
+
+          <!-- Cancels Table Card -->
+          <div
+            id="cancelsTableViewContainer"
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-700">
+                <thead
+                  class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
+                >
+                  <tr>
+                    <th class="py-3.5 px-6">Requester</th>
+                    <th class="py-3.5 px-6">Facility</th>
+                    <th class="py-3.5 px-6">Scheduled Slot</th>
+                    <th class="py-3.5 px-6">Requester Reason</th>
+                    <th class="py-3.5 px-6">Status</th>
+                    <th class="py-3.5 px-6 text-right">Decision</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="cancelsTableBody"
+                  class="divide-y divide-gray-100 font-normal"
+                >
+                  <tr>
+                    <td
+                      colspan="6"
+                      class="p-8 text-center text-gray-400 text-xs"
+                    >
+                      Loading cancellation requests...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VIEW 6: CONFLICT OVERRIDE REQUESTS (Dedicated Sidebar View)           -->
+        <!-- ===================================================================== -->
+        <section id="view-overrides" class="dashboard-view hidden space-y-6">
+          <!-- Info Banner Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex items-start gap-4"
+          >
+            <div
+              class="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0 mt-0.5"
+            >
+              <span class="material-symbols-outlined text-[22px]"
+                >priority_high</span
+              >
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-gray-900">
+                Conflict Override Requests Queue
+              </h2>
+              <p class="text-xs text-gray-500 mt-1 leading-relaxed">
+                Requests submitted by users when their desired slot was already
+                occupied. Approving proposes moving the conflicting reservation;
+                rejecting requires a staff note.
+              </p>
+            </div>
+          </div>
+
+          <!-- Overrides Table Card -->
+          <div
+            id="overridesTableViewContainer"
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-700">
+                <thead
+                  class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
+                >
+                  <tr>
+                    <th class="py-3.5 px-6">Requester</th>
+                    <th class="py-3.5 px-6">Facility</th>
+                    <th class="py-3.5 px-6">Requested Slot</th>
+                    <th class="py-3.5 px-6">Conflicting Booking</th>
+                    <th class="py-3.5 px-6">Urgency Reason</th>
+                    <th class="py-3.5 px-6">Status</th>
+                    <th class="py-3.5 px-6 text-right">Decision</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="overridesTableBody"
+                  class="divide-y divide-gray-100 font-normal"
+                >
+                  <tr>
+                    <td
+                      colspan="7"
+                      class="p-8 text-center text-gray-400 text-xs"
+                    >
+                      Loading conflict override requests...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VIEW 7: USER DIRECTORY (Dedicated Sidebar View)                       -->
+        <!-- ===================================================================== -->
+        <section id="view-users" class="dashboard-view hidden space-y-6">
+          <!-- Controls Bar Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+          >
+            <div class="relative flex-1">
+              <span
+                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[19px]"
+                >search</span
+              >
+              <input
+                type="text"
+                id="userSearchInput"
+                placeholder="Search user by full name or university email address..."
+                class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] transition-all"
+              />
+            </div>
+            <div class="flex items-center gap-3">
+              <!-- Filter by Role -->
+              <select
+                id="userRoleFilter"
+                class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 font-medium focus:outline-none focus:border-[#7a1f2b]"
+              >
+                <option value="all">All Roles</option>
+                <option value="Admin">Admin</option>
+                <option value="Staff">Staff</option>
+                <option value="Customer">Customer</option>
+              </select>
+
+              <!-- Filter by Verification -->
+              <select
+                id="userVerifiedFilter"
+                class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 font-medium focus:outline-none focus:border-[#7a1f2b]"
+              >
+                <option value="all">All Verification</option>
+                <option value="verified">Verified Only</option>
+                <option value="unverified">Unverified Only</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Users Table Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-700">
+                <thead
+                  class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
+                >
+                  <tr>
+                    <th class="py-3.5 px-6">User Name</th>
+                    <th class="py-3.5 px-6">Email Address</th>
+                    <th class="py-3.5 px-6">Assigned Role</th>
+                    <th class="py-3.5 px-6">Account Verification</th>
+                    <th class="py-3.5 px-6">Registration Date</th>
+                    <th class="py-3.5 px-6 text-right">Role Management</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="usersTableBody"
+                  class="divide-y divide-gray-100 font-normal"
+                >
+                  <tr>
+                    <td
+                      colspan="6"
+                      class="p-8 text-center text-gray-400 text-xs"
+                    >
+                      Loading registered users directory...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VIEW 8: ACADEMIC CLASS SCHEDULES (Dedicated Sidebar View)             -->
+        <!-- ===================================================================== -->
+        <section id="view-classes" class="dashboard-view hidden space-y-6">
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4"
+          >
+            <div>
+              <h2 class="text-base font-bold text-gray-900">
+                Recurring Weekly Class Blocks
+              </h2>
+              <p class="text-xs text-gray-500 mt-1">
+                Class schedules automatically lock academic rooms to prevent
+                student reservation collisions.
+              </p>
+            </div>
+            <button
+              type="button"
+              id="openAddClassModalBtn"
+              class="px-5 py-2.5 bg-[#7a1f2b] hover:bg-[#5b0617] text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition-all flex items-center gap-2 self-start md:self-auto"
+            >
+              <span class="material-symbols-outlined text-[18px]">add</span>
+              <span>Add Class Block</span>
+            </button>
+          </div>
+
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-700">
+                <thead
+                  class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
+                >
+                  <tr>
+                    <th class="py-3.5 px-6">Room / Facility</th>
+                    <th class="py-3.5 px-6">Course Code</th>
+                    <th class="py-3.5 px-6">Section</th>
+                    <th class="py-3.5 px-6">Weekday</th>
+                    <th class="py-3.5 px-6">Time Window</th>
+                    <th class="py-3.5 px-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="classesTableBody"
+                  class="divide-y divide-gray-100 font-normal"
+                >
+                  <tr>
+                    <td
+                      colspan="6"
+                      class="p-8 text-center text-gray-400 text-xs"
+                    >
+                      Loading class schedules...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VIEW 9: UNIVERSITY HOLIDAYS (Dedicated Sidebar View)                  -->
+        <!-- ===================================================================== -->
+        <section id="view-holidays" class="dashboard-view hidden space-y-6">
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4"
+          >
+            <div>
+              <h2 class="text-base font-bold text-gray-900">
+                University Holidays &amp; Campus Closures
+              </h2>
+              <p class="text-xs text-gray-500 mt-1">
+                Declared holiday closures automatically prohibit all room
+                reservations.
+              </p>
+            </div>
+            <button
+              type="button"
+              id="openAddHolidayModalBtn"
+              class="px-5 py-2.5 bg-[#7a1f2b] hover:bg-[#5b0617] text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition-all flex items-center gap-2 self-start md:self-auto"
+            >
+              <span class="material-symbols-outlined text-[18px]">add</span>
+              <span>Declare Holiday</span>
+            </button>
+          </div>
+
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-700">
+                <thead
+                  class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
+                >
+                  <tr>
+                    <th class="py-3.5 px-6">Calendar Date</th>
+                    <th class="py-3.5 px-6">Holiday Name</th>
+                    <th class="py-3.5 px-6">Holiday Classification</th>
+                    <th class="py-3.5 px-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="holidaysTableBody"
+                  class="divide-y divide-gray-100 font-normal"
+                >
+                  <tr>
+                    <td
+                      colspan="4"
+                      class="p-8 text-center text-gray-400 text-xs"
+                    >
+                      Loading holiday calendars...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VIEW 10: SYSTEM CONFIGURATION (Dedicated Sidebar View)                -->
+        <!-- ===================================================================== -->
+        <section id="view-config" class="dashboard-view hidden space-y-6">
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-7"
+          >
+            <div class="max-w-3xl">
+              <div class="flex items-center gap-2 mb-2">
+                <span
+                  class="material-symbols-outlined text-[#7a1f2b] text-[24px]"
+                  >tune</span
+                >
+                <h2 class="text-lg font-bold text-gray-900">
+                  Institution Operating Hours &amp; Reservation Policy
+                </h2>
+              </div>
+              <p class="text-xs text-gray-500 mb-6 leading-relaxed">
+                Configure institution-wide operational hours and campus closure
+                days. Student and faculty reservations cannot be scheduled
+                outside operational hours or on declared closed days.
+              </p>
+
+              <form id="systemSettingsForm" class="space-y-6">
+                <!-- Hours of Operation Card -->
+                <div
+                  class="bg-gray-50/70 p-6 rounded-2xl border border-gray-100 space-y-4"
+                >
+                  <h3
+                    class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2"
+                  >
+                    <span
+                      class="material-symbols-outlined text-[18px] text-[#7a1f2b]"
+                      >schedule</span
+                    >
+                    <span>Facility Operational Hours (Asia/Manila)</span>
+                  </h3>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                      <label
+                        class="block text-xs font-semibold text-gray-700 mb-1"
+                        for="configHoursStart"
+                        >Opening Time (Start of Day) *</label
+                      >
+                      <input
+                        type="time"
+                        id="configHoursStart"
+                        required
+                        step="1800"
+                        class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+                      />
+                      <p class="text-[11px] text-gray-400 mt-1">
+                        Default: 06:00 (6:00 AM)
+                      </p>
+                    </div>
+                    <div>
+                      <label
+                        class="block text-xs font-semibold text-gray-700 mb-1"
+                        for="configHoursEnd"
+                        >Closing Time (End of Day) *</label
+                      >
+                      <input
+                        type="time"
+                        id="configHoursEnd"
+                        required
+                        step="1800"
+                        class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+                      />
+                      <p class="text-[11px] text-gray-400 mt-1">
+                        Default: 21:00 (9:00 PM)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Closed Days of Week Card -->
+                <div
+                  class="bg-gray-50/70 p-6 rounded-2xl border border-gray-100 space-y-4"
+                >
+                  <h3
+                    class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2"
+                  >
+                    <span
+                      class="material-symbols-outlined text-[18px] text-[#7a1f2b]"
+                      >event_busy</span
+                    >
+                    <span>Closed Days of the Week</span>
+                  </h3>
+                  <p class="text-xs text-gray-500">
+                    Select days when all campus facilities are closed to
+                    reservations (e.g. Sunday).
+                  </p>
+                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                    <label
+                      class="flex items-center gap-2.5 p-3 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 cursor-pointer hover:border-gray-300"
+                    >
+                      <input
+                        type="checkbox"
+                        id="closedDaySunday"
+                        name="configClosedDays"
+                        value="Sunday"
+                        class="rounded text-[#7a1f2b] focus:ring-[#7a1f2b]"
+                      />
+                      <span>Sunday</span>
+                    </label>
+                    <label
+                      class="flex items-center gap-2.5 p-3 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 cursor-pointer hover:border-gray-300"
+                    >
+                      <input
+                        type="checkbox"
+                        id="closedDayMonday"
+                        name="configClosedDays"
+                        value="Monday"
+                        class="rounded text-[#7a1f2b] focus:ring-[#7a1f2b]"
+                      />
+                      <span>Monday</span>
+                    </label>
+                    <label
+                      class="flex items-center gap-2.5 p-3 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 cursor-pointer hover:border-gray-300"
+                    >
+                      <input
+                        type="checkbox"
+                        id="closedDayTuesday"
+                        name="configClosedDays"
+                        value="Tuesday"
+                        class="rounded text-[#7a1f2b] focus:ring-[#7a1f2b]"
+                      />
+                      <span>Tuesday</span>
+                    </label>
+                    <label
+                      class="flex items-center gap-2.5 p-3 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 cursor-pointer hover:border-gray-300"
+                    >
+                      <input
+                        type="checkbox"
+                        id="closedDayWednesday"
+                        name="configClosedDays"
+                        value="Wednesday"
+                        class="rounded text-[#7a1f2b] focus:ring-[#7a1f2b]"
+                      />
+                      <span>Wednesday</span>
+                    </label>
+                    <label
+                      class="flex items-center gap-2.5 p-3 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 cursor-pointer hover:border-gray-300"
+                    >
+                      <input
+                        type="checkbox"
+                        id="closedDayThursday"
+                        name="configClosedDays"
+                        value="Thursday"
+                        class="rounded text-[#7a1f2b] focus:ring-[#7a1f2b]"
+                      />
+                      <span>Thursday</span>
+                    </label>
+                    <label
+                      class="flex items-center gap-2.5 p-3 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 cursor-pointer hover:border-gray-300"
+                    >
+                      <input
+                        type="checkbox"
+                        id="closedDayFriday"
+                        name="configClosedDays"
+                        value="Friday"
+                        class="rounded text-[#7a1f2b] focus:ring-[#7a1f2b]"
+                      />
+                      <span>Friday</span>
+                    </label>
+                    <label
+                      class="flex items-center gap-2.5 p-3 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 cursor-pointer hover:border-gray-300"
+                    >
+                      <input
+                        type="checkbox"
+                        id="closedDaySaturday"
+                        name="configClosedDays"
+                        value="Saturday"
+                        class="rounded text-[#7a1f2b] focus:ring-[#7a1f2b]"
+                      />
+                      <span>Saturday</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    id="btn-reload-settings"
+                    class="px-5 py-2.5 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+                  >
+                    Reset to Saved
+                  </button>
+                  <button
+                    type="submit"
+                    id="btn-save-settings"
+                    class="px-6 py-2.5 text-xs font-bold text-white bg-[#7a1f2b] hover:bg-[#5b0617] rounded-xl shadow-sm transition-all flex items-center gap-2"
+                  >
+                    <span class="material-symbols-outlined text-[17px]"
+                      >save</span
+                    >
+                    <span>Save Policy Changes</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VIEW 10b: DATA ARCHIVES (30-Day Retention Governance)                 -->
+        <!-- ===================================================================== -->
+        <section id="view-archives" class="dashboard-view hidden space-y-6">
+          <!-- Page Header Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0"
+              >
+                <span class="material-symbols-outlined text-[24px]">inventory_2</span>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-gray-900 tracking-tight">
+                  Data Archives
+                </h2>
+                <p class="text-xs text-gray-500 mt-0.5">
+                  Institutional record retention &amp; automated 30-day purge management
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <button
+                type="button"
+                id="btnRefreshArchives"
+                class="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl border border-gray-200 transition-all flex items-center gap-1.5 shadow-sm"
+              >
+                <span class="material-symbols-outlined text-[17px]">sync</span>
+                <span>Refresh Archives</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Archival Policy Info Banner -->
+          <div
+            class="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3.5"
+          >
+            <div
+              class="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 mt-0.5"
+            >
+              <span class="material-symbols-outlined text-[20px]">policy</span>
+            </div>
+            <div class="text-xs text-amber-950 leading-relaxed">
+              <span class="font-bold text-amber-900">Automated 30-Day Archival Policy:</span>
+              In accordance with university records management standards, all deleted class schedules, university closures, and removed or revoked reservations are preserved in this secure archive. Records are retained for <strong>30 calendar days</strong> before permanent system purge.
+            </div>
+          </div>
+
+          <!-- Archival Stats Grid -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <span class="text-xs font-semibold text-gray-500">Total In Archive</span>
+              <p class="text-2xl font-bold text-gray-900 mt-1" id="statArchiveTotal">0</p>
+              <span class="text-[11px] text-gray-400 mt-1 block">Preserved records</span>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <span class="text-xs font-semibold text-gray-500">Class Schedules</span>
+              <p class="text-2xl font-bold text-blue-700 mt-1" id="statArchiveClasses">0</p>
+              <span class="text-[11px] text-gray-400 mt-1 block">Deleted blocks</span>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <span class="text-xs font-semibold text-gray-500">Holiday Closures</span>
+              <p class="text-2xl font-bold text-purple-700 mt-1" id="statArchiveHolidays">0</p>
+              <span class="text-[11px] text-gray-400 mt-1 block">Deleted calendar dates</span>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <span class="text-xs font-semibold text-gray-500">Reservations</span>
+              <p class="text-2xl font-bold text-amber-700 mt-1" id="statArchiveReservations">0</p>
+              <span class="text-[11px] text-gray-400 mt-1 block">Revoked / Removed</span>
+            </div>
+          </div>
+
+          <!-- Search & Filter Controls Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+          >
+            <div class="relative flex-1">
+              <span
+                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[19px]"
+                >search</span
+              >
+              <input
+                type="text"
+                id="archiveSearchInput"
+                placeholder="Search archives by description, ID, or reason..."
+                class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] transition-all"
+              />
+            </div>
+            <div class="flex items-center gap-3">
+              <select
+                id="archiveTypeFilter"
+                class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 font-medium focus:outline-none focus:border-[#7a1f2b]"
+              >
+                <option value="all">All Archive Types</option>
+                <option value="classschedules">Class Schedules</option>
+                <option value="holidays">University Holidays</option>
+                <option value="reservations">Reservations</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Archives Table Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-700">
+                <thead
+                  class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
+                >
+                  <tr>
+                    <th class="py-3.5 px-6">Record Description</th>
+                    <th class="py-3.5 px-6">Entity Type</th>
+                    <th class="py-3.5 px-6">Archived At</th>
+                    <th class="py-3.5 px-6">Archived By</th>
+                    <th class="py-3.5 px-6">Retention Status</th>
+                    <th class="py-3.5 px-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="archivesTableBody"
+                  class="divide-y divide-gray-100 font-normal"
+                >
+                  <tr>
+                    <td
+                      colspan="6"
+                      class="p-8 text-center text-gray-400 text-xs"
+                    >
+                      Loading archived records...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VIEW 11: SYSTEM AUDIT LOGS (Dedicated Sidebar View)                   -->
+        <!-- ===================================================================== -->
+        <section id="view-logs" class="dashboard-view hidden space-y-6">
+          <!-- Search Control Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+          >
+            <div class="relative flex-1">
+              <span
+                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[19px]"
+                >search</span
+              >
+              <input
+                type="text"
+                id="logSearchInput"
+                placeholder="Filter audit trail by action keyword or user ID..."
+                class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] transition-all"
+              />
+            </div>
+            <button
+              type="button"
+              id="btn-search-logs"
+              class="px-5 py-2.5 bg-gray-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 self-start md:self-auto"
+            >
+              <span class="material-symbols-outlined text-[17px]"
+                >filter_alt</span
+              >
+              <span>Search Logs</span>
+            </button>
+          </div>
+
+          <!-- Logs Table Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-gray-700">
+                <thead
+                  class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
+                >
+                  <tr>
+                    <th class="py-3.5 px-6">Timestamp (Manila)</th>
+                    <th class="py-3.5 px-6">User / Actor ID</th>
+                    <th class="py-3.5 px-6">Audit Description</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="logsTableBody"
+                  class="divide-y divide-gray-100 font-normal"
+                >
+                  <tr>
+                    <td
+                      colspan="3"
+                      class="p-8 text-center text-gray-400 text-xs"
+                    >
+                      Loading complete audit logs...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- Log Pagination -->
+            <div
+              class="p-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500"
+            >
+              <span id="logPageIndicator">Page 1</span>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  id="btn-log-prev"
+                  class="px-3.5 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  id="btn-log-next"
+                  class="px-3.5 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- ========================================================================= -->
+    <!-- 4. MODALS & DIALOGS (Rounded-2xl Elevated Containers)                      -->
+    <!-- ========================================================================= -->
+
+    <!-- Modal 1: Add Facility Modal -->
+    <div
+      id="addFacilityModal"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
+    >
+      <div
+        class="bg-white w-[92%] max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        <div
+          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50"
+        >
+          <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[#7a1f2b]"
+              >add_home_work</span
+            >
+            <span>Create New Facility</span>
+          </h3>
+          <button
+            type="button"
+            data-modal-close="addFacilityModal"
+            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <form id="addFacilityForm" class="p-6 space-y-4 overflow-y-auto">
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-700 mb-1"
+              for="newRoomName"
+              >Facility Name *</label
+            >
+            <input
+              type="text"
+              id="newRoomName"
+              required
+              placeholder="e.g. Science Lab 402"
+              class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+            />
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-700 mb-1"
+                for="newRoomType"
+                >Room Type *</label
+              >
+              <select
+                id="newRoomType"
+                required
+                class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+              >
+                <option value="Laboratory">Laboratory</option>
+                <option value="Lecture Hall">Lecture Hall</option>
+                <option value="AVR">Audio-Visual Room (AVR)</option>
+                <option value="Seminar Room">Seminar Room</option>
+                <option value="Conference">Conference Room</option>
+                <option value="Studio">Studio</option>
+                <option value="Gymnasium">Gymnasium</option>
+              </select>
+            </div>
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-700 mb-1"
+                for="newRoomFloor"
+                >Floor Number *</label
+              >
+              <input
+                type="number"
+                id="newRoomFloor"
+                required
+                min="1"
+                max="15"
+                value="1"
+                class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+              />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-700 mb-1"
+                for="newRoomCapacity"
+                >Capacity (Persons) *</label
+              >
+              <input
+                type="number"
+                id="newRoomCapacity"
+                required
+                min="1"
+                max="1000"
+                placeholder="e.g. 40"
+                class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+              />
+            </div>
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-700 mb-1"
+                for="newRoomStatus"
+                >Initial Status</label
+              >
+              <select
+                id="newRoomStatus"
+                class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+              >
+                <option value="Available">Available</option>
+                <option value="Maintenance">Maintenance</option>
+              </select>
+            </div>
+          </div>
+          <div class="pt-4 border-t border-gray-100 flex justify-end gap-3">
+            <button
+              type="button"
+              data-modal-close="addFacilityModal"
+              class="px-4 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-5 py-2.5 text-xs font-bold text-white bg-[#7a1f2b] hover:bg-[#5b0617] rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+            >
+              <span class="material-symbols-outlined text-[17px]">save</span>
+              <span>Save Facility</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 2: Edit Facility Modal -->
+    <div
+      id="editFacilityModal"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
+    >
+      <div
+        class="bg-white w-[92%] max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        <div
+          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50"
+        >
+          <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[#7a1f2b]"
+              >edit_note</span
+            >
+            <span>Edit Facility Specifications</span>
+          </h3>
+          <button
+            type="button"
+            data-modal-close="editFacilityModal"
+            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <form id="editFacilityForm" class="p-6 space-y-4 overflow-y-auto">
+          <input type="hidden" id="editRoomId" />
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-700 mb-1"
+              for="editRoomName"
+              >Facility Name *</label
+            >
+            <input
+              type="text"
+              id="editRoomName"
+              required
+              class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+            />
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-700 mb-1"
+                for="editRoomType"
+                >Room Type</label
+              >
+              <select
+                id="editRoomType"
+                required
+                class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+              >
+                <option value="Laboratory">Laboratory</option>
+                <option value="Lecture Hall">Lecture Hall</option>
+                <option value="AVR">Audio-Visual Room (AVR)</option>
+                <option value="Seminar Room">Seminar Room</option>
+                <option value="Conference">Conference Room</option>
+                <option value="Studio">Studio</option>
+                <option value="Gymnasium">Gymnasium</option>
+              </select>
+            </div>
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-700 mb-1"
+                for="editRoomFloor"
+                >Floor Number</label
+              >
+              <input
+                type="number"
+                id="editRoomFloor"
+                required
+                min="1"
+                max="15"
+                class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+              />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-700 mb-1"
+                for="editRoomCapacity"
+                >Capacity (Persons)</label
+              >
+              <input
+                type="number"
+                id="editRoomCapacity"
+                required
+                min="1"
+                max="1000"
+                class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+              />
+            </div>
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-700 mb-1"
+                for="editRoomStatus"
+                >Status</label
+              >
+              <select
+                id="editRoomStatus"
+                class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+              >
+                <option value="Available">Available</option>
+                <option value="Maintenance">Maintenance</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-700 mb-1"
+              for="editRoomIsActive"
+              >Lifecycle Status</label
+            >
+            <select
+              id="editRoomIsActive"
+              class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+            >
+              <option value="true">Active (Visible for Booking)</option>
+              <option value="false">Decommissioned / Inactive</option>
+            </select>
+          </div>
+          <div class="pt-4 border-t border-gray-100 flex justify-end gap-3">
+            <button
+              type="button"
+              data-modal-close="editFacilityModal"
+              class="px-4 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-5 py-2.5 text-xs font-bold text-white bg-[#7a1f2b] hover:bg-[#5b0617] rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+            >
+              <span class="material-symbols-outlined text-[17px]">update</span>
+              <span>Update Facility</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 3: Room Schedule Inspector Modal -->
+    <div
+      id="roomScheduleModal"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
+    >
+      <div
+        class="bg-white w-[94%] max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        <div
+          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50"
+        >
+          <div>
+            <h3
+              id="scheduleModalTitle"
+              class="text-base font-bold text-gray-900"
+            >
+              Room Schedule Inspector
+            </h3>
+            <p id="scheduleModalSubtitle" class="text-xs text-gray-500 mt-0.5">
+              Upcoming commitments and class schedules
+            </p>
+          </div>
+          <button
+            type="button"
+            data-modal-close="roomScheduleModal"
+            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <div class="p-6 overflow-y-auto space-y-6">
+          <div>
+            <h4
+              class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5"
+            >
+              <span class="material-symbols-outlined text-[16px] text-[#7a1f2b]"
+                >schedule</span
+              >
+              <span>Recurring Weekly Classes</span>
+            </h4>
+            <div id="roomScheduleClassesList" class="space-y-2">
+              <p class="text-xs text-gray-400">Loading recurring classes...</p>
+            </div>
+          </div>
+          <div>
+            <h4
+              class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5"
+            >
+              <span class="material-symbols-outlined text-[16px] text-amber-600"
+                >event_available</span
+              >
+              <span>Upcoming Approved Reservations (Next 14 Days)</span>
+            </h4>
+            <div id="roomScheduleReservationsList" class="space-y-2">
+              <p class="text-xs text-gray-400">
+                Loading scheduled reservations...
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 4: Reservation Details & Audit Trail Modal -->
+    <div
+      id="resDetailsModal"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
+    >
+      <div
+        class="bg-white w-[94%] max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        <div
+          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50"
+        >
+          <div>
+            <h3 id="resDetailsTitle" class="text-base font-bold text-gray-900">
+              Reservation Details
+            </h3>
+            <p id="resDetailsSubtitle" class="text-xs text-gray-500 mt-0.5">
+              Comprehensive audit trail and request specifications
+            </p>
+          </div>
+          <button
+            type="button"
+            data-modal-close="resDetailsModal"
+            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <div class="p-6 overflow-y-auto space-y-6">
+          <div id="resDetailsContent" class="space-y-4"></div>
+          <div class="border-t border-gray-100 pt-5">
+            <h4
+              class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5"
+            >
+              <span class="material-symbols-outlined text-[16px] text-[#7a1f2b]"
+                >history</span
+              >
+              <span>Booking Audit Trail</span>
+            </h4>
+            <div id="resDetailsAuditList" class="space-y-2.5">
+              <p class="text-xs text-gray-400">Loading audit trail...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 5: Admin Cancel Reservation Modal -->
+    <div
+      id="adminCancelModal"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
+    >
+      <div
+        class="bg-white w-[92%] max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+      >
+        <div
+          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-red-50/50"
+        >
+          <h3 class="text-base font-bold text-red-900 flex items-center gap-2">
+            <span class="material-symbols-outlined text-red-600"
+              >event_busy</span
+            >
+            <span>Administrative Cancellation</span>
+          </h3>
+          <button
+            type="button"
+            data-modal-close="adminCancelModal"
+            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <form id="adminCancelForm" class="p-6 space-y-4">
+          <input type="hidden" id="cancelReservationId" />
+          <p class="text-xs text-gray-600 leading-relaxed">
+            You are overriding and cancelling this reservation. University
+            policy requires providing a reason for the audit trail.
+          </p>
+          <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
+            <span class="material-symbols-outlined text-[17px] text-amber-600 shrink-0">inventory_2</span>
+            <div>
+              <strong>30-Day Archival Policy:</strong> Revoking this permit immediately releases the facility slot and preserves the booking snapshot in the Data Archive for 30 days before permanent deletion.
+            </div>
+          </div>
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-700 mb-1"
+              for="adminCancelReason"
+              >Cancellation Reason *</label
+            >
+            <textarea
+              id="adminCancelReason"
+              required
+              rows="3"
+              placeholder="e.g. Facility required for urgent university institutional emergency..."
+              class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-red-600 resize-none"
+            ></textarea>
+          </div>
+          <div class="pt-3 border-t border-gray-100 flex justify-end gap-3">
+            <button
+              type="button"
+              data-modal-close="adminCancelModal"
+              class="px-4 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
+            >
+              Dismiss
+            </button>
+            <button
+              type="submit"
+              class="px-5 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+            >
+              <span class="material-symbols-outlined text-[17px]"
+                >check_circle</span
+              >
+              <span>Confirm Cancellation</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 6: Move Request Review Modal -->
+    <div
+      id="moveReviewModal"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
+    >
+      <div
+        class="bg-white w-[92%] max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+      >
+        <div
+          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-blue-50/50"
+        >
+          <h3 class="text-base font-bold text-blue-900 flex items-center gap-2">
+            <span class="material-symbols-outlined text-blue-600"
+              >edit_calendar</span
+            >
+            <span>Review Move Request</span>
+          </h3>
+          <button
+            type="button"
+            data-modal-close="moveReviewModal"
+            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <input type="hidden" id="moveRequestId" />
+          <div
+            id="moveReviewSummary"
+            class="text-xs text-gray-600 space-y-2"
+          ></div>
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-700 mb-1"
+              for="moveStaffComment"
+              >Staff Comment (Mandatory on Rejection)</label
+            >
+            <textarea
+              id="moveStaffComment"
+              rows="2"
+              placeholder="Provide note or justification..."
+              class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b] resize-none"
+            ></textarea>
+          </div>
+          <div class="pt-3 border-t border-gray-100 flex justify-end gap-2.5">
+            <button
+              type="button"
+              id="btn-reject-move"
+              class="px-4 py-2.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all"
+            >
+              Reject Move
+            </button>
+            <button
+              type="button"
+              id="btn-approve-move"
+              class="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+            >
+              <span class="material-symbols-outlined text-[17px]">check</span>
+              <span>Approve Move</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 7: Cancellation Request Review Modal -->
+    <div
+      id="cancelReviewModal"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
+    >
+      <div
+        class="bg-white w-[92%] max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+      >
+        <div
+          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-red-50/50"
+        >
+          <h3 class="text-base font-bold text-red-900 flex items-center gap-2">
+            <span class="material-symbols-outlined text-red-600"
+              >event_busy</span
+            >
+            <span>Review Cancellation Request</span>
+          </h3>
+          <button
+            type="button"
+            data-modal-close="cancelReviewModal"
+            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <input type="hidden" id="cancelRequestId" />
+          <div
+            id="cancelReviewSummary"
+            class="text-xs text-gray-600 space-y-2"
+          ></div>
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-700 mb-1"
+              for="cancelStaffComment"
+              >Staff Comment (Mandatory on Rejection)</label
+            >
+            <textarea
+              id="cancelStaffComment"
+              rows="2"
+              placeholder="Provide note or justification..."
+              class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b] resize-none"
+            ></textarea>
+          </div>
+          <div class="pt-3 border-t border-gray-100 flex justify-end gap-2.5">
+            <button
+              type="button"
+              id="btn-reject-cancel-req"
+              class="px-4 py-2.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+            >
+              Decline Request
+            </button>
+            <button
+              type="button"
+              id="btn-approve-cancel-req"
+              class="px-5 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+            >
+              <span class="material-symbols-outlined text-[17px]"
+                >done_all</span
+              >
+              <span>Confirm &amp; Release Room</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 8: Conflict Override Request Review Modal -->
+    <div
+      id="conflictOverrideModal"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
+    >
+      <div
+        class="bg-white w-[92%] max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        <div
+          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-violet-50/50"
+        >
+          <h3
+            class="text-base font-bold text-violet-900 flex items-center gap-2"
+          >
+            <span class="material-symbols-outlined text-violet-600"
+              >priority_high</span
+            >
+            <span>Review Conflict Override Request</span>
+          </h3>
+          <button
+            type="button"
+            data-modal-close="conflictOverrideModal"
+            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <div class="p-6 space-y-4 overflow-y-auto">
+          <input type="hidden" id="overrideRequestId" />
+          <div
+            id="overrideReviewSummary"
+            class="text-xs text-gray-700 space-y-2 p-3 bg-gray-50 rounded-xl"
+          ></div>
+          <fieldset
+            class="p-4 rounded-xl border border-violet-100 bg-violet-50/50 space-y-3"
+          >
+            <legend
+              class="px-1 text-[11px] font-bold uppercase tracking-wider text-violet-700"
+            >
+              If Approving: Propose Moving Conflicting Booking To
+            </legend>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label
+                  class="block text-xs font-semibold text-gray-700 mb-1"
+                  for="overrideMoveDate"
+                  >Move Date</label
+                >
+                <input
+                  type="date"
+                  id="overrideMoveDate"
+                  class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-violet-600"
+                />
+              </div>
+              <div>
+                <label
+                  class="block text-xs font-semibold text-gray-700 mb-1"
+                  for="overrideMoveStart"
+                  >Start Time</label
+                >
+                <input
+                  type="time"
+                  step="1800"
+                  id="overrideMoveStart"
+                  class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-violet-600"
+                />
+              </div>
+              <div>
+                <label
+                  class="block text-xs font-semibold text-gray-700 mb-1"
+                  for="overrideMoveEnd"
+                  >End Time</label
+                >
+                <input
+                  type="time"
+                  step="1800"
+                  id="overrideMoveEnd"
+                  class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-violet-600"
+                />
+              </div>
+            </div>
+            <p
+              id="overrideMoveHint"
+              class="text-[11px] text-gray-500 italic"
+            ></p>
+          </fieldset>
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-700 mb-1"
+              for="overrideStaffComment"
+              >Staff Comment
+              <span class="font-normal text-gray-400"
+                >(Mandatory on rejection)</span
+              ></label
+            >
+            <textarea
+              id="overrideStaffComment"
+              rows="2"
+              maxlength="500"
+              placeholder="Provide note or justification..."
+              class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-violet-600 resize-none"
+            ></textarea>
+          </div>
+          <div
+            id="overrideErrorMsg"
+            class="hidden text-xs text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-100 font-medium"
+          ></div>
+          <div class="pt-3 border-t border-gray-100 flex justify-end gap-2.5">
+            <button
+              type="button"
+              data-modal-close="conflictOverrideModal"
+              class="px-4 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              id="btn-reject-override"
+              class="px-4 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all"
+            >
+              Reject Override
+            </button>
+            <button
+              type="button"
+              id="btn-approve-override"
+              class="px-5 py-2 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+            >
+              <span class="material-symbols-outlined text-[17px]">done</span>
+              <span>Approve &amp; Propose Move</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 9: Change User Role Modal -->
+    <div
+      id="changeRoleModal"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
+    >
+      <div
+        class="bg-white w-[92%] max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+      >
+        <div
+          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50"
+        >
+          <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[#7a1f2b]"
+              >manage_accounts</span
+            >
+            <span>Assign User Role</span>
+          </h3>
+          <button
+            type="button"
+            data-modal-close="changeRoleModal"
+            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <form id="changeRoleForm" class="p-6 space-y-4">
+          <input type="hidden" id="changeRoleUserId" />
+          <div>
+            <p id="changeRoleUserName" class="text-sm font-bold text-gray-900">
+              User Name
+            </p>
+            <p id="changeRoleUserEmail" class="text-xs text-gray-500">
+              user@bpu.edu.ph
+            </p>
+          </div>
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-700 mb-1"
+              for="newAssignedRole"
+              >Select System Role *</label
+            >
+            <select
+              id="newAssignedRole"
+              class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+            >
+              <option value="Customer">
+                Customer (Standard Student / Faculty)
+              </option>
+              <option value="Staff">
+                Staff (Facility Custodian &amp; Approver)
+              </option>
+              <option value="Admin">Admin (Administrator)</option>
+            </select>
+          </div>
+          <!-- Dynamic Role Privilege Notice -->
+          <div
+            id="rolePrivilegeNotice"
+            class="p-3 rounded-xl text-xs flex items-start gap-2.5 bg-blue-50/80 border border-blue-100 text-blue-900 transition-all"
+          >
+            <span class="material-symbols-outlined text-[17px] text-blue-600 shrink-0">info</span>
+            <div id="rolePrivilegeText" class="leading-relaxed">
+              Standard user permissions: Can browse available rooms, submit booking requests, and manage personal reservations.
+            </div>
+          </div>
+          <div class="pt-3 border-t border-gray-100 flex justify-end gap-3">
+            <button
+              type="button"
+              data-modal-close="changeRoleModal"
+              class="px-4 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-5 py-2.5 text-xs font-bold text-white bg-[#7a1f2b] hover:bg-[#5b0617] rounded-xl shadow-sm transition-all"
+            >
+              Update Role
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 9b: Archive Record Details Modal (30-Day Retention) -->
+    <div
+      id="archiveDetailModal"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
+    >
+      <div
+        class="bg-white w-[92%] max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[19px]">inventory_2</span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-gray-900">Archived Record Details</h3>
+              <p class="text-[11px] text-gray-500">30-day retention repository snapshot</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            data-modal-close="archiveDetailModal"
+            class="text-gray-400 hover:text-gray-600 p-1"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <div class="p-6 space-y-4 overflow-y-auto text-xs text-gray-700">
+          <div class="p-3 bg-gray-50 rounded-xl space-y-1.5 border border-gray-100">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-500">Record Type:</span>
+              <span id="archiveDetailType" class="font-bold text-gray-900">—</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-500">Record Summary:</span>
+              <span id="archiveDetailSummary" class="font-semibold text-gray-800 text-right">—</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-500">Archived At:</span>
+              <span id="archiveDetailArchivedAt" class="font-mono text-gray-700">—</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-500">Purge Scheduled:</span>
+              <span id="archiveDetailPurgeAt" class="font-mono text-amber-700 font-bold">—</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-500">Archived By:</span>
+              <span id="archiveDetailActor" class="text-gray-800 font-medium">—</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-500">Retention Status:</span>
+              <span id="archiveDetailRetention" class="font-bold text-emerald-700">—</span>
+            </div>
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1.5">Original Snapshot Payload (JSON)</label>
+            <pre id="archiveDetailJson" class="p-3 bg-gray-900 text-gray-100 font-mono text-[11px] rounded-xl overflow-x-auto max-h-56 leading-relaxed"></pre>
+          </div>
+        </div>
+        <div class="px-6 py-3 border-t border-gray-100 flex justify-end">
+          <button
+            type="button"
+            data-modal-close="archiveDetailModal"
+            class="px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 10: Add Class Schedule Modal -->
+    <div
+      id="addClassModal"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
+    >
+      <div
+        class="bg-white w-[92%] max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        <div
+          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50"
+        >
+          <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[#7a1f2b]"
+              >calendar_month</span
+            >
+            <span>Add Recurring Academic Class</span>
+          </h3>
+          <button
+            type="button"
+            data-modal-close="addClassModal"
+            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <form id="addClassForm" class="p-6 space-y-4 overflow-y-auto">
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-700 mb-1"
+              for="classRoomSelect"
+              >Target Facility *</label
+            >
+            <select
+              id="classRoomSelect"
+              required
+              class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+            >
+              <option value="">Select a room...</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-700 mb-1"
+                for="classCourseCode"
+                >Course Code *</label
+              >
+              <input
+                type="text"
+                id="classCourseCode"
+                required
+                maxlength="50"
+                placeholder="e.g. CS-301"
+                class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+              />
+            </div>
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-700 mb-1"
+                for="classSection"
+                >Section *</label
+              >
+              <input
+                type="text"
+                id="classSection"
+                required
+                maxlength="20"
+                placeholder="e.g. BSIT-3B"
+                class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+              />
+            </div>
+          </div>
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-700 mb-1"
+              for="classDayOfWeek"
+              >Day of Week *</label
+            >
+            <select
+              id="classDayOfWeek"
+              required
+              class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+            >
+              <option value="Monday">Monday</option>
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday">Friday</option>
+              <option value="Saturday">Saturday</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-700 mb-1"
+                for="classStartTime"
+                >Start Time *</label
+              >
+              <input
+                type="time"
+                id="classStartTime"
+                required
+                step="1800"
+                class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+              />
+            </div>
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-700 mb-1"
+                for="classEndTime"
+                >End Time *</label
+              >
+              <input
+                type="time"
+                id="classEndTime"
+                required
+                step="1800"
+                class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+              />
+            </div>
+          </div>
+          <div class="pt-3 border-t border-gray-100 flex justify-end gap-3">
+            <button
+              type="button"
+              data-modal-close="addClassModal"
+              class="px-4 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-5 py-2.5 text-xs font-bold text-white bg-[#7a1f2b] hover:bg-[#5b0617] rounded-xl shadow-sm transition-all"
+            >
+              Add Class Schedule
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 11: Add Holiday Modal -->
+    <div
+      id="addHolidayModal"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
+    >
+      <div
+        class="bg-white w-[92%] max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+      >
+        <div
+          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50"
+        >
+          <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[#7a1f2b]"
+              >holiday_village</span
+            >
+            <span>Declare University Holiday</span>
+          </h3>
+          <button
+            type="button"
+            data-modal-close="addHolidayModal"
+            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <form id="addHolidayForm" class="p-6 space-y-4">
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-700 mb-1"
+              for="newHolidayDate"
+              >Holiday Date *</label
+            >
+            <input
+              type="date"
+              id="newHolidayDate"
+              required
+              class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-700 mb-1"
+              for="newHolidayName"
+              >Holiday Name *</label
+            >
+            <input
+              type="text"
+              id="newHolidayName"
+              required
+              maxlength="100"
+              placeholder="e.g. University Foundation Day"
+              class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-700 mb-1"
+              for="newHolidayType"
+              >Classification *</label
+            >
+            <select
+              id="newHolidayType"
+              required
+              class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+            >
+              <option value="Regular">Regular Holiday</option>
+              <option value="Special Non-Working">
+                Special Non-Working Holiday
+              </option>
+            </select>
+          </div>
+          <div class="pt-3 border-t border-gray-100 flex justify-end gap-3">
+            <button
+              type="button"
+              data-modal-close="addHolidayModal"
+              class="px-4 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-5 py-2.5 text-xs font-bold text-white bg-[#7a1f2b] hover:bg-[#5b0617] rounded-xl shadow-sm transition-all"
+            >
+              Declare Holiday
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 12: Generic Confirmation Modal -->
+    <div
+      id="confirmModal"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
+    >
+      <div
+        class="bg-white w-[90%] max-w-sm rounded-2xl shadow-2xl p-6 flex flex-col text-center"
+      >
+        <div
+          id="confirmModalIconContainer"
+          class="w-12 h-12 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center mb-4"
+        >
+          <span
+            id="confirmModalIcon"
+            class="material-symbols-outlined text-[28px]"
+            >warning</span
+          >
+        </div>
+        <h3
+          id="confirmModalTitle"
+          class="text-base font-bold text-gray-900 mb-1.5"
+        >
+          Confirm Action
+        </h3>
+        <p
+          id="confirmModalMessage"
+          class="text-xs text-gray-600 mb-6 leading-relaxed"
+        >
+          Are you sure you want to proceed with this administrative change?
+        </p>
+        <div class="flex gap-3 justify-center">
+          <button
+            type="button"
+            id="confirmModalCancelBtn"
+            class="flex-1 px-4 py-2.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            id="confirmModalProceedBtn"
+            class="flex-1 px-4 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-sm transition-all"
+          >
+            Proceed
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Non-blocking Toast Container -->
+    <div
+      id="toastContainer"
+      class="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 pointer-events-none"
+    ></div>
+
+    <!-- Shared Schedules Script & Admin Logic -->
+    <script src="js/schedule.js"></script>
+    <script src="js/admin-dashboard.js"></script>
+  </body>
+</html>
