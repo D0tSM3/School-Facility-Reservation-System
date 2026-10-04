@@ -80,7 +80,8 @@
     'html[data-role="customer"] aside nav a[data-path="my-reservations"],' +
     'html[data-role="staff"] aside nav a[data-path="staff-dashboard"],' +
     'html[data-role="admin"] aside nav a[data-path="staff-dashboard"],' +
-    'html[data-role="staff"] aside nav a[data-path="admin-governance"],' +
+    // Admin Governance is Admin-only: its tabs call Admin-only endpoints, so a
+    // Staff user would only hit 403s. Staff get the approval queue, not this.
     'html[data-role="admin"] aside nav a[data-path="admin-governance"]{display:flex!important}' +
     // Empty role pill shouldn't show as a blank badge (keeps its space: no shift).
     'header .font-label-sm.text-primary:empty{visibility:hidden}' +
@@ -160,7 +161,7 @@
     setLink('aside nav a[data-path="customer-dashboard"]', role === 'customer');
     setLink('aside nav a[data-path="rooms"]', role === 'customer');
     setLink('aside nav a[data-path="staff-dashboard"]', role === 'staff' || role === 'admin');
-    setLink('aside nav a[data-path="admin-governance"]', role === 'staff' || role === 'admin');
+    setLink('aside nav a[data-path="admin-governance"]', role === 'admin');
     setLink('aside nav a[data-path="my-reservations"]', role === 'customer');
 
     var nameEl = document.querySelector('header .font-label-md.text-on-surface');

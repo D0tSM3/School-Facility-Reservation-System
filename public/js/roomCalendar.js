@@ -29,9 +29,12 @@ class RoomCalendar {
     this.lastDates = null;
     this.lastData = null;
 
-    // Open on the week of the date being booked, not on "today's" week.
+    // Show a rolling 7-day window that STARTS on the day being booked (or today
+    // when nothing is selected yet) — not the Monday of that calendar week, so
+    // the grid is always today..+6 with no greyed-out past days up front.
     const anchor = this.parseYMD(this.selectedDate) || this.parseYMD(this.minDate) || new Date();
-    this.currentDate = this.mondayOf(anchor);
+    anchor.setHours(0, 0, 0, 0);
+    this.currentDate = anchor;
 
     const S = window.CampusSchedule;
     this.buildBlocks(config.rules || (S ? S.DEFAULT_RULES : { open: '06:00', close: '21:00', closedDays: ['Sunday'] }));
@@ -84,22 +87,15 @@ class RoomCalendar {
 
   getDatesToRender() {
     const dates = [];
-    let startD = new Date(this.currentDate);
-    let count = 7;
-    
-    if (this.selectedDate && this.selectedEndDate) {
-        const s = this.parseYMD(this.selectedDate);
-        const e = this.parseYMD(this.selectedEndDate);
-        if (s && e && s <= e) {
-            const diff = Math.round((e - s) / 86400000) + 1;
-            if (diff >= 1 && diff <= 7) {
-                startD = s;
-                count = diff;
-            }
-        }
-    }
-    
-    for (let i = 0; i < count; i++) {
+    // ALWAYS a full 7-day window. It starts on the selected day (so the chosen
+    // day/range sits at the left and is fully visible) or on currentDate/today
+    // otherwise — the selection is HIGHLIGHTED within the 7 columns, never used
+    // to shrink them. (A single-day booking has start === end; collapsing to
+    // that range is what used to leave the calendar showing just one column.)
+    let startD = this.parseYMD(this.selectedDate) || new Date(this.currentDate);
+    startD.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 7; i++) {
       const d = new Date(startD);
       d.setDate(d.getDate() + i);
       dates.push(d);
@@ -131,12 +127,12 @@ class RoomCalendar {
     }
     this.selectedDate = ymd;
     if (!this.selectedEndDate || this.selectedEndDate < ymd) this.selectedEndDate = ymd;
-    const monday = this.mondayOf(d);
-    if (!force && this.formatDateYMD(monday) === this.formatDateYMD(this.currentDate)) {
+    d.setHours(0, 0, 0, 0);
+    if (!force && this.formatDateYMD(d) === this.formatDateYMD(this.currentDate)) {
       if (this.lastData) this.renderGrid(this.lastDates, this.lastData);   // just move the highlight
       return;
     }
-    this.currentDate = monday;
+    this.currentDate = d;   // window starts on the chosen day (rolling 7-day view)
     this.loadData();
   }
 
@@ -228,6 +224,13 @@ class RoomCalendar {
         `${dates[0].toLocaleDateString('en-US', opts)} – ${lastDate.toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`;
     }
 
+    // Paint the 7 day-columns right away, before (and regardless of) the
+    // availability fetch. Previously the header row was built only inside
+    // renderGrid() on a successful response, so a slow, cached or failed fetch
+    // left the calendar with no days showing at all. The fetch below then just
+    // fills in the booking / class / holiday blocks.
+    this.renderGrid(dates, { reservations: [], class_schedules: [], holidays: [] });
+
     const seq = ++this.requestSeq;
     clearTimeout(this.loadingTimer);
     this.loadingTimer = setTimeout(() => {
@@ -305,21 +308,35 @@ class RoomCalendar {
     }
   }
 
-  /** Highlight every column from start to end ('YYYY-MM-DD', inclusive). */
-  setSelectionRange(start, end) {
-    this.activeDates = null;
+  /**
+   * Called by booking.js when the booking DATES change. Repositions the 7-day
+   * window to `start` and highlights the chosen days: the explicit `activeDates`
+   * list when given (specific-days mode, or a range expanded day-by-day),
+   * otherwise the contiguous range [start, end]. Reloads availability for the
+   * new window so the booking/class/holiday blocks match the dates shown.
+   */
+  setRange(start, end, activeDates) {
     this.selectedDate = start || '';
     this.selectedEndDate = end && end >= this.selectedDate ? end : this.selectedDate;
-    if (this.lastDates && this.lastData) {
-      this.renderGrid(this.lastDates, this.lastData);
-    }
+    this.activeDates = (Array.isArray(activeDates) && activeDates.length > 0) ? activeDates.slice() : null;
+    const anchor = this.parseYMD(this.selectedDate);
+    if (anchor) { anchor.setHours(0, 0, 0, 0); this.currentDate = anchor; }
+    this.loadData();
   }
 
-  setSelectionActiveDates(activeDatesArray) {
-    this.activeDates = activeDatesArray;
-    if (activeDatesArray && activeDatesArray.length > 0) {
-        this.selectedDate = activeDatesArray[0];
-        this.selectedEndDate = activeDatesArray[activeDatesArray.length - 1];
+  /**
+   * Called by booking.js when only the chosen days (or the time window) change
+   * but the 7-day window stays put — highlights exactly `activeDatesArray`
+   * without a reload. Combined with setSelectionTimes(), this is what paints
+   * the selected hour blocks onto each selected day.
+   */
+  setActiveDates(activeDatesArray) {
+    this.activeDates = (Array.isArray(activeDatesArray) && activeDatesArray.length > 0)
+      ? activeDatesArray.slice()
+      : null;
+    if (this.activeDates) {
+        this.selectedDate = this.activeDates[0];
+        this.selectedEndDate = this.activeDates[this.activeDates.length - 1];
     }
     if (this.lastDates && this.lastData) {
       this.renderGrid(this.lastDates, this.lastData);

@@ -199,12 +199,20 @@ class AuthController
             Response::error('Invalid email or password.', 401);
         }
         
-        if (!(bool)$user['is_verified']) {
+        // Two-factor authentication: a correct password alone does not open a
+        // session. Every login issues a fresh one-time code to the account's
+        // email, and the session is created only once that code is confirmed at
+        // POST /api/auth/verify-otp (the verify.html step). An unverified
+        // account rides the same challenge — confirming the code also completes
+        // its first-time email verification.
+        {
             $otp  = $this->issueOtp($user['user_id']);
             $sent = Mailer::sendOtp($email, $user['name'], $otp);
             
             $payload = [
-                'error' => 'Please verify your email address to continue.',
+                'message' => (bool)$user['is_verified']
+                    ? 'A login verification code has been sent to your email.'
+                    : 'Please verify your email address — a code has been sent to continue.',
                 'email' => $email,
                 'requires_verification' => true
             ];
@@ -215,13 +223,7 @@ class AuthController
             }
 
             Response::json($payload, 403);
-            exit;
         }
-
-        $this->startSession($user);
-
-        unset($user['password_hash'], $user['otp_code'], $user['otp_expires_at']);
-        Response::json($user);
     }
 
     // ---------------------------------------------------------------
@@ -243,15 +245,17 @@ class AuthController
             Response::error('Invalid verification attempt.', 404);
         }
 
-        // Already verified — just log in (user may have submitted twice)
-        if ((bool)$user['is_verified'] && empty($user['otp_code'])) {
-            $this->startSession($user);
-            unset($user['password_hash'], $user['otp_code'], $user['otp_expires_at']);
-            Response::json($user);
+        // A code must be outstanding. It is cleared the instant one is consumed
+        // (markVerified below), so a replayed or codeless request — including a
+        // double submit after a successful login — lands here instead of
+        // silently opening a second session. This is what makes the login
+        // challenge a real second factor rather than a skippable step.
+        if (empty($user['otp_code'])) {
+            Response::error('This code is no longer valid. Please log in again to get a new one.', 422);
         }
 
         // Validate OTP
-        if ($user['otp_code'] === null || $code !== $user['otp_code']) {
+        if ($code !== $user['otp_code']) {
             Response::error('Incorrect verification code. Please try again.', 422);
         }
 
@@ -261,7 +265,9 @@ class AuthController
             Response::error('This code has expired. Please request a new one.', 422);
         }
 
-        // Mark verified, clear OTP, and log in
+        // Consume the code and, for a first-time login, complete email
+        // verification — markVerified() flips is_verified AND nulls the OTP, so
+        // the same code cannot be used twice. Only now is the session opened.
         $this->users->markVerified($user['user_id']);
 
         $this->startSession($user);
@@ -369,12 +375,11 @@ class AuthController
     {
         $body = $this->jsonBody();
 
-        // Fails CLOSED. This route sends a real email through the University's
-        // SMTP account, so an unchecked caller can use it to mail-bomb any
-        // address they know. The 30-second cooldown on verify.html is a
-        // client-side courtesy and stops nobody who skips the page.
-        $this->requireHuman($body);
-
+        // No reCAPTCHA here by product decision: the caller already cleared the
+        // challenge on the sign-in screen before reaching the OTP step, and we
+        // don't want a second checkbox. Throttling is the 30-second cooldown on
+        // verify.html plus the auth_rate_limits table. (If abuse becomes a
+        // concern, reinstate a server-side per-email/IP rate check here.)
         $email = trim($body['email'] ?? '');
 
         if ($email === '') {
@@ -387,10 +392,8 @@ class AuthController
             Response::json(['message' => 'If this email is registered, a new code has been sent.']);
         }
 
-        if ((bool)$user['is_verified']) {
-            Response::error('This account is already verified.', 409);
-        }
-
+        // No "already verified" short-circuit: a verified account still needs a
+        // fresh code for every login (two-factor), so Resend must work for it.
         $otp  = $this->issueOtp($user['user_id']);
         $sent = Mailer::sendOtp($email, $user['name'], $otp);
 

@@ -16,6 +16,11 @@ window.initBookingForm = function() {
     const dateRangeHint = document.getElementById('dateRangeHint');
     const specificDaysWrapper = document.getElementById('specificDaysWrapper');
     const dayCheckboxesContainer = document.getElementById('dayCheckboxes');
+    const selectAllDays = document.getElementById('selectAllDays');
+    // The date range the checkbox list was last built for. renderSpecificDays()
+    // rebuilds only when this changes, so a plain check/uncheck (which runs
+    // through onDatesChanged → renderSpecificDays) never wipes the user's choice.
+    let renderedRangeKey = null;
 
     function getBookingMode() {
       const checked = document.querySelector('input[name="booking_mode"]:checked');
@@ -54,55 +59,93 @@ window.initBookingForm = function() {
       onDatesChanged();
     }
 
+    function updateSelectedDaysUI() {
+      const counter = document.getElementById('selectedDaysCount');
+      const boxes = dayCheckboxesContainer.querySelectorAll('input[name="active_days"]');
+      const checkedCount = dayCheckboxesContainer.querySelectorAll('input[name="active_days"]:checked').length;
+      if (counter) counter.textContent = `${checkedCount} selected`;
+      // Keep the master "Select all" in sync: on when every day is ticked,
+      // indeterminate when only some are, off when none.
+      if (selectAllDays) {
+        selectAllDays.checked = boxes.length > 0 && checkedCount === boxes.length;
+        selectAllDays.indeterminate = checkedCount > 0 && checkedCount < boxes.length;
+      }
+    }
+
     function renderSpecificDays() {
       if (getBookingMode() !== 'specific') return;
       const start = startDateValue();
       const end = endDateValue();
       if (!isRealDate(start) || !isRealDate(end)) {
         dayCheckboxesContainer.innerHTML = '<span class="text-xs text-gray-400">Select From and To dates first.</span>';
+        renderedRangeKey = null;
         return;
       }
-      
+
       const sDate = new Date(start);
       const eDate = new Date(end);
-      dayCheckboxesContainer.innerHTML = '';
-      
+
       const daysDiff = (eDate - sDate) / (1000 * 60 * 60 * 24);
       if (daysDiff < 0) {
         dayCheckboxesContainer.innerHTML = '<span class="text-xs text-red-500">Invalid date range.</span>';
+        renderedRangeKey = null;
         return;
       }
       if (daysDiff > 6) {
         dayCheckboxesContainer.innerHTML = '<span class="text-xs text-red-500">Range exceeds 7 days.</span>';
+        renderedRangeKey = null;
         return;
       }
 
-      const counter = document.getElementById('selectedDaysCount');
+      // Only the date RANGE drives a rebuild. If the range is unchanged (e.g.
+      // the user just ticked/unticked a day, which calls onDatesChanged), leave
+      // the existing checkboxes alone so their choice survives.
+      const rangeKey = start + '|' + end;
+      if (rangeKey === renderedRangeKey && dayCheckboxesContainer.querySelector('input[name="active_days"]')) {
+        updateSelectedDaysUI();
+        return;
+      }
+
+      // Remember which dates were unchecked so a range tweak keeps prior choices.
+      const previous = {};
+      dayCheckboxesContainer.querySelectorAll('input[name="active_days"]').forEach(cb => {
+        previous[cb.value] = cb.checked;
+      });
+
+      dayCheckboxesContainer.innerHTML = '';
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       let curr = new Date(sDate);
-      
+
       while (curr <= eDate) {
         const dateStr = toYMD(curr);
         const dayName = days[curr.getDay()];
-        
+        const isChecked = previous[dateStr] !== false; // new dates default to checked
+
         const label = document.createElement('label');
         label.className = 'flex items-center gap-2.5 bg-white px-3.5 py-2.5 rounded-lg cursor-pointer border border-gray-200 shadow-sm transition-colors hover:border-[#7a1f2b]/30';
-        label.innerHTML = `<input type="checkbox" name="active_days" value="${dateStr}" class="w-4 h-4 text-[#7a1f2b] bg-white border-gray-300 rounded focus:ring-[#7a1f2b] focus:ring-1" checked><span class="text-[13px] font-bold text-[#1e293b]">${dayName} <span class="text-gray-400 font-normal ml-1">· ${curr.toLocaleString('en-US', {month:'short', day:'numeric'})}</span></span>`;
-        
-        label.querySelector('input').addEventListener('change', () => { 
-            const count = typeof getSelectedDates === 'function' ? getSelectedDates().length : document.querySelectorAll('input[name="active_days"]:checked').length;
-            if (counter) counter.textContent = `${count} selected`;
-            onDatesChanged(); 
-            updateCalendarSelection(); 
+        label.innerHTML = `<input type="checkbox" name="active_days" value="${dateStr}" class="w-4 h-4 text-[#7a1f2b] bg-white border-gray-300 rounded focus:ring-[#7a1f2b] focus:ring-1" ${isChecked ? 'checked' : ''}><span class="text-[13px] font-bold text-[#1e293b]">${dayName} <span class="text-gray-400 font-normal ml-1">· ${curr.toLocaleString('en-US', {month:'short', day:'numeric'})}</span></span>`;
+
+        label.querySelector('input').addEventListener('change', () => {
+            updateSelectedDaysUI();
+            onDatesChanged();
+            updateCalendarSelection();
         });
         dayCheckboxesContainer.appendChild(label);
-        
+
         curr.setDate(curr.getDate() + 1);
       }
-      if (counter) {
-        const count = typeof getSelectedDates === 'function' ? getSelectedDates().length : document.querySelectorAll('input[name="active_days"]:checked').length;
-        counter.textContent = `${count} selected`;
-      }
+      renderedRangeKey = rangeKey;
+      updateSelectedDaysUI();
+    }
+
+    if (selectAllDays) {
+      selectAllDays.addEventListener('change', () => {
+        const on = selectAllDays.checked;
+        dayCheckboxesContainer.querySelectorAll('input[name="active_days"]').forEach(cb => { cb.checked = on; });
+        updateSelectedDaysUI();
+        onDatesChanged();
+        updateCalendarSelection();
+      });
     }
 
     if (bookingModeRadios) {
@@ -322,14 +365,16 @@ window.initBookingForm = function() {
   // --- Room Calendar Integration ---
   let calendarInstance = null;
   function updateCalendarSelection() {
-    if (!calendarInstance) return;
-    const selected = getSelectedDates();
-    if (typeof calendarInstance.setActiveDates === 'function') {
-      calendarInstance.setActiveDates(selected);
+    if (calendarInstance) {
+      const selected = getSelectedDates();
+      if (typeof calendarInstance.setActiveDates === 'function') {
+        calendarInstance.setActiveDates(selected);
+      }
+      if (startTimeInput && endTimeInput && typeof calendarInstance.setSelectionTimes === 'function') {
+        calendarInstance.setSelectionTimes(startTimeInput.value, endTimeInput.value);
+      }
     }
-    if (startTimeInput && endTimeInput && typeof calendarInstance.setSelectionTimes === 'function') {
-      calendarInstance.setSelectionTimes(startTimeInput.value, endTimeInput.value);
-    }
+    refreshBookingState();   // time/day selection changed — refresh Submit vs Request Slip
   }
 
   function updateCalendar(roomId) {
@@ -820,9 +865,123 @@ window.initBookingForm = function() {
 
     // Re-derive the end options for the (possibly cleared) start against this day.
     syncEndOptions();
+    refreshBookingState();   // schedule now loaded — refresh Submit vs Request Slip
   }
 
   if (roomSelect) roomSelect.addEventListener('change', markTakenSlots);
+
+  // ---------------------------------------------------------------
+  // Request Slip (conflict override) — pre-submit classification + launcher.
+  // Shared by both booking pages (book-room.html, rooms.html): the page's own
+  // button logic calls classify() to decide whether the normal "Submit" is
+  // allowed or a "Request Slip" is offered, and openRequestSlip() to launch
+  // the existing override form. Everything is derived from the SAME loaded
+  // schedule (rangeData) the greyed-out time options already use.
+  // ---------------------------------------------------------------
+
+  /**
+   * Status of the currently-selected room/date/time window:
+   *   'incomplete'  — not enough chosen yet to judge
+   *   'clean'       — free → normal Submit (auto-approved server-side)
+   *   'overridable' — clashes only with Approved bookings → offer Request Slip
+   *   'holiday'     — the day is a holiday → block, NO slip (rule 3)
+   *   'blocked'     — a class or a pending booking clashes → block, no slip
+   */
+  // The holiday name when any currently-selected day is a holiday (''=unnamed),
+  // else null — read from the already-loaded schedule (rangeData). A holiday
+  // closes the whole day, so this is judged independently of the time picked.
+  function selectedHoliday() {
+    if (!rangeData || !rangeData.data || !Array.isArray(rangeData.data.holidays) || !rangeData.data.holidays.length) return null;
+    if (!roomSelect || rangeData.roomId !== roomSelect.value ||
+        rangeData.start !== startDateValue() || rangeData.end !== endDateValue()) return null;
+    const selected = (typeof getSelectedDates === 'function' && getSelectedDates().length)
+      ? getSelectedDates() : rangeData.dates;
+    for (let i = 0; i < rangeData.data.holidays.length; i++) {
+      const hd = String(rangeData.data.holidays[i].holiday_date).slice(0, 10);
+      if ((selected || []).includes(hd)) return rangeData.data.holidays[i].name || '';
+    }
+    return null;
+  }
+
+  function classifySelection() {
+    // Auto-assign lets the server pick a free room per day, so there is no
+    // single room to clash or to file a slip against: always a normal submit.
+    if (autoAssignCheckbox && autoAssignCheckbox.checked && !isRebook) return { status: 'clean' };
+
+    // Rule 3: a selected day that is a holiday blocks the whole booking (no
+    // slip), flagged even before a time is chosen.
+    const holidayName = selectedHoliday();
+    if (holidayName !== null) {
+      return { status: 'holiday', message: 'That date is a holiday' + (holidayName ? ' (' + holidayName + ')' : '') + ' — it cannot be reserved.' };
+    }
+
+    const startVal = startTimeInput ? startTimeInput.value : '';
+    const endVal   = endTimeInput ? endTimeInput.value : '';
+    if (!startVal || !endVal) return { status: 'incomplete' };
+    const clash = rangeConflicts(startVal, endVal);
+    if (!clash.length) return { status: 'clean' };
+    if (clash.some(c => c.kind === 'holiday')) {
+      return { status: 'holiday', message: window.CampusSchedule.describeRange(clash, startVal, endVal) };
+    }
+    if (!isRebook && window.CampusSchedule.onlyApprovedConflicts(clash)) {
+      return { status: 'overridable', message: window.CampusSchedule.describeRange(clash, startVal, endVal) };
+    }
+    return { status: 'blocked', message: window.CampusSchedule.describeRange(clash, startVal, endVal) };
+  }
+
+  /** The booking body from the current form, same shape the submit handler
+   *  builds — reused for the override/Request Slip request. */
+  function buildReservationPayload() {
+    const auto = !!(autoAssignCheckbox && autoAssignCheckbox.checked) && !isRebook;
+    const dateVal     = startDateValue();
+    const endDateVal  = endDateValue();
+    const startVal    = startTimeInput ? startTimeInput.value : '';
+    const endVal      = endTimeInput ? endTimeInput.value : '';
+    const picked      = form ? form.querySelector('input[name="reservation_purpose"]:checked') : null;
+    const description = purposeInput ? purposeInput.value.trim() : '';
+    const payload = {
+      purpose: description,
+      category: picked ? PURPOSE_LABELS[picked.value] : '',
+      start_time: `${dateVal}T${startVal}:00`,
+      end_time: `${endDateVal}T${endVal}:00`,
+      equipment_notes: collectEquipmentNotes() || 'Standard Academic Setup'
+    };
+    if (auto) {
+      payload.auto_assign = true;
+      payload.filters = {
+        min_capacity: critCapacity && critCapacity.value ? parseInt(critCapacity.value, 10) : null,
+        room_type:    critRoomType && critRoomType.value ? critRoomType.value : null,
+        floor:        critFloor && critFloor.value !== '' ? parseInt(critFloor.value, 10) : null
+      };
+    } else {
+      payload.room_id = roomSelect ? roomSelect.value : '';
+    }
+    if (typeof getBookingMode === 'function' && getBookingMode() === 'specific') {
+      payload.active_dates = getSelectedDates();
+    }
+    return payload;
+  }
+
+  /** Launch the override ("Request Slip") form for the current selection.
+   *  Only ever acts on a genuine, overridable (Approved-booking) conflict. */
+  function openRequestSlip() {
+    const info = classifySelection();
+    if (info.status !== 'overridable') return;
+    const payload = buildReservationPayload();
+    if (payload.auto_assign) return;   // nothing single-room to override
+    openOverrideModal(payload, null, info.message || '');
+  }
+
+  /** Tell the page to re-evaluate its Submit / Request Slip buttons. Fired
+   *  after any change AND after the async schedule load (markTakenSlots), so
+   *  the buttons reflect conflicts the server data only reveals once loaded. */
+  function refreshBookingState() {
+    try {
+      document.dispatchEvent(new CustomEvent('campusroom:bookingstate', { detail: classifySelection() }));
+    } catch (e) { /* older browsers: the page falls back to its own input events */ }
+  }
+
+  window.CampusRoomBooking = { classify: classifySelection, openRequestSlip: openRequestSlip };
 
   function showCollisionError(message, title = 'Unable to submit request') {
     if (errorBannerTitle) errorBannerTitle.textContent = title;

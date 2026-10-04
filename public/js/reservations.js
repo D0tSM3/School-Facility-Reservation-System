@@ -351,9 +351,15 @@ document.addEventListener('DOMContentLoaded', () => {
           buttons.forEach(b => { b.disabled = false; b.classList.remove('opacity-50', 'cursor-not-allowed'); });
           return;
         }
+        // Drop the answered card immediately so the panel updates even before
+        // the reload lands; hide the whole panel once nothing is left.
+        if (card) card.remove();
+        if (facilityPanel && !facilityPanel.querySelector('[data-suggestion-card]')) {
+          facilityPanel.classList.add('hidden');
+          facilityPanel.innerHTML = '';
+        }
         // Accepting changes the booking's room; reload so the list (and its room
-        // labels / calendar) reflect the room that is now assigned, and so the
-        // answered suggestion drops out of the panel.
+        // labels) reflect the room that is now assigned (and re-syncs the panel).
         fetchReservations();
       })
       .catch(err => {
@@ -485,6 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     switch (reservation.status) {
       case 'Pending':
+        buttons.push(actionButton('slip', id, 'View Request Slip'));
         buttons.push(actionButton('move', id, 'Move', moveRequestBlockedReason(reservation)));
         buttons.push(actionButton('remove', id, 'Withdraw'));
         break;
