@@ -145,6 +145,7 @@ $routes = [
     // Class Schedules (Staff + Admin)
     ['GET',    '#^/api/classes$#',                   fn() => (new ClassScheduleController())->index()],
     ['POST',   '#^/api/classes$#',                   fn() => (new ClassScheduleController())->store()],
+    ['PATCH',  '#^/api/classes/(?P<id>[^/]+)$#',     fn(string $id) => (new ClassScheduleController())->relocate($id)],
     ['DELETE', '#^/api/classes/(?P<id>[^/]+)$#',     fn(string $id) => (new ClassScheduleController())->destroy($id)],
 
     // Holidays (Staff + Admin)

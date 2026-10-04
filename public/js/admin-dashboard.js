@@ -319,7 +319,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Views/sidebar links only an Admin may use. Staff get the same reservation
   // queues (overview, reservations, approval-queue, moves, cancels, overrides,
   // facilities/Rooms) but NOT these administration tools.
-  const ADMIN_ONLY_VIEWS = ['classes', 'holidays', 'users', 'archives', 'config', 'logs'];
+  // Class Schedules is shared Staff + Admin: staff need it to relocate classes
+  // out of a room a customer booking needs, so it is NOT in this list.
+  const ADMIN_ONLY_VIEWS = ['holidays', 'users', 'archives', 'config', 'logs'];
 
   function applyStaffVisibility() {
     document.documentElement.setAttribute('data-role', 'staff');
@@ -2376,7 +2378,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <td class="py-4 px-6 text-xs text-gray-600">${escapeHtml(c.section)}</td>
           <td class="py-4 px-6 text-xs font-semibold text-gray-700">${escapeHtml(c.day_of_week)}</td>
           <td class="py-4 px-6 text-xs text-gray-600">${formatTime(c.start_time)} – ${formatTime(c.end_time)}</td>
-          <td class="py-4 px-6 text-right">
+          <td class="py-4 px-6 text-right whitespace-nowrap">
+            <button type="button" class="btn-relocate-class p-1.5 text-gray-400 hover:text-[#7a1f2b] hover:bg-[#7a1f2b]/5 rounded-lg transition-colors" data-id="${c.schedule_id}" data-room="${c.room_id}" data-desc="${escapeHtml(c.course_code)} ${escapeHtml(c.section)}" data-when="${escapeHtml(c.day_of_week)} ${formatTime(c.start_time)} – ${formatTime(c.end_time)}" title="Relocate to another room">
+              <span class="material-symbols-outlined text-[19px]">move_up</span>
+            </button>
             <button type="button" class="btn-delete-class p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" data-id="${c.schedule_id}" data-desc="${escapeHtml(c.course_code)} (${escapeHtml(c.day_of_week)})" title="Delete Schedule">
               <span class="material-symbols-outlined text-[19px]">delete</span>
             </button>
@@ -2407,9 +2412,83 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
       });
+
+      document.querySelectorAll('.btn-relocate-class').forEach(btn => {
+        btn.addEventListener('click', () => {
+          openRelocateClassModal({
+            id: btn.getAttribute('data-id'),
+            currentRoomId: btn.getAttribute('data-room'),
+            desc: btn.getAttribute('data-desc'),
+            when: btn.getAttribute('data-when'),
+          });
+        });
+      });
     } catch (err) {
       tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500 text-xs">Failed to load classes: ${escapeHtml(err.message)}</td></tr>`;
     }
+  }
+
+  // Relocate a class to another room (same weekday/time). Staff + Admin only —
+  // a direct move, not an approval-queue request.
+  function openRelocateClassModal({ id, currentRoomId, desc, when }) {
+    const others = (state.rooms || []).filter(r => r.room_id !== currentRoomId);
+    if (others.length === 0) {
+      showToast('No other rooms available to relocate this class to.', 'error');
+      return;
+    }
+
+    let overlay = document.getElementById('relocateClassModal');
+    if (overlay) overlay.remove();
+    overlay = document.createElement('div');
+    overlay.id = 'relocateClassModal';
+    overlay.className = 'fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4';
+    overlay.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-100 flex items-start gap-3">
+          <span class="material-symbols-outlined text-[#7a1f2b] mt-0.5">move_up</span>
+          <div>
+            <h3 class="font-bold text-gray-900 text-sm">Relocate Class</h3>
+            <p class="text-xs text-gray-500 mt-0.5">${escapeHtml(desc)} · ${escapeHtml(when)}</p>
+          </div>
+        </div>
+        <div class="px-6 py-5 space-y-3">
+          <label class="block text-xs font-semibold text-gray-700">Move to room</label>
+          <select id="relocateRoomSelect" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-xs focus:ring-2 focus:ring-[#7a1f2b]/30 focus:border-[#7a1f2b] outline-none">
+            ${others.map(r => `<option value="${r.room_id}">${escapeHtml(r.name)} (${escapeHtml(r.room_type || 'Facility')})</option>`).join('')}
+          </select>
+          <p class="text-[11px] text-gray-500 leading-relaxed">The class keeps the same weekday and time. The destination room must be free then, or the move is rejected.</p>
+        </div>
+        <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+          <button type="button" id="relocateCancelBtn" class="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
+          <button type="button" id="relocateConfirmBtn" class="px-4 py-2 text-xs font-semibold text-white bg-[#7a1f2b] hover:bg-[#641821] rounded-lg transition-colors">Relocate</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.remove();
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    overlay.querySelector('#relocateCancelBtn').addEventListener('click', close);
+
+    const confirmBtn = overlay.querySelector('#relocateConfirmBtn');
+    confirmBtn.addEventListener('click', async () => {
+      const room_id = overlay.querySelector('#relocateRoomSelect').value;
+      if (!room_id) return;
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Relocating...';
+      try {
+        await apiFetch(`api/classes/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ room_id }),
+        });
+        showToast('Class relocated successfully.', 'success');
+        close();
+        loadClasses();
+      } catch (err) {
+        showToast(err.message, 'error');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Relocate';
+      }
+    });
   }
 
   const openAddClassModalBtn = document.getElementById('openAddClassModalBtn');

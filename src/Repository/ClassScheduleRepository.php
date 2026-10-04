@@ -137,4 +137,25 @@ class ClassScheduleRepository
         $row = $stmt->fetch();
         return $row ?: null;
     }
+
+    /** One class schedule by id, or null. */
+    public function findById(string $scheduleId): ?array
+    {
+        $stmt = $this->db->query(
+            "SELECT schedule_id, room_id, course_code, section, day_of_week, start_time, end_time
+               FROM ClassSchedules WHERE schedule_id = :schedule_id LIMIT 1",
+            [':schedule_id' => $scheduleId]
+        );
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
+    /** Relocate a class to another room, keeping its weekday and time window. */
+    public function updateRoom(string $scheduleId, string $newRoomId): void
+    {
+        $this->db->query(
+            "UPDATE ClassSchedules SET room_id = :room_id WHERE schedule_id = :schedule_id",
+            [':room_id' => $newRoomId, ':schedule_id' => $scheduleId]
+        );
+    }
 }

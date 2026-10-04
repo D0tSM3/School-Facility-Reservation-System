@@ -105,6 +105,75 @@ class ClassScheduleController
         Response::json(['success' => true, 'schedule_id' => $id], 201);
     }
 
+    /**
+     * PATCH /api/classes/{id} — move a class to another ROOM (same weekday and
+     * time). Staff/Admin use this to free a room a customer needs: instead of
+     * blocking the booking because a class is there, the class is relocated to
+     * another free room. The destination room must itself be free then, using
+     * the same overlap rules as adding a class.
+     */
+    public function relocate(string $id): never
+    {
+        Auth::requireRole(['Staff', 'Admin']);
+
+        if (!self::isUuid($id)) {
+            Response::error('Invalid class schedule id.', 422);
+        }
+
+        $raw  = file_get_contents('php://input');
+        $body = json_decode($raw ?: '{}', true);
+        if (!is_array($body)) {
+            Response::error('Request body must be valid JSON.', 400);
+        }
+        $newRoomId = trim((string) ($body['room_id'] ?? ''));
+        if ($newRoomId === '') {
+            Response::error('room_id (the destination room) is required.', 422);
+        }
+
+        $class = $this->repo->findById($id);
+        if ($class === null) {
+            Response::error('Class schedule not found.', 404);
+        }
+        if (!self::isUuid($newRoomId) || (new RoomRepository())->findById($newRoomId) === null) {
+            Response::error('Destination room not found.', 404);
+        }
+        if ($newRoomId === $class['room_id']) {
+            Response::error('The class is already in that room.', 422);
+        }
+
+        $day   = $class['day_of_week'];
+        $start = $class['start_time'];
+        $end   = $class['end_time'];
+
+        // The destination room must be free at this weekday/time.
+        $classes = $this->repo->findOverlappingClasses($newRoomId, $day, $start, $end);
+        if ($classes) {
+            $c = $classes[0];
+            Response::error(
+                "Scheduling Collision: the destination room already has a class then ({$c['course_code']} - {$c['section']}, "
+                . "{$day} " . self::hhmm($c['start_time']) . '-' . self::hhmm($c['end_time']) . ').',
+                409
+            );
+        }
+        $bookings = $this->repo->findOverlappingReservations($newRoomId, $day, $start, $end);
+        if ($bookings) {
+            $count = count($bookings);
+            Response::error(
+                'Scheduling Collision: ' . ($count === 1 ? 'an upcoming reservation already occupies' : "{$count} upcoming reservations already occupy")
+                . " the destination room during that time on {$day}s. Move or cancel it first.",
+                409
+            );
+        }
+
+        $this->repo->updateRoom($id, $newRoomId);
+        (new ReservationRepository())->insertLog(
+            Auth::userId(),
+            (string) Auth::role() . " relocated class {$class['course_code']} {$class['section']} ({$day} "
+                . self::hhmm($start) . '-' . self::hhmm($end) . ') to another room'
+        );
+        Response::json(['success' => true, 'schedule_id' => $id, 'room_id' => $newRoomId]);
+    }
+
     public function destroy(string $id): never
     {
         Auth::requireRole(['Staff', 'Admin']);
