@@ -43,7 +43,7 @@ class Database
 
         // Put PostgreSQL's clock on the same zone as PHP's date_default_timezone_set()
         // (done in index.php before this connection is opened). NOW() drives
-        // live_status, getNextAvailableSlot() and the maintenance warning, and
+        // live_status, getNextAvailableSlots() and the maintenance warning, and
         // compares against wall-clock TIMESTAMP columns, so the two clocks must
         // agree.
         //

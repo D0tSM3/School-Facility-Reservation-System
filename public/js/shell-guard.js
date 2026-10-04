@@ -28,11 +28,16 @@
   function readUser() {
     try {
       var u = JSON.parse(sessionStorage.getItem(KEY));
-      return u && typeof u.role === 'string' ? u : null;
+      var role = u && typeof u.role === 'string' ? u.role.toLowerCase() : '';
+      return ['customer', 'staff', 'admin'].indexOf(role) !== -1
+        ? { name: u.name || '', role: role }
+        : null;
     } catch (e) { return null; }
   }
   function saveUser(u) {
-    try { sessionStorage.setItem(KEY, JSON.stringify({ name: u.name, role: u.role })); } catch (e) { /* ignore */ }
+    try {
+      sessionStorage.setItem(KEY, JSON.stringify({ name: u.name || '', role: u.role }));
+    } catch (e) { /* ignore */ }
   }
   function clearUser() {
     try { sessionStorage.removeItem(KEY); } catch (e) { /* ignore */ }
@@ -64,11 +69,20 @@
   var style = document.createElement('style');
   style.textContent =
     'html{background:#f8f9fb}' +
-    // Role-gated sidebar links, driven by <html data-role> (set above).
-    'html[data-role="staff"] aside nav a[data-path="staff-queue"],' +
-    'html[data-role="admin"] aside nav a[data-path="staff-queue"],' +
-    'html[data-role="admin"] aside nav a[data-path="admin-governance"],' +
-    'html[data-role="customer"] aside nav a[data-path="my-reservations"]{display:flex}' +
+    // Hide role-specific links until a verified hint or session response is available.
+    'aside nav a[data-path="customer-dashboard"],' +
+    'aside nav a[data-path="rooms"],' +
+    'aside nav a[data-path="my-reservations"],' +
+    'aside nav a[data-path="staff-dashboard"],' +
+    'aside nav a[data-path="admin-governance"]{display:none!important}' +
+    'html[data-role="customer"] aside nav a[data-path="customer-dashboard"],' +
+    'html[data-role="customer"] aside nav a[data-path="rooms"],' +
+    'html[data-role="customer"] aside nav a[data-path="my-reservations"],' +
+    'html[data-role="staff"] aside nav a[data-path="staff-dashboard"],' +
+    'html[data-role="admin"] aside nav a[data-path="staff-dashboard"],' +
+    // Admin Governance is Admin-only: its tabs call Admin-only endpoints, so a
+    // Staff user would only hit 403s. Staff get the approval queue, not this.
+    'html[data-role="admin"] aside nav a[data-path="admin-governance"]{display:flex!important}' +
     // Empty role pill shouldn't show as a blank badge (keeps its space: no shift).
     'header .font-label-sm.text-primary:empty{visibility:hidden}' +
     // Until the icon font is in, clip ligature text ("meeting_room"...) to
@@ -79,7 +93,15 @@
 
   // ---- start the authoritative session check right now --------------------
   var session = fetch(BASE + 'api/auth/me', { credentials: 'include' })
-    .then(function (res) { return res.json(); });
+    .then(function (res) { return res.json(); })
+    .then(function (json) {
+      if (json && json.success && json.data) {
+        saveUser(json.data);
+      } else {
+        clearUser();
+      }
+      return json;
+    });
   session.catch(function () { /* handled in app.js; avoids unhandled-rejection noise */ });
 
   // ---- shell painting (idempotent) ----------------------------------------
@@ -136,7 +158,9 @@
     setRole(role);
     if (bounceIfStaff(role)) return false;
 
-    setLink('aside nav a[data-path="staff-queue"]', role === 'staff' || role === 'admin');
+    setLink('aside nav a[data-path="customer-dashboard"]', role === 'customer');
+    setLink('aside nav a[data-path="rooms"]', role === 'customer');
+    setLink('aside nav a[data-path="staff-dashboard"]', role === 'staff' || role === 'admin');
     setLink('aside nav a[data-path="admin-governance"]', role === 'admin');
     setLink('aside nav a[data-path="my-reservations"]', role === 'customer');
 

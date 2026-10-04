@@ -25,12 +25,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // -----------------------------------------------------------------------
   // 1. Fetch real session info
   // -----------------------------------------------------------------------
-  fetch(BASE + 'api/auth/me', { credentials: 'include' })
-    .then(res => res.json())
+  const shell = window.CampusRoomShell;
+  if (!shell) {
+    console.error('The shared shell guard failed to load.');
+    window.location.replace('index.html');
+    return;
+  }
+
+  shell.session
     .then(json => {
       const currentUser = json.success ? json.data : null;
       if (!currentUser) {
         localStorage.removeItem('campus_role');
+        shell.clearUser();
         // No active session — send to login page.
         window.location.href = 'index.html';
         return;
@@ -40,45 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
       window.currentUser = currentUser;
       document.dispatchEvent(new CustomEvent('campusroom:user', { detail: currentUser }));
 
-      const role = String(currentUser.role || '').toLowerCase();
-
-      // -----------------------------------------------------------------------
-      // 2. Show / hide role-restricted sidebar links
-      // -----------------------------------------------------------------------
-      
-      const dashboardLink     = document.querySelector('aside nav a[data-path="customer-dashboard"]');
-      const roomsLink         = document.querySelector('aside nav a[data-path="rooms"]');
-      const staffLink         = document.querySelector('aside nav a[data-path="staff-dashboard"]');
-      const adminLink         = document.querySelector('aside nav a[data-path="admin-governance"]');
-      const myReservationsLink = document.querySelector('aside nav a[data-path="my-reservations"]');
-
-      if (dashboardLink) {
-        const show = role === 'customer';
-        dashboardLink.hidden = !show;
-        dashboardLink.style.setProperty('display', show ? 'flex' : 'none', 'important');
-      }
-      if (roomsLink) {
-        const show = role === 'customer';
-        roomsLink.hidden = !show;
-        roomsLink.style.setProperty('display', show ? 'flex' : 'none', 'important');
-      }
-
-
-      if (staffLink) {
-        const show = role === 'staff' || role === 'admin';
-        staffLink.hidden = !show;
-        staffLink.style.setProperty('display', show ? 'flex' : 'none', 'important');
-      }
-      if (adminLink) {
-        const show = role === 'admin';
-        adminLink.hidden = !show;
-        adminLink.style.setProperty('display', show ? 'flex' : 'none', 'important');
-      }
-      if (myReservationsLink) {
-        const show = role === 'customer';
-        myReservationsLink.hidden = !show;
-        myReservationsLink.style.setProperty('display', show ? 'flex' : 'none', 'important');
-      }
+      shell.saveUser(currentUser);
+      if (!shell.applyUser(currentUser)) return;
 
       // -----------------------------------------------------------------------
       // 3. Update profile header
@@ -150,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // -----------------------------------------------------------------------
   function attachLogout(btn) {
     btn.addEventListener('click', () => {
+      window.CampusRoomShell.clearUser();
       fetch(BASE + 'api/auth/logout', { method: 'POST', credentials: 'include' })
         .then(() => { localStorage.removeItem('campus_role'); window.location.href = 'index.html'; })
         .catch(err => {

@@ -41,8 +41,9 @@ class RoomController
             ? $this->rooms->findAllForManagement()
             : $this->rooms->findAllActive();
 
+        $nextAvailable = $this->reservations->getNextAvailableSlots(array_column($rooms, 'room_id'));
         foreach ($rooms as &$room) {
-            $room['next_available'] = $this->reservations->getNextAvailableSlot($room['room_id']);
+            $room['next_available'] = $nextAvailable[$room['room_id']] ?? 'Available now';
         }
         unset($room);
         
@@ -126,6 +127,18 @@ class RoomController
             Response::error('Only an Admin can activate or deactivate a room.', 403);
         }
 
+        $requiresApproval = null;
+        if (array_key_exists('requires_approval', $body)) {
+            $requiresApproval = filter_var($body['requires_approval'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($requiresApproval === null) {
+                Response::error('requires_approval must be true or false.', 422);
+            }
+            // Deciding which rooms always need sign-off is a governance call.
+            if ($role !== 'Admin') {
+                Response::error('Only an Admin can change a room\'s approval requirement.', 403);
+            }
+        }
+
         if ($status !== null && !in_array($status, ['Available', 'Maintenance'], true)) {
             Response::error('status must be Available or Maintenance.', 422);
         }
@@ -135,7 +148,7 @@ class RoomController
             Response::error('Room not found.', 404);
         }
 
-        $room = $this->rooms->update($roomId, $status, $isActive, $details);
+        $room = $this->rooms->update($roomId, $status, $isActive, $details, $requiresApproval);
         if ($room === null) {
             Response::error('Room not found.', 404);
         }
@@ -156,6 +169,9 @@ class RoomController
         }
         if ($isActive !== null) {
             $parts[] = "{$role} " . ($isActive ? 'reactivated' : 'deactivated') . " {$room['name']}";
+        }
+        if ($requiresApproval !== null) {
+            $parts[] = "{$role} " . ($requiresApproval ? 'now requires Staff approval for' : 'removed the Staff-approval requirement on') . " {$room['name']}";
         }
         foreach ($parts as $line) {
             $this->reservations->insertLog(Auth::userId(), $line);

@@ -5,6 +5,7 @@
     <title>CampusRoom — Book a Facility | BPU Facility Gateway</title>
     <meta name="description" content="Submit a space reservation request for BPU academic facilities." />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <script src="js/shell-guard.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
@@ -31,15 +32,6 @@
       };
     </script>
   
-  <!-- FOUC Preventer -->
-  <script>
-    (function() {
-      const role = localStorage.getItem('campus_role');
-      if (role) {
-        document.documentElement.setAttribute('data-role', role.toLowerCase());
-      }
-    })();
-  </script>
   <style>
     /* Prevent sidebar flash */
     html[data-role="staff"] aside nav a[data-path="customer-dashboard"],
@@ -51,14 +43,11 @@
       display: none !important;
     }
     
-    html[data-role="staff"] aside nav a[data-path="staff-dashboard"],
-    html[data-role="admin"] aside nav a[data-path="staff-dashboard"] {
-      display: flex !important;
+    aside nav a[data-path="staff-dashboard"],
+    aside nav a[data-path="admin-governance"] {
+      display: none !important;
     }
-    
-    html[data-role="admin"] aside nav a[data-path="admin-governance"] {
-      display: flex !important;
-    }
+
   </style>
 
  </head>
@@ -88,11 +77,11 @@
           <span class="material-symbols-outlined text-[20px]">event_available</span>
           <span>My Reservations</span>
         </a>
-        <a class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="staff-dashboard" href="staff-dashboard.html">
+        <a hidden class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="staff-dashboard" href="staff-dashboard.html">
           <span class="material-symbols-outlined text-[20px]">assignment</span>
           <span>Staff Dashboard</span>
         </a>
-        <a class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="admin-governance" href="admin-governance.html">
+        <a hidden class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="admin-governance" href="admin-governance.html">
           <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
           <span>Admin Governance</span>
         </a>
@@ -192,9 +181,19 @@
               </button>
             </div>
 
-            <!-- Grid: Room Selector & Date -->
+            <!-- Any-available-facility toggle -->
+            <div id="autoAssignBlock" class="flex items-start gap-3 p-4 bg-[#f8f9fb] border border-gray-200 rounded-xl">
+              <input id="autoAssign" type="checkbox" class="mt-0.5 w-4 h-4 rounded text-[#7a1f2b] focus:ring-[#7a1f2b] cursor-pointer" />
+              <div class="flex flex-col">
+                <label for="autoAssign" class="text-sm font-bold text-gray-800 cursor-pointer">Assign any available room matching my criteria</label>
+                <p class="text-xs text-gray-500 mt-0.5">We'll pick a free room for you. For a date range, each day may be placed in a different room if no single room is free throughout.</p>
+              </div>
+            </div>
+
+            <!-- Grid: Room Selector / Criteria & Date -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div class="flex flex-col space-y-2">
+              <!-- Specific room picker (default) -->
+              <div id="roomSelectField" class="flex flex-col space-y-2">
                 <label class="text-sm font-bold text-gray-800" for="roomSelect">Target Facility <span class="text-red-500">*</span></label>
                 <div class="relative">
                   <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-400">location_city</span>
@@ -202,6 +201,30 @@
                     <option value="">Loading rooms…</option>
                   </select>
                 </div>
+              </div>
+
+              <!-- Criteria fields (shown only when "any available" is ticked) -->
+              <div id="criteriaFields" class="hidden flex-col space-y-2">
+                <span class="text-sm font-bold text-gray-800">Facility Criteria <span class="text-gray-400 font-normal">(all optional)</span></span>
+                <div class="grid grid-cols-3 gap-2">
+                  <div class="relative">
+                    <label for="critCapacity" class="sr-only">Minimum capacity</label>
+                    <input id="critCapacity" type="number" min="1" placeholder="Min seats" class="w-full px-3 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" />
+                  </div>
+                  <div class="relative">
+                    <label for="critRoomType" class="sr-only">Room type</label>
+                    <select id="critRoomType" class="w-full px-2 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none">
+                      <option value="">Any type</option>
+                    </select>
+                  </div>
+                  <div class="relative">
+                    <label for="critFloor" class="sr-only">Floor</label>
+                    <select id="critFloor" class="w-full px-2 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] appearance-none">
+                      <option value="">Any floor</option>
+                    </select>
+                  </div>
+                </div>
+                <p class="text-xs text-gray-500">Leave a field blank for "no preference".</p>
               </div>
 
               <div class="flex flex-col space-y-2">
@@ -431,6 +454,9 @@
             
           </form>
 
+          <!-- Conflict / holiday notice (driven by booking.js state) -->
+          <p id="bookingConflictNote" class="hidden mx-6 mt-4 text-xs font-semibold rounded-lg px-3 py-2"></p>
+
           <!-- Form Footer Actions -->
           <div class="bg-gray-50 px-6 py-5 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p class="text-xs text-gray-500 flex items-center gap-1.5">
@@ -440,6 +466,10 @@
             <div class="flex items-center gap-3 w-full sm:w-auto">
               <button id="cancelModalBtn" type="button" class="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-200 text-gray-700 font-medium text-sm rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
                 Cancel
+              </button>
+              <button id="requestSlipBtn" type="button" class="hidden w-full sm:w-auto px-6 py-2.5 bg-amber-500 text-white font-medium text-sm rounded-xl items-center justify-center gap-2 transition-colors shadow-sm hover:bg-amber-600 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">assignment</span>
+                Request Slip
               </button>
               <button id="bookingSubmitBtn" type="submit" form="roomReservationForm" disabled class="w-full sm:w-auto px-6 py-2.5 bg-gray-200 text-gray-400 font-medium text-sm rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm cursor-not-allowed">
                 <span class="material-symbols-outlined text-[18px]">send</span>
@@ -456,8 +486,8 @@
     <script src="js/util.js"></script>
     <script src="js/schedule.js"></script>
     <script src="js/app.js"></script>
-    <script src="js/roomCalendar.js"></script>
-    <script src="js/booking.js"></script>
+    <script src="js/roomCalendar.js?v=20261004-1"></script>
+    <script src="js/booking.js?v=20261004-1"></script>
     <script>
       document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('roomReservationForm');
@@ -469,11 +499,13 @@
         const endTime = document.getElementById('endTime');
         const purposeInput = document.getElementById('purpose');
         const policyBox = document.getElementById('policyAcknowledgement');
+        const autoAssign = document.getElementById('autoAssign');
 
         if (!submitBtn || !form) return;
 
         function isFormReady() {
-          if (roomSelect && !roomSelect.value) return false;
+          // When "assign any available room" is on, no specific room is required.
+          if (!(autoAssign && autoAssign.checked) && roomSelect && !roomSelect.value) return false;
           if (resDate && !resDate.value) return false;
           if (resEndDate && !resEndDate.value) return false;
           if (startTime && !startTime.value) return false;
@@ -487,10 +519,12 @@
           return true;
         }
 
-        function updateBtn() {
-          const ready = isFormReady();
-          submitBtn.disabled = !ready;
-          if (ready) {
+        const requestSlipBtn = document.getElementById('requestSlipBtn');
+        const conflictNote   = document.getElementById('bookingConflictNote');
+
+        function setSubmitEnabled(on) {
+          submitBtn.disabled = !on;
+          if (on) {
             submitBtn.className = submitBtn.className
               .replace('bg-gray-200', 'bg-blue-600')
               .replace('text-gray-400', 'text-white')
@@ -503,8 +537,69 @@
             submitBtn.className = cls.replace(/\s+/g, ' ').trim();
           }
         }
+        function showSlipBtn(on) {
+          if (!requestSlipBtn) return;
+          requestSlipBtn.classList.toggle('hidden', !on);
+          requestSlipBtn.classList.toggle('inline-flex', on);
+        }
+        function showNote(msg, tone) {
+          if (!conflictNote) return;
+          if (!msg) { conflictNote.classList.add('hidden'); conflictNote.textContent = ''; return; }
+          conflictNote.textContent = msg;
+          conflictNote.className = 'mx-6 mt-4 text-xs font-semibold rounded-lg px-3 py-2 ' +
+            (tone === 'red'
+              ? 'text-red-700 bg-red-50 border border-red-200'
+              : 'text-amber-800 bg-amber-50 border border-amber-200');
+        }
 
-        const watchTargets = [roomSelect, resDate, resEndDate, startTime, endTime, purposeInput, policyBox];
+        // Rules 1-3: a clean slot enables the normal Submit (auto-approved); an
+        // Approved-booking clash disables Submit and offers a Request Slip; a
+        // holiday (or class / pending clash) blocks with no slip at all.
+        function updateBtn() {
+          const ready = isFormReady();
+          const info = (window.CampusRoomBooking && window.CampusRoomBooking.classify)
+            ? window.CampusRoomBooking.classify()
+            : { status: 'clean' };
+
+          // A holiday closes the whole day — show that notice even before the
+          // rest of the form is filled (rule 3), and never offer a slip.
+          if (info.status === 'holiday') {
+            setSubmitEnabled(false);
+            showSlipBtn(false);
+            showNote(info.message || 'That date is a holiday and cannot be reserved.', 'red');
+            return;
+          }
+
+          if (!ready) { setSubmitEnabled(false); showSlipBtn(false); showNote('', null); return; }
+
+          switch (info.status) {
+            case 'overridable':
+              setSubmitEnabled(false);
+              showSlipBtn(true);
+              showNote((info.message ? info.message + ' ' : '') +
+                'This time is already booked — file a Request Slip for staff to review an override.', 'amber');
+              break;
+            case 'blocked':
+              setSubmitEnabled(false);
+              showSlipBtn(false);
+              showNote(info.message || 'That time is unavailable.', 'red');
+              break;
+            default: // clean / incomplete
+              setSubmitEnabled(true);
+              showSlipBtn(false);
+              showNote('', null);
+          }
+        }
+
+        if (requestSlipBtn) {
+          requestSlipBtn.addEventListener('click', () => {
+            if (window.CampusRoomBooking && window.CampusRoomBooking.openRequestSlip) {
+              window.CampusRoomBooking.openRequestSlip();
+            }
+          });
+        }
+
+        const watchTargets = [roomSelect, resDate, resEndDate, startTime, endTime, purposeInput, policyBox, autoAssign];
         watchTargets.forEach(el => {
           if (!el) return;
           el.addEventListener('change', updateBtn);
@@ -512,6 +607,9 @@
         });
 
         form.addEventListener('change', updateBtn);
+        // booking.js re-evaluates conflicts after the async schedule load and on
+        // every selection change, and tells us to repaint the buttons.
+        document.addEventListener('campusroom:bookingstate', updateBtn);
         updateBtn();
       });
     </script>

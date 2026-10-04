@@ -1,11 +1,10 @@
 /**
  * CampusRoom — Log archive modal (shared component, Section 13)
  *
- * One component used by the customer page (my-reservations.html) and the
- * staff dispatch queue (staff-queue.html):
+ * One component used by reservation pages and the Governance booking-history view:
  *
  *   window.CampusRoomLogArchive.open(reservationId)   per-booking timeline
- *   window.CampusRoomLogArchive.openGlobal()          Admin audit search
+ *   window.CampusRoomLogArchive.openGlobal()          Admin-only audit search
  *   window.CampusRoomLogArchive.close()
  *
  * Load order on a page:
@@ -18,10 +17,9 @@
  *     check lives server-side (Section 8) — a Customer only ever gets their
  *     own booking's rows back, a 403, or a 404. This component never decides
  *     that on its own.
- *   - openGlobal() is Staff/Admin only. Nothing on this page enforces that;
- *     it must only ever be wired up from a page already gated to those
- *     roles (staff-queue.html). GET api/logs itself also 403s a Customer,
- *     so a stray call here fails safely, but it should never be offered.
+ *   - openGlobal() is Admin-only and is only offered from Admin Governance.
+ *     GET api/logs enforces this role server-side; booking timelines use the
+ *     separate GET api/reservations/{id}/logs endpoint.
  *   - action_type is free text (Section 8) — icon/colour matching is a best
  *     effort by keyword, with a neutral fallback for anything unmatched.
  *   - Timestamps are zone-less DATETIME/TIMESTAMP strings that are already
@@ -31,8 +29,7 @@
  *   - Builds its own DOM and injects its own <style>, so both pages need
  *     nothing but the script tags.
  *   - The "Actor" filter in the global view has no directory endpoint to
- *     draw from — GET api/users is Admin-only and this view is also open to
- *     Staff. Instead it is populated from actors seen in loaded pages,
+ *     draw from — GET api/users is Admin-only. Instead it is populated from actors seen in loaded pages,
  *     growing as the operator pages or filters further. Documented in the
  *     Section 13 handoff notes as a known limitation, not a bug.
  */
@@ -242,7 +239,7 @@
   }
 
   // ---------------------------------------------------------------
-  // Global (Staff/Admin) audit search
+  // Global (Admin-only) audit search
   // ---------------------------------------------------------------
 
   function rememberActors(items) {
@@ -443,7 +440,7 @@
         return;
       }
       if (response.status === 403) {
-        bodyEl.innerHTML = errorHtml('Only Staff and Admin accounts can view the audit log.', { retry: false });
+        bodyEl.innerHTML = errorHtml('Only Admin accounts can view the system-wide audit log.', { retry: false });
         return;
       }
       if (!response.ok || !json || json.success === false || !json.data) {

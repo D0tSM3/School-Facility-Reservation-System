@@ -53,6 +53,7 @@ class RoomRepository
                     r.capacity,
                     r.status,
                     r.is_active::int AS is_active,
+                    r.requires_approval::int AS requires_approval,
                     r.created_at,
                     CASE
                         WHEN EXISTS (
@@ -85,6 +86,7 @@ class RoomRepository
                     r.capacity,
                     r.status,
                     r.is_active::int AS is_active,
+                    r.requires_approval::int AS requires_approval,
                     r.created_at,
                     CASE
                         WHEN r.is_active = false THEN 'Decommissioned'
@@ -102,11 +104,52 @@ class RoomRepository
         return $stmt->fetchAll();
     }
 
+    /**
+     * Rooms eligible for "assign any available room": in service, Available
+     * (not under maintenance) and NOT flagged requires_approval — a special
+     * room is chosen deliberately, never auto-assigned. The optional filters
+     * narrow by minimum capacity, exact room type and exact floor. Ordered by
+     * capacity ascending then name, so the smallest room that fits is tried
+     * first and the biggest rooms are kept free for bookings that need them.
+     *
+     * Callers still run ReservationValidator per room/day; this only trims the
+     * field to rooms that COULD be booked at all.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function findBookableByCriteria(?int $minCapacity, ?string $roomType, ?int $floor): array
+    {
+        $sql = "SELECT room_id, name, floor, room_type, capacity
+                  FROM Rooms
+                 WHERE is_active = true
+                   AND status = 'Available'
+                   AND requires_approval = false";
+        $params = [];
+
+        if ($minCapacity !== null) {
+            $sql .= ' AND capacity >= :min_capacity';
+            $params[':min_capacity'] = $minCapacity;
+        }
+        if ($roomType !== null && $roomType !== '') {
+            $sql .= ' AND room_type = :room_type';
+            $params[':room_type'] = $roomType;
+        }
+        if ($floor !== null) {
+            $sql .= ' AND floor = :floor';
+            $params[':floor'] = $floor;
+        }
+
+        $sql .= ' ORDER BY capacity ASC, name ASC';
+
+        return $this->db->query($sql, $params)->fetchAll();
+    }
+
     /** Find a room by primary key. */
     public function findById(string $roomId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT room_id, name, floor, room_type, capacity, status, is_active::int AS is_active, created_at
+            'SELECT room_id, name, floor, room_type, capacity, status, is_active::int AS is_active,
+                    requires_approval::int AS requires_approval, created_at
                FROM Rooms
               WHERE room_id = :room_id
               LIMIT 1',
@@ -114,6 +157,20 @@ class RoomRepository
         );
         $row = $stmt->fetch();
         return $row ?: null;
+    }
+
+    /**
+     * Whether a room always needs Staff sign-off, whatever the schedule says.
+     * Drives ReservationController::approvalOutcome() — a true here forces a
+     * Pending / 'special' booking instead of auto-approval.
+     */
+    public function requiresApproval(string $roomId): bool
+    {
+        $stmt = $this->db->query(
+            'SELECT requires_approval FROM Rooms WHERE room_id = :room_id LIMIT 1',
+            [':room_id' => $roomId]
+        );
+        return (bool) $stmt->fetchColumn();
     }
 
     /**
@@ -157,7 +214,7 @@ class RoomRepository
      *
      * @return array|null Updated row, or null if not found.
      */
-    public function update(string $roomId, ?string $status, ?bool $isActive, array $details = []): ?array
+    public function update(string $roomId, ?string $status, ?bool $isActive, array $details = [], ?bool $requiresApproval = null): ?array
     {
         $sets   = [];
         $params = [':room_id' => $roomId];
@@ -174,9 +231,18 @@ class RoomRepository
             $sets[]           = 'status = :status';
             $params[':status'] = $status;
         }
+        // Booleans are bound as 0/1, not PHP true/false. With emulated prepares
+        // off, PDO sends a PHP false as an empty string, which PostgreSQL rejects
+        // for a boolean column ("invalid input syntax for type boolean: """);
+        // '1'/'0' cast cleanly. (This also fixes room DEACTIVATION, which hit the
+        // same bug the moment is_active was set to false.)
         if ($isActive !== null) {
             $sets[]             = 'is_active = :is_active';
-            $params[':is_active'] = $isActive;
+            $params[':is_active'] = $isActive ? 1 : 0;
+        }
+        if ($requiresApproval !== null) {
+            $sets[]                      = 'requires_approval = :requires_approval';
+            $params[':requires_approval'] = $requiresApproval ? 1 : 0;
         }
 
         if (empty($sets)) {

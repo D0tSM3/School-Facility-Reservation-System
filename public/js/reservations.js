@@ -181,6 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderReservations();
         applyFilters();
         fetchOverrideRequests();
+        fetchFacilitySuggestions();
       })
       .catch(err => {
         // Log the real cause instead of silently swallowing it - this is
@@ -266,6 +267,113 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(res => res.json())
       .then(json => renderOverrideRequests(json && json.success && Array.isArray(json.data) ? json.data : []))
       .catch(err => console.error('[My Reservations] override requests failed to load:', err));
+  }
+
+  // ---------------------------------------------------------------
+  // Facility suggestions: staff propose moving ONE conflicting day of a
+  // booking to a different room. Shown in their own panel above everything,
+  // with Accept / Decline. (Step 5)
+  // ---------------------------------------------------------------
+
+  let facilityPanel = null;
+
+  function ensureFacilityPanel() {
+    if (facilityPanel || !reservationList || !reservationList.parentNode) return facilityPanel;
+    facilityPanel = document.createElement('section');
+    facilityPanel.id = 'facilitySuggestionsPanel';
+    facilityPanel.className = 'hidden mb-4';
+    facilityPanel.setAttribute('aria-label', 'Facility suggestions from staff');
+    // Above the override panel when it exists, otherwise directly above the list.
+    reservationList.parentNode.insertBefore(facilityPanel, overridePanel || reservationList);
+    return facilityPanel;
+  }
+
+  function renderFacilitySuggestions(list) {
+    const panel = ensureFacilityPanel();
+    if (!panel) return;
+    panel.classList.toggle('hidden', !list.length);
+    if (!list.length) { panel.innerHTML = ''; return; }
+
+    panel.innerHTML = `
+      <h2 class="text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[18px] text-sky-600">swap_horiz</span>Room change suggested by staff
+      </h2>` + list.map(s => {
+        const d = formatDate(s.affected_date);
+        return `<div class="bg-white px-5 py-4 rounded-xl border-2 border-sky-200 shadow-sm mb-2" data-suggestion-card="${escapeHtml(s.suggestion_id)}">
+          <p class="text-sm text-gray-800">
+            Staff suggests moving your <span class="font-bold">${escapeHtml(d.month)} ${escapeHtml(String(d.day))}</span> booking
+            from <span class="font-bold">${escapeHtml(s.original_room_name)}</span>
+            to <span class="font-bold text-sky-800">${escapeHtml(s.suggested_room_name)}</span>
+            because ${escapeHtml(s.reason)}
+            <span class="text-gray-500">The rest of your booking is unaffected.</span>
+          </p>
+          <div class="text-xs text-gray-500 mt-1.5">${escapeHtml(s.purpose || '')} • ${formatTime(s.start_time)} – ${formatTime(s.end_time)}</div>
+          <p data-suggestion-error class="hidden text-xs font-semibold text-red-600 mt-2"></p>
+          <div class="flex items-center gap-2 mt-3">
+            <button type="button" data-suggestion-accept="${escapeHtml(s.suggestion_id)}"
+              class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-semibold rounded-lg transition-all shadow-sm">
+              <span class="material-symbols-outlined text-[14px]">check</span>Accept
+            </button>
+            <button type="button" data-suggestion-decline="${escapeHtml(s.suggestion_id)}"
+              class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-xs font-semibold rounded-lg transition-all shadow-sm">
+              <span class="material-symbols-outlined text-[14px]">close</span>Decline
+            </button>
+          </div>
+        </div>`;
+      }).join('');
+
+    panel.querySelectorAll('[data-suggestion-accept]').forEach(b =>
+      b.addEventListener('click', () => respondToSuggestion(b.getAttribute('data-suggestion-accept'), 'Accepted', b)));
+    panel.querySelectorAll('[data-suggestion-decline]').forEach(b =>
+      b.addEventListener('click', () => respondToSuggestion(b.getAttribute('data-suggestion-decline'), 'Declined', b)));
+  }
+
+  function respondToSuggestion(suggestionId, status, btn) {
+    const card = btn.closest('[data-suggestion-card]');
+    const errEl = card ? card.querySelector('[data-suggestion-error]') : null;
+    // Lock both buttons while the request is in flight.
+    const buttons = card ? card.querySelectorAll('button') : [btn];
+    buttons.forEach(b => { b.disabled = true; b.classList.add('opacity-50', 'cursor-not-allowed'); });
+    if (errEl) errEl.classList.add('hidden');
+
+    fetch(BASE + 'api/facility-suggestions/' + encodeURIComponent(suggestionId), {
+      method: 'PATCH',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    })
+      .then(res => res.json().catch(() => null).then(json => ({ status: res.status, json })))
+      .then(({ status: code, json }) => {
+        if (code === 401) { window.location.href = 'index.html'; return; }
+        if (!json || !json.success) {
+          const msg = (json && json.error) || 'Could not record your response. Please try again.';
+          if (errEl) { errEl.textContent = msg; errEl.classList.remove('hidden'); }
+          buttons.forEach(b => { b.disabled = false; b.classList.remove('opacity-50', 'cursor-not-allowed'); });
+          return;
+        }
+        // Drop the answered card immediately so the panel updates even before
+        // the reload lands; hide the whole panel once nothing is left.
+        if (card) card.remove();
+        if (facilityPanel && !facilityPanel.querySelector('[data-suggestion-card]')) {
+          facilityPanel.classList.add('hidden');
+          facilityPanel.innerHTML = '';
+        }
+        // Accepting changes the booking's room; reload so the list (and its room
+        // labels) reflect the room that is now assigned (and re-syncs the panel).
+        fetchReservations();
+      })
+      .catch(err => {
+        console.error('[My Reservations] suggestion response failed:', err);
+        if (errEl) { errEl.textContent = 'Network error. Check your connection and try again.'; errEl.classList.remove('hidden'); }
+        buttons.forEach(b => { b.disabled = false; b.classList.remove('opacity-50', 'cursor-not-allowed'); });
+      });
+  }
+
+  function fetchFacilitySuggestions() {
+    fetch(BASE + 'api/facility-suggestions/mine?status=Pending', { credentials: 'same-origin' })
+      .then(res => res.json())
+      .then(json => renderFacilitySuggestions(json && json.success && Array.isArray(json.data) ? json.data : []))
+      .catch(err => console.error('[My Reservations] facility suggestions failed to load:', err));
   }
 
   // ---------------------------------------------------------------
@@ -383,6 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     switch (reservation.status) {
       case 'Pending':
+        buttons.push(actionButton('slip', id, 'View Request Slip'));
         buttons.push(actionButton('move', id, 'Move', moveRequestBlockedReason(reservation)));
         buttons.push(actionButton('remove', id, 'Withdraw'));
         break;
