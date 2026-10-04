@@ -151,7 +151,52 @@ class ReservationValidator
              LIMIT 1
         ");
 
-        foreach (self::datesBetween($startDate, $endDate) ?? [] as $day) {
+        $days = self::datesBetween($startDate, $endDate) ?? [];
+        if ($activeDates !== null && count($activeDates) > 0) {
+            $days = array_values(array_intersect($days, $activeDates));
+        }
+
+        foreach ($days as $day) {
+            $stmt->execute([$roomId, "$day $dailyEnd", "$day $dailyStart"]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row !== false) {
+                return $row;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The first Approved or Pending reservation in this room that overlaps the daily
+     * window on any date of the range, or null. Prefers Approved over Pending.
+     * Returns reservation_id, customer_id, start_time, end_time and status.
+     */
+    public static function findConflictingReservation(
+        string $roomId,
+        string $startDate,
+        string $endDate,
+        string $dailyStart,
+        string $dailyEnd,
+        ?array $activeDates = null
+    ): ?array {
+        $pdo  = Database::getInstance()->getPdo();
+        $stmt = $pdo->prepare("
+            SELECT reservation_id, customer_id, start_time, end_time, status
+              FROM Reservations
+             WHERE room_id = ?
+               AND status IN ('Approved', 'Pending')
+               AND start_time < ?
+               AND end_time > ?
+             ORDER BY CASE WHEN status = 'Approved' THEN 1 ELSE 2 END, start_time
+             LIMIT 1
+        ");
+
+        $days = self::datesBetween($startDate, $endDate) ?? [];
+        if ($activeDates !== null && count($activeDates) > 0) {
+            $days = array_values(array_intersect($days, $activeDates));
+        }
+
+        foreach ($days as $day) {
             $stmt->execute([$roomId, "$day $dailyEnd", "$day $dailyStart"]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($row !== false) {

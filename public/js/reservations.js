@@ -155,37 +155,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function fetchReservations() {
     setLoading(true);
-    fetch(BASE + 'api/reservations/mine', { credentials: 'same-origin' })
-      // Parse the body inside its own catch so a bad/non-JSON response is
-      // reported as a bad response, not confused with the request never
-      // reaching the server at all.
-      .then(res =>
-        res
-          .json()
-          .catch(() => {
+    Promise.all([
+      fetch(BASE + 'api/reservations/mine', { credentials: 'same-origin' })
+        .then(res => {
+          if (res.status === 401) {
+            window.location.href = 'index.html';
+            return null;
+          }
+          return res.json().catch(() => {
             throw new Error('Server returned an unreadable (non-JSON) response.');
-          })
-          .then(json => ({ status: res.status, json }))
-      )
-      .then(({ status, json }) => {
-        if (status === 401) {
-          window.location.href = 'index.html';
-          return;
-        }
-        if (!json.success) {
-          showListError(json.error || 'Could not load your reservations.');
+          });
+        }),
+      fetch(BASE + 'api/conflict-override-requests/mine', { credentials: 'same-origin' })
+        .then(res => {
+          if (res.status === 401) return null;
+          return res.json().catch(() => ({ success: false, data: [] }));
+        })
+        .catch(() => ({ success: false, data: [] }))
+    ])
+      .then(([resJson, ovJson]) => {
+        if (!resJson) return; // 401 redirecting
+        if (!resJson.success) {
+          showListError(resJson.error || 'Could not load your reservations.');
           return;
         }
         hideListStates();
-        allReservations = groupBySeries(json.data || []);
+
+        const reservations = groupBySeries(resJson.data || []);
+        const overrides = (ovJson && ovJson.success && Array.isArray(ovJson.data)) ? ovJson.data : [];
+
+        // Format active / pending Request Slips (Conflict Override Requests)
+        // Booked ones are already converted to real reservations in `reservations`
+        const overrideItems = overrides
+          .filter(o => o.outcome !== 'Booked')
+          .map(o => ({
+            is_override: true,
+            reservation_id: o.request_id,
+            request_id: o.request_id,
+            room_id: o.room_id,
+            room_name: o.room_name,
+            start_time: o.start_time,
+            end_time: o.end_time,
+            purpose: o.purpose,
+            category: o.category,
+            reason: o.reason,
+            request_type: o.request_type || 'Schedule Conflict',
+            alt_start_time: o.alt_start_time,
+            alt_end_time: o.alt_end_time,
+            additional_info: o.additional_info,
+            equipment_notes: o.equipment_notes,
+            status: o.status,
+            staff_comment: o.staff_comment,
+            outcome: o.outcome,
+            outcome_note: o.outcome_note,
+            created_at: o.created_at,
+            is_multi_day: String(o.start_time).slice(0, 10) !== String(o.end_time).slice(0, 10),
+            series_rows: []
+          }));
+
+        // Override items placed first so customer sees newly filed request slips at top
+        allReservations = [...overrideItems, ...reservations];
         renderReservations();
         applyFilters();
-        fetchOverrideRequests();
       })
       .catch(err => {
-        // Log the real cause instead of silently swallowing it - this is
-        // what actually failed, whether that's a dropped connection, a bad
-        // response body, or a bug while rendering the data.
         console.error('[My Reservations] failed to load:', err);
         const message = (err instanceof TypeError)
           ? 'Network error. Check that the server is reachable.'
@@ -197,76 +230,150 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (reservationListRetry) reservationListRetry.addEventListener('click', fetchReservations);
 
-  // ---------------------------------------------------------------
-  // Urgent (conflict override) requests: shown in their own panel above the
-  // list. They aren't reservations yet, so the status filters don't apply.
-  // ---------------------------------------------------------------
-
-  let overridePanel = null;
-
-  function ensureOverridePanel() {
-    if (overridePanel || !reservationList || !reservationList.parentNode) return overridePanel;
-    overridePanel = document.createElement('section');
-    overridePanel.id = 'overrideRequestsPanel';
-    overridePanel.className = 'hidden mb-4';
-    overridePanel.setAttribute('aria-label', 'Urgent override requests');
-    reservationList.parentNode.insertBefore(overridePanel, reservationList);
-    return overridePanel;
-  }
-
-  /** Label + colors + detail line for an override request's current state. */
-  function overrideState(o) {
-    if (o.status === 'Pending') {
-      return { label: 'Pending review', cls: 'bg-yellow-100 text-yellow-700', note: 'Staff will decide whether to ask the current holder to move.' };
+  function withdrawRequestSlip(id) {
+    if (!confirm('Are you sure you want to withdraw this Request Slip? This will cancel your conflict override request.')) {
+      return;
     }
-    if (o.status === 'Rejected') {
-      return { label: 'Rejected', cls: 'bg-red-100 text-red-700', note: o.staff_comment ? `Staff comment: ${o.staff_comment}` : 'Staff declined this request.' };
-    }
-    switch (o.outcome) {
-      case 'Booked':
-        return { label: 'Approved · booked', cls: 'bg-green-100 text-green-700', note: 'Your reservation was created and is awaiting normal approval — see it in the list below.' };
-      case 'Move rejected':
-        return { label: 'Not fulfilled', cls: 'bg-red-100 text-red-700', note: 'The current booking could not be moved, so the slot stays with its holder.' + (o.outcome_note ? ` Staff comment: ${o.outcome_note}` : '') };
-      case 'Booking failed':
-        return { label: 'Not fulfilled', cls: 'bg-red-100 text-red-700', note: `The slot was freed, but your booking couldn't be created: ${o.outcome_note || 'the room is no longer free.'}` };
-      default:
-        return { label: 'Approved · awaiting move', cls: 'bg-violet-100 text-violet-700', note: 'Staff approved your request and asked the current booking to move. Your reservation is created once that move is confirmed.' + (o.staff_comment ? ` Staff comment: ${o.staff_comment}` : '') };
-    }
-  }
-
-  function renderOverrideRequests(list) {
-    const panel = ensureOverridePanel();
-    if (!panel) return;
-    panel.classList.toggle('hidden', !list.length);
-    if (!list.length) { panel.innerHTML = ''; return; }
-
-    panel.innerHTML = `
-      <h2 class="text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5">
-        <span class="material-symbols-outlined text-[18px] text-violet-600">priority_high</span>Urgent override requests
-      </h2>` + list.map(o => {
-        const s = overrideState(o);
-        const d = formatDate(o.start_time);
-        const multi = String(o.start_time).slice(0, 10) !== String(o.end_time).slice(0, 10);
-        const days = multi ? ` to ${formatDate(o.end_time).month} ${formatDate(o.end_time).day}` : '';
-        return `<div class="bg-white px-5 py-3 rounded-xl border border-violet-200 shadow-sm mb-2">
-          <div class="flex items-center gap-2 flex-wrap">
-            <h3 class="text-sm font-bold text-gray-900">${escapeHtml(o.purpose)}</h3>
-            <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded ${s.cls}">${escapeHtml(s.label)}</span>
-          </div>
-          <div class="text-xs text-gray-500 mt-1">
-            ${escapeHtml(o.room_name)} • ${escapeHtml(d.month)} ${escapeHtml(String(d.day))}${escapeHtml(days)} • ${formatTime(o.start_time)} – ${formatTime(o.end_time)}${multi ? ' daily' : ''}
-          </div>
-          <div class="text-xs text-gray-600 mt-1.5">${escapeHtml(s.note)}</div>
-        </div>`;
-      }).join('');
-  }
-
-  function fetchOverrideRequests() {
-    fetch(BASE + 'api/conflict-override-requests/mine', { credentials: 'same-origin' })
+    fetch(BASE + 'api/conflict-override-requests/' + encodeURIComponent(id), {
+      method: 'DELETE',
+      credentials: 'same-origin'
+    })
       .then(res => res.json())
-      .then(json => renderOverrideRequests(json && json.success && Array.isArray(json.data) ? json.data : []))
-      .catch(err => console.error('[My Reservations] override requests failed to load:', err));
+      .then(json => {
+        if (json && json.success) {
+          showToast('Request Slip withdrawn successfully.', 'success');
+          fetchReservations();
+        } else {
+          showToast((json && json.error) || 'Could not withdraw Request Slip.', 'error');
+        }
+      })
+      .catch(() => {
+        showToast('Network error while withdrawing Request Slip.', 'error');
+      });
   }
+
+  // ---------------------------------------------------------------
+  // View Request Slip Modal
+  // ---------------------------------------------------------------
+
+  const requestSlipViewModal = document.getElementById('requestSlipViewModal');
+  const closeRequestSlipViewBtn = document.getElementById('closeRequestSlipViewBtn');
+  const closeRequestSlipViewFooterBtn = document.getElementById('closeRequestSlipViewFooterBtn');
+  const rsvWithdrawBtn = document.getElementById('rsvWithdrawBtn');
+
+  function openRequestSlipViewModal(id) {
+    const item = allReservations.find(r => r.is_override && (r.request_id === id || r.reservation_id === id));
+    if (!item || !requestSlipViewModal) return;
+
+    const rsvCodeBadge = document.getElementById('rsvCodeBadge');
+    const rsvRoomName = document.getElementById('rsvRoomName');
+    const rsvRequestType = document.getElementById('rsvRequestType');
+    const rsvDates = document.getElementById('rsvDates');
+    const rsvTimes = document.getElementById('rsvTimes');
+    const rsvReason = document.getElementById('rsvReason');
+    const rsvAltScheduleText = document.getElementById('rsvAltScheduleText');
+    const rsvAdditionalBlock = document.getElementById('rsvAdditionalBlock');
+    const rsvAdditionalText = document.getElementById('rsvAdditionalText');
+    const rsvStatusBanner = document.getElementById('rsvStatusBanner');
+    const rsvStatusIcon = document.getElementById('rsvStatusIcon');
+    const rsvStatusTitle = document.getElementById('rsvStatusTitle');
+    const rsvStatusDesc = document.getElementById('rsvStatusDesc');
+
+    if (rsvCodeBadge) rsvCodeBadge.textContent = '#REQ-SLIP-' + String(item.request_id).substring(0, 8).toUpperCase();
+    if (rsvRoomName) rsvRoomName.textContent = item.room_name || item.room_id || '—';
+    if (rsvRequestType) rsvRequestType.textContent = item.request_type || item.category || 'Conflict Override';
+
+    const startDateObj = formatDate(item.start_time);
+    const multi = String(item.start_time).slice(0, 10) !== String(item.end_time).slice(0, 10);
+    const endDateObj = multi ? formatDate(item.end_time) : null;
+    const dateStr = multi
+      ? `${startDateObj.month} ${startDateObj.day}, ${startDateObj.year} – ${endDateObj.month} ${endDateObj.day}, ${endDateObj.year}`
+      : `${startDateObj.month} ${startDateObj.day}, ${startDateObj.year}`;
+
+    if (rsvDates) rsvDates.textContent = dateStr;
+    if (rsvTimes) rsvTimes.textContent = `${formatTime(item.start_time)} – ${formatTime(item.end_time)}`;
+    if (rsvReason) rsvReason.textContent = item.reason || 'No justification provided.';
+
+    if (rsvAltScheduleText) {
+      if (item.alt_start_time) {
+        const altStartObj = formatDate(item.alt_start_time);
+        rsvAltScheduleText.textContent = `${altStartObj.month} ${altStartObj.day}, ${altStartObj.year} (${formatTime(item.alt_start_time)} – ${formatTime(item.alt_end_time)})`;
+      } else {
+        rsvAltScheduleText.textContent = 'None provided (Strictly requesting the original slot).';
+      }
+    }
+
+    if (rsvAdditionalBlock && rsvAdditionalText) {
+      const extraParts = [];
+      if (item.additional_info) extraParts.push(item.additional_info);
+      if (item.equipment_notes && item.equipment_notes !== 'Standard Academic Setup') {
+        extraParts.push('Equipment: ' + item.equipment_notes);
+      }
+      if (extraParts.length > 0) {
+        rsvAdditionalText.textContent = extraParts.join('\n\n');
+        rsvAdditionalBlock.classList.remove('hidden');
+      } else {
+        rsvAdditionalBlock.classList.add('hidden');
+      }
+    }
+
+    // Status banner styling
+    if (rsvStatusBanner && rsvStatusIcon && rsvStatusTitle && rsvStatusDesc) {
+      if (item.status === 'Pending') {
+        rsvStatusBanner.className = 'p-3.5 rounded-xl border flex items-start gap-3 bg-amber-50 border-amber-200 text-amber-900';
+        rsvStatusIcon.textContent = 'hourglass_top';
+        rsvStatusIcon.className = 'material-symbols-outlined text-[20px] text-amber-700 shrink-0 mt-0.5';
+        rsvStatusTitle.textContent = 'Status: Under Review by Campus Staff';
+        rsvStatusDesc.textContent = 'Staff will evaluate your request to determine if the conflicting booking can be relocated or rescheduled.';
+      } else if (item.status === 'Approved') {
+        rsvStatusBanner.className = 'p-3.5 rounded-xl border flex items-start gap-3 bg-violet-50 border-violet-200 text-violet-900';
+        rsvStatusIcon.textContent = 'sync';
+        rsvStatusIcon.className = 'material-symbols-outlined text-[20px] text-violet-700 shrink-0 mt-0.5';
+        rsvStatusTitle.textContent = 'Status: Approved (Awaiting Move Completion)';
+        rsvStatusDesc.textContent = 'Staff has approved your request and initiated a relocation of the conflicting booking. Once completed, your reservation will be scheduled.';
+      } else if (item.status === 'Rejected') {
+        rsvStatusBanner.className = 'p-3.5 rounded-xl border flex items-start gap-3 bg-red-50 border-red-200 text-red-900';
+        rsvStatusIcon.textContent = 'cancel';
+        rsvStatusIcon.className = 'material-symbols-outlined text-[20px] text-red-700 shrink-0 mt-0.5';
+        rsvStatusTitle.textContent = 'Status: Declined';
+        rsvStatusDesc.textContent = item.staff_comment || 'Staff was unable to approve this conflict override request.';
+      }
+    }
+
+    if (rsvWithdrawBtn) {
+      if (item.status === 'Pending') {
+        rsvWithdrawBtn.classList.remove('hidden');
+        rsvWithdrawBtn.onclick = () => {
+          closeRequestSlipViewModal();
+          withdrawRequestSlip(item.request_id);
+        };
+      } else {
+        rsvWithdrawBtn.classList.add('hidden');
+      }
+    }
+
+    requestSlipViewModal.classList.remove('hidden');
+    requestSlipViewModal.classList.add('flex');
+  }
+
+  function closeRequestSlipViewModal() {
+    if (!requestSlipViewModal) return;
+    requestSlipViewModal.classList.add('hidden');
+    requestSlipViewModal.classList.remove('flex');
+  }
+
+  if (closeRequestSlipViewBtn) closeRequestSlipViewBtn.addEventListener('click', closeRequestSlipViewModal);
+  if (closeRequestSlipViewFooterBtn) closeRequestSlipViewFooterBtn.addEventListener('click', closeRequestSlipViewModal);
+  if (requestSlipViewModal) {
+    requestSlipViewModal.addEventListener('click', (e) => {
+      if (e.target === requestSlipViewModal) closeRequestSlipViewModal();
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && requestSlipViewModal && !requestSlipViewModal.classList.contains('hidden')) {
+      closeRequestSlipViewModal();
+    }
+  });
 
   // ---------------------------------------------------------------
   // Rendering
@@ -378,6 +485,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Which buttons show per status. An approved booking is deliberately NOT
   // cancellable here: the room is committed, so it goes through a request.
   function buildActions(reservation) {
+    if (reservation.is_override) {
+      const buttons = [];
+      buttons.push(`<button type="button" data-action="view-override-slip" data-id="${escapeHtml(reservation.request_id)}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#7a1f2b] text-white hover:bg-[#5e1821] text-xs font-semibold rounded-lg transition-all shadow-sm cursor-pointer"><span class="material-symbols-outlined text-[14px]">receipt_long</span>View Slip</button>`);
+      if (reservation.status === 'Pending') {
+        buttons.push(`<button type="button" data-action="withdraw-slip" data-id="${escapeHtml(reservation.request_id)}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm cursor-pointer"><span class="material-symbols-outlined text-[14px]">cancel</span>Withdraw</button>`);
+      }
+      return buttons.join('');
+    }
+
     const id = reservation.reservation_id;
     const buttons = [];
 
@@ -453,6 +569,75 @@ function renderReservations() {
     // No longer filters out Cancelled â€” every status renders, and the
     // existing 'history' tab filter (below) already accepts it.
     reservationList.innerHTML = allReservations.map(reservation => {
+      if (reservation.is_override) {
+        const isPending = reservation.status === 'Pending';
+        const isApproved = reservation.status === 'Approved';
+        const isRejected = reservation.status === 'Rejected';
+        
+        let filterStatus = isPending ? 'pending' : (isApproved ? 'pending' : 'history');
+        let statusBadgeCls = 'bg-amber-100 text-amber-800 border border-amber-300';
+        let statusBadgeText = 'REQUEST SLIP · PENDING REVIEW';
+        if (isApproved) {
+          statusBadgeCls = 'bg-violet-100 text-violet-700 border border-violet-200';
+          statusBadgeText = 'REQUEST SLIP · AWAITING MOVE';
+        } else if (isRejected) {
+          statusBadgeCls = 'bg-red-100 text-red-700 border border-red-200';
+          statusBadgeText = 'REQUEST SLIP · REJECTED';
+        }
+
+        const date = formatDate(reservation.start_time);
+        const multi = String(reservation.start_time).slice(0, 10) !== String(reservation.end_time).slice(0, 10);
+        const endDateObj = multi ? formatDate(reservation.end_time) : null;
+        const daysText = multi ? ` to ${endDateObj.month} ${endDateObj.day}, ${endDateObj.year}` : '';
+
+        const dateBlockHtml = `
+          <div class="border border-amber-300 rounded-lg overflow-hidden text-center min-w-[68px] shrink-0 flex flex-col bg-white shadow-xs">
+            <div class="bg-amber-600 text-white text-[9px] font-bold py-1 px-1 uppercase tracking-widest whitespace-nowrap">${date.month} ${date.year}</div>
+            <div class="text-2xl font-bold text-gray-900 py-2 leading-none">${date.day}</div>
+          </div>
+        `;
+
+        const titleText = reservation.purpose || reservation.request_type || 'Facility Request Slip';
+
+        return `<div data-status="${filterStatus}" class="reservation-card bg-white px-5 py-4 rounded-xl border border-amber-200/80 shadow-sm mb-3 transition-all hover:border-amber-300 hover:shadow">
+          <div class="flex items-center gap-5">
+            ${dateBlockHtml}
+
+            <!-- Main info -->
+            <div class="flex flex-col flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-base font-bold text-gray-900 leading-tight">${escapeHtml(titleText)}</h3>
+                <span class="text-[10px] font-semibold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-mono tracking-wide shrink-0">#REQ-SLIP-${escapeHtml(reservation.request_id).substring(0,8).toUpperCase()}</span>
+                <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded shrink-0 ${statusBadgeCls}">${statusBadgeText}</span>
+              </div>
+
+              <!-- Subtitle row -->
+              <div class="flex items-center gap-3 text-sm text-gray-500 mt-1 flex-wrap">
+                <span class="flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[15px] text-gray-400">location_on</span>
+                  <span class="font-medium text-gray-700">${escapeHtml(reservation.room_name || reservation.room_id)}</span>
+                </span>
+                <span class="text-gray-300 select-none">•</span>
+                <span class="flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[15px] text-gray-400">assignment</span>
+                  <span class="font-medium text-gray-700">${escapeHtml(reservation.request_type || 'Conflict Override')}</span>
+                </span>
+                <span class="text-gray-300 select-none">•</span>
+                <span class="flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[15px] text-gray-400">schedule</span>
+                  <span>${formatTime(reservation.start_time)} – ${formatTime(reservation.end_time)}${multi ? ' (' + daysText + ')' : ''}</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex items-center gap-2 shrink-0 self-center ml-2">
+              ${buildActions(reservation)}
+            </div>
+          </div>
+        </div>`;
+      }
+
       const date = formatDate(reservation.start_time);
       const isPast = isPastEnd(reservation);
 
@@ -758,6 +943,12 @@ function renderReservations() {
           break;
         case 'logs':
           openLogModal(id); // Section 13
+          break;
+        case 'withdraw-slip':
+          withdrawRequestSlip(id);
+          break;
+        case 'view-override-slip':
+          openRequestSlipViewModal(id);
           break;
       }
     });

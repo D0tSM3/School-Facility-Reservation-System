@@ -629,15 +629,152 @@ window.initBookingForm = function() {
     }
     
     const rsForm = document.getElementById('requestSlipForm');
+    const rsErrorBanner = document.getElementById('rsErrorBanner');
+    const submitRsBtn = document.getElementById('submitRequestSlipBtn') || (rsForm ? rsForm.querySelector('button[type="submit"]') : null);
+
     if (rsForm) {
-      rsForm.addEventListener('submit', (e) => {
+      rsForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        alert('Request Slip submitted successfully. Staff will review it shortly.');
-        closeRs();
-        const mainModal = document.getElementById('bookingModalOverlay');
-        if (mainModal) {
+        if (submitting) return;
+
+        const setRsError = (msg) => {
+          if (rsErrorBanner) {
+            rsErrorBanner.textContent = msg;
+            rsErrorBanner.classList.remove('hidden');
+          } else {
+            alert(msg);
+          }
+        };
+
+        if (rsErrorBanner) rsErrorBanner.classList.add('hidden');
+
+        const ack = document.getElementById('rsAcknowledgement');
+        if (ack && !ack.checked) {
+          return setRsError('Please check the acknowledgement checkbox to proceed.');
+        }
+
+        const reasonEl = rsForm.querySelector('textarea[name="reason"]');
+        const reason = reasonEl ? reasonEl.value.trim() : '';
+        if (!reason) {
+          return setRsError('Please explain why you need this facility (Justification is required).');
+        }
+
+        const reqTypeEl = rsForm.querySelector('select[name="request_type"]');
+        const requestType = reqTypeEl ? reqTypeEl.value : '';
+        if (!requestType) {
+          return setRsError('Please select a Request Type.');
+        }
+
+        const addInfoEl = rsForm.querySelector('textarea[name="additional_info"]');
+        const additionalInfo = addInfoEl ? addInfoEl.value.trim() : '';
+
+        const altSchedule = rsAltSchedule ? rsAltSchedule.value : 'No';
+        const altDateInput = rsForm.querySelector('input[name="alt_date"]');
+        const altStartInput = rsForm.querySelector('input[name="alt_start"]');
+        const altEndInput = rsForm.querySelector('input[name="alt_end"]');
+
+        const altDate = altDateInput ? altDateInput.value : '';
+        const altStart = altStartInput ? altStartInput.value : '';
+        const altEnd = altEndInput ? altEndInput.value : '';
+
+        if (altSchedule === 'Yes') {
+          if (!altDate || !altStart || !altEnd) {
+            return setRsError('Please fill out all fields for your alternative schedule, or set alternative schedule to "No".');
+          }
+          if (altEnd <= altStart) {
+            return setRsError('Alternative end time must be after the alternative start time.');
+          }
+        }
+
+        const roomId = roomSelect ? roomSelect.value : '';
+        const dateVal = startDateValue();
+        const endDateVal = endDateValue();
+        const startVal = startTimeInput ? startTimeInput.value : '';
+        const endVal = endTimeInput ? endTimeInput.value : '';
+
+        if (!roomId || !dateVal || !endDateVal || !startVal || !endVal) {
+          return setRsError('Facility, dates, and times must be selected on the booking form.');
+        }
+
+        const picked = form ? form.querySelector('input[name="reservation_purpose"]:checked') : null;
+        const PURPOSE_MAP = {
+          'Academic Requirement': 'Academic Lecture',
+          'Faculty-Directed Activity': 'Faculty Defense',
+          'Schedule Conflict': 'Academic Lecture',
+          'Special Event': 'Dept Workshop',
+          'Other': 'Academic Lecture'
+        };
+        const category = (picked && PURPOSE_LABELS[picked.value]) 
+          ? PURPOSE_LABELS[picked.value] 
+          : (PURPOSE_MAP[requestType] || 'Academic Lecture');
+
+        let purposeText = purposeInput ? purposeInput.value.trim() : '';
+        if (!purposeText) {
+          purposeText = `${requestType}: ${reason}`.substring(0, 250);
+        }
+
+        const payload = {
+          room_id: roomId,
+          purpose: purposeText,
+          category: category,
+          start_time: `${dateVal}T${startVal}:00`,
+          end_time: `${endDateVal}T${endVal}:00`,
+          equipment_notes: collectEquipmentNotes() || 'Standard Academic Setup',
+          reason: reason,
+          request_type: requestType,
+          additional_info: additionalInfo || null,
+          alt_start_time: (altSchedule === 'Yes' && altDate && altStart) ? `${altDate} ${altStart}:00` : null,
+          alt_end_time: (altSchedule === 'Yes' && altDate && altEnd) ? `${altDate} ${altEnd}:00` : null
+        };
+
+        if (getBookingMode() === 'specific') {
+          payload.active_dates = getSelectedDates();
+        }
+
+        if (submitRsBtn) {
+          submitRsBtn.disabled = true;
+          submitRsBtn.classList.add('opacity-70', 'cursor-not-allowed');
+          const btnSpan = submitRsBtn.querySelector('span:last-child');
+          if (btnSpan) btnSpan.textContent = 'Submitting…';
+        }
+
+        try {
+          const result = await sendReservation('api/conflict-override-requests', payload);
+          if (!result) return; // 401 redirecting
+
+          if (!result.ok || (result.json && !result.json.success)) {
+            const errMsg = (result.json && result.json.error) ? result.json.error : 'Could not submit your Request Slip. Please try again.';
+            if (submitRsBtn) {
+              submitRsBtn.disabled = false;
+              submitRsBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+              const btnSpan = submitRsBtn.querySelector('span:last-child');
+              if (btnSpan) btnSpan.textContent = 'Submit Request Slip';
+            }
+            return setRsError(errMsg);
+          }
+
+          // Success!
+          closeRs();
+          const mainModal = document.getElementById('bookingModalOverlay');
+          if (mainModal) {
             mainModal.classList.add('hidden');
             mainModal.classList.remove('flex');
+          }
+
+          redirecting = true;
+          setSubmitting(true);
+          showSuccess('Request Slip submitted successfully! Staff will review it shortly. Redirecting to My Reservations…');
+          setTimeout(() => {
+            window.location.href = 'my-reservations.html?filter=pending';
+          }, 1500);
+        } catch (err) {
+          if (submitRsBtn) {
+            submitRsBtn.disabled = false;
+            submitRsBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            const btnSpan = submitRsBtn.querySelector('span:last-child');
+            if (btnSpan) btnSpan.textContent = 'Submit Request Slip';
+          }
+          return setRsError('Could not reach the server. Please check your connection and try again.');
         }
       });
     }
@@ -1336,7 +1473,7 @@ window.initBookingForm = function() {
     redirecting = true;
     setSubmitting(true);
     showSuccess('Override request sent: staff will review it and you can follow its status in My Reservations. Redirecting…');
-    setTimeout(() => { window.location.href = 'my-reservations.html'; }, 1800);
+    setTimeout(() => { window.location.href = 'my-reservations.html?filter=pending'; }, 1800);
   }
 
   if (form) {

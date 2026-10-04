@@ -430,6 +430,103 @@
       </div>
     </div>
 
+    <!-- ── View Request Slip Modal ─────────────────────────────────── -->
+    <div id="requestSlipViewModal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in duration-200">
+        
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-amber-50/50">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 shadow-xs">
+              <span class="material-symbols-outlined text-[22px]">assignment</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-base font-bold text-gray-900 leading-tight">Facility Request Slip</h2>
+                <span id="rsvCodeBadge" class="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200">#REQ-SLIP-——</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">Conflict Override Review · Buenavista Polytechnic University</p>
+            </div>
+          </div>
+          <button id="closeRequestSlipViewBtn" type="button" class="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-lg hover:bg-gray-100">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+
+        <!-- Scrollable Slip Content -->
+        <div class="p-6 overflow-y-auto flex flex-col gap-4 text-sm text-gray-700">
+          
+          <!-- Status Banner -->
+          <div id="rsvStatusBanner" class="p-3.5 rounded-xl border flex items-start gap-3 bg-amber-50 border-amber-200 text-amber-900">
+            <span id="rsvStatusIcon" class="material-symbols-outlined text-[20px] text-amber-700 shrink-0 mt-0.5">hourglass_top</span>
+            <div class="flex-1 text-xs">
+              <span id="rsvStatusTitle" class="font-bold text-amber-950 block mb-0.5">Status: Under Review</span>
+              <span id="rsvStatusDesc" class="leading-relaxed">Staff will evaluate your request to determine if the conflicting booking can be relocated or rescheduled.</span>
+            </div>
+          </div>
+
+          <!-- Schedule & Room Summary Grid -->
+          <div class="bg-gray-50/80 rounded-xl border border-gray-100 p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <span class="text-gray-400 font-semibold uppercase tracking-wider block text-[10px]">Facility / Room</span>
+              <span id="rsvRoomName" class="font-bold text-gray-900 text-sm mt-0.5 block">—</span>
+            </div>
+            <div>
+              <span class="text-gray-400 font-semibold uppercase tracking-wider block text-[10px]">Request Category</span>
+              <span id="rsvRequestType" class="font-semibold text-gray-800 mt-0.5 block">—</span>
+            </div>
+            <div>
+              <span class="text-gray-400 font-semibold uppercase tracking-wider block text-[10px]">Requested Date(s)</span>
+              <span id="rsvDates" class="font-semibold text-gray-800 mt-0.5 block">—</span>
+            </div>
+            <div>
+              <span class="text-gray-400 font-semibold uppercase tracking-wider block text-[10px]">Requested Time Window</span>
+              <span id="rsvTimes" class="font-semibold text-gray-800 mt-0.5 block">—</span>
+            </div>
+          </div>
+
+          <!-- Justification -->
+          <div>
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1.5">Urgent Need / Justification</span>
+            <div id="rsvReason" class="p-3.5 rounded-xl bg-gray-50 border border-gray-200 text-xs sm:text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+              —
+            </div>
+          </div>
+
+          <!-- Alternative Schedule -->
+          <div>
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1.5">Proposed Alternative Schedule</span>
+            <div id="rsvAltSchedule" class="p-3.5 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-700 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-gray-400">schedule</span>
+              <span id="rsvAltScheduleText">None provided (Strictly requesting the designated slot).</span>
+            </div>
+          </div>
+
+          <!-- Additional Logistics -->
+          <div id="rsvAdditionalBlock">
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1.5">Additional Logistics & Notes</span>
+            <div id="rsvAdditionalText" class="p-3 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-600 leading-relaxed">
+              —
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-3.5 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
+          <button id="rsvWithdrawBtn" type="button" class="hidden px-4 py-2 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 text-xs font-semibold rounded-xl transition-all shadow-sm cursor-pointer">
+            <span class="material-symbols-outlined text-[15px] align-middle mr-1">cancel</span>Withdraw Request
+          </button>
+          <div class="flex items-center gap-2 ml-auto">
+            <button id="closeRequestSlipViewFooterBtn" type="button" class="px-5 py-2 bg-[#7a1f2b] text-white hover:bg-[#5b0617] text-xs font-semibold rounded-xl transition-all shadow-sm cursor-pointer">
+              Close
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     <!-- ── Action Toast ────────────────────────────────────────────── -->
     <div id="action-toast" class="hidden fixed bottom-6 right-6 z-[300] max-w-sm bg-white border border-gray-200 rounded-2xl shadow-xl px-4 py-3 flex items-start gap-3">
       <span id="action-toast-icon" class="material-symbols-outlined text-[20px] shrink-0 mt-0.5 text-gray-500">info</span>

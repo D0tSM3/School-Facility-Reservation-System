@@ -31,14 +31,15 @@ class ConflictOverrideRepository
         string $conflictingReservationId,
         ?string $requestType = null,
         ?string $altStartTime = null,
-        ?string $altEndTime = null
+        ?string $altEndTime = null,
+        ?string $additionalInfo = null
     ): array {
         $stmt = $this->db->query(
             'INSERT INTO ConflictOverrideRequests
                     (requested_by, room_id, start_time, end_time, purpose, category,
-                     equipment_notes, reason, conflicting_reservation_id, request_type, alt_start_time, alt_end_time)
+                     equipment_notes, reason, conflicting_reservation_id, request_type, alt_start_time, alt_end_time, additional_info)
              VALUES (:requested_by, :room_id, :start_time, :end_time, :purpose, :category,
-                     :equipment_notes, :reason, :conflicting_reservation_id, :request_type, :alt_start_time, :alt_end_time)
+                     :equipment_notes, :reason, :conflicting_reservation_id, :request_type, :alt_start_time, :alt_end_time, :additional_info)
              RETURNING request_id',
             [
                 ':requested_by'               => $requestedBy,
@@ -53,6 +54,7 @@ class ConflictOverrideRepository
                 ':request_type'               => $requestType,
                 ':alt_start_time'             => $altStartTime,
                 ':alt_end_time'               => $altEndTime,
+                ':additional_info'            => $additionalInfo,
             ]
         );
         return $this->findById((string) $stmt->fetchColumn()) ?? [];
@@ -92,7 +94,8 @@ class ConflictOverrideRepository
             'SELECT o.request_id, o.room_id, r.name AS room_name, o.start_time, o.end_time,
                     o.purpose, o.category, o.reason, o.status, o.staff_comment,
                     o.outcome, o.outcome_note, o.created_reservation_id,
-                    o.processed_at, o.created_at
+                    o.processed_at, o.created_at, o.request_type, o.alt_start_time, o.alt_end_time,
+                    o.additional_info, o.equipment_notes, o.conflicting_reservation_id
                FROM ConflictOverrideRequests o
                JOIN Rooms r ON r.room_id = o.room_id
               WHERE o.requested_by = :requested_by
@@ -100,6 +103,16 @@ class ConflictOverrideRepository
             [':requested_by' => $requestedBy]
         );
         return $stmt->fetchAll();
+    }
+
+    /** Delete/withdraw a customer's override request. */
+    public function delete(string $requestId): bool
+    {
+        $stmt = $this->db->query(
+            'DELETE FROM ConflictOverrideRequests WHERE request_id = :request_id',
+            [':request_id' => $requestId]
+        );
+        return $stmt->rowCount() > 0;
     }
 
     /**

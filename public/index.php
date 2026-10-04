@@ -152,11 +152,12 @@ $routes = [
     ['DELETE', '#^/api/holidays/(?P<id>[^/]+)$#',    fn(string $id) => (new HolidayController())->destroy($id)],
 
     // Conflict override requests (Customer)
-    ['GET',   '#^/api/conflict-override-requests/mine$#', fn() => (new ReservationController())->myOverrides()],
-    ['POST',  '#^/api/conflict-override-requests$#',      fn() => (new ReservationController())->requestOverride()],
+    ['GET',    '#^/api/conflict-override-requests/mine$#', fn() => (new ReservationController())->myOverrides()],
+    ['POST',   '#^/api/conflict-override-requests$#',      fn() => (new ReservationController())->requestOverride()],
+    ['DELETE', '#^/api/conflict-override-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->cancelOverride($id)],
     // Conflict override requests (Staff/Admin)
-    ['GET',   '#^/api/conflict-override-requests$#',      fn() => (new ReservationController())->overrideIndex()],
-    ['PATCH', '#^/api/conflict-override-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->resolveOverride($id)],
+    ['GET',    '#^/api/conflict-override-requests$#',      fn() => (new ReservationController())->overrideIndex()],
+    ['PATCH',  '#^/api/conflict-override-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->resolveOverride($id)],
 
     // System settings (Admin)
     ['GET',   '#^/api/settings$#',                   fn() => (new SettingsController())->show()],

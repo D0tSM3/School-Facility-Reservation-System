@@ -11,16 +11,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
 
   if (summaryUpcoming && summaryPast && summaryPending) {
-    fetch(BASE + 'api/reservations/mine')
-      .then(res => res.json())
-      .then(json => {
-        if (json.success && json.data) {
-          const reservations = json.data;
+    Promise.all([
+      fetch(BASE + 'api/reservations/mine').then(res => res.json()).catch(() => ({ success: false, data: [] })),
+      fetch(BASE + 'api/conflict-override-requests/mine').then(res => res.json()).catch(() => ({ success: false, data: [] }))
+    ])
+      .then(([resJson, ovJson]) => {
+        let upcomingCount = 0;
+        let pastCount = 0;
+        let pendingCount = 0;
+
+        if (resJson && resJson.success && Array.isArray(resJson.data)) {
+          const reservations = resJson.data;
           const now = new Date();
-          
-          let upcomingCount = 0;
-          let pastCount = 0;
-          let pendingCount = 0;
 
           reservations.forEach(r => {
             if (r.status === 'Pending') pendingCount++;
@@ -38,15 +40,23 @@ document.addEventListener('DOMContentLoaded', () => {
               pastCount++;
             }
           });
-
-          summaryUpcoming.textContent = upcomingCount;
-          summaryPast.textContent = pastCount;
-          summaryPending.textContent = pendingCount;
         }
+
+        // Include pending conflict override requests (Request Slips)
+        if (ovJson && ovJson.success && Array.isArray(ovJson.data)) {
+          ovJson.data.forEach(o => {
+            if (o.status === 'Pending' || o.outcome === 'Awaiting move') {
+              pendingCount++;
+            }
+          });
+        }
+
+        summaryUpcoming.textContent = upcomingCount;
+        summaryPast.textContent = pastCount;
+        summaryPending.textContent = pendingCount;
       })
-      .catch(err => console.error('Error fetching reservations:', err));
+      .catch(err => console.error('Error fetching dashboard counts:', err));
   }
-});
 
   // Quick Reserve functionality
   const quickReserveBtn = document.getElementById('quickReserveBtn');
@@ -205,3 +215,4 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+});

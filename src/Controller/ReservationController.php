@@ -276,10 +276,11 @@ class ReservationController
         $dailyStart = substr($startTime, 11);
         $dailyEnd   = substr($endTime, 11);
 
-        if (ReservationValidator::checkRange($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, [], ['Pending'], $activeDates) !== null) {
+        // General rules check: room operational, hours, closed days, holidays, class schedules (blockingStatuses = [] ignores reservations)
+        if (ReservationValidator::checkRange($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, [], [], $activeDates) !== null) {
             return null;
         }
-        $conflict = ReservationValidator::findApprovedConflict($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, $activeDates);
+        $conflict = ReservationValidator::findConflictingReservation($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, $activeDates);
 
         // Nobody overrides their own booking; they'd move it instead.
         if ($conflict === null || $conflict['customer_id'] === Auth::userId()) {
@@ -308,7 +309,7 @@ class ReservationController
     // ---------------------------------------------------------------
     // Customer: POST /api/conflict-override-requests
     // Same body as POST /api/reservations plus `reason`. Accepted only when
-    // the slot is blocked solely by another customer's Approved booking.
+    // the slot is blocked solely by another customer's booking.
     // ---------------------------------------------------------------
 
     public function requestOverride(): never
@@ -326,18 +327,20 @@ class ReservationController
             Response::error('reason must be 500 characters or fewer.', 422);
         }
 
-        $startDate = substr($request['start_time'], 0, 10);
-        $endDate   = substr($request['end_time'], 0, 10);
-        $error     = ReservationValidator::checkRange(
+        $startDate   = substr($request['start_time'], 0, 10);
+        $endDate     = substr($request['end_time'], 0, 10);
+        $activeDates = is_array($body['active_dates'] ?? null) ? $body['active_dates'] : null;
+        $error       = ReservationValidator::checkRange(
             $request['room_id'], $startDate, $endDate,
-            substr($request['start_time'], 11), substr($request['end_time'], 11)
+            substr($request['start_time'], 11), substr($request['end_time'], 11),
+            [], ['Pending', 'Approved'], $activeDates
         );
         if ($error === null) {
             Response::error('This slot is free. Submit a normal reservation request instead.', 422);
         }
 
         // The conflicting booking is worked out here, never taken from the client.
-        $conflict = $this->overridableConflict($request['room_id'], $request['start_time'], $request['end_time']);
+        $conflict = $this->overridableConflict($request['room_id'], $request['start_time'], $request['end_time'], $activeDates);
         if ($conflict === null) {
             Response::error("An override can't resolve this: {$error}", 409);
         }
@@ -347,9 +350,10 @@ class ReservationController
             Response::error('You already have an override request awaiting review for this slot.', 409);
         }
 
-        $requestType = trim((string) ($body['request_type'] ?? ''));
-        $altStartTime = trim((string) ($body['alt_start_time'] ?? ''));
-        $altEndTime = trim((string) ($body['alt_end_time'] ?? ''));
+        $requestType    = trim((string) ($body['request_type'] ?? ''));
+        $additionalInfo = trim((string) ($body['additional_info'] ?? ''));
+        $altStartTime   = trim((string) ($body['alt_start_time'] ?? ''));
+        $altEndTime     = trim((string) ($body['alt_end_time'] ?? ''));
 
         $override = $overrides->create(
             Auth::userId(),
@@ -363,7 +367,8 @@ class ReservationController
             $conflict['reservation_id'],
             $requestType !== '' ? $requestType : null,
             $altStartTime !== '' ? $altStartTime : null,
-            $altEndTime !== '' ? $altEndTime : null
+            $altEndTime !== '' ? $altEndTime : null,
+            $additionalInfo !== '' ? $additionalInfo : null
         );
 
         // Logged against the booking it targets, so that booking's history shows it.
@@ -374,6 +379,30 @@ class ReservationController
         );
 
         Response::json($override, 201);
+    }
+
+    // ---------------------------------------------------------------
+    // Customer: DELETE /api/conflict-override-requests/{id}
+    // ---------------------------------------------------------------
+
+    public function cancelOverride(string $id): never
+    {
+        Auth::requireRole(['Customer']);
+
+        $overrides = new ConflictOverrideRepository();
+        $override  = self::isUuid($id) ? $overrides->findById($id) : null;
+        if ($override === null) {
+            Response::error('Override request not found.', 404);
+        }
+        if ($override['requested_by'] !== Auth::userId()) {
+            Response::error('You can only withdraw your own request slips.', 403);
+        }
+        if ($override['status'] !== 'Pending') {
+            Response::error('Only pending request slips can be withdrawn.', 422);
+        }
+
+        $overrides->delete($id);
+        Response::json(['success' => true, 'message' => 'Request slip withdrawn successfully.']);
     }
 
     // ---------------------------------------------------------------
@@ -551,9 +580,9 @@ class ReservationController
 
         // --- Approve: propose moving the conflicting booking out of the way ---
         $conflict = $this->reservations->findById($conflictId);
-        if ($conflict === null || $conflict['status'] !== 'Approved') {
+        if ($conflict === null || !in_array($conflict['status'], ['Approved', 'Pending'], true)) {
             Response::error(
-                'The conflicting booking is no longer approved' . ($conflict ? " ({$conflict['status']})" : '')
+                'The conflicting booking is no longer active' . ($conflict ? " ({$conflict['status']})" : '')
                 . ', so there is nothing to move. Reject this override; the requester can book the slot normally.',
                 409
             );
