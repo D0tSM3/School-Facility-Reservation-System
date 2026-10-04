@@ -61,6 +61,10 @@ document.addEventListener('DOMContentLoaded', () => {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
+  function shortId(value) {
+    return String(value ?? '').substring(0, 8).toUpperCase();
+  }
+
   function formatDateTime(str) {
     if (!str) return '—';
     const d = new Date(str);
