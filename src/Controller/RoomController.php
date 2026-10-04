@@ -15,6 +15,9 @@ use CampusRoom\Repository\ReservationRepository;
  */
 class RoomController
 {
+    /** Maximum allowed seating/person capacity for any campus facility */
+    public const MAX_CAPACITY = 1000;
+
     private RoomRepository $rooms;
     private ReservationRepository $reservations;
 
@@ -68,8 +71,8 @@ class RoomController
         if ($name === '') {
             Response::error('name is required.', 422);
         }
-        if (!is_numeric($capacity) || (int) $capacity <= 0) {
-            Response::error('capacity must be a positive integer.', 422);
+        if (!is_numeric($capacity) || (int) $capacity <= 0 || (int) $capacity > self::MAX_CAPACITY) {
+            Response::error('Capacity must be between 1 and ' . number_format(self::MAX_CAPACITY) . ' persons.', 422);
         }
         if (!in_array($status, ['Available', 'Maintenance'], true)) {
             Response::error('status must be Available or Maintenance.', 422);
@@ -168,6 +171,51 @@ class RoomController
     }
 
     // ---------------------------------------------------------------
+    // Admin: DELETE /api/rooms/{id}
+    // ---------------------------------------------------------------
+
+    public function destroy(string $roomId): never
+    {
+        Auth::requireRole(['Admin']);
+
+        $room = $this->rooms->findById($roomId);
+        if ($room === null) {
+            Response::error('Room not found.', 404);
+        }
+
+        $userId = Auth::userId();
+        $summary = "Facility: {$room['name']} ({$room['room_type']}) - Floor {$room['floor']}, {$room['capacity']} Seats";
+
+        // Institutional 30-day archival policy
+        try {
+            (new \CampusRoom\Repository\ArchiveRepository())->archive(
+                'rooms',
+                $roomId,
+                $summary,
+                $room,
+                $userId,
+                'Admin deleted facility'
+            );
+        } catch (\Throwable $e) {
+            error_log('[RoomController] Failed to archive deleted room: ' . $e->getMessage());
+        }
+
+        $deleted = $this->rooms->delete($roomId);
+
+        // Audit log
+        $this->reservations->insertLog(
+            $userId,
+            "Admin archived and deleted facility '{$room['name']}' (ID: {$roomId}) — retained in archive for 30 days"
+        );
+
+        Response::json([
+            'success' => true,
+            'message' => "Facility '{$room['name']}' has been deleted and archived for 30 days.",
+            'deleted' => $deleted,
+        ]);
+    }
+
+    // ---------------------------------------------------------------
     // Customer: GET /api/rooms/{id}/calendar
     // ---------------------------------------------------------------
 
@@ -180,7 +228,8 @@ class RoomController
         $end   = $_GET['end']   ?? null;
         
         if (!$start || !$end) {
-            Response::error('start and end query parameters are required.', 400);
+            $start = $start ?: date('Y-m-d');
+            $end   = $end   ?: date('Y-m-d', strtotime('+30 days'));
         }
 
         // The repository appends 00:00:00 / 23:59:59 to these, so they must be
@@ -195,6 +244,8 @@ class RoomController
         // Invalid room IDs will simply return an empty schedule, which is safe for this read-only endpoint.
 
         $calendarData = $this->rooms->getRoomCalendar($roomId, $start, $end);
+        // Expose 'classes' alias for frontend compatibility
+        $calendarData['classes'] = $calendarData['class_schedules'] ?? [];
 
         // Fix Guide 4.3: a student can see who has booked what, and why, in
         // every room via this endpoint. Redact other students' identity and
@@ -237,8 +288,8 @@ class RoomController
             $details['name'] = $name;
         }
         if (array_key_exists('capacity', $body)) {
-            if (!is_numeric($body['capacity']) || (int) $body['capacity'] <= 0) {
-                Response::error('capacity must be a positive integer.', 422);
+            if (!is_numeric($body['capacity']) || (int) $body['capacity'] <= 0 || (int) $body['capacity'] > self::MAX_CAPACITY) {
+                Response::error('Capacity must be between 1 and ' . number_format(self::MAX_CAPACITY) . ' persons.', 422);
             }
             $details['capacity'] = (int) $body['capacity'];
         }

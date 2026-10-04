@@ -258,4 +258,31 @@ class RoomRepository
             'holidays'        => json_decode($row['holidays'], true)
         ];
     }
+
+    /**
+     * Delete a room by primary key (Admin-only).
+     * Cleans up any non-cascading references in FacilitySuggestions first,
+     * then deletes the room and returns the deleted row snapshot.
+     */
+    public function delete(string $roomId): ?array
+    {
+        $existing = $this->findById($roomId);
+        if ($existing === null) {
+            return null;
+        }
+
+        // Clean up references in facilitysuggestions (NO ACTION fk)
+        $this->db->query(
+            'DELETE FROM facilitysuggestions WHERE original_room_id = :room_id OR suggested_room_id = :room_id',
+            [':room_id' => $roomId]
+        );
+
+        // Delete the room (cascades to Reservations, ClassSchedules, ConflictOverrideRequests)
+        $this->db->query(
+            'DELETE FROM Rooms WHERE room_id = :room_id',
+            [':room_id' => $roomId]
+        );
+
+        return $existing;
+    }
 }
