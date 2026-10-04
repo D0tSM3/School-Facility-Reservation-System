@@ -28,14 +28,17 @@ class ConflictOverrideRepository
         string $category,
         ?string $equipmentNotes,
         string $reason,
-        string $conflictingReservationId
+        string $conflictingReservationId,
+        ?string $requestType = null,
+        ?string $altStartTime = null,
+        ?string $altEndTime = null
     ): array {
         $stmt = $this->db->query(
             'INSERT INTO ConflictOverrideRequests
                     (requested_by, room_id, start_time, end_time, purpose, category,
-                     equipment_notes, reason, conflicting_reservation_id)
+                     equipment_notes, reason, conflicting_reservation_id, request_type, alt_start_time, alt_end_time)
              VALUES (:requested_by, :room_id, :start_time, :end_time, :purpose, :category,
-                     :equipment_notes, :reason, :conflicting_reservation_id)
+                     :equipment_notes, :reason, :conflicting_reservation_id, :request_type, :alt_start_time, :alt_end_time)
              RETURNING request_id',
             [
                 ':requested_by'               => $requestedBy,
@@ -47,6 +50,9 @@ class ConflictOverrideRepository
                 ':equipment_notes'            => $equipmentNotes,
                 ':reason'                     => $reason,
                 ':conflicting_reservation_id' => $conflictingReservationId,
+                ':request_type'               => $requestType,
+                ':alt_start_time'             => $altStartTime,
+                ':alt_end_time'               => $altEndTime,
             ]
         );
         return $this->findById((string) $stmt->fetchColumn()) ?? [];

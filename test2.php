@@ -6,5 +6,5 @@ $dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->safeLoad();
 
 $db = \CampusRoom\Core\Database::getInstance();
-$stmt = $db->query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'conflictoverriderequests'");
-print_r($stmt->fetchAll(PDO::FETCH_ASSOC));
+$userId = $db->query("SELECT user_id FROM Users WHERE role='Customer' LIMIT 1")->fetchColumn();
+var_dump($userId);

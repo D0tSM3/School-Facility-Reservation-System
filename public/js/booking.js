@@ -1302,13 +1302,25 @@ window.initBookingForm = function() {
     const btn = wrap.querySelector('[data-override-submit]');
     const fail = (msg) => { err.textContent = msg; err.classList.remove('hidden'); btn.disabled = false; };
 
+    const altSchedule = wrap.querySelector('#rsAltSchedule') ? wrap.querySelector('#rsAltSchedule').value : 'No';
+    const altDate = wrap.querySelector('input[name="alt_date"]') ? wrap.querySelector('input[name="alt_date"]').value : '';
+    const altStart = wrap.querySelector('input[name="alt_start"]') ? wrap.querySelector('input[name="alt_start"]').value : '';
+    const altEnd = wrap.querySelector('input[name="alt_end"]') ? wrap.querySelector('input[name="alt_end"]').value : '';
+
     if (!reason) return fail('Please explain why this booking is urgent.');
     btn.disabled = true;
     err.classList.add('hidden');
 
+    const overridePayload = Object.assign({}, payload, { 
+      reason,
+      request_type: altSchedule === 'Yes' ? 'Alternative Schedule' : 'Specific Time',
+      alt_start_time: altSchedule === 'Yes' && altDate && altStart ? `${altDate} ${altStart}:00` : null,
+      alt_end_time: altSchedule === 'Yes' && altDate && altEnd ? `${altDate} ${altEnd}:00` : null
+    });
+
     let result;
     try {
-      result = await sendReservation('api/conflict-override-requests', Object.assign({}, payload, { reason }));
+      result = await sendReservation('api/conflict-override-requests', overridePayload);
     } catch (_) {
       return fail('Could not reach the server. Check your connection and try again.');
     }

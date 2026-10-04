@@ -347,6 +347,10 @@ class ReservationController
             Response::error('You already have an override request awaiting review for this slot.', 409);
         }
 
+        $requestType = trim((string) ($body['request_type'] ?? ''));
+        $altStartTime = trim((string) ($body['alt_start_time'] ?? ''));
+        $altEndTime = trim((string) ($body['alt_end_time'] ?? ''));
+
         $override = $overrides->create(
             Auth::userId(),
             $request['room_id'],
@@ -356,7 +360,10 @@ class ReservationController
             $request['category'],
             $request['equipment_notes'] !== '' ? $request['equipment_notes'] : null,
             $reason,
-            $conflict['reservation_id']
+            $conflict['reservation_id'],
+            $requestType !== '' ? $requestType : null,
+            $altStartTime !== '' ? $altStartTime : null,
+            $altEndTime !== '' ? $altEndTime : null
         );
 
         // Logged against the booking it targets, so that booking's history shows it.
@@ -470,7 +477,7 @@ class ReservationController
         $dailyEnd   = substr($endTime, 11);
         $seriesId   = $this->reservations->newSeriesId();
 
-        return $this->reservations->transaction(function () use ($days, $customerId, $roomId, $purpose, $category, $equipmentNotes, $dailyStart, $dailyEnd, $seriesId): array {
+        return $this->reservations->transaction(function () use ($days, $customerId, $roomId, $purpose, $category, $equipmentNotes, $dailyStart, $dailyEnd, $seriesId, $status): array {
             $rows = [];
             foreach ($days as $day) {
                 $rows[] = $this->reservations->create(
@@ -1346,7 +1353,7 @@ class ReservationController
     // Helpers
     // ---------------------------------------------------------------
 
-    private function jsonBody(): array
+    protected function jsonBody(): array
     {
         $raw  = file_get_contents('php://input');
         $body = json_decode($raw ?: '{}', true);
