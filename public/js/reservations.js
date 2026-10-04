@@ -9,10 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const parseDate = typeof sharedParseDate === 'function'
     ? sharedParseDate
     : function (value) {
-        if (!value) return null;
-        const date = new Date(String(value).replace(' ', 'T'));
-        return Number.isNaN(date.getTime()) ? null : date;
-      };
+      if (!value) return null;
+      const date = new Date(String(value).replace(' ', 'T'));
+      return Number.isNaN(date.getTime()) ? null : date;
+    };
   if (typeof sharedParseDate !== 'function') {
     console.warn('[My Reservations] window.CampusRoomUtil.parseDate missing - using local fallback. util.js may be stale/cached.');
   }
@@ -45,8 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
       t.classList.remove('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
       t.classList.add('text-gray-500', 'hover:text-gray-700', 'font-medium');
     });
-    const initialTab = Array.from(tabs).find(t => t.getAttribute('data-filter') === activeFilter) || 
-                       Array.from(tabs).find(t => t.getAttribute('data-filter') === 'all');
+    const initialTab = Array.from(tabs).find(t => t.getAttribute('data-filter') === activeFilter) ||
+      Array.from(tabs).find(t => t.getAttribute('data-filter') === 'all');
     if (initialTab) {
       initialTab.classList.remove('text-gray-500', 'hover:text-gray-700', 'font-medium');
       initialTab.classList.add('bg-white', 'shadow-sm', 'text-gray-800', 'font-semibold');
@@ -245,11 +245,11 @@ document.addEventListener('DOMContentLoaded', () => {
       <h2 class="text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[18px] text-violet-600">priority_high</span>Urgent override requests
       </h2>` + list.map(o => {
-        const s = overrideState(o);
-        const d = formatDate(o.start_time);
-        const multi = String(o.start_time).slice(0, 10) !== String(o.end_time).slice(0, 10);
-        const days = multi ? ` to ${formatDate(o.end_time).month} ${formatDate(o.end_time).day}` : '';
-        return `<div class="bg-white px-5 py-3 rounded-xl border border-violet-200 shadow-sm mb-2">
+      const s = overrideState(o);
+      const d = formatDate(o.start_time);
+      const multi = String(o.start_time).slice(0, 10) !== String(o.end_time).slice(0, 10);
+      const days = multi ? ` to ${formatDate(o.end_time).month} ${formatDate(o.end_time).day}` : '';
+      return `<div class="bg-white px-5 py-3 rounded-xl border border-violet-200 shadow-sm mb-2">
           <div class="flex items-center gap-2 flex-wrap">
             <h3 class="text-sm font-bold text-gray-900">${escapeHtml(o.purpose)}</h3>
             <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded ${s.cls}">${escapeHtml(s.label)}</span>
@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="text-xs text-gray-600 mt-1.5">${escapeHtml(s.note)}</div>
         </div>`;
-      }).join('');
+    }).join('');
   }
 
   function fetchOverrideRequests() {
@@ -298,8 +298,8 @@ document.addEventListener('DOMContentLoaded', () => {
       <h2 class="text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[18px] text-sky-600">swap_horiz</span>Room change suggested by staff
       </h2>` + list.map(s => {
-        const d = formatDate(s.affected_date);
-        return `<div class="bg-white px-5 py-4 rounded-xl border-2 border-sky-200 shadow-sm mb-2" data-suggestion-card="${escapeHtml(s.suggestion_id)}">
+      const d = formatDate(s.affected_date);
+      return `<div class="bg-white px-5 py-4 rounded-xl border-2 border-sky-200 shadow-sm mb-2" data-suggestion-card="${escapeHtml(s.suggestion_id)}">
           <p class="text-sm text-gray-800">
             Staff suggests moving your <span class="font-bold">${escapeHtml(d.month)} ${escapeHtml(String(d.day))}</span> booking
             from <span class="font-bold">${escapeHtml(s.original_room_name)}</span>
@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
           </div>
         </div>`;
-      }).join('');
+    }).join('');
 
     panel.querySelectorAll('[data-suggestion-accept]').forEach(b =>
       b.addEventListener('click', () => respondToSuggestion(b.getAttribute('data-suggestion-accept'), 'Accepted', b)));
@@ -389,10 +389,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const date = parseDate(value);
     return date
       ? {
-          month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-          day: date.toLocaleDateString('en-US', { day: '2-digit' }),
-          year: date.getFullYear()
-        }
+        month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+        day: date.toLocaleDateString('en-US', { day: '2-digit' }),
+        year: date.getFullYear()
+      }
       : { month: '---', day: '--', year: '----' };
   }
 
@@ -405,15 +405,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Same Tailwind class strings the six hand-written cards used, so the
   // action buttons look identical to before now that they're generated.
-  
+
   const ACTION_STYLES = {
-    cancel:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
-    remove:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    cancel: 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    remove: 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 text-xs font-semibold rounded-lg transition-all shadow-sm',
     reqcancel: 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
-    move:      'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-600 border border-gray-200 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
-    slip:      'inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#7a1f2b] text-white hover:bg-[#5e1821] border border-transparent text-xs font-semibold rounded-lg transition-all shadow-sm',
-    rebook:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-emerald-600 border border-gray-200 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
-    logs:      'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 text-xs font-semibold rounded-lg transition-all shadow-sm'
+    move: 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-600 border border-gray-200 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    slip: 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#7a1f2b] text-white hover:bg-[#5e1821] border border-transparent text-xs font-semibold rounded-lg transition-all shadow-sm',
+    rebook: 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-emerald-600 border border-gray-200 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
+    logs: 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 text-xs font-semibold rounded-lg transition-all shadow-sm'
   };
 
   const ACTION_ICONS = {
@@ -511,62 +511,58 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function groupBySeries(rows) {
-  const groups = {};
-  const result = [];
-  rows.forEach(row => {
-    if (!row.series_id) {
-      result.push(row);
-    } else {
-      if (!groups[row.series_id]) {
-        const parent = JSON.parse(JSON.stringify(row));
-        parent.series_rows = [row];
-        parent.is_multi_day = true;
-        groups[row.series_id] = parent;
-        result.push(parent);
+    const groups = {};
+    const result = [];
+    rows.forEach(row => {
+      if (!row.series_id) {
+        result.push(row);
       } else {
-        groups[row.series_id].series_rows.push(row);
-      }
-    }
-  });
-
-  result.forEach(parent => {
-    if (parent.is_multi_day) {
-      parent.series_rows.sort((a, b) => a.start_time.localeCompare(b.start_time));
-      
-      const statuses = parent.series_rows.map(r => r.status);
-      if (statuses.includes('Pending')) parent.status = 'Pending';
-      else if (statuses.includes('Rejected')) parent.status = 'Rejected';
-      else if (statuses.includes('Cancelled')) parent.status = 'Cancelled';
-      else parent.status = statuses[0];
-
-      const datesObj = parent.series_rows.map(r => parseDate(r.start_time));
-      let isConsecutive = true;
-      for (let i = 1; i < datesObj.length; i++) {
-        const diffDays = Math.round((datesObj[i] - datesObj[i-1]) / (1000 * 60 * 60 * 24));
-        if (diffDays !== 1) {
-          isConsecutive = false;
-          break;
+        if (!groups[row.series_id]) {
+          const parent = JSON.parse(JSON.stringify(row));
+          parent.series_rows = [row];
+          parent.is_multi_day = true;
+          groups[row.series_id] = parent;
+          result.push(parent);
+        } else {
+          groups[row.series_id].series_rows.push(row);
         }
       }
-      parent.is_consecutive = isConsecutive;
-      parent.datesObj = datesObj;
-    }
-  });
-  
-  return result;
-}
+    });
 
-function renderReservations() {
+    result.forEach(parent => {
+      if (parent.is_multi_day) {
+        parent.series_rows.sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+        const statuses = parent.series_rows.map(r => r.status);
+        if (statuses.includes('Pending')) parent.status = 'Pending';
+        else if (statuses.includes('Rejected')) parent.status = 'Rejected';
+        else if (statuses.includes('Cancelled')) parent.status = 'Cancelled';
+        else parent.status = statuses[0];
+
+        const datesObj = parent.series_rows.map(r => parseDate(r.start_time));
+        let isConsecutive = true;
+        for (let i = 1; i < datesObj.length; i++) {
+          const diffDays = Math.round((datesObj[i] - datesObj[i - 1]) / (1000 * 60 * 60 * 24));
+          if (diffDays !== 1) {
+            isConsecutive = false;
+            break;
+          }
+        }
+        parent.is_consecutive = isConsecutive;
+        parent.datesObj = datesObj;
+      }
+    });
+
+    return result;
+  }
+
+  function renderReservations() {
     if (!reservationList) return;
 
-    // Group reservations by series_id so multi-day bookings appear as one entry
-    const groupedReservations = groupBySeries(allReservations);
-
-    // No longer filters out Cancelled — every status renders, and the
+    // No longer filters out Cancelled â€” every status renders, and the
     // existing 'history' tab filter (below) already accepts it.
-    reservationList.innerHTML = groupedReservations.map(reservation => {
+    reservationList.innerHTML = allReservations.map(reservation => {
       const date = formatDate(reservation.start_time);
-
       const isPast = isPastEnd(reservation);
 
       // Guard against a row with a missing/null status (e.g. bad data,
@@ -613,57 +609,57 @@ function renderReservations() {
         const first = reservation.datesObj[0];
         const last = reservation.datesObj[reservation.datesObj.length - 1];
         const monthFirst = first.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-        
+
         let displayType = reservation.is_consecutive ? 'Multiple Days — Consecutive Range' : 'Multiple Days — Specific Days';
-        
+
         let datesText = '';
         if (reservation.is_consecutive) {
-           const mFirst = first.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-           const mLast = last.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-           const yFirst = first.getFullYear();
-           const yLast = last.getFullYear();
-           
-           if (yFirst !== yLast) {
-               datesText = `${mFirst} ${first.getDate()}, ${yFirst} – ${mLast} ${last.getDate()}, ${yLast}`;
-           } else if (mFirst !== mLast) {
-               datesText = `${mFirst} ${first.getDate()} – ${mLast} ${last.getDate()}, ${yFirst}`;
-           } else {
-               datesText = `${mFirst} ${first.getDate()}–${last.getDate()}, ${yFirst}`;
-           }
+          const mFirst = first.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+          const mLast = last.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+          const yFirst = first.getFullYear();
+          const yLast = last.getFullYear();
+
+          if (yFirst !== yLast) {
+            datesText = `${mFirst} ${first.getDate()}, ${yFirst} – ${mLast} ${last.getDate()}, ${yLast}`;
+          } else if (mFirst !== mLast) {
+            datesText = `${mFirst} ${first.getDate()} – ${mLast} ${last.getDate()}, ${yFirst}`;
+          } else {
+            datesText = `${mFirst} ${first.getDate()}–${last.getDate()}, ${yFirst}`;
+          }
         } else {
-           datesText = reservation.datesObj.map(d => `${d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()} ${d.getDate()}`).join(', ') + `, ${first.getFullYear()}`;
+          datesText = reservation.datesObj.map(d => `${d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()} ${d.getDate()}`).join(', ') + `, ${first.getFullYear()}`;
         }
 
         let topHeader = `${monthFirst} ${first.getFullYear()}`;
         let mainContent = '';
-        
+
         if (reservation.is_consecutive) {
-           const mFirst = first.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-           const mLast = last.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-           const yFirst = first.getFullYear();
-           const yLast = last.getFullYear();
-           
-           if (yFirst !== yLast) {
-               topHeader = 'MULTI-DAY';
-               mainContent = `${mFirst} ${first.getDate()}<br>–<br>${mLast} ${last.getDate()}`;
-           } else if (mFirst !== mLast) {
-               topHeader = `${yFirst}`;
-               mainContent = `${mFirst} ${first.getDate()}<br>–<br>${mLast} ${last.getDate()}`;
-           } else {
-               topHeader = `${mFirst} ${yFirst}`;
-               mainContent = `${first.getDate()}–${last.getDate()}`;
-           }
+          const mFirst = first.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+          const mLast = last.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+          const yFirst = first.getFullYear();
+          const yLast = last.getFullYear();
+
+          if (yFirst !== yLast) {
+            topHeader = 'MULTI-DAY';
+            mainContent = `${mFirst} ${first.getDate()}<br>–<br>${mLast} ${last.getDate()}`;
+          } else if (mFirst !== mLast) {
+            topHeader = `${yFirst}`;
+            mainContent = `${mFirst} ${first.getDate()}<br>–<br>${mLast} ${last.getDate()}`;
+          } else {
+            topHeader = `${mFirst} ${yFirst}`;
+            mainContent = `${first.getDate()}–${last.getDate()}`;
+          }
         } else {
-           const mFirst = first.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-           const mLast = last.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-           
-           if (mFirst !== mLast || first.getFullYear() !== last.getFullYear()) {
-               topHeader = 'MULTI-DAY';
-               mainContent = reservation.datesObj.length + '<br><span class="text-[10px] font-normal text-gray-500 uppercase tracking-widest">Days</span>';
-           } else {
-               topHeader = `${mFirst} ${first.getFullYear()}`;
-               mainContent = reservation.datesObj.map(d => d.getDate()).join(', ');
-           }
+          const mFirst = first.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+          const mLast = last.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+
+          if (mFirst !== mLast || first.getFullYear() !== last.getFullYear()) {
+            topHeader = 'MULTI-DAY';
+            mainContent = reservation.datesObj.length + '<br><span class="text-[10px] font-normal text-gray-500 uppercase tracking-widest">Days</span>';
+          } else {
+            topHeader = `${mFirst} ${first.getFullYear()}`;
+            mainContent = reservation.datesObj.map(d => d.getDate()).join(', ');
+          }
         }
 
         dateBlockHtml = `
@@ -676,16 +672,16 @@ function renderReservations() {
 
         let datesTextHtml = '';
         if (reservation.series_rows.some(r => r.status !== reservation.status)) {
-           // Display specific dates with their statuses if they differ
-           datesTextHtml = reservation.series_rows.map(r => {
-             const d = parseDate(r.start_time);
-             const statusColor = r.status === 'Pending' ? 'text-yellow-600' : (r.status === 'Approved' ? 'text-green-600' : 'text-gray-600');
-             return `<span class="${statusColor}">${d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()} ${d.getDate()} (${r.status})</span>`;
-           }).join(', ') + `, ${first.getFullYear()}`;
+          // Display specific dates with their statuses if they differ
+          datesTextHtml = reservation.series_rows.map(r => {
+            const d = parseDate(r.start_time);
+            const statusColor = r.status === 'Pending' ? 'text-yellow-600' : (r.status === 'Approved' ? 'text-green-600' : 'text-gray-600');
+            return `<span class="${statusColor}">${d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()} ${d.getDate()} (${r.status})</span>`;
+          }).join(', ') + `, ${first.getFullYear()}`;
         } else {
-           datesTextHtml = escapeHtml(datesText);
+          datesTextHtml = escapeHtml(datesText);
         }
-        
+
         extraInfoHtml = `
               <span class="text-gray-300 select-none">&bull;</span>
               <span class="flex items-center gap-1">
@@ -719,7 +715,7 @@ function renderReservations() {
             <!-- Title row: Detailed Purpose Description + ref badge + status badge -->
             <div class="flex items-center gap-2 flex-wrap">
               <h3 class="text-base font-bold text-gray-900 leading-tight">${escapeHtml(reservation.purpose)}</h3>
-              <span class="text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded font-mono tracking-wide shrink-0">#RES-${escapeHtml(reservation.reservation_id).substring(0,8).toUpperCase()}</span>
+              <span class="text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded font-mono tracking-wide shrink-0">#RES-${escapeHtml(reservation.reservation_id).substring(0, 8).toUpperCase()}</span>
               <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded shrink-0 ${statusColor}">${statusText}</span>
             </div>
 
@@ -936,7 +932,7 @@ function renderReservations() {
   function applyFilters() {
     const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
     const cards = Array.from(document.querySelectorAll('.reservation-card'));
-    
+
     let visibleCards = [];
 
     cards.forEach(card => {
@@ -980,10 +976,10 @@ function renderReservations() {
     if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
     if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages;
     if (pageIndicator) pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
-    
+
     const countEl = document.getElementById('visibleResCount');
     if (countEl) countEl.textContent = visibleCards.length;
-    
+
     if (reservationListEmpty) {
       reservationListEmpty.classList.toggle('hidden', visibleCards.length > 0);
     }
@@ -1010,7 +1006,7 @@ function renderReservations() {
       applyFilters();
     });
   }
-  
+
   if (prevPageBtn) {
     prevPageBtn.addEventListener('click', () => {
       if (currentPage > 1) {
@@ -1019,7 +1015,7 @@ function renderReservations() {
       }
     });
   }
-  
+
   if (nextPageBtn) {
     nextPageBtn.addEventListener('click', () => {
       currentPage++;
@@ -1130,7 +1126,7 @@ function renderReservations() {
     // Warn as soon as the range stops fitting, not only on submit. The
     // sequence guard drops answers that arrive after a newer edit.
     let moveCheckSeq = 0;
-    
+
     const moveStartTimeSelect = document.getElementById('moveStartTime');
     const moveEndTimeSelect = document.getElementById('moveEndTime');
 
@@ -1138,24 +1134,24 @@ function renderReservations() {
       const ALL_END_OPTIONS = Array.from(moveEndTimeSelect.options)
         .filter(o => o.value)
         .map(o => ({ value: o.value, text: o.textContent }));
-      
+
       const syncMoveEndOptions = () => {
         const start = moveStartTimeSelect.value;
         const previous = moveEndTimeSelect.value;
-        
+
         moveEndTimeSelect.innerHTML = '<option value="">End time</option>';
         ALL_END_OPTIONS.forEach(o => {
           const opt = document.createElement('option');
           opt.value = o.value;
           opt.textContent = o.text;
-          
+
           if (start && o.value <= start) {
             opt.disabled = true;
             opt.hidden = true; // hide/disable before or equal
           }
           moveEndTimeSelect.appendChild(opt);
         });
-        
+
         if (previous && previous > start) {
           moveEndTimeSelect.value = previous;
         }
@@ -1180,7 +1176,7 @@ function renderReservations() {
             document.getElementById('moveEndTime').value
           );
         }
-        
+
         const seq = ++moveCheckSeq;
         const problem = await moveRangeProblem();
         if (seq === moveCheckSeq) showMoveError(problem);
@@ -1282,20 +1278,20 @@ function renderReservations() {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       })
-      .then(res => res.json())
-      .then(json => {
-        if (json.success || json.removed) {
-          showToast(wasPending ? 'Request cancelled and moved to archive (retained for 30 days).' : 'Booking moved to archive (retained for 30 days before permanent deletion).', 'success');
-          fetchReservations(); // reload entirely
-        } else {
-          showToast(json.error || 'Failed to remove the booking.', 'error');
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        showToast('Network error.', 'error');
-      })
-      .finally(closeModal);
+        .then(res => res.json())
+        .then(json => {
+          if (json.success || json.removed) {
+            showToast(wasPending ? 'Request cancelled and moved to archive (retained for 30 days).' : 'Booking moved to archive (retained for 30 days before permanent deletion).', 'success');
+            fetchReservations(); // reload entirely
+          } else {
+            showToast(json.error || 'Failed to remove the booking.', 'error');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          showToast('Network error.', 'error');
+        })
+        .finally(closeModal);
     });
   }
 
@@ -1328,27 +1324,27 @@ function renderReservations() {
       const targetId = currentTargetReservationId;
       const target = allReservations.find(r => r.reservation_id === currentTargetReservationId) || {};
       const ids = target.is_multi_day ? target.series_rows.map(r => r.reservation_id) : [currentTargetReservationId];
-      
+
       Promise.all(ids.map(id => fetch(BASE + 'api/reservations/' + encodeURIComponent(id) + '/cancel-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason })
       }).then(res => res.json())))
-      .then(results => {
-        const failed = results.find(json => !json.success);
-        if (!failed) {
-          closeModal();
-          showToast('Cancellation request submitted. Your booking stands until staff review it.', 'success');
-          fetchReservations();
-        } else {
-          showCancelReqError(failed.error || 'Could not submit the request.');
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        showCancelReqError('Network error. Please try again.');
-      })
-      .finally(() => { cancelReqSubmit.disabled = false; });
+        .then(results => {
+          const failed = results.find(json => !json.success);
+          if (!failed) {
+            closeModal();
+            showToast('Cancellation request submitted. Your booking stands until staff review it.', 'success');
+            fetchReservations();
+          } else {
+            showCancelReqError(failed.error || 'Could not submit the request.');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          showCancelReqError('Network error. Please try again.');
+        })
+        .finally(() => { cancelReqSubmit.disabled = false; });
     });
   }
 
