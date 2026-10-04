@@ -156,7 +156,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (status === 200) {
           hideLoginError();
 
-          
+          if (typeof payload.name === 'string' && typeof payload.role === 'string') {
+            try {
+              sessionStorage.setItem('campusroom:shellUser', JSON.stringify({
+                name: payload.name,
+                role: payload.role
+              }));
+            } catch (err) {
+              console.warn('Could not cache the verified shell role', err);
+            }
+          }
+
           localStorage.setItem('campus_role', payload.role);
             if (payload.role === 'Admin') {
             window.location.href = 'admin-governance.html';

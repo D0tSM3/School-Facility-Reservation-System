@@ -5,6 +5,7 @@
     <title>CampusRoom — Book a Facility | BPU Facility Gateway</title>
     <meta name="description" content="Submit a space reservation request for BPU academic facilities." />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <script src="js/shell-guard.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
@@ -31,15 +32,6 @@
       };
     </script>
   
-  <!-- FOUC Preventer -->
-  <script>
-    (function() {
-      const role = localStorage.getItem('campus_role');
-      if (role) {
-        document.documentElement.setAttribute('data-role', role.toLowerCase());
-      }
-    })();
-  </script>
   <style>
     /* Prevent sidebar flash */
     html[data-role="staff"] aside nav a[data-path="customer-dashboard"],
@@ -51,14 +43,11 @@
       display: none !important;
     }
     
-    html[data-role="staff"] aside nav a[data-path="staff-dashboard"],
-    html[data-role="admin"] aside nav a[data-path="staff-dashboard"] {
-      display: flex !important;
+    aside nav a[data-path="staff-dashboard"],
+    aside nav a[data-path="admin-governance"] {
+      display: none !important;
     }
-    
-    html[data-role="admin"] aside nav a[data-path="admin-governance"] {
-      display: flex !important;
-    }
+
   </style>
 
  </head>
@@ -88,11 +77,11 @@
           <span class="material-symbols-outlined text-[20px]">event_available</span>
           <span>My Reservations</span>
         </a>
-        <a class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="staff-dashboard" href="staff-dashboard.html">
+        <a hidden class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="staff-dashboard" href="staff-dashboard.html">
           <span class="material-symbols-outlined text-[20px]">assignment</span>
           <span>Staff Dashboard</span>
         </a>
-        <a class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="admin-governance" href="admin-governance.html">
+        <a hidden class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="admin-governance" href="admin-governance.html">
           <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
           <span>Admin Governance</span>
         </a>
