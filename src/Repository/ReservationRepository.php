@@ -54,12 +54,13 @@ class ReservationRepository
         string $endTime,
         ?string $equipmentNotes = null,
         string $category = 'Academic Lecture',
-        ?string $seriesId = null
+        ?string $seriesId = null,
+        string $status = 'Pending'
     ): array {
         $reservationId = self::uuidv4();
         $this->db->query(
-            'INSERT INTO Reservations (reservation_id, customer_id, room_id, purpose, category, equipment_notes, start_time, end_time, series_id)
-             VALUES (:reservation_id, :customer_id, :room_id, :purpose, :category, :equipment_notes, :start_time, :end_time, :series_id)',
+            'INSERT INTO Reservations (reservation_id, customer_id, room_id, purpose, category, equipment_notes, start_time, end_time, series_id, status)
+             VALUES (:reservation_id, :customer_id, :room_id, :purpose, :category, :equipment_notes, :start_time, :end_time, :series_id, :status)',
             [
                 ':reservation_id'  => $reservationId,
                 ':customer_id'     => $customerId,
@@ -70,6 +71,7 @@ class ReservationRepository
                 ':start_time'      => $startTime,
                 ':end_time'        => $endTime,
                 ':series_id'       => $seriesId,
+                ':status'          => $status,
             ]
         );
         // Fetch by primary key — no more re-fetch-by-natural-key ambiguity.

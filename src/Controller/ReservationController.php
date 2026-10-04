@@ -157,7 +157,8 @@ class ReservationController
         // Different dates = a multi-day booking: start_time's date to
         // end_time's date, using start_time's clock to end_time's clock as the
         // window on every one of those days.
-        $activeDates = $body['active_dates'] ?? null; if (substr($startTime, 0, 10) !== substr($endTime, 0, 10)) {
+        $activeDates = $body['active_dates'] ?? null;
+        if (substr($startTime, 0, 10) !== substr($endTime, 0, 10)) {
             $this->storeSeries($roomId, $purpose, $category, $equipmentNotes, $startTime, $endTime, $activeDates);
         }
 
@@ -174,7 +175,9 @@ class ReservationController
                 $startTime,
                 $endTime,
                 $equipmentNotes !== '' ? $equipmentNotes : null,
-                $category
+                $category,
+                null,
+                'Approved'
             );
         } catch (PDOException $e) {
             // Fallback in case of race condition caught by the DB trigger
@@ -387,7 +390,9 @@ class ReservationController
         string $category,
         string $equipmentNotes,
         string $startTime,
-        string $endTime
+        string $endTime,
+        ?array $activeDates = null,
+        string $status = 'Approved'
     ): never {
         $startDate   = substr($startTime, 0, 10);
         $endDate     = substr($endTime, 0, 10);
@@ -402,7 +407,7 @@ class ReservationController
         try {
             $rows = $this->createBookingRows(
                 Auth::userId(), $roomId, $purpose, $category,
-                $equipmentNotes !== '' ? $equipmentNotes : null, $startTime, $endTime, $activeDates
+                $equipmentNotes !== '' ? $equipmentNotes : null, $startTime, $endTime, $activeDates, $status
             );
         } catch (PDOException $e) {
             if ($e->getCode() === '45000') {
@@ -441,13 +446,15 @@ class ReservationController
         string $category,
         ?string $equipmentNotes,
         string $startTime,
-        string $endTime
+        string $endTime,
+        ?array $activeDates = null,
+        string $status = 'Approved'
     ): array {
         $startDate = substr($startTime, 0, 10);
         $endDate   = substr($endTime, 0, 10);
 
         if ($startDate === $endDate) {
-            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $equipmentNotes, $category)];
+            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $equipmentNotes, $category, null, $status)];
         }
 
         
@@ -468,7 +475,7 @@ class ReservationController
             foreach ($days as $day) {
                 $rows[] = $this->reservations->create(
                     $customerId, $roomId, $purpose, "$day $dailyStart", "$day $dailyEnd",
-                    $equipmentNotes, $category, $seriesId
+                    $equipmentNotes, $category, $seriesId, $status
                 );
             }
             return $rows;
@@ -621,7 +628,7 @@ class ReservationController
             try {
                 $rows = $this->createBookingRows(
                     $override['requested_by'], $override['room_id'], $override['purpose'], $override['category'],
-                    $override['equipment_notes'], $override['start_time'], $override['end_time']
+                    $override['equipment_notes'], $override['start_time'], $override['end_time'], null, 'Pending'
                 );
             } catch (PDOException $e) {
                 if ($e->getCode() !== '45000') {
