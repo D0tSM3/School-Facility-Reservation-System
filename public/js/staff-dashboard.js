@@ -744,14 +744,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Promise.all — it re-validates every Pending booking (many remote-DB round
     // trips) and can take 15s+. Waiting on it here left the whole queue stuck on
     // "Loading…". It is loaded separately below and only adds "Conflict" badges.
-    const [reservations, rooms, moves, cancels, overrides, suggestions] = await Promise.all([
-      api('api/reservations'),
-      api('api/rooms'),
-      api('api/reservations/move-requests?status=Pending'),
-      api('api/reservations/cancel-requests?status=Pending'),
-      api('api/conflict-override-requests?status=Pending'),
-      api('api/facility-suggestions')
-    ]);
+    let reservations, rooms, moves, cancels, overrides, suggestions;
+    try {
+      [reservations, rooms, moves, cancels, overrides, suggestions] = await Promise.all([
+        api('api/reservations'),
+        api('api/rooms'),
+        api('api/reservations/move-requests?status=Pending'),
+        api('api/reservations/cancel-requests?status=Pending'),
+        api('api/conflict-override-requests?status=Pending'),
+        api('api/facility-suggestions')
+      ]);
+    } catch (e) {
+      state.loading = false;
+      showToast('A fatal error occurred while loading dashboard data.', 'error');
+      console.error(e);
+      return;
+    }
 
     state.loading = false;
 
