@@ -406,7 +406,14 @@ window.initBookingForm = function() {
   // Earliest bookable day: today (same-day booking is allowed), skipping closed days.
   function earliestOpenDay() {
     const d = new Date();
-    // Start from today; skip forward only if today itself is a closed day.
+    const nowHHMM = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    
+    // If today is past the last bookable time, start looking from tomorrow
+    if (rules && rules.close && nowHHMM >= rules.close) {
+      d.setDate(d.getDate() + 1);
+    }
+
+    // Start from current d; skip forward only if it's a closed day.
     for (let i = 0; i < 7 && window.CampusSchedule.isClosedDay(toYMD(d), rules.closedDays); i++) {
       d.setDate(d.getDate() + 1);
     }
