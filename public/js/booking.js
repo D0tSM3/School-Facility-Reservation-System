@@ -1201,7 +1201,7 @@ window.initBookingForm = function() {
     if (res.status === 401) { window.location.href = 'index.html'; return null; }
     let json = null;
     try { json = await res.json(); } catch (_) { /* HTML error page or empty body */ }
-    return { status: res.status, json };
+    return { ok: res.ok, status: res.status, json };
   }
 
   // ---------------------------------------------------------------
@@ -1313,9 +1313,12 @@ window.initBookingForm = function() {
       return fail('Could not reach the server. Check your connection and try again.');
     }
     if (!result) return;                                   // 401 → already redirecting to login
-    const { status, json } = result;
-    if (!json) return fail(`The server sent an unexpected response (HTTP ${status}). Please try again.`);
-    if (!json.success) return fail(json.error || 'Your override request could not be submitted.');
+    const { ok, status, json } = result;
+    if (!ok) {
+      if (json && json.error) return fail(json.error);
+      return fail(`The server sent an unexpected response (HTTP ${status}). Please try again.`);
+    }
+    if (json && !json.success) return fail(json.error || 'Your override request could not be submitted.');
 
     close();
     redirecting = true;
@@ -1391,16 +1394,20 @@ window.initBookingForm = function() {
       setSubmitting(true);
       sendReservation(endpoint, payload)
         .then(result => {
-          if (!result) return;                       // 401 → already redirecting to login
-          const { status, json } = result;
+          if (!result) return;                       // 401
+          const { ok, status, json } = result;
 
-          if (!json) {
-            return showCollisionError(`The server sent an unexpected response (HTTP ${status}). Please try again.`, 'Something went wrong');
+          if (!ok) {
+            if (json && !json.success && status === 409 && !isRebook && json.data && json.data.override_eligible) {
+              return openOverrideModal(payload, json.data.conflict, json.error);
+            }
+            return showCollisionError(
+              (json && json.error) ? json.error : `The server sent an unexpected response (HTTP ${status}). Please try again.`,
+              status === 409 ? 'Scheduling conflict' : 'Something went wrong'
+            );
           }
-          if (!json.success && status === 409 && !isRebook && json.data && json.data.override_eligible) {
-            return openOverrideModal(payload, json.data.conflict, json.error);
-          }
-          if (!json.success) {
+
+          if (json && !json.success) {
             return showCollisionError(
               json.error || 'Your request could not be submitted.',
               status === 409 ? 'Scheduling conflict' : 'Unable to submit request'
@@ -1408,8 +1415,17 @@ window.initBookingForm = function() {
           }
 
           redirecting = true;
-          const ref = 'REQ-' + String(json.data.reservation_id).substring(0, 8).toUpperCase();
-          const dayCount = Array.isArray(json.data.series) ? json.data.series.length : 1;
+          let ref = 'REQ-XXXXXXXX';
+          let dayCount = 1;
+          if (json && json.data) {
+              if (json.data.reservation_id) {
+                  ref = 'REQ-' + String(json.data.reservation_id).substring(0, 8).toUpperCase();
+              }
+              if (Array.isArray(json.data.series)) {
+                  dayCount = json.data.series.length;
+              }
+          }
+          
           const what = isRebook ? 'Re-booking created'
             : dayCount > 1 ? `Reservation request created for ${dayCount} days` : 'Reservation request created';
           showSuccess(`${what}: ${ref} is now in the staff queue for verification. Redirecting to My Reservations…`);

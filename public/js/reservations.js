@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         hideListStates();
-        allReservations = json.data || [];
+        allReservations = groupBySeries(json.data || []);
         renderReservations();
         applyFilters();
         fetchOverrideRequests();
@@ -401,7 +401,53 @@ document.addEventListener('DOMContentLoaded', () => {
     return buttons.join('');
   }
 
-  function renderReservations() {
+  function groupBySeries(rows) {
+  const groups = {};
+  const result = [];
+  rows.forEach(row => {
+    if (!row.series_id) {
+      result.push(row);
+    } else {
+      if (!groups[row.series_id]) {
+        const parent = JSON.parse(JSON.stringify(row));
+        parent.series_rows = [row];
+        parent.is_multi_day = true;
+        groups[row.series_id] = parent;
+        result.push(parent);
+      } else {
+        groups[row.series_id].series_rows.push(row);
+      }
+    }
+  });
+
+  result.forEach(parent => {
+    if (parent.is_multi_day) {
+      parent.series_rows.sort((a, b) => a.start_time.localeCompare(b.start_time));
+      
+      const statuses = parent.series_rows.map(r => r.status);
+      if (statuses.includes('Pending')) parent.status = 'Pending';
+      else if (statuses.includes('Rejected')) parent.status = 'Rejected';
+      else if (statuses.includes('Cancelled')) parent.status = 'Cancelled';
+      else parent.status = statuses[0];
+
+      const datesObj = parent.series_rows.map(r => parseDate(r.start_time));
+      let isConsecutive = true;
+      for (let i = 1; i < datesObj.length; i++) {
+        const diffDays = Math.round((datesObj[i] - datesObj[i-1]) / (1000 * 60 * 60 * 24));
+        if (diffDays !== 1) {
+          isConsecutive = false;
+          break;
+        }
+      }
+      parent.is_consecutive = isConsecutive;
+      parent.datesObj = datesObj;
+    }
+  });
+  
+  return result;
+}
+
+function renderReservations() {
     if (!reservationList) return;
 
     // No longer filters out Cancelled â€” every status renders, and the
@@ -447,15 +493,112 @@ document.addEventListener('DOMContentLoaded', () => {
         filterStatus = 'history';
       }
 
+      let dateBlockHtml = '';
+      let extraInfoHtml = '';
 
-      return `<div data-status="${escapeHtml(filterStatus)}" class="reservation-card bg-white px-5 py-4 rounded-xl border border-gray-200 shadow-sm mb-3 transition-all hover:border-gray-300 hover:shadow">
-        <div class="flex items-center gap-5">
+      if (reservation.is_multi_day && reservation.datesObj && reservation.datesObj.length > 0) {
+        const first = reservation.datesObj[0];
+        const last = reservation.datesObj[reservation.datesObj.length - 1];
+        const monthFirst = first.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+        
+        let displayType = reservation.is_consecutive ? 'Multiple Days — Consecutive Range' : 'Multiple Days — Specific Days';
+        
+        let datesText = '';
+        if (reservation.is_consecutive) {
+           const mFirst = first.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+           const mLast = last.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+           const yFirst = first.getFullYear();
+           const yLast = last.getFullYear();
+           
+           if (yFirst !== yLast) {
+               datesText = `${mFirst} ${first.getDate()}, ${yFirst} – ${mLast} ${last.getDate()}, ${yLast}`;
+           } else if (mFirst !== mLast) {
+               datesText = `${mFirst} ${first.getDate()} – ${mLast} ${last.getDate()}, ${yFirst}`;
+           } else {
+               datesText = `${mFirst} ${first.getDate()}–${last.getDate()}, ${yFirst}`;
+           }
+        } else {
+           datesText = reservation.datesObj.map(d => `${d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()} ${d.getDate()}`).join(', ') + `, ${first.getFullYear()}`;
+        }
 
+        let topHeader = `${monthFirst} ${first.getFullYear()}`;
+        let mainContent = '';
+        
+        if (reservation.is_consecutive) {
+           const mFirst = first.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+           const mLast = last.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+           const yFirst = first.getFullYear();
+           const yLast = last.getFullYear();
+           
+           if (yFirst !== yLast) {
+               topHeader = 'MULTI-DAY';
+               mainContent = `${mFirst} ${first.getDate()}<br>–<br>${mLast} ${last.getDate()}`;
+           } else if (mFirst !== mLast) {
+               topHeader = `${yFirst}`;
+               mainContent = `${mFirst} ${first.getDate()}<br>–<br>${mLast} ${last.getDate()}`;
+           } else {
+               topHeader = `${mFirst} ${yFirst}`;
+               mainContent = `${first.getDate()}–${last.getDate()}`;
+           }
+        } else {
+           const mFirst = first.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+           const mLast = last.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+           
+           if (mFirst !== mLast || first.getFullYear() !== last.getFullYear()) {
+               topHeader = 'MULTI-DAY';
+               mainContent = reservation.datesObj.length + '<br><span class="text-[10px] font-normal text-gray-500 uppercase tracking-widest">Days</span>';
+           } else {
+               topHeader = `${mFirst} ${first.getFullYear()}`;
+               mainContent = reservation.datesObj.map(d => d.getDate()).join(', ');
+           }
+        }
+
+        dateBlockHtml = `
+          <!-- Date block: MULTI-DAY -->
+          <div class="border border-gray-200 rounded-lg overflow-hidden text-center min-w-[76px] shrink-0 flex flex-col bg-white">
+            <div class="bg-[#7a1f2b] text-white text-[9px] font-bold py-1 px-1 uppercase tracking-widest whitespace-nowrap">${topHeader}</div>
+            <div class="text-[15px] font-bold text-gray-900 py-2 px-1 leading-tight flex items-center justify-center flex-1">${mainContent}</div>
+          </div>
+        `;
+
+        let datesTextHtml = '';
+        if (reservation.series_rows.some(r => r.status !== reservation.status)) {
+           // Display specific dates with their statuses if they differ
+           datesTextHtml = reservation.series_rows.map(r => {
+             const d = parseDate(r.start_time);
+             const statusColor = r.status === 'Pending' ? 'text-yellow-600' : (r.status === 'Approved' ? 'text-green-600' : 'text-gray-600');
+             return `<span class="${statusColor}">${d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()} ${d.getDate()} (${r.status})</span>`;
+           }).join(', ') + `, ${first.getFullYear()}`;
+        } else {
+           datesTextHtml = escapeHtml(datesText);
+        }
+        
+        extraInfoHtml = `
+              <span class="text-gray-300 select-none">&bull;</span>
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[15px] text-gray-400">calendar_month</span>
+                <span>${datesTextHtml}</span>
+              </span>
+              <span class="text-gray-300 select-none">&bull;</span>
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[15px] text-gray-400">style</span>
+                <span>${escapeHtml(displayType)}</span>
+              </span>
+        `;
+      } else {
+        dateBlockHtml = `
           <!-- Date block: month + year on same header line, large day below -->
           <div class="border border-gray-200 rounded-lg overflow-hidden text-center min-w-[68px] shrink-0 flex flex-col bg-white">
             <div class="bg-[#7a1f2b] text-white text-[9px] font-bold py-1 px-1 uppercase tracking-widest whitespace-nowrap">${date.month} ${date.year}</div>
             <div class="text-2xl font-bold text-gray-900 py-2 leading-none">${date.day}</div>
           </div>
+        `;
+      }
+
+      return `<div data-status="${escapeHtml(filterStatus)}" class="reservation-card bg-white px-5 py-4 rounded-xl border border-gray-200 shadow-sm mb-3 transition-all hover:border-gray-300 hover:shadow">
+          <div class="flex items-center gap-5">
+  
+            ${dateBlockHtml}
 
           <!-- Main info -->
           <div class="flex flex-col flex-1 min-w-0">
@@ -483,7 +626,8 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[15px] text-gray-400">schedule</span>
                 <span>${formatTime(reservation.start_time)} – ${formatTime(reservation.end_time)}</span>
-              </span>
+                </span>
+                ${extraInfoHtml}
             </div>
 
             ${moveStatusBadge}
@@ -1069,21 +1213,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
       cancelReqSubmit.disabled = true;
       const targetId = currentTargetReservationId;
-      fetch(BASE + 'api/reservations/' + encodeURIComponent(targetId) + '/cancel-request', {
+      const target = allReservations.find(r => r.reservation_id === currentTargetReservationId) || {};
+      const ids = target.is_multi_day ? target.series_rows.map(r => r.reservation_id) : [currentTargetReservationId];
+      
+      Promise.all(ids.map(id => fetch(BASE + 'api/reservations/' + encodeURIComponent(id) + '/cancel-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason })
-      })
-      .then(res => res.json())
-      .then(json => {
-        if (json.success) {
+      }).then(res => res.json())))
+      .then(results => {
+        const failed = results.find(json => !json.success);
+        if (!failed) {
           closeModal();
           showToast('Cancellation request submitted. Your booking stands until staff review it.', 'success');
           fetchReservations();
         } else {
-          // 422s here are the real rules (day-of, duplicate request); show them
-          // in the form rather than closing it out from under the customer.
-          showCancelReqError(json.error || 'Could not submit the request.');
+          showCancelReqError(failed.error || 'Could not submit the request.');
         }
       })
       .catch(err => {
@@ -1096,6 +1241,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   fetchReservations();
 });
+
+
+
 
 
 
