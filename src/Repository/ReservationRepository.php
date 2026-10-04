@@ -55,12 +55,20 @@ class ReservationRepository
         ?string $equipmentNotes = null,
         string $category = 'Academic Lecture',
         ?string $seriesId = null,
-        string $status = 'Pending'
+        string $status = 'Pending',
+        string $approvalType = 'manual'
     ): array {
         $reservationId = self::uuidv4();
+
+        // A booking that lands Approved at submission (auto-approval) has been
+        // "processed" at that moment, so stamp processed_at the way updateStatus()
+        // does for a staff decision. No staff member is behind it, so
+        // processed_by stays NULL.
+        $processedAt = $status === 'Approved' ? date('Y-m-d H:i:s') : null;
+
         $this->db->query(
-            'INSERT INTO Reservations (reservation_id, customer_id, room_id, purpose, category, equipment_notes, start_time, end_time, series_id, status)
-             VALUES (:reservation_id, :customer_id, :room_id, :purpose, :category, :equipment_notes, :start_time, :end_time, :series_id, :status)',
+            'INSERT INTO Reservations (reservation_id, customer_id, room_id, purpose, category, equipment_notes, start_time, end_time, series_id, status, approval_type, processed_at)
+             VALUES (:reservation_id, :customer_id, :room_id, :purpose, :category, :equipment_notes, :start_time, :end_time, :series_id, :status, :approval_type, :processed_at)',
             [
                 ':reservation_id'  => $reservationId,
                 ':customer_id'     => $customerId,
@@ -72,6 +80,8 @@ class ReservationRepository
                 ':end_time'        => $endTime,
                 ':series_id'       => $seriesId,
                 ':status'          => $status,
+                ':approval_type'   => $approvalType,
+                ':processed_at'    => $processedAt,
             ]
         );
         // Fetch by primary key — no more re-fetch-by-natural-key ambiguity.
@@ -194,6 +204,7 @@ class ReservationRepository
                     res.end_time,
                     res.series_id,
                     res.status,
+                    res.approval_type,
                     res.processed_by,
                     res.processed_at,
                     p.name          AS processed_by_name,
@@ -290,7 +301,7 @@ class ReservationRepository
     {
         $stmt = $this->db->query(
             'SELECT reservation_id, customer_id, room_id, purpose, category, equipment_notes,
-                    start_time, end_time, series_id, status, processed_by, processed_at,
+                    start_time, end_time, series_id, status, approval_type, processed_by, processed_at,
                     cancellation_reason, cancelled_by, created_at
                FROM Reservations
               WHERE reservation_id = :reservation_id
@@ -315,7 +326,7 @@ class ReservationRepository
     {
         $stmt = $this->db->query(
             'SELECT reservation_id, customer_id, room_id, purpose, category, equipment_notes,
-                    start_time, end_time, series_id, status, processed_by, processed_at,
+                    start_time, end_time, series_id, status, approval_type, processed_by, processed_at,
                     cancellation_reason, cancelled_by, created_at
                FROM Reservations
               WHERE series_id = :series_id
@@ -781,6 +792,53 @@ class ReservationRepository
         );
         $row = $stmt->fetch();
         return $row ?: null;
+    }
+
+    /**
+     * Bookings the REQUESTER cancelled themselves, newest first (Staff/Admin log).
+     * Bookings cancelled by Staff/Admin (cancelled_by <> customer_id) are excluded.
+     * cancelled_at is read from the audit-log entry written when the booking was
+     * cancelled; the two action_type patterns below must match the strings that
+     * ReservationController::cancel() and remove() write.
+     * customer_hidden is deliberately NOT filtered: a customer removing a booking
+     * from their own list must not erase it from the staff log.
+     */
+    public function findUserCancellations(int $limit = 200, int $offset = 0): array
+    {
+        $limit  = max(1, min(500, $limit));
+        $offset = max(0, $offset);
+
+        $stmt = $this->db->query(
+            "SELECT res.reservation_id,
+                    res.series_id,
+                    res.customer_id,
+                    u.name          AS customer_name,
+                    u.email         AS customer_email,
+                    u.account_type  AS customer_account_type,
+                    res.room_id,
+                    r.name          AS room_name,
+                    r.floor         AS floor,
+                    r.room_type     AS room_type,
+                    res.purpose,
+                    res.category,
+                    res.start_time,
+                    res.end_time,
+                    res.cancellation_reason,
+                    (SELECT MAX(sl.timestamp)
+                       FROM System_Logs sl
+                      WHERE sl.reservation_id = res.reservation_id
+                        AND sl.user_id = res.cancelled_by
+                        AND (sl.action_type LIKE 'Reservation cancelled by requester%'
+                          OR sl.action_type = 'Reservation withdrawn by requester')) AS cancelled_at
+               FROM Reservations res
+               JOIN Users u ON u.user_id = res.customer_id
+               JOIN Rooms r ON r.room_id = res.room_id
+              WHERE res.status = 'Cancelled'
+                AND res.cancelled_by = res.customer_id
+           ORDER BY cancelled_at DESC NULLS LAST, res.reservation_id DESC
+              LIMIT $limit OFFSET $offset"
+        );
+        return $stmt->fetchAll();
     }
 
     public function updateCancelRequestStatus(string $requestId, string $status, string $processedBy, ?string $staffComment): ?array

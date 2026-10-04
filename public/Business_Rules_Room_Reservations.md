@@ -138,17 +138,13 @@ Buenavista, Bohol
 
 ## ARTICLE X — CANCELLATION
 
-**Section 1.** A reservation in Pending status may be cancelled by its Requestor directly and without delay, at any time, without need of approval by any Approving Authority.
+**Section 1.** A reservation in Pending or Approved status may be cancelled by its Requestor directly and without delay, without need of confirmation or approval by any Approving Authority. The cancellation shall be recorded in the audit log and shall be made visible to the Approving Authorities.
 
-**Section 2.** A reservation in Approved status may not be cancelled directly by its Requestor. Cancellation of such a reservation shall proceed only by way of a Cancellation Request, stating the reason therefor, which shall be examined and either approved or rejected by an Approving Authority in the same manner as a Move Request. A rejection shall state its reason, the reservation being left standing thereby.
+**Section 2.** Upon cancellation the reservation shall pass to Cancelled status and the Facility shall be released at once. The Requestor shall state a reason for the cancellation, and that reason shall be recorded against the reservation.
 
-**Section 2-A.** Where a Cancellation Request is approved, the reservation shall thereupon pass to Cancelled status and the Facility shall be released. The reason recorded against the reservation shall be that stated by the Requestor.
+**Section 3.** No reservation in Approved status may be cancelled by its Requestor on or after the calendar date of that reservation's scheduled commencement. Where the day of the reservation has arrived, the reservation shall run its course; any failure of the Requestor to appear shall be recorded thereafter by an Approving Authority as a separate matter, and shall not be treated as a cancellation.
 
-**Section 2-B.** No reservation shall carry more than one Cancellation Request in Pending status at a given time.
-
-**Section 3.** No Cancellation Request upon an Approved reservation shall be admitted for submission on or after the calendar date of that reservation's scheduled commencement. Where the day of the reservation has arrived, the reservation shall run its course; any failure of the Requestor to appear shall be recorded thereafter by an Approving Authority as a separate matter, and shall not be treated as a cancellation.
-
-**Section 4.** Nothing in this Article shall be read to prevent an Approving Authority from cancelling an Approved reservation directly, upon its own discretion, without recourse to the Cancellation Request procedure.
+**Section 4.** Nothing in this Article shall be read to prevent an Approving Authority from cancelling a reservation directly, upon its own discretion, stating its reason.
 
 ---
 

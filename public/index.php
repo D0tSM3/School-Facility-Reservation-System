@@ -118,6 +118,7 @@ $routes = [
     ['GET',   '#^/api/reservations/mine$#',          fn() => (new ReservationController())->mine()],
     ['GET',   '#^/api/reservations/move-requests$#', fn() => (new ReservationController())->getMoveRequests()],
     ['GET',   '#^/api/reservations/cancel-requests$#', fn() => (new ReservationController())->getCancelRequests()],
+    ['GET',   '#^/api/reservations/cancellations$#', fn() => (new ReservationController())->getUserCancellations()],
     ['GET',   '#^/api/reservations/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->show($id)],
     ['GET',   '#^/api/reservations$#',               fn() => (new ReservationController())->index()],
     ['POST',  '#^/api/reservations$#',               fn() => (new ReservationController())->store()],
@@ -134,19 +135,19 @@ $routes = [
     ['PATCH', '#^/api/reservations/move-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->resolveMoveRequest($id)],
 
     // Cancellation Requests (approved bookings)
-    ['POST',  '#^/api/reservations/(?P<id>[^/]+)/cancel-request$#', fn(string $id) => (new ReservationController())->requestCancel($id)],
+    // Customers no longer file cancellation requests: they cancel directly via PATCH /{id}/cancel.
     ['PATCH', '#^/api/reservations/cancel-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->resolveCancelRequest($id)],
 
     // Users (Admin)
     ['GET',   '#^/api/users$#',                      fn() => (new UserController())->index()],
     ['PATCH', '#^/api/users/(?P<id>[^/]+)/role$#',   fn(string $id) => (new UserController())->updateRole($id)],
 
-    // Class Schedules (Admin)
+    // Class Schedules (Staff + Admin)
     ['GET',    '#^/api/classes$#',                   fn() => (new ClassScheduleController())->index()],
     ['POST',   '#^/api/classes$#',                   fn() => (new ClassScheduleController())->store()],
     ['DELETE', '#^/api/classes/(?P<id>[^/]+)$#',     fn(string $id) => (new ClassScheduleController())->destroy($id)],
 
-    // Holidays (Admin)
+    // Holidays (Staff + Admin)
     ['GET',    '#^/api/holidays$#',                  fn() => (new HolidayController())->index()],
     ['POST',   '#^/api/holidays$#',                  fn() => (new HolidayController())->store()],
     ['DELETE', '#^/api/holidays/(?P<id>[^/]+)$#',    fn(string $id) => (new HolidayController())->destroy($id)],

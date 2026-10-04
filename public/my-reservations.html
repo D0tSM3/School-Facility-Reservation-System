@@ -329,33 +329,33 @@
       </div>
     </div>
 
-    <!-- ── Cancellation Request Modal (Approved bookings) ──────────── -->
-    <div id="cancelRequestModal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+    <!-- Cancel Booking Modal (reason + final confirmation) -->
+    <div id="cancelBookingModal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4" role="dialog" aria-modal="true" aria-labelledby="cancelBookingTitle">
         <div class="flex items-start justify-between gap-3">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined text-[20px] text-amber-600">cancel</span>
+            <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px] text-red-600">free_cancellation</span>
             </div>
             <div>
-              <h2 class="text-base font-bold text-gray-900">Request Cancellation</h2>
-              <p id="cancelRequestPermitCode" class="text-xs text-gray-500 font-mono mt-0.5"></p>
+              <h2 id="cancelBookingTitle" class="text-base font-bold text-gray-900">Cancel this reservation?</h2>
+              <p id="cancelBookingPermitCode" class="text-xs text-gray-500 font-mono mt-0.5"></p>
             </div>
           </div>
-          <button id="cancelRequestDismiss" type="button" class="text-gray-400 hover:text-gray-700 transition-colors p-1">
+          <button id="cancelBookingDismiss" type="button" aria-label="Close" class="text-gray-400 hover:text-gray-700 transition-colors p-1">
             <span class="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
-        <p class="text-sm text-gray-600 leading-relaxed">Your booking is already approved. Provide a reason for cancellation — staff will review and decide.</p>
+        <p class="text-sm text-gray-600 leading-relaxed">The room is released right away and no staff approval is needed. Tell us why you are cancelling, then confirm.</p>
         <div class="flex flex-col gap-2">
-          <label class="text-xs font-bold text-gray-700 uppercase tracking-wider">Reason <span class="text-red-500">*</span></label>
-          <textarea id="cancelRequestReason" rows="3" placeholder="e.g. Event rescheduled by department…"
+          <label for="cancelBookingReason" class="text-xs font-bold text-gray-700 uppercase tracking-wider">Reason for cancellation <span class="text-red-500">*</span></label>
+          <textarea id="cancelBookingReason" rows="3" maxlength="250" placeholder="e.g. Event rescheduled by the department"
             class="w-full p-3 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 resize-none focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]"></textarea>
-          <p id="cancelRequestError" class="hidden text-xs font-semibold text-red-600"></p>
+          <p id="cancelBookingError" class="hidden text-xs font-semibold text-red-600"></p>
         </div>
         <div class="flex items-center justify-end gap-3 pt-2">
-          <button type="button" onclick="document.getElementById('cancelRequestDismiss').click()" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors">Keep Booking</button>
-          <button id="cancelRequestSubmit" type="button" class="px-4 py-2 bg-[#7a1f2b] hover:bg-[#5b0617] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">Submit Request</button>
+          <button id="cancelBookingKeep" type="button" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors">Keep Booking</button>
+          <button id="cancelBookingSubmit" type="button" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60">Confirm Cancellation</button>
         </div>
       </div>
     </div>

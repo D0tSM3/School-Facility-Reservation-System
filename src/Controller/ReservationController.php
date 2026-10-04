@@ -10,6 +10,7 @@ use CampusRoom\Core\Response;
 use CampusRoom\Core\ReservationValidator;
 use CampusRoom\Repository\ConflictOverrideRepository;
 use CampusRoom\Repository\ReservationRepository;
+use CampusRoom\Repository\RoomRepository;
 use PDOException;
 
 /**
@@ -167,6 +168,11 @@ class ReservationController
             $this->conflictError($error, $roomId, $startTime, $endTime, $activeDates);
         }
 
+        // A clean single-day booking is approved on the spot unless the room
+        // asks for Staff review. Anything that must wait lands as Pending and
+        // shows up in the Staff / Admin Approval Queue.
+        [$status, $approvalType] = $this->approvalOutcome($roomId, 1);
+
         try {
             $reservation = $this->reservations->create(
                 Auth::userId(),
@@ -177,7 +183,8 @@ class ReservationController
                 $equipmentNotes !== '' ? $equipmentNotes : null,
                 $category,
                 null,
-                'Approved'
+                $status,
+                $approvalType
             );
         } catch (PDOException $e) {
             // Fallback in case of race condition caught by the DB trigger
@@ -196,6 +203,7 @@ class ReservationController
             'Reservation submitted by requester',
             $reservation['reservation_id']
         );
+        $this->logAutoApproval($status, $approvalType, [$reservation['reservation_id']]);
 
         Response::json($reservation, 201);
     }
@@ -427,8 +435,7 @@ class ReservationController
         string $equipmentNotes,
         string $startTime,
         string $endTime,
-        ?array $activeDates = null,
-        string $status = 'Approved'
+        ?array $activeDates = null
     ): never {
         $startDate   = substr($startTime, 0, 10);
         $endDate     = substr($endTime, 0, 10);
@@ -440,10 +447,19 @@ class ReservationController
             $this->conflictError($error, $roomId, $startTime, $endTime, $activeDates);
         }
 
+        // Whole-range decision: a short, clean hold is auto-approved for every
+        // day; a range longer than the policy limit, or a room that asks for
+        // it, waits as Pending (see approvalOutcome()).
+        $dayCount = count(ReservationValidator::datesBetween($startDate, $endDate) ?? []);
+        if (is_array($activeDates) && count($activeDates) > 0) {
+            $dayCount = count(array_intersect(ReservationValidator::datesBetween($startDate, $endDate) ?? [], $activeDates));
+        }
+        [$status, $approvalType] = $this->approvalOutcome($roomId, $dayCount);
+
         try {
             $rows = $this->createBookingRows(
                 Auth::userId(), $roomId, $purpose, $category,
-                $equipmentNotes !== '' ? $equipmentNotes : null, $startTime, $endTime, $activeDates, $status
+                $equipmentNotes !== '' ? $equipmentNotes : null, $startTime, $endTime, $activeDates, $status, $approvalType
             );
         } catch (PDOException $e) {
             if ($e->getCode() === '45000') {
@@ -463,6 +479,7 @@ class ReservationController
                 $row['reservation_id']
             );
         }
+        $this->logAutoApproval($status, $approvalType, array_column($rows, 'reservation_id'));
 
         Response::json($rows[0] + ['series' => $rows], 201);
     }
@@ -484,13 +501,14 @@ class ReservationController
         string $startTime,
         string $endTime,
         ?array $activeDates = null,
-        string $status = 'Approved'
+        string $status = 'Pending',
+        string $approvalType = 'manual'
     ): array {
         $startDate = substr($startTime, 0, 10);
         $endDate   = substr($endTime, 0, 10);
 
         if ($startDate === $endDate) {
-            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $equipmentNotes, $category, null, $status)];
+            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $equipmentNotes, $category, null, $status, $approvalType)];
         }
 
         
@@ -506,12 +524,12 @@ class ReservationController
         $dailyEnd   = substr($endTime, 11);
         $seriesId   = $this->reservations->newSeriesId();
 
-        return $this->reservations->transaction(function () use ($days, $customerId, $roomId, $purpose, $category, $equipmentNotes, $dailyStart, $dailyEnd, $seriesId, $status): array {
+        return $this->reservations->transaction(function () use ($days, $customerId, $roomId, $purpose, $category, $equipmentNotes, $dailyStart, $dailyEnd, $seriesId, $status, $approvalType): array {
             $rows = [];
             foreach ($days as $day) {
                 $rows[] = $this->reservations->create(
                     $customerId, $roomId, $purpose, "$day $dailyStart", "$day $dailyEnd",
-                    $equipmentNotes, $category, $seriesId, $status
+                    $equipmentNotes, $category, $seriesId, $status, $approvalType
                 );
             }
             return $rows;
@@ -850,13 +868,12 @@ class ReservationController
             Response::error('Forbidden.', 403);
         }
 
-        // Once a booking is Approved the room is committed and staff have
-        // planned around it, so its customer can no longer cancel unilaterally
-        // — they file a cancellation request and staff decide. Staff and Admin
-        // keep the direct route, which is what approving such a request uses.
-        if ($role === 'Customer' && $existing['status'] === 'Approved') {
+        // An Approved booking can be cancelled by its owner directly, with no
+        // staff confirmation. The same-day cut-off (Business Rules Art. X Sec. 3)
+        // still applies to customers: on the booking date the booking runs its course.
+        if ($role === 'Customer' && $existing['status'] === 'Approved' && self::isTooLateToCancel($existing['start_time'])) {
             Response::error(
-                'An approved booking cannot be cancelled directly. Please submit a cancellation request for staff to review.',
+                'An approved booking cannot be cancelled on the day it takes place. Please contact the facilities desk directly.',
                 422
             );
         }
@@ -877,6 +894,15 @@ class ReservationController
         // Customer account, so this is effectively "required for staff".)
         if (!$isOwner && $reason === '') {
             Response::error('A cancellation reason is required when cancelling on behalf of a requester.', 422);
+        }
+
+        // A requester cancelling their own booking must also say why (Business
+        // Rules Art. X Sec. 2); the reason is what Staff/Admin see in the log.
+        if ($isOwner && $reason === '') {
+            Response::error('Please give a reason for cancelling.', 422);
+        }
+        if (mb_strlen($reason) > 250) {
+            Response::error('The reason must be 250 characters or fewer.', 422);
         }
 
         $reservation = $this->reservations->cancel($reservationId, $userId, $reason !== '' ? $reason : null);
@@ -1034,13 +1060,13 @@ class ReservationController
             Response::error('Forbidden.', 403);
         }
 
-        // Approved is excluded on purpose: the room is committed, so it goes
-        // through a cancellation request. Completed is excluded because it is
-        // the record of a room actually being used.
+        // Approved is excluded on purpose: the room is committed, so it must be
+        // cancelled first. Completed is excluded because it is the record of a
+        // room actually being used.
         $removable = ['Pending', 'Rejected', 'Cancelled'];
         if (!in_array($existing['status'], $removable, true)) {
             $hint = $existing['status'] === 'Approved'
-                ? ' Submit a cancellation request instead.'
+                ? ' Cancel it first, then remove it.'
                 : '';
             $article = $existing['status'] === 'Approved' ? 'An' : 'A';
             Response::error(
@@ -1148,6 +1174,18 @@ class ReservationController
         }
 
         Response::json($this->reservations->findCancelRequests($status));
+    }
+
+    // Staff/Admin: GET /api/reservations/cancellations[?limit=&offset=]
+    // Read-only log of bookings the requester cancelled themselves.
+    public function getUserCancellations(): never
+    {
+        Auth::requireRole(['Staff', 'Admin']);
+
+        $limit  = isset($_GET['limit'])  && ctype_digit((string) $_GET['limit'])  ? (int) $_GET['limit']  : 200;
+        $offset = isset($_GET['offset']) && ctype_digit((string) $_GET['offset']) ? (int) $_GET['offset'] : 0;
+
+        Response::json($this->reservations->findUserCancellations($limit, $offset));
     }
 
     // Staff/Admin: PATCH /api/reservations/cancel-requests/{id}
@@ -1406,6 +1444,54 @@ class ReservationController
     // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------
+
+    /**
+     * Decide how a clean new booking enters the system: [status, approval_type].
+     *
+     *  - 'special' — the room is flagged requires_approval: always Pending, so
+     *                Staff / Admin sign it off (and can see WHY it is queued).
+     *  - 'manual'  — a hold longer than 3 days waits for a human decision.
+     *  - 'auto'    — everything else is Approved immediately, no queue.
+     *
+     * If the requires_approval lookup fails (e.g. migration not applied yet) we
+     * fail SAFE: the booking goes to the Pending queue rather than being
+     * approved unreviewed.
+     *
+     * @return array{0:string,1:string}
+     */
+    private function approvalOutcome(string $roomId, int $dayCount): array
+    {
+        try {
+            if ((new RoomRepository())->requiresApproval($roomId)) {
+                return ['Pending', 'special'];
+            }
+        } catch (\Throwable $e) {
+            error_log('[ReservationController] requiresApproval lookup failed: ' . $e->getMessage());
+            return ['Pending', 'manual'];
+        }
+
+        if ($dayCount > 3) {
+            return ['Pending', 'manual'];
+        }
+
+        return ['Approved', 'auto'];
+    }
+
+    /**
+     * Write the "Auto-approved" audit entry on each row of a booking approved at
+     * submission. A no-op for bookings that entered the Pending queue.
+     *
+     * @param string[] $reservationIds
+     */
+    private function logAutoApproval(string $status, string $approvalType, array $reservationIds): void
+    {
+        if ($status !== 'Approved' || $approvalType !== 'auto') {
+            return;
+        }
+        foreach ($reservationIds as $id) {
+            $this->reservations->insertLog(Auth::userId(), 'Auto-approved: no conflicts found', $id);
+        }
+    }
 
     protected function jsonBody(): array
     {

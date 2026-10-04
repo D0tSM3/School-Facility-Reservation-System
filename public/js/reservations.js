@@ -66,13 +66,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalDismiss = document.getElementById('modalDismissBtn');
   const modalConfirm = document.getElementById('modalConfirmBtn');
 
-  // Cancellation request (approved bookings only).
-  const cancelReqModal = document.getElementById('cancelRequestModal');
-  const cancelReqPermit = document.getElementById('cancelRequestPermitCode');
-  const cancelReqReason = document.getElementById('cancelRequestReason');
-  const cancelReqError = document.getElementById('cancelRequestError');
-  const cancelReqSubmit = document.getElementById('cancelRequestSubmit');
-  const cancelReqDismiss = document.getElementById('cancelRequestDismiss');
+  // Cancel-booking confirmation (reason + final confirm, to stop misclicks).
+  const cancelBkModal = document.getElementById('cancelBookingModal');
+  const cancelBkPermit = document.getElementById('cancelBookingPermitCode');
+  const cancelBkReason = document.getElementById('cancelBookingReason');
+  const cancelBkError = document.getElementById('cancelBookingError');
+  const cancelBkSubmit = document.getElementById('cancelBookingSubmit');
+  const cancelBkDismiss = document.getElementById('cancelBookingDismiss');
+  const cancelBkKeep = document.getElementById('cancelBookingKeep');
+
   const newReservationBtn = document.getElementById('newReservationBtn');
   const exportSlipBtn = document.getElementById('exportSlipBtn');
 
@@ -507,7 +509,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const ACTION_STYLES = {
     cancel:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
     remove:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
-    reqcancel: 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
     move:      'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-600 border border-gray-200 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
     slip:      'inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#7a1f2b] text-white hover:bg-[#5e1821] border border-transparent text-xs font-semibold rounded-lg transition-all shadow-sm',
     rebook:    'inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-emerald-600 border border-gray-200 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 text-xs font-semibold rounded-lg transition-all shadow-sm',
@@ -515,9 +516,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const ACTION_ICONS = {
-    cancel: 'cancel',
+    cancel: 'free_cancellation',
     remove: 'free_cancellation',
-    reqcancel: 'free_cancellation',
     move: 'edit_calendar',
     slip: 'receipt_long',
     rebook: 'event_repeat',
@@ -551,19 +551,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * '' when a cancellation request may still be filed, otherwise why it can't.
-   * Mirrors the server rule in ReservationController::requestCancel(); the
-   * server is still the authority and repeats every one of these checks.
+   * Which rows of a booking can be cancelled right now. Pending rows always
+   * can; Approved rows only until the day before they start (Business Rules
+   * Art. X Sec. 3). Mirrors ReservationController::cancel(); the server is
+   * still the authority. A multi-day booking is one row per day.
    */
-  function cancelRequestBlockedReason(reservation) {
-    if (reservation.cancel_status === 'Pending') {
-      return 'A cancellation request for this booking is already awaiting staff review.';
-    }
+  function cancellableRows(reservation) {
+    const rows = reservation.is_multi_day && Array.isArray(reservation.series_rows)
+      ? reservation.series_rows
+      : [reservation];
+    const today = todayYMD();
+    return rows.filter(r =>
+      r.status === 'Pending' ||
+      (r.status === 'Approved' && String(r.start_time).slice(0, 10) > today)
+    );
+  }
+
+  /** '' when the booking can be cancelled, otherwise why it can't. */
+  function cancelBlockedReason(reservation) {
+    if (cancellableRows(reservation).length) return '';
     // Wall-clock date, read literally from the stored value (never device-local).
-    if (String(reservation.start_time).slice(0, 10) <= todayYMD()) {
-      return 'Cancellation requests close the day before the booking. Please contact the facilities desk.';
-    }
-    return '';
+    return 'An approved booking cannot be cancelled on the day it takes place. Please contact the facilities desk.';
   }
 
   /**
@@ -581,8 +589,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return '';
   }
 
-  // Which buttons show per status. An approved booking is deliberately NOT
-  // cancellable here: the room is committed, so it goes through a request.
+  // Which buttons show per status. Pending and Approved bookings are cancelled
+  // directly by their owner on the first click, with no staff confirmation.
   function buildActions(reservation) {
     if (reservation.is_override) {
       const buttons = [];
@@ -599,12 +607,12 @@ document.addEventListener('DOMContentLoaded', () => {
     switch (reservation.status) {
       case 'Pending':
         buttons.push(actionButton('move', id, 'Move', moveRequestBlockedReason(reservation)));
-        buttons.push(actionButton('remove', id, 'Cancel'));
+        buttons.push(actionButton('cancel', id, 'Cancel', cancelBlockedReason(reservation)));
         buttons.push(actionButton('slip', id, 'View Slip'));
         break;
       case 'Approved':
         buttons.push(actionButton('move', id, 'Move', moveRequestBlockedReason(reservation)));
-        buttons.push(actionButton('reqcancel', id, 'Cancel', cancelRequestBlockedReason(reservation)));
+        buttons.push(actionButton('cancel', id, 'Cancel', cancelBlockedReason(reservation)));
         buttons.push(actionButton('slip', id, 'View Slip'));
         break;
       case 'Completed':
@@ -966,23 +974,73 @@ function renderReservations() {
     if (modal) modal.classList.remove('hidden');
   }
 
-  function openCancelRequestModal(id) {
+  // Cancel = two steps, to stop misclicks: the owner gives a reason and then
+  // presses a final "Confirm Cancellation". No staff confirmation is needed.
+  function openCancelBookingModal(id) {
     const reservation = allReservations.find(r => r.reservation_id === id);
     if (!reservation) return;
 
-    // The button is already disabled in these cases; this covers a stale card.
-    const blocked = cancelRequestBlockedReason(reservation);
-    if (blocked) {
-      showToast(blocked, 'error');
+    // The button is already disabled in this case; this covers a stale card.
+    const blocked = cancelBlockedReason(reservation);
+    if (blocked) { showToast(blocked, 'error'); return; }
+
+    currentTargetReservationId = id;
+    if (cancelBkPermit) cancelBkPermit.textContent = permitRef(id);
+    if (cancelBkReason) cancelBkReason.value = '';
+    showCancelBkError('');
+    if (cancelBkModal) cancelBkModal.classList.remove('hidden');
+    if (cancelBkReason) cancelBkReason.focus();
+  }
+
+  function showCancelBkError(message) {
+    if (!cancelBkError) return;
+    cancelBkError.textContent = message;
+    cancelBkError.classList.toggle('hidden', !message);
+  }
+
+  function submitCancelBooking() {
+    const id = currentTargetReservationId;
+    const target = allReservations.find(r => r.reservation_id === id);
+    if (!target) { closeModal(); return; }
+
+    const reason = cancelBkReason ? cancelBkReason.value.trim() : '';
+    if (!reason) {
+      showCancelBkError('Please give a reason for cancelling.');
+      if (cancelBkReason) cancelBkReason.focus();
       return;
     }
 
-    currentTargetReservationId = id;
-    if (cancelReqPermit) cancelReqPermit.textContent = permitRef(id);
-    if (cancelReqReason) cancelReqReason.value = '';
-    if (cancelReqError) cancelReqError.classList.add('hidden');
-    if (cancelReqModal) cancelReqModal.classList.remove('hidden');
-    if (cancelReqReason) cancelReqReason.focus();
+    const blocked = cancelBlockedReason(target);
+    if (blocked) { closeModal(); showToast(blocked, 'error'); return; }
+
+    // A multi-day booking is one row per day: cancel every day still open.
+    const rows = cancellableRows(target);
+    const skipped = (target.is_multi_day ? target.series_rows : [target])
+      .filter(r => (r.status === 'Pending' || r.status === 'Approved') && !rows.includes(r)).length;
+
+    if (cancelBkSubmit) cancelBkSubmit.disabled = true;
+    Promise.all(rows.map(r =>
+      fetch(BASE + 'api/reservations/' + encodeURIComponent(r.reservation_id) + '/cancel', {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      }).then(res => res.json())
+    ))
+    .then(results => {
+      const failed = results.find(json => !json.success);
+      if (failed) {
+        showCancelBkError(failed.error || 'Could not cancel the booking.');
+      } else {
+        closeModal();
+        showToast(skipped
+          ? 'Cancelled the upcoming days. Days that start today or earlier cannot be cancelled.'
+          : 'Booking cancelled. The room has been released.', 'success');
+      }
+      fetchReservations();
+    })
+    .catch(() => showCancelBkError('Network error. Please try again.'))
+    .finally(() => { if (cancelBkSubmit) cancelBkSubmit.disabled = false; });
   }
 
   let moveCalendarInstance = null;
@@ -1108,8 +1166,8 @@ function renderReservations() {
         case 'remove':
           openRemoveModal(id);
           break;
-        case 'reqcancel':
-          openCancelRequestModal(id);
+        case 'cancel':
+          openCancelBookingModal(id);
           break;
         case 'move':
           openMoveModal(id);
@@ -1332,7 +1390,7 @@ function renderReservations() {
 
   function closeModal() {
     if (modal) modal.classList.add('hidden');
-    if (cancelReqModal) cancelReqModal.classList.add('hidden');
+    if (cancelBkModal) cancelBkModal.classList.add('hidden');
     currentTargetReservationId = null;
 
     const moveModalOverlay = document.getElementById('moveModalOverlay');
@@ -1342,6 +1400,9 @@ function renderReservations() {
   }
 
   if (modalClose) modalClose.addEventListener('click', closeModal);
+  if (cancelBkDismiss) cancelBkDismiss.addEventListener('click', closeModal);
+  if (cancelBkKeep) cancelBkKeep.addEventListener('click', closeModal);
+  if (cancelBkSubmit) cancelBkSubmit.addEventListener('click', submitCancelBooking);
   if (modalDismiss) modalDismiss.addEventListener('click', closeModal);
 
   const moveModalCloseIcon = document.getElementById('moveModalCloseIcon');
@@ -1722,6 +1783,7 @@ function renderReservations() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      if (cancelBkModal && !cancelBkModal.classList.contains('hidden')) closeModal();
       if (moveRequestSlipModalOverlay && !moveRequestSlipModalOverlay.classList.contains('hidden')) {
         closeMoveRequestSlipModal();
       }
@@ -1759,59 +1821,6 @@ function renderReservations() {
         showToast('Network error.', 'error');
       })
       .finally(closeModal);
-    });
-  }
-
-  // ---------------------------------------------------------------
-  // Cancellation request (approved bookings)
-  // ---------------------------------------------------------------
-
-  if (cancelReqDismiss) cancelReqDismiss.addEventListener('click', closeModal);
-
-  function showCancelReqError(message) {
-    if (!cancelReqError) return;
-    cancelReqError.textContent = message;
-    cancelReqError.classList.toggle('hidden', !message);
-  }
-
-  if (cancelReqSubmit) {
-    cancelReqSubmit.addEventListener('click', () => {
-      if (!currentTargetReservationId) {
-        closeModal();
-        return;
-      }
-      const reason = cancelReqReason ? cancelReqReason.value.trim() : '';
-      if (!reason) {
-        showCancelReqError('Please give a reason so staff can decide.');
-        if (cancelReqReason) cancelReqReason.focus();
-        return;
-      }
-
-      cancelReqSubmit.disabled = true;
-      const targetId = currentTargetReservationId;
-      const target = allReservations.find(r => r.reservation_id === currentTargetReservationId) || {};
-      const ids = target.is_multi_day ? target.series_rows.map(r => r.reservation_id) : [currentTargetReservationId];
-      
-      Promise.all(ids.map(id => fetch(BASE + 'api/reservations/' + encodeURIComponent(id) + '/cancel-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason })
-      }).then(res => res.json())))
-      .then(results => {
-        const failed = results.find(json => !json.success);
-        if (!failed) {
-          closeModal();
-          showToast('Cancellation request submitted. Your booking stands until staff review it.', 'success');
-          fetchReservations();
-        } else {
-          showCancelReqError(failed.error || 'Could not submit the request.');
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        showCancelReqError('Network error. Please try again.');
-      })
-      .finally(() => { cancelReqSubmit.disabled = false; });
     });
   }
 

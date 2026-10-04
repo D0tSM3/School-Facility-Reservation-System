@@ -5,10 +5,11 @@
  *   GET   api/auth/me                              → session / role guard
  *   GET   api/reservations                         → pending queue + KPIs
  *   PATCH api/reservations/{id}                    → approve / reject
- *   GET   api/rooms                                → facility state grid
+ *   GET   api/rooms                                → Rooms Directory
  *   PATCH api/rooms/{id}                           → maintenance toggle
  *   GET   api/reservations/move-requests           → move request queue
  *   PATCH api/reservations/move-requests/{id}      → approve / reject a move
+ *   GET/POST/DELETE api/classes, api/holidays     → Class Schedules, Holidays & Closures
  *   GET   api/logs                                 → audit log archive (rendered by js/logArchive.js)
  *   GET   api/reservations/{id}/logs               → per-booking log timeline (rendered by js/logArchive.js)
  *   GET   api/reservations/{id}                    → confirmation slip (rendered by js/slip.js)
@@ -29,30 +30,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const el = (id) => document.getElementById(id);
 
-  const tabPending      = el('tab-pending');
-  const tabMoves        = el('tab-moves');
-  const tabCancels      = el('tab-cancels');
-  const tabOverrides    = el('tab-overrides');
-  const tabAll          = el('tab-all');
-  const tabMaintenance  = el('tab-maintenance');
   const viewPending     = el('view-pending');
   const viewMoves       = el('view-moves');
   const viewCancels     = el('view-cancels');
   const viewOverrides   = el('view-overrides');
-  const viewAll         = el('view-all');
-  const viewAllList     = el('view-all-list');
-  const viewMaintenance = el('view-maintenance');
-  const allStatusFilter = el('all-status-filter');
 
   const pendingBadge     = el('pending-badge-count');
   const moveBadge        = el('move-badge-count');
   const cancelReqBadge   = el('cancel-badge-count');
   const overrideBadge    = el('override-badge-count');
-  const allBadge         = el('all-badge-count');
-  const maintenanceBadge = el('maintenance-badge-count');
-  const kpiPending       = el('kpi-pending-count');
-  const kpiMaintenance   = el('kpi-maintenance-count');
-  const kpiAuth          = el('kpi-auth-count');
+  const reservationsBadge = el('reservations-badge-count');
+  const facilitiesBadge    = el('facilities-badge-count');
+  const queueToolbar     = el('queue-toolbar');
 
   const batchApproveBtn   = el('btn-batch-approve');
   const searchInput       = el('searchInput');
@@ -63,16 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const toastText   = el('action-toast-text');
   const toastIcon   = el('action-toast-icon');
   const toastDismiss = el('btn-dismiss-toast');
-
-  const facilityFilter = el('facility-filter');
-  const facilityGrid   = el('view-maintenance-list');
-
-  const alertBox      = el('maintenance-alert');
-  const alertLocation = el('maintenance-alert-location');
-  const alertTitle    = el('maintenance-alert-title');
-  const alertBody     = el('maintenance-alert-body');
-  const alertBtn      = el('btn-maintenance-alert-toggle');
-  const alertBtnLabel = el('btn-maintenance-alert-label');
 
   
   
@@ -86,14 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const moveError      = el('moveReviewErrorMsg');
   const moveApproveBtn = el('moveReviewApproveBtn');
   const moveRejectBtn  = el('moveReviewRejectBtn');
-
-  // Cancellation request review modal
-  const cancelReqOverlay    = el('cancelReviewModalOverlay');
-  const cancelReqSummary    = el('cancelReviewSummary');
-  const cancelReqComment    = el('cancelReviewComment');
-  const cancelReqError      = el('cancelReviewErrorMsg');
-  const cancelReqApproveBtn = el('cancelReviewApproveBtn');
-  const cancelReqRejectBtn  = el('cancelReviewRejectBtn');
 
   // Detail modal
   const detailOverlay = el('detailModalOverlay');
@@ -116,13 +87,13 @@ document.addEventListener('DOMContentLoaded', () => {
     reservations: [],
     rooms: [],
     moveRequests: [],
-    cancelRequests: [],
+    userCancellations: [],
     overrideRequests: [],
-    activeTab: 'pending',
-    wingFilter: 'all',
-    allStatusFilter: 'all',
+    activeView: 'overview',
+    resSubtab: 'all',
+    classes: [],
+    holidays: [],
     currentMoveId: null,
-    currentCancelReqId: null,
     currentCancelId: null,
     loading: false,
     searchQuery: ''
@@ -276,51 +247,100 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------------------------------------------------------------
-  // Tabs
+  // Navigation & view routing (sidebar + dashboard cards share data-nav)
   // ---------------------------------------------------------------
 
-  
-  
+  const viewTitles = {
+    overview: 'Dashboard',
+    pending: 'Pending Approvals',
+    moves: 'Move Requests',
+    cancels: 'User Cancellations',
+    overrides: 'Conflict Override Requests',
+    reservations: 'All Reservations',
+    facilities: 'Rooms Directory',
+    classes: 'Class Schedules',
+    holidays: 'Holidays & Closures',
+  };
 
-  function switchTab(tab) {
-    state.activeTab = tab;
+  const hashToView = {
+    '#dashboard': 'overview',
+    '#overview': 'overview',
+    '#pending-approvals': 'pending',
+    '#staff-queue': 'pending',
+    '#approval-queue': 'pending',
+    '#move-requests': 'moves',
+    '#moves': 'moves',
+    '#cancellations': 'cancels',
+    '#cancels': 'cancels',
+    '#overrides': 'overrides',
+    '#reservations': 'reservations',
+    '#all-reservations': 'reservations',
+    '#rooms': 'facilities',
+    '#facilities': 'facilities',
+    '#facility-grid': 'facilities',
+    '#classes': 'classes',
+    '#holidays': 'holidays',
+  };
 
-    const pairs = [
-      ['pending', tabPending, viewPending, 'Pending Approvals'],
-      ['moves', tabMoves, viewMoves, 'Move Requests'],
-      ['cancels', tabCancels, viewCancels, 'Cancellation Requests'],
-      ['overrides', tabOverrides, viewOverrides, 'Conflict Override Requests'],
-      ['all', tabAll, viewAll, 'All Requests'],
-      ['maintenance', tabMaintenance, viewMaintenance, 'Facility State Grid']
-    ];
+  const viewToHash = {
+    overview: '#dashboard',
+    pending: '#pending-approvals',
+    moves: '#move-requests',
+    cancels: '#cancellations',
+    overrides: '#overrides',
+    reservations: '#reservations',
+    facilities: '#rooms',
+    classes: '#classes',
+    holidays: '#holidays',
+  };
 
-    pairs.forEach(([name, tabEl, viewEl, title]) => {
-      const active = name === tab;
-      if (tabEl) {
-        tabEl.classList.toggle('active-tab', active);
-        tabEl.classList.toggle('ring-2', active);
-        tabEl.classList.toggle('ring-[#7a1f2b]', active);
-        tabEl.setAttribute('aria-selected', active ? 'true' : 'false');
-      }
-      if (viewEl) viewEl.classList.toggle('hidden', !active);
-      
-      if (active) {
-         const titleEl = document.getElementById('viewport-title');
-         if (titleEl) titleEl.textContent = title;
-      }
+  function switchView(viewName, syncHash = true) {
+    if (!viewTitles[viewName]) return;
+    state.activeView = viewName;
+
+    if (syncHash && window.location.hash !== viewToHash[viewName]) {
+      history.replaceState(null, '', viewToHash[viewName]);
+    }
+
+    // Highlight the sidebar item for this view (dashboard cards are not .nav-item).
+    document.querySelectorAll('.nav-item').forEach((navItem) => {
+      const active = navItem.getAttribute('data-nav') === viewName;
+      navItem.classList.toggle('active-nav-link', active);
+      if (active) navItem.setAttribute('aria-current', 'page');
+      else navItem.removeAttribute('aria-current');
     });
 
-    if (alertBox) {
-      alertBox.classList.toggle('hidden', tab !== 'maintenance' || !alertBtn.dataset.roomId);
+    document.querySelectorAll('.dashboard-view').forEach((view) => view.classList.add('hidden'));
+    const targetView = el(`view-${viewName}`);
+    if (targetView) targetView.classList.remove('hidden');
+
+    const titleEl = el('viewport-title');
+    if (titleEl) titleEl.textContent = viewTitles[viewName];
+
+    // Search box only makes sense on the request queues; "Approve Selected" only on Pending.
+    const isQueueView = ['pending', 'moves', 'cancels', 'overrides'].includes(viewName);
+    if (queueToolbar) {
+      queueToolbar.classList.toggle('hidden', !isQueueView);
+      queueToolbar.classList.toggle('flex', isQueueView);
     }
+    if (batchApproveBtn) {
+      batchApproveBtn.classList.toggle('hidden', viewName !== 'pending');
+      batchApproveBtn.classList.toggle('flex', viewName === 'pending');
+    }
+
+    // Class / holiday lists are fetched on demand (not part of loadAll).
+    if (viewName === 'classes') loadClasses();
+    if (viewName === 'holidays') loadHolidays();
   }
 
-  if (tabPending) tabPending.addEventListener('click', () => switchTab('pending'));
-  if (tabMoves) tabMoves.addEventListener('click', () => switchTab('moves'));
-  if (tabCancels) tabCancels.addEventListener('click', () => switchTab('cancels'));
-  if (tabOverrides) tabOverrides.addEventListener('click', () => switchTab('overrides'));
-  if (tabAll) tabAll.addEventListener('click', () => switchTab('all'));
-  if (tabMaintenance) tabMaintenance.addEventListener('click', () => switchTab('maintenance'));
+  document.querySelectorAll('[data-nav]').forEach((navItem) => {
+    navItem.addEventListener('click', () => switchView(navItem.dataset.nav));
+  });
+
+  window.addEventListener('hashchange', () => {
+    const viewName = hashToView[window.location.hash];
+    if (viewName) switchView(viewName, false);
+  });
 
   // ---------------------------------------------------------------
   // Renderers
@@ -399,7 +419,8 @@ document.addEventListener('DOMContentLoaded', () => {
       obj.staff_comment,
       obj.requester_name,
       obj.requester_email,
-      obj.reason
+      obj.reason,
+      obj.cancellation_reason
     ];
     return fields.some(f => f && String(f).toLowerCase().includes(q));
   }
@@ -413,29 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ? pending.map(reservationCard).join('')
       : emptyState('No pending applications. The dispatch queue is clear.', 'task_alt');
 
-    if (pendingBadge) pendingBadge.textContent = `${pending.length} Requests`;
     
-  }
-
-  function renderAllRequests() {
-    if (!viewAllList) return;
-
-    const filtered = state.allStatusFilter === 'all'
-      ? state.reservations
-      : state.reservations.filter((r) => r.status === state.allStatusFilter);
-
-    viewAllList.innerHTML = filtered.length
-      ? filtered.map(reservationCard).join('')
-      : emptyState('No reservations match this filter.', 'search_off');
-
-    if (allBadge) allBadge.textContent = `${state.reservations.length} Total`;
-  }
-
-  if (allStatusFilter) {
-    if (allStatusFilter) allStatusFilter.addEventListener('change', () => {
-      state.allStatusFilter = allStatusFilter.value;
-      renderAllRequests();
-    });
   }
 
   function moveCard(request) {
@@ -484,44 +483,41 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * A cancellation request: the requester wants an already-approved booking
-   * released. The reason is theirs, in their words, so it is shown verbatim —
-   * it is the whole basis for the decision.
+   * Read-only log entry: a booking its requester cancelled themselves. No
+   * action is needed from staff; View Log opens the booking's audit timeline.
+   * Cancellations done by Staff/Admin are deliberately not listed here.
    */
-  function cancelRequestCard(request) {
-      const id = escapeHtml(request.request_id);
-      const resId = escapeHtml(request.reservation_id);
-      return `
-        <div class="relative bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden transition-all hover:shadow-md mb-4" data-cancel-id="${id}">
-          <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="px-2 py-1 rounded bg-red-50 text-red-700 text-xs font-bold tracking-wide border border-red-100">Cancel REQ #${id}</span>
-                <span class="text-xs text-gray-500 font-semibold">Ref: <a href="#" onclick="window.CampusRoomStaff.openDetailModal('${resId}')" class="text-[#7a1f2b] hover:underline">#${shortId(resId)}</a></span>
-              </div>
-              <div class="text-sm text-gray-600 mt-3">
-                 <span class="font-semibold text-gray-700">Reason given:</span> ${escapeHtml(request.customer_reason)}
-              </div>
-              <div class="text-xs text-gray-400 mt-2">
-                 Requested on ${formatDateTime(request.created_at)}
-              </div>
+  function cancellationCard(row) {
+    const id = escapeHtml(row.reservation_id);
+    return `
+      <div class="relative bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-4" data-cancellation-id="${id}">
+        <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-2 py-1 rounded bg-red-50 text-red-700 text-xs font-bold border border-red-100">#${shortId(row.reservation_id)}</span>
+              <h3 class="text-base font-bold text-gray-900 truncate">${escapeHtml(row.customer_name || 'Requester')}</h3>
+              ${row.customer_email ? `<span class="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold uppercase truncate">${escapeHtml(row.customer_email)}</span>` : ''}
             </div>
-            <div class="flex items-center gap-2 shrink-0 border-t sm:border-t-0 border-gray-100 pt-4 sm:pt-0">
-               <button type="button" onclick="window.CampusRoomStaff.openCancelRequestModal('${id}')" class="px-5 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors shadow-sm">Review Request</button>
-            </div>
+            <div class="text-sm text-gray-500">${escapeHtml(row.room_name)} &bull; ${formatDateTime(row.start_time)} &rarr; ${formatTime(row.end_time)}</div>
+            <div class="text-sm text-gray-600 mt-2"><span class="font-semibold text-gray-700">Reason:</span> ${escapeHtml(row.cancellation_reason || 'No reason given')}</div>
+            <div class="text-xs text-gray-400 mt-2">Cancelled on ${formatDateTime(row.cancelled_at)}</div>
           </div>
-        </div>`;
-    }
+          <div class="shrink-0">
+            <button type="button" onclick="window.CampusRoomLogArchive.open('${id}')" class="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 shadow-sm">View Log</button>
+          </div>
+        </div>
+      </div>`;
+  }
 
-  function renderCancelRequests() {
+  function renderCancellations() {
     if (!viewCancels) return;
 
-    const cancels = state.cancelRequests.filter(matchSearch);
-    viewCancels.innerHTML = cancels.length
-      ? cancels.map(cancelRequestCard).join('')
-      : emptyState('No pending cancellation requests.', 'assignment_turned_in');
+    const rows = state.userCancellations.filter(matchSearch);
+    viewCancels.innerHTML = rows.length
+      ? rows.map(cancellationCard).join('')
+      : emptyState('No user cancellations recorded.', 'event_busy');
 
-    if (cancelReqBadge) cancelReqBadge.textContent = `${state.cancelRequests.length}`;
+    if (cancelReqBadge) cancelReqBadge.textContent = `${state.userCancellations.length}`;
   }
 
   /** "Mar 10, 2031 · 9:00 AM – 11:00 AM", or a range "Mar 10 – Mar 12, 2031 · 9:00 AM – 11:00 AM daily". */
@@ -588,125 +584,38 @@ document.addEventListener('DOMContentLoaded', () => {
     if (overrideBadge) overrideBadge.textContent = `${state.overrideRequests.length}`;
   }
 
-  function facilityCard(room) {
-      const isAvailable = room.status === 'Available';
-      const isMaint = room.status === 'Maintenance';
-      
-      let badgeBg = 'bg-gray-100 text-gray-700';
-      if (isAvailable) badgeBg = 'bg-emerald-100 text-emerald-700';
-      else if (isMaint) badgeBg = 'bg-amber-100 text-amber-700';
-      
-      const rId = escapeHtml(room.room_id);
-      const rName = escapeHtml(room.name);
-      
-      return `
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-           <div class="p-5 border-b border-gray-50 flex items-start justify-between gap-3">
-              <div>
-                 <div class="text-[10px] font-bold text-gray-400 tracking-wider uppercase mb-1">${escapeHtml(room.room_type)} &bull; Floor ${escapeHtml(room.floor)}</div>
-                 <h4 class="font-bold text-gray-900 text-base leading-tight mb-2">${rName}</h4>
-                 <span class="px-2 py-0.5 rounded ${badgeBg} text-[10px] font-bold uppercase tracking-wider">${escapeHtml(room.status)}</span>
-              </div>
-              <div class="flex flex-col gap-1 items-end shrink-0">
-                <span class="material-symbols-outlined text-gray-300 text-[24px]">meeting_room</span>
-                <span class="text-xs font-semibold text-gray-500">Cap: ${room.capacity}</span>
-              </div>
-           </div>
-           <div class="p-4 bg-[#f8f9fb] flex flex-col gap-3 mt-auto">
-              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Quick State Toggle</span>
-              <div class="grid grid-cols-2 gap-2">
-                 <button type="button" onclick="window.CampusRoomStaff.toggleFacility('${rId}','Available','${rName}',this)" class="flex items-center justify-center py-2 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-50 transition-colors ${isAvailable ? 'bg-emerald-50 ring-2 ring-emerald-500 border-transparent' : 'bg-white'}" title="Set Available"><span class="material-symbols-outlined text-[20px]">check_circle</span></button>
-                 <button type="button" onclick="window.CampusRoomStaff.toggleFacility('${rId}','Maintenance','${rName}',this)" class="flex items-center justify-center py-2 rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-50 transition-colors ${isMaint ? 'bg-amber-50 ring-2 ring-amber-500 border-transparent' : 'bg-white'}" title="Set Maintenance"><span class="material-symbols-outlined text-[20px]">build</span></button>
-              </div>
-           </div>
-        </div>`;
-    }
-
-  function renderFacilities() {
-    if (!facilityGrid) return;
-
-    const filtered = state.rooms.filter((room) => {
-      if (state.wingFilter === 'all') return true;
-      if (state.wingFilter === '__maintenance__') return room.status === 'Maintenance';
-      return (room.room_type || 'Unclassified') === state.wingFilter;
-    });
-
-    facilityGrid.innerHTML = filtered.length
-      ? filtered.map(facilityCard).join('')
-      : `<div class="p-5 text-gray-500 text-sm ">No rooms match this filter.</div>`;
-
-    if (maintenanceBadge) maintenanceBadge.textContent = `${state.rooms.length} Rooms`;
-  }
-
-  function renderFacilityFilter() {
-    if (!facilityFilter) return;
-
-    const types = [...new Set(state.rooms.map((r) => r.room_type || 'Unclassified'))].sort();
-    const previous = state.wingFilter;
-
-    facilityFilter.innerHTML =
-      `<option value="all">All Rooms (${state.rooms.length})</option>` +
-      `<option value="__maintenance__">Under Maintenance Only</option>` +
-      types
-        .map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`)
-        .join('');
-
-    facilityFilter.value = previous;
-    if (!facilityFilter.value) {
-      facilityFilter.value = 'all';
-      state.wingFilter = 'all';
-    }
-  }
-
-  function renderMaintenanceAlert() {
-    if (!alertBox || !alertBtn) return;
-
-    // Decommissioned rooms are already out of service and can only be
-    // brought back by an Admin (is_active), so they don't belong in the
-    // Staff "flip it back to Available" quick-action alert.
-    const offline = state.rooms.find((room) => room.status === 'Maintenance' && Number(room.is_active) !== 0);
-
-    if (!offline) {
-      alertBtn.dataset.roomId = '';
-      alertBox.classList.add('hidden');
-      return;
-    }
-
-    alertBtn.dataset.roomId = offline.room_id;
-    alertBtn.dataset.roomName = offline.name;
-    if (alertLocation) alertLocation.textContent = roomMeta(offline);
-    if (alertTitle) alertTitle.textContent = `Instant Facility Action • ${offline.name} State Alert`;
-    if (alertBody) {
-      alertBody.textContent =
-        `${offline.name} is currently tagged Offline and is excluded from booking. `
-        + 'Restore it once servicing has been verified by the Operations Lead.';
-    }
-    if (alertBtnLabel) alertBtnLabel.textContent = `Toggle ${offline.name} to Available (Active)`;
-
-    alertBox.classList.toggle('hidden', state.activeTab !== 'maintenance');
-  }
-
   function renderKpis() {
     const pending = state.reservations.filter((r) => r.status === 'Pending').length;
+    const moves = state.moveRequests.filter((r) => r.status === 'Pending').length;
+    const cancels = state.userCancellations.length;
+    const overrides = state.overrideRequests.filter((r) => r.status === 'Pending').length;
     const offline = state.rooms.filter((r) => r.status === 'Maintenance' && Number(r.is_active) !== 0).length;
-    const approvedToday = state.reservations.filter(
-      (r) => r.status === 'Approved' && isToday(r.processed_at)
-    ).length;
 
-    if (kpiPending) kpiPending.textContent = String(pending);
-    if (kpiMaintenance) kpiMaintenance.textContent = String(offline);
-    if (kpiAuth) kpiAuth.textContent = String(approvedToday);
+    const counts = {
+      'kpi-pending-count': pending,
+      'kpi-moves-count': moves,
+      'kpi-cancels-count': cancels,
+      'kpi-overrides-count': overrides,
+      'kpi-maintenance-count': offline,
+    };
+    Object.entries(counts).forEach(([id, count]) => {
+      const node = el(id);
+      if (node) node.textContent = String(count);
+    });
+
+    // Sidebar badges. Pending = every pending application (not narrowed by any search box).
+    if (pendingBadge) pendingBadge.textContent = String(pending);
+    if (reservationsBadge) reservationsBadge.textContent = String(pending);
+    if (facilitiesBadge) facilitiesBadge.textContent = String(state.rooms.length);
   }
 
   function renderAll() {
     renderPending();
     renderMoves();
-    renderCancelRequests();
+    renderCancellations();
     renderOverrides();
-    renderAllRequests();
-    renderFacilityFilter();
-    renderFacilities();
-    renderMaintenanceAlert();
+    renderReservations();
+    renderRooms();
     renderKpis();
     stampSync();
   }
@@ -723,24 +632,34 @@ document.addEventListener('DOMContentLoaded', () => {
     
     
 
-    const [reservations, rooms, moves, cancels, overrides] = await Promise.all([
+    const [reservations, pendingRes, rooms, moves, cancels, overrides] = await Promise.all([
       api('api/reservations'),
+      // Dedicated Pending fetch: api/reservations only returns the newest 200
+      // rows of every status, so older Pending rows never reached the queue.
+      api('api/reservations?status=Pending&limit=500'),
       api('api/rooms'),
       api('api/reservations/move-requests?status=Pending'),
-      api('api/reservations/cancel-requests?status=Pending'),
+      api('api/reservations/cancellations'),
       api('api/conflict-override-requests?status=Pending')
     ]);
 
     state.loading = false;
     
 
-    const failed = [reservations, rooms, moves, cancels, overrides].find((r) => !r.ok);
+    const failed = [reservations, pendingRes, rooms, moves, cancels, overrides].find((r) => !r.ok);
     if (failed && handleAuthFailure(failed)) return;
 
-    if (reservations.ok) state.reservations = reservations.data || [];
+    if (reservations.ok || pendingRes.ok) {
+      // Union of both lists, de-duplicated by id (Pending copy wins), so every
+      // existing status filter / lookup keeps working on one array.
+      const merged = new Map();
+      (reservations.ok ? reservations.data || [] : []).forEach((r) => merged.set(r.reservation_id, r));
+      (pendingRes.ok ? pendingRes.data || [] : []).forEach((r) => merged.set(r.reservation_id, r));
+      state.reservations = Array.from(merged.values());
+    }
     if (rooms.ok) state.rooms = rooms.data || [];
     if (moves.ok) state.moveRequests = moves.data || [];
-    if (cancels.ok) state.cancelRequests = cancels.data || [];
+    if (cancels.ok) state.userCancellations = cancels.data || [];
     if (overrides.ok) state.overrideRequests = overrides.data || [];
 
     renderAll();
@@ -776,7 +695,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    switchTab('pending');
+    switchView(hashToView[window.location.hash] || 'overview');
     await loadAll();
   }
 
@@ -787,12 +706,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewMoves) viewMoves.innerHTML = '';
     if (viewCancels) viewCancels.innerHTML = '';
     if (viewOverrides) viewOverrides.innerHTML = '';
-    if (facilityGrid) facilityGrid.innerHTML = '';
     [batchApproveBtn, exportLogBtn].forEach((btn) => {
       if (btn) btn.disabled = true;
     });
-    if (syncTimestamp) syncTimestamp.textContent = 'Dispatch offline';
-    if (syncIndicator) syncIndicator.classList.remove('animate-pulse');
   }
 
   // ---------------------------------------------------------------
@@ -889,16 +805,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const cancelReviewBtn = event.target.closest('.btn-review-cancel');
-    if (cancelReviewBtn) {
-      openCancelRequestModal(cancelReviewBtn.dataset.id);
-      return;
-    }
-
     const facilityBtn = event.target.closest('.btn-toggle-facility');
     if (facilityBtn) {
-      toggleFacility,
-    updateBatchButton(
+      toggleFacility(
         facilityBtn.dataset.roomId,
         facilityBtn.dataset.nextStatus,
         facilityBtn.dataset.roomName,
@@ -908,60 +817,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ---------------------------------------------------------------
-  // Batch approve
+  // Search
   // ---------------------------------------------------------------
 
-  if (batchApproveBtn) {
-    
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       state.searchQuery = (e.target.value || '').trim().toLowerCase();
       renderAll();
-    });
-  }
-
-  if (batchApproveBtn) batchApproveBtn.addEventListener('click', async () => {
-      const pending = state.reservations.filter((r) => r.status === 'Pending' && matchSearch(r));
-      if (!pending.length) {
-        showToast('No pending reservations available for batch approval.');
-        return;
-      }
-
-      if (!window.confirm(`Approve all ${pending.length} pending application(s)?`)) return;
-
-      batchApproveBtn.disabled = true;
-      if (batchApproveLabel) batchApproveLabel.textContent = 'Approving…';
-
-      let approved = 0;
-      const failures = [];
-
-      for (const reservation of pending) {
-        const result = await api(`api/reservations/${encodeURIComponent(reservation.reservation_id)}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'Approved' })
-        });
-
-        if (result.ok) {
-          reservation.status = 'Approved';
-          reservation.processed_at = (result.data && result.data.processed_at) || reservation.processed_at;
-          approved += 1;
-        } else {
-          if (handleAuthFailure(result)) return;
-          failures.push(`#${shortId(reservation.reservation_id)}`);
-        }
-      }
-
-      batchApproveBtn.disabled = false;
-      renderAll();
-
-      if (failures.length) {
-        showToast(
-          `Batch finished: ${approved} approved, ${failures.length} failed (${failures.join(', ')}).`,
-          'error'
-        );
-      } else {
-        showToast(`Batch approved ${approved} reservation(s). Digital door schedules updated.`, 'success');
-      }
     });
   }
 
@@ -995,8 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
       room.live_status = room.status === 'Maintenance' ? 'Maintenance' : room.live_status;
     }
 
-    renderFacilities();
-    renderMaintenanceAlert();
+    renderRooms();
     renderKpis();
 
     showToast(
@@ -1005,22 +866,6 @@ document.addEventListener('DOMContentLoaded', () => {
         : `${roomName || 'Room'} restored to the available booking inventory.`,
       'success'
     );
-  }
-
-  if (alertBtn) {
-    if (alertBtn) alertBtn.addEventListener('click', () => {
-      const roomId = alertBtn.dataset.roomId;
-      if (!roomId) return;
-      toggleFacility,
-    updateBatchButton(roomId, 'Available', alertBtn.dataset.roomName, alertBtn);
-    });
-  }
-
-  if (facilityFilter) {
-    if (facilityFilter) facilityFilter.addEventListener('change', () => {
-      state.wingFilter = facilityFilter.value;
-      renderFacilities();
-    });
   }
 
   // ---------------------------------------------------------------
@@ -1417,102 +1262,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (moveRejectBtn) moveRejectBtn.addEventListener('click', () => submitMoveReview('Rejected'));
 
   // ---------------------------------------------------------------
-  // Cancellation request review modal
-  // ---------------------------------------------------------------
-
-  function openCancelRequestModal(requestId) {
-    const request = state.cancelRequests.find((r) => r.request_id === requestId);
-    state.currentCancelReqId = requestId;
-
-    if (cancelReqComment) cancelReqComment.value = '';
-    if (cancelReqError) cancelReqError.classList.add('hidden');
-
-    if (cancelReqSummary) {
-      cancelReqSummary.innerHTML = request
-        ? `
-          <div><span class="font-semibold text-gray-900">Requester:</span> ${escapeHtml(request.customer_name || request.customer_email || '—')}</div>
-          <div><span class="font-semibold text-gray-900">Room:</span> ${escapeHtml(request.room_name || '—')}</div>
-          <div><span class="font-semibold text-gray-900">Booked:</span> ${escapeHtml(formatDateTime(request.start_time))} – ${escapeHtml(formatTime(request.end_time))}</div>
-          <div><span class="font-semibold text-gray-900">Purpose:</span> ${escapeHtml(request.purpose || '—')}</div>
-          <div><span class="font-semibold text-red-600">Reason given:</span> ${escapeHtml(request.reason || '—')}</div>`
-        : '';
-    }
-
-    if (cancelReqOverlay) {
-      cancelReqOverlay.classList.remove('opacity-0', 'pointer-events-none');
-      cancelReqOverlay.setAttribute('aria-hidden', 'false');
-    }
-  }
-
-  function closeCancelRequestModal() {
-    state.currentCancelReqId = null;
-    if (cancelReqOverlay) {
-      cancelReqOverlay.classList.add('opacity-0', 'pointer-events-none');
-      cancelReqOverlay.setAttribute('aria-hidden', 'true');
-    }
-  }
-
-  const cancelReqCloseIcon = el('cancelReviewCloseIcon');
-  const cancelReqCancelBtn = el('cancelReviewCancelBtn');
-  if (cancelReqCloseIcon) cancelReqCloseIcon.addEventListener('click', closeCancelRequestModal);
-  if (cancelReqCancelBtn) cancelReqCancelBtn.addEventListener('click', closeCancelRequestModal);
-  if (cancelReqOverlay) {
-    if (cancelReqOverlay) cancelReqOverlay.addEventListener('click', (event) => {
-      if (event.target === cancelReqOverlay) closeCancelRequestModal();
-    });
-  }
-
-  async function submitCancelReview(status) {
-    if (!state.currentCancelReqId) return;
-
-    const comment = cancelReqComment ? cancelReqComment.value.trim() : '';
-
-    // The booking stands after a rejection, so the requester is owed a why.
-    if (status === 'Rejected' && !comment) {
-      if (cancelReqError) {
-        cancelReqError.textContent = 'A comment is required for rejection.';
-        cancelReqError.classList.remove('hidden');
-      }
-      return;
-    }
-
-    if (cancelReqApproveBtn) cancelReqApproveBtn.disabled = true;
-    if (cancelReqRejectBtn) cancelReqRejectBtn.disabled = true;
-
-    const result = await api(
-      `api/reservations/cancel-requests/${encodeURIComponent(state.currentCancelReqId)}`,
-      {
-        method: 'PATCH',
-        body: JSON.stringify({ status, staff_comment: comment })
-      }
-    );
-
-    if (cancelReqApproveBtn) cancelReqApproveBtn.disabled = false;
-    if (cancelReqRejectBtn) cancelReqRejectBtn.disabled = false;
-
-    if (!result.ok) {
-      if (handleAuthFailure(result)) return;
-      if (cancelReqError) {
-        cancelReqError.textContent = result.error;
-        cancelReqError.classList.remove('hidden');
-      }
-      return;
-    }
-
-    closeCancelRequestModal();
-    showToast(
-      status === 'Approved'
-        ? 'Cancellation approved. The room has been released.'
-        : 'Cancellation rejected. The booking still stands.',
-      'success'
-    );
-    await loadAll();
-  }
-
-  if (cancelReqApproveBtn) cancelReqApproveBtn.addEventListener('click', () => submitCancelReview('Approved'));
-  if (cancelReqRejectBtn) cancelReqRejectBtn.addEventListener('click', () => submitCancelReview('Rejected'));
-
-  // ---------------------------------------------------------------
   // Conflict override review modal
   //
   // Approve = propose moving the conflicting booking to a new time (a
@@ -1699,7 +1448,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
     closeMoveModal();
-    closeCancelRequestModal();
     closeOverrideModal();
     closeDetailModal();
     closeActionMenu();
@@ -1737,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let failCount = 0;
       for (const id of checked) {
         try {
-          const res = await api(`/api/reservations/${id}`, {
+          const res = await api(`api/reservations/${encodeURIComponent(id)}`, {
             method: 'PATCH',
             body: JSON.stringify({ status: 'Approved', staff_comment: 'Batch approved' })
           });
@@ -1761,6 +1509,454 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------------------------------------------------------------
+  // Overlay helpers (Add Class / Declare Holiday)
+  // ---------------------------------------------------------------
+
+  function openOverlay(id) {
+    const overlay = el(id);
+    if (!overlay) return;
+    overlay.classList.remove('opacity-0', 'pointer-events-none');
+    overlay.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeOverlay(id) {
+    const overlay = el(id);
+    if (!overlay) return;
+    overlay.classList.add('opacity-0', 'pointer-events-none');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  document.querySelectorAll('[data-close-modal]').forEach((btn) => {
+    btn.addEventListener('click', () => closeOverlay(btn.dataset.closeModal));
+  });
+  ['addClassModalOverlay', 'addHolidayModalOverlay'].forEach((id) => {
+    const overlay = el(id);
+    if (overlay) {
+      overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) closeOverlay(id);
+      });
+    }
+  });
+
+  function showFormError(id, message) {
+    const box = el(id);
+    if (!box) return;
+    box.textContent = message || '';
+    box.classList.toggle('hidden', !message);
+  }
+
+  const isRoomActive = (room) => Number(room.is_active) !== 0;
+
+  function emptyRow(colspan, message, tone = 'text-gray-400') {
+    return `<tr><td colspan="${colspan}" class="p-8 text-center ${tone} text-xs">${escapeHtml(message)}</td></tr>`;
+  }
+
+  // ---------------------------------------------------------------
+  // All Reservations (every status, with filters)
+  // ---------------------------------------------------------------
+
+  function reservationPill(status) {
+    const map = {
+      Approved:  'bg-emerald-50 text-emerald-700 border border-emerald-200',
+      Pending:   'bg-amber-50 text-amber-700 border border-amber-200',
+      Rejected:  'bg-red-50 text-red-700 border border-red-200',
+      Cancelled: 'bg-gray-100 text-gray-600',
+    };
+    const cls = map[status] || 'bg-blue-50 text-blue-700';
+    return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${cls}">${escapeHtml(status)}</span>`;
+  }
+
+  function reservationRow(r) {
+    const id = escapeHtml(r.reservation_id);
+    const name = escapeHtml(r.customer_name || r.customer_email || 'Requester');
+    const isPending = r.status === 'Pending';
+
+    return `
+      <tr class="hover:bg-gray-50/80 transition-colors">
+        <td class="py-4 px-6 font-mono text-xs font-semibold text-gray-600" title="${id}">#${shortId(r.reservation_id)}</td>
+        <td class="py-4 px-6 text-xs">
+          <div class="font-bold text-gray-900">${name}</div>
+          <div class="text-[11px] text-gray-400">${escapeHtml(r.customer_email || '—')}</div>
+        </td>
+        <td class="py-4 px-6 text-xs font-semibold text-gray-800">${escapeHtml(r.room_name || 'Facility')}</td>
+        <td class="py-4 px-6 text-xs text-gray-600 whitespace-nowrap">${formatDateTime(r.start_time)} &rarr; ${formatTime(r.end_time)}</td>
+        <td class="py-4 px-6 text-xs text-gray-600">
+          <span class="font-semibold text-gray-800">${escapeHtml(r.category || 'General')}</span>
+          ${r.purpose ? `<div class="text-[11px] text-gray-400 truncate max-w-xs" title="${escapeHtml(r.purpose)}">${escapeHtml(r.purpose)}</div>` : ''}
+        </td>
+        <td class="py-4 px-6 text-xs">${reservationPill(r.status)}</td>
+        <td class="py-4 px-6 text-right">
+          <div class="inline-flex items-center gap-1.5">
+            ${isPending ? `
+              <button type="button" class="btn-approve-req px-2.5 py-1 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-all" data-id="${id}" data-name="${name}">Approve</button>
+              <button type="button" class="btn-reject-req px-2.5 py-1 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-all" data-id="${id}" data-name="${name}">Reject</button>` : ''}
+            <button type="button" class="btn-actions-menu p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" data-id="${id}" aria-haspopup="menu" aria-expanded="false" title="More actions">
+              <span class="material-symbols-outlined text-[19px]">more_vert</span>
+            </button>
+          </div>
+        </td>
+      </tr>`;
+  }
+
+  function renderReservations() {
+    const tbody = el('reservationsTableBody');
+    if (!tbody) return;
+
+    const pendingCount = state.reservations.filter((r) => r.status === 'Pending').length;
+    const pendingTabBadge = el('subtab-pending-badge');
+    if (pendingTabBadge) pendingTabBadge.textContent = String(pendingCount);
+
+    // Classification filter is built from the data actually present.
+    const categorySelect = el('resCategoryFilter');
+    if (categorySelect) {
+      const previous = categorySelect.value;
+      const categories = [...new Set(state.reservations.map((r) => r.category).filter(Boolean))].sort();
+      categorySelect.innerHTML = '<option value="all">All Classifications</option>'
+        + categories.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+      categorySelect.value = categories.includes(previous) ? previous : 'all';
+    }
+
+    document.querySelectorAll('.res-subtab-btn').forEach((btn) => {
+      const active = btn.dataset.resSubtab === state.resSubtab;
+      btn.classList.toggle('bg-[#7a1f2b]', active);
+      btn.classList.toggle('text-white', active);
+      btn.classList.toggle('text-gray-600', !active);
+      btn.classList.toggle('hover:bg-gray-100', !active);
+    });
+
+    const search = ((el('resSearchInput') || {}).value || '').trim().toLowerCase();
+    const category = categorySelect ? categorySelect.value : 'all';
+
+    const rows = state.reservations.filter((r) => {
+      if (state.resSubtab !== 'all' && r.status !== state.resSubtab) return false;
+      if (category !== 'all' && r.category !== category) return false;
+      if (!search) return true;
+      return [r.reservation_id, r.customer_name, r.customer_email, r.room_name, r.purpose]
+        .some((f) => f && String(f).toLowerCase().includes(search));
+    });
+
+    tbody.innerHTML = rows.length
+      ? rows.map(reservationRow).join('')
+      : emptyRow(7, 'No reservations matching current view filters.');
+  }
+
+  document.querySelectorAll('[data-res-subtab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.resSubtab = btn.dataset.resSubtab;
+      renderReservations();
+    });
+  });
+  if (el('resSearchInput')) el('resSearchInput').addEventListener('input', renderReservations);
+  if (el('resCategoryFilter')) el('resCategoryFilter').addEventListener('change', renderReservations);
+
+  // ---------------------------------------------------------------
+  // Rooms Directory — Staff may only flip Available <-> Maintenance.
+  // Create / edit / decommission / delete are Admin-only on the server.
+  // ---------------------------------------------------------------
+
+  function roomRow(room) {
+    const isMaint = room.status === 'Maintenance';
+    const active = isRoomActive(room);
+    const rId = escapeHtml(room.room_id);
+    const rName = escapeHtml(room.name);
+
+    const operational = isMaint
+      ? '<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Maintenance</span>'
+      : '<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Available</span>';
+
+    const lifecycle = active
+      ? '<span class="text-xs font-semibold text-emerald-600 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Active</span>'
+      : '<span class="text-xs font-semibold text-gray-400 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>Decommissioned</span>';
+
+    // Decommissioned rooms can only be brought back by an Admin.
+    const action = active
+      ? `<button type="button" class="btn-toggle-facility p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" data-room-id="${rId}" data-room-name="${rName}" data-next-status="${isMaint ? 'Available' : 'Maintenance'}" title="${isMaint ? 'Mark Available' : 'Put Under Maintenance'}">
+           <span class="material-symbols-outlined text-[19px]">${isMaint ? 'check_circle' : 'build'}</span>
+         </button>`
+      : '<span class="text-[11px] text-gray-400">Admin only</span>';
+
+    return `
+      <tr class="hover:bg-gray-50/80 transition-colors">
+        <td class="py-4 px-6">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700 shrink-0">
+              <span class="material-symbols-outlined text-[18px]">meeting_room</span>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-gray-900">${rName}</div>
+              <div class="text-[11px] text-gray-400">Next: ${escapeHtml(room.next_available || 'Open')}</div>
+            </div>
+          </div>
+        </td>
+        <td class="py-4 px-6 text-xs text-gray-600">
+          <span class="font-semibold text-gray-800">${escapeHtml(room.room_type || 'General')}</span>
+          <span class="text-gray-400"> &bull; Floor ${escapeHtml(room.floor ?? 1)}</span>
+        </td>
+        <td class="py-4 px-6 text-xs font-semibold text-gray-700">${escapeHtml(room.capacity)} Seats</td>
+        <td class="py-4 px-6">${operational}</td>
+        <td class="py-4 px-6">${lifecycle}</td>
+        <td class="py-4 px-6 text-right">${action}</td>
+      </tr>`;
+  }
+
+  function renderRooms() {
+    const tbody = el('facilitiesTableBody');
+    if (!tbody) return;
+
+    const typeSelect = el('facilityTypeFilter');
+    if (typeSelect) {
+      const previous = typeSelect.value;
+      const types = [...new Set(state.rooms.map((r) => r.room_type).filter(Boolean))].sort();
+      typeSelect.innerHTML = '<option value="all">All Room Types</option>'
+        + types.map((t) => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+      typeSelect.value = types.includes(previous) ? previous : 'all';
+    }
+
+    const search = ((el('facilitySearchInput') || {}).value || '').trim().toLowerCase();
+    const type = typeSelect ? typeSelect.value : 'all';
+    const status = (el('facilityStatusFilter') || {}).value || 'all';
+
+    const rooms = state.rooms.filter((room) => {
+      if (search && !String(room.name || '').toLowerCase().includes(search)
+          && !String(room.room_type || '').toLowerCase().includes(search)) return false;
+      if (type !== 'all' && room.room_type !== type) return false;
+      if (status === 'Available' && (room.status !== 'Available' || !isRoomActive(room))) return false;
+      if (status === 'Maintenance' && room.status !== 'Maintenance') return false;
+      if (status === 'Inactive' && isRoomActive(room)) return false;
+      return true;
+    });
+
+    tbody.innerHTML = rooms.length
+      ? rooms.map(roomRow).join('')
+      : emptyRow(6, 'No facilities matching current filters.');
+  }
+
+  ['facilitySearchInput'].forEach((id) => { if (el(id)) el(id).addEventListener('input', renderRooms); });
+  ['facilityTypeFilter', 'facilityStatusFilter'].forEach((id) => { if (el(id)) el(id).addEventListener('change', renderRooms); });
+
+  // ---------------------------------------------------------------
+  // Class Schedules
+  // ---------------------------------------------------------------
+
+  /** "HH:MM[:SS]" -> "1:30 PM" (class times are clock values, not datetimes). */
+  function formatClock(value) {
+    const m = /^(\d{1,2}):(\d{2})/.exec(String(value ?? ''));
+    if (!m) return '—';
+    let h = parseInt(m[1], 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m[2]} ${ampm}`;
+  }
+
+  /** "YYYY-MM-DD" -> "Dec 25, 2026" without a timezone shift. */
+  function formatCalendarDate(value) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value ?? ''));
+    if (!m) return escapeHtml(value || '—');
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+      .toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+  }
+
+  function renderClasses() {
+    const tbody = el('classesTableBody');
+    if (!tbody) return;
+    if (!state.classes.length) {
+      tbody.innerHTML = emptyRow(6, 'No recurring academic class blocks registered.');
+      return;
+    }
+    tbody.innerHTML = state.classes.map((c) => `
+      <tr class="hover:bg-gray-50/80 transition-colors">
+        <td class="py-4 px-6 font-bold text-gray-900 text-xs">${escapeHtml(c.room_name || 'Room')}</td>
+        <td class="py-4 px-6 font-semibold text-gray-800 text-xs">${escapeHtml(c.course_code)}</td>
+        <td class="py-4 px-6 text-xs text-gray-600">${escapeHtml(c.section)}</td>
+        <td class="py-4 px-6 text-xs font-semibold text-gray-700">${escapeHtml(c.day_of_week)}</td>
+        <td class="py-4 px-6 text-xs text-gray-600">${formatClock(c.start_time)} – ${formatClock(c.end_time)}</td>
+        <td class="py-4 px-6 text-right">
+          <button type="button" class="btn-delete-class p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" data-id="${escapeHtml(c.schedule_id)}" data-desc="${escapeHtml(c.course_code)} (${escapeHtml(c.day_of_week)})" title="Delete Schedule">
+            <span class="material-symbols-outlined text-[19px]">delete</span>
+          </button>
+        </td>
+      </tr>`).join('');
+  }
+
+  async function loadClasses() {
+    const tbody = el('classesTableBody');
+    if (!tbody) return;
+    if (!state.classes.length) tbody.innerHTML = emptyRow(6, 'Loading class schedules...');
+
+    const result = await api('api/classes');
+    if (!result.ok) {
+      if (handleAuthFailure(result)) return;
+      tbody.innerHTML = emptyRow(6, `Failed to load classes: ${result.error}`, 'text-red-500');
+      return;
+    }
+    state.classes = Array.isArray(result.data) ? result.data : [];
+    renderClasses();
+  }
+
+  if (el('classesTableBody')) {
+    el('classesTableBody').addEventListener('click', async (event) => {
+      const btn = event.target.closest('.btn-delete-class');
+      if (!btn) return;
+      if (!window.confirm(
+        `Remove weekly class schedule ${btn.dataset.desc}?\n\n`
+        + 'It will be moved to the archive and retained for 30 days before permanent deletion.'
+      )) return;
+
+      btn.disabled = true;
+      const result = await api(`api/classes/${encodeURIComponent(btn.dataset.id)}`, { method: 'DELETE' });
+      btn.disabled = false;
+      if (!result.ok) {
+        if (handleAuthFailure(result)) return;
+        showToast(result.error, 'error');
+        return;
+      }
+      showToast('Class schedule block moved to archive (retained for 30 days).', 'success');
+      loadClasses();
+    });
+  }
+
+  if (el('openAddClassModalBtn')) {
+    el('openAddClassModalBtn').addEventListener('click', () => {
+      const select = el('classRoomSelect');
+      if (select) {
+        select.innerHTML = '<option value="">Select a room...</option>'
+          + state.rooms.filter(isRoomActive).map((r) =>
+            `<option value="${escapeHtml(r.room_id)}">${escapeHtml(r.name)} (${escapeHtml(r.room_type || 'Facility')})</option>`
+          ).join('');
+      }
+      if (el('addClassForm')) el('addClassForm').reset();
+      showFormError('addClassError', '');
+      openOverlay('addClassModalOverlay');
+    });
+  }
+
+  if (el('addClassForm')) {
+    el('addClassForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const submit = el('addClassSubmit');
+      const payload = {
+        room_id: el('classRoomSelect').value,
+        course_code: el('classCourseCode').value.trim(),
+        section: el('classSection').value.trim(),
+        day_of_week: el('classDayOfWeek').value,
+        start_time: el('classStartTime').value,
+        end_time: el('classEndTime').value,
+      };
+
+      showFormError('addClassError', '');
+      if (submit) submit.disabled = true;
+      const result = await api('api/classes', { method: 'POST', body: JSON.stringify(payload) });
+      if (submit) submit.disabled = false;
+
+      if (!result.ok) {
+        if (handleAuthFailure(result)) return;
+        showFormError('addClassError', result.error);
+        return;
+      }
+      closeOverlay('addClassModalOverlay');
+      showToast(`Class block ${payload.course_code} added.`, 'success');
+      loadClasses();
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // Holidays & Closures
+  // ---------------------------------------------------------------
+
+  function renderHolidays() {
+    const tbody = el('holidaysTableBody');
+    if (!tbody) return;
+    if (!state.holidays.length) {
+      tbody.innerHTML = emptyRow(4, 'No declared university holidays.');
+      return;
+    }
+    tbody.innerHTML = state.holidays.map((h) => `
+      <tr class="hover:bg-gray-50/80 transition-colors">
+        <td class="py-4 px-6 font-bold text-gray-900 text-xs whitespace-nowrap">${formatCalendarDate(h.holiday_date)}</td>
+        <td class="py-4 px-6 font-semibold text-gray-800 text-xs">${escapeHtml(h.name)}</td>
+        <td class="py-4 px-6 text-xs">
+          <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${h.type === 'Regular' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">${escapeHtml(h.type)}</span>
+        </td>
+        <td class="py-4 px-6 text-right">
+          <button type="button" class="btn-delete-holiday p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" data-date="${escapeHtml(h.holiday_date)}" data-name="${escapeHtml(h.name)}" title="Delete Holiday">
+            <span class="material-symbols-outlined text-[19px]">delete</span>
+          </button>
+        </td>
+      </tr>`).join('');
+  }
+
+  async function loadHolidays() {
+    const tbody = el('holidaysTableBody');
+    if (!tbody) return;
+    if (!state.holidays.length) tbody.innerHTML = emptyRow(4, 'Loading holiday calendars...');
+
+    const result = await api('api/holidays');
+    if (!result.ok) {
+      if (handleAuthFailure(result)) return;
+      tbody.innerHTML = emptyRow(4, `Failed to load holidays: ${result.error}`, 'text-red-500');
+      return;
+    }
+    state.holidays = Array.isArray(result.data) ? result.data : [];
+    renderHolidays();
+  }
+
+  if (el('holidaysTableBody')) {
+    el('holidaysTableBody').addEventListener('click', async (event) => {
+      const btn = event.target.closest('.btn-delete-holiday');
+      if (!btn) return;
+      if (!window.confirm(
+        `Remove ${btn.dataset.name} on ${btn.dataset.date}? Rooms become reservable on this date.\n\n`
+        + 'It will be moved to the archive and retained for 30 days before permanent deletion.'
+      )) return;
+
+      btn.disabled = true;
+      const result = await api(`api/holidays/${encodeURIComponent(btn.dataset.date)}`, { method: 'DELETE' });
+      btn.disabled = false;
+      if (!result.ok) {
+        if (handleAuthFailure(result)) return;
+        showToast(result.error, 'error');
+        return;
+      }
+      showToast('Holiday closure moved to archive (retained for 30 days).', 'success');
+      loadHolidays();
+    });
+  }
+
+  if (el('openAddHolidayModalBtn')) {
+    el('openAddHolidayModalBtn').addEventListener('click', () => {
+      if (el('addHolidayForm')) el('addHolidayForm').reset();
+      showFormError('addHolidayError', '');
+      openOverlay('addHolidayModalOverlay');
+    });
+  }
+
+  if (el('addHolidayForm')) {
+    el('addHolidayForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const submit = el('addHolidaySubmit');
+      const payload = {
+        holiday_date: el('newHolidayDate').value,
+        name: el('newHolidayName').value.trim(),
+        type: el('newHolidayType').value,
+      };
+
+      showFormError('addHolidayError', '');
+      if (submit) submit.disabled = true;
+      const result = await api('api/holidays', { method: 'POST', body: JSON.stringify(payload) });
+      if (submit) submit.disabled = false;
+
+      if (!result.ok) {
+        if (handleAuthFailure(result)) return;
+        showFormError('addHolidayError', result.error);
+        return;
+      }
+      closeOverlay('addHolidayModalOverlay');
+      showToast(`Holiday "${payload.name}" declared for ${payload.holiday_date}.`, 'success');
+      loadHolidays();
+    });
+  }
+
+  // ---------------------------------------------------------------
   // Export Global API for inline HTML onclick handlers
   // ---------------------------------------------------------------
   window.CampusRoomStaff = {
@@ -1768,7 +1964,6 @@ document.addEventListener('DOMContentLoaded', () => {
     openDetailModal,
     openStaffCancelModal,
     openMoveModal,
-    openCancelRequestModal,
     openOverrideModal,
     toggleFacility,
     updateBatchButton

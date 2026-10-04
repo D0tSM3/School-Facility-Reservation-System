@@ -24,14 +24,14 @@ class HolidayController
 
     public function index(): never
     {
-        Auth::requireRole(['Admin']);
+        Auth::requireRole(['Staff', 'Admin']);
         $holidays = $this->repo->findAll();
         Response::json($holidays);
     }
 
     public function store(): never
     {
-        Auth::requireRole(['Admin']);
+        Auth::requireRole(['Staff', 'Admin']);
 
         $raw  = file_get_contents('php://input');
         $body = json_decode($raw ?: '{}', true);
@@ -64,13 +64,13 @@ class HolidayController
         }
 
         $this->repo->create($date, $name, $type);
-        (new ReservationRepository())->insertLog(Auth::userId(), "Admin added holiday {$name} ({$date})");
+        (new ReservationRepository())->insertLog(Auth::userId(), (string) Auth::role() . " added holiday {$name} ({$date})");
         Response::json(['success' => true], 201);
     }
 
     public function destroy(string $date): never
     {
-        Auth::requireRole(['Admin']);
+        Auth::requireRole(['Staff', 'Admin']);
 
         if (DateTimeHelper::toMysqlDate($date) === null) {
             Response::error('Invalid date. Use YYYY-MM-DD.', 422);
@@ -91,14 +91,14 @@ class HolidayController
                 $summary,
                 $holiday,
                 $userId,
-                'Admin removed university holiday closure'
+                (string) Auth::role() . ' removed university holiday closure'
             );
         } catch (\Throwable $e) {
             error_log('[HolidayController] Failed to archive deleted holiday: ' . $e->getMessage());
         }
 
         $this->repo->delete($date);
-        (new ReservationRepository())->insertLog($userId, "Admin archived holiday {$holiday['name']} ({$date}) — retained for 30 days");
+        (new ReservationRepository())->insertLog($userId, (string) Auth::role() . " archived holiday {$holiday['name']} ({$date}) — retained for 30 days");
         Response::json([
             'success'        => true,
             'archived'       => true,

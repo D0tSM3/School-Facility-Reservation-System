@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     rooms: [],
     reservations: [],
     moveRequests: [],
-    cancelRequests: [],
+    userCancellations: [],
     overrideRequests: [],
     settings: null,
     users: [],
@@ -52,6 +52,14 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  // Short, upper-cased reference shown in the Approval Queue / detail modal.
+  // renderApprovalQueue(), the approve/reject confirmations and the reservation
+  // detail view all call this; it was never defined here, so the first Pending
+  // row threw a ReferenceError and the queue stayed on its empty state.
+  function shortId(value) {
+    return String(value ?? '').substring(0, 8).toUpperCase();
   }
 
   function getInitials(name) {
@@ -383,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
     reservations: 'Reservations Master Management',
     'approval-queue': 'Pending Approvals Queue',
     moves: 'Reservation Move Requests',
-    cancels: 'Reservation Cancellation Requests',
+    cancels: 'User Cancellations',
     overrides: 'Conflict Override Requests Queue',
     users: 'Institutional User Directory',
     classes: 'Recurring Academic Class Schedules',
@@ -546,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateAllCounters() {
     const pendingCount = state.reservations.filter(r => r.status === 'Pending').length;
     const movesCount = state.moveRequests.filter(m => m.status === 'Pending').length;
-    const cancelsCount = state.cancelRequests.filter(c => c.status === 'Pending').length;
+    const cancelsCount = state.userCancellations.length;
     const overridesCount = state.overrideRequests.filter(o => o.status === 'Pending').length;
 
     // Sidebar badge counters
@@ -587,14 +595,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const cancelsBadge = document.getElementById('badge-cancels-count');
-    if (cancelsBadge) {
-      if (cancelsCount > 0) {
-        cancelsBadge.textContent = cancelsCount;
-        cancelsBadge.classList.remove('hidden');
-      } else {
-        cancelsBadge.classList.add('hidden');
-      }
-    }
+    // A plain count of logged cancellations, not an alert: nothing to action.
+    if (cancelsBadge) cancelsBadge.textContent = cancelsCount;
 
     const overridesBadge = document.getElementById('badge-overrides-count');
     if (overridesBadge) {
@@ -626,13 +628,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // 4. DATA LOADER CONTROLLER
   // =========================================================================
 
+  // Union of the general reservation list and the dedicated Pending list,
+  // de-duplicated by reservation_id (the Pending copy wins; it is the fresher read).
+  function mergePendingReservations(all, pending) {
+    const merged = new Map();
+    (Array.isArray(all) ? all : []).forEach((r) => merged.set(r.reservation_id, r));
+    (Array.isArray(pending) ? pending : []).forEach((r) => merged.set(r.reservation_id, r));
+    return Array.from(merged.values());
+  }
+
   async function loadAllData() {
     try {
-      const [rooms, reservations, moveReqs, cancelReqs, overrideReqs, users, settings, archivesRes] = await Promise.all([
+      const [rooms, reservations, pendingRes, moveReqs, cancelReqs, overrideReqs, users, settings, archivesRes] = await Promise.all([
         apiFetch('api/rooms').catch(() => []),
         apiFetch('api/reservations').catch(() => []),
+        // Dedicated Pending fetch: api/reservations returns only the newest 200
+        // rows of every status, so older Pending rows silently fell off the
+        // queue and the badge. Pending alone is fetched at the 500 maximum.
+        apiFetch('api/reservations?status=Pending&limit=500').catch(() => []),
         apiFetch('api/reservations/move-requests').catch(() => []),
-        apiFetch('api/reservations/cancel-requests').catch(() => []),
+        apiFetch('api/reservations/cancellations').catch(() => []),
         apiFetch('api/conflict-override-requests').catch(() => []),
         apiFetch('api/users').catch(() => []),
         apiFetch('api/settings').catch(() => null),
@@ -640,9 +655,9 @@ document.addEventListener('DOMContentLoaded', () => {
       ]);
 
       state.rooms = Array.isArray(rooms) ? rooms : [];
-      state.reservations = Array.isArray(reservations) ? reservations : [];
+      state.reservations = mergePendingReservations(reservations, pendingRes);
       state.moveRequests = Array.isArray(moveReqs) ? moveReqs : [];
-      state.cancelRequests = Array.isArray(cancelReqs) ? cancelReqs : [];
+      state.userCancellations = Array.isArray(cancelReqs) ? cancelReqs : [];
       state.overrideRequests = Array.isArray(overrideReqs) ? overrideReqs : [];
       state.users = Array.isArray(users) ? users : [];
       state.settings = settings;
@@ -670,7 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Calculate KPI Metrics
     const pendingTotal = state.reservations.filter(r => r.status === 'Pending').length;
     const pendingMoves = state.moveRequests.filter(m => m.status === 'Pending').length;
-    const pendingCancels = state.cancelRequests.filter(c => c.status === 'Pending').length;
+    const pendingCancels = state.userCancellations.length;
     const pendingOverrides = state.overrideRequests.filter(o => o.status === 'Pending').length;
     const activeRooms = state.rooms.filter(r => r.is_active && r.status === 'Available').length;
     const maintenanceRooms = state.rooms.filter(r => r.status === 'Maintenance').length;
@@ -1855,114 +1870,65 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Render Cancellation Requests Table
+  // Render User Cancellations log (read-only). Lists bookings the requester
+  // cancelled themselves; Staff/Admin cancellations ("Revoke") are not shown.
   function renderCancelsTable() {
     const tbody = document.getElementById('cancelsTableBody');
     if (!tbody) return;
-    if (state.cancelRequests.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400 text-xs">No cancellation requests awaiting review.</td></tr>`;
+
+    const searchInput = document.getElementById('cancelsSearchInput');
+    const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const rows = state.userCancellations.filter(c => {
+      if (!search) return true;
+      return [
+        c.customer_name,
+        c.customer_email,
+        c.room_name,
+        c.purpose,
+        c.reservation_id,
+        c.cancellation_reason,
+      ].some(f => f && String(f).toLowerCase().includes(search));
+    });
+
+    if (rows.length === 0) {
+      const msg = state.userCancellations.length === 0
+        ? 'No user cancellations recorded.'
+        : 'No cancellations match your search.';
+      tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400 text-xs">${msg}</td></tr>`;
       return;
     }
 
-    tbody.innerHTML = state.cancelRequests.map(c => {
-      const isPending = c.status === 'Pending';
-      return `
-        <tr class="hover:bg-gray-50/80 transition-colors">
-          <td class="py-4 px-6 text-xs">
-            <div class="font-bold text-gray-900">${escapeHtml(c.customer_name || 'Requester')}</div>
-            <div class="text-[11px] text-gray-400">${escapeHtml(c.customer_email || '—')}</div>
-          </td>
-          <td class="py-4 px-6 text-xs font-semibold text-gray-800">${escapeHtml(c.room_name || 'Facility')}</td>
-          <td class="py-4 px-6 text-xs text-gray-500">${formatRange(c.start_time, c.end_time)}</td>
-          <td class="py-4 px-6 text-xs text-gray-700 italic max-w-xs truncate" title="${escapeHtml(c.reason)}">
-            "${escapeHtml(c.reason)}"
-          </td>
-          <td class="py-4 px-6 text-xs">
-            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${isPending ? 'bg-amber-100 text-amber-800' : (c.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800')}">
-              ${c.status}
-            </span>
-          </td>
-          <td class="py-4 px-6 text-right">
-            ${isPending ? `
-              <button type="button" class="btn-review-cancel px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg shadow-sm transition-all" data-id="${c.request_id}">
-                Review Cancel
-              </button>
-            ` : `<span class="text-xs text-gray-400">—</span>`}
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    document.querySelectorAll('.btn-review-cancel').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        const req = state.cancelRequests.find(c => c.request_id === id);
-        if (!req) return;
-
-        document.getElementById('cancelRequestId').value = req.request_id;
-        document.getElementById('cancelStaffComment').value = '';
-        const summary = document.getElementById('cancelReviewSummary');
-        if (summary) {
-          summary.innerHTML = `
-            <div class="p-3 bg-gray-50 rounded-xl space-y-1">
-              <p><strong>Requester:</strong> ${escapeHtml(req.customer_name)} (${escapeHtml(req.customer_email)})<br><span class="text-xs text-gray-500">Account Type: ${escapeHtml(req.customer_account_type || 'Student')}</span></p>
-              <p><strong>Facility:</strong> ${escapeHtml(req.room_name)}</p>
-              <p><strong>Scheduled Slot:</strong> ${formatRange(req.start_time, req.end_time)}</p>
-              <p class="text-red-700"><strong>Customer Reason:</strong> "${escapeHtml(req.reason)}"</p>
-            </div>
-          `;
-        }
-
-        openModal('cancelReviewModal');
-      });
-    });
+    tbody.innerHTML = rows.map(c => `
+      <tr class="hover:bg-gray-50/80 transition-colors">
+        <td class="py-4 px-6 text-xs">
+          <div class="font-bold text-gray-900">${escapeHtml(c.customer_name || 'Requester')}</div>
+          <div class="text-[11px] text-gray-400">${escapeHtml(c.customer_email || '—')}</div>
+        </td>
+        <td class="py-4 px-6 text-xs font-semibold text-gray-800">${escapeHtml(c.room_name || 'Facility')}</td>
+        <td class="py-4 px-6 text-xs text-gray-500">${formatRange(c.start_time, c.end_time)}</td>
+        <td class="py-4 px-6 text-xs text-gray-500">${formatDateTime(c.cancelled_at)}</td>
+        <td class="py-4 px-6 text-xs text-gray-700 italic max-w-xs truncate" title="${escapeHtml(c.cancellation_reason || '')}">
+          ${escapeHtml(c.cancellation_reason || 'No reason given')}
+        </td>
+        <td class="py-4 px-6 text-right">
+          <button type="button" class="btn-cancel-log px-3 py-1 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 font-semibold text-xs rounded-lg shadow-sm transition-all" data-id="${escapeHtml(c.reservation_id)}">
+            View Log
+          </button>
+        </td>
+      </tr>`).join('');
   }
 
-  // Resolve Cancellation Request Buttons
-  const btnApproveCancelReq = document.getElementById('btn-approve-cancel-req');
-  if (btnApproveCancelReq) {
-    btnApproveCancelReq.addEventListener('click', async () => {
-      const id = document.getElementById('cancelRequestId').value;
-      const comment = document.getElementById('cancelStaffComment').value.trim();
+  // Search box and View Log button (delegated, so they survive every re-render).
+  const cancelsSearchInput = document.getElementById('cancelsSearchInput');
+  if (cancelsSearchInput) cancelsSearchInput.addEventListener('input', renderCancelsTable);
 
-      try {
-        await apiFetch(`api/reservations/cancel-requests/${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'Approved', staff_comment: comment }),
-        });
-        showToast('Cancellation approved. Room released for bookings.', 'success');
-        closeModal('cancelReviewModal');
-        await loadAllData();
-        switchResSubtab('cancels');
-      } catch (err) {
-        showToast(err.message, 'error');
-      }
-    });
-  }
-
-  const btnRejectCancelReq = document.getElementById('btn-reject-cancel-req');
-  if (btnRejectCancelReq) {
-    btnRejectCancelReq.addEventListener('click', async () => {
-      const id = document.getElementById('cancelRequestId').value;
-      const comment = document.getElementById('cancelStaffComment').value.trim();
-
-      if (!comment) {
-        showToast('A comment is required when declining a cancellation request.', 'error');
-        return;
-      }
-
-      try {
-        await apiFetch(`api/reservations/cancel-requests/${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'Rejected', staff_comment: comment }),
-        });
-        showToast('Cancellation request declined.', 'info');
-        closeModal('cancelReviewModal');
-        await loadAllData();
-        switchResSubtab('cancels');
-      } catch (err) {
-        showToast(err.message, 'error');
-      }
+  const cancelsTableBodyEl = document.getElementById('cancelsTableBody');
+  if (cancelsTableBodyEl) {
+    cancelsTableBodyEl.addEventListener('click', (event) => {
+      const btn = event.target.closest('.btn-cancel-log');
+      if (!btn) return;
+      if (window.CampusRoomLogArchive) window.CampusRoomLogArchive.open(btn.dataset.id);
+      else showToast('The log viewer could not be loaded. Refresh the page.', 'error');
     });
   }
 

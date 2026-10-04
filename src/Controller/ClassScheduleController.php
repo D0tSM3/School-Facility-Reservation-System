@@ -23,14 +23,14 @@ class ClassScheduleController
 
     public function index(): never
     {
-        Auth::requireRole(['Admin']);
+        Auth::requireRole(['Staff', 'Admin']);
         $classes = $this->repo->findAll();
         Response::json($classes);
     }
 
     public function store(): never
     {
-        Auth::requireRole(['Admin']);
+        Auth::requireRole(['Staff', 'Admin']);
 
         $raw  = file_get_contents('php://input');
         $body = json_decode($raw ?: '{}', true);
@@ -100,14 +100,14 @@ class ClassScheduleController
         $id = $this->repo->create($roomId, $courseCode, $section, $dayOfWeek, $startTime, $endTime);
         (new ReservationRepository())->insertLog(
             Auth::userId(),
-            "Admin added class {$courseCode} {$section} ({$dayOfWeek} " . self::hhmm($startTime) . '-' . self::hhmm($endTime) . ')'
+            (string) Auth::role() . " added class {$courseCode} {$section} ({$dayOfWeek} " . self::hhmm($startTime) . '-' . self::hhmm($endTime) . ')'
         );
         Response::json(['success' => true, 'schedule_id' => $id], 201);
     }
 
     public function destroy(string $id): never
     {
-        Auth::requireRole(['Admin']);
+        Auth::requireRole(['Staff', 'Admin']);
 
         // schedule_id is a Postgres UUID; a malformed one would be a 500, not a 404.
         $deleted = self::isUuid($id) ? $this->repo->delete($id) : null;
@@ -126,7 +126,7 @@ class ClassScheduleController
                 $summary,
                 $deleted,
                 $userId,
-                'Admin removed weekly class schedule block'
+                (string) Auth::role() . ' removed weekly class schedule block'
             );
         } catch (\Throwable $e) {
             // Keep going even if archival fails, but log the error
@@ -135,7 +135,7 @@ class ClassScheduleController
 
         (new ReservationRepository())->insertLog(
             $userId,
-            "Admin archived class schedule {$deleted['course_code']} {$deleted['section']} ({$deleted['day_of_week']}) — retained for 30 days"
+            (string) Auth::role() . " archived class schedule {$deleted['course_code']} {$deleted['section']} ({$deleted['day_of_week']}) — retained for 30 days"
         );
         Response::json([
             'success'        => true,

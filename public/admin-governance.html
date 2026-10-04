@@ -190,7 +190,7 @@
             </div>
             <span
               id="badge-cancels-count"
-              class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white"
+              class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-gray-300"
               >0</span
             >
           </button>
@@ -524,7 +524,7 @@
               <p class="text-xs font-semibold text-gray-500">Move Requests</p>
             </button>
 
-            <!-- Card 3: Cancellation Requests -->
+            <!-- Card 3: User Cancellations -->
             <button
               type="button"
               data-jump-nav="cancels"
@@ -544,7 +544,7 @@
                 0
               </p>
               <p class="text-xs font-semibold text-gray-500">
-                Cancellation Requests
+                User Cancellations
               </p>
             </button>
 
@@ -1197,12 +1197,30 @@
             </div>
             <div>
               <h2 class="text-base font-bold text-gray-900">
-                Customer Cancellation Requests
+                User Cancellations
               </h2>
               <p class="text-xs text-gray-500 mt-1 leading-relaxed">
-                Cancellation requests submitted by customers for approved
-                bookings. Approval officially cancels and releases the room.
+                Bookings cancelled by the requester themselves. Cancellations
+                made by Staff or Admin are not listed here.
               </p>
+            </div>
+          </div>
+
+          <!-- Cancels Search Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5"
+          >
+            <div class="relative">
+              <span
+                class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[19px]"
+                >search</span
+              >
+              <input
+                type="text"
+                id="cancelsSearchInput"
+                placeholder="Search cancellations by requester, email, room, reason, or ID..."
+                class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b]"
+              />
             </div>
           </div>
 
@@ -1219,10 +1237,10 @@
                   <tr>
                     <th class="py-3.5 px-6">Requester</th>
                     <th class="py-3.5 px-6">Facility</th>
-                    <th class="py-3.5 px-6">Scheduled Slot</th>
-                    <th class="py-3.5 px-6">Requester Reason</th>
-                    <th class="py-3.5 px-6">Status</th>
-                    <th class="py-3.5 px-6 text-right">Decision</th>
+                    <th class="py-3.5 px-6">Booked Slot</th>
+                    <th class="py-3.5 px-6">Cancelled On</th>
+                    <th class="py-3.5 px-6">Reason</th>
+                    <th class="py-3.5 px-6 text-right">Log</th>
                   </tr>
                 </thead>
                 <tbody
@@ -1234,7 +1252,7 @@
                       colspan="6"
                       class="p-8 text-center text-gray-400 text-xs"
                     >
-                      Loading cancellation requests...
+                      Loading cancellations...
                     </td>
                   </tr>
                 </tbody>
@@ -2475,73 +2493,6 @@
       </div>
     </div>
 
-    <!-- Modal 7: Cancellation Request Review Modal -->
-    <div
-      id="cancelReviewModal"
-      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
-    >
-      <div
-        class="bg-white w-[92%] max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-      >
-        <div
-          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-red-50/50"
-        >
-          <h3 class="text-base font-bold text-red-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-red-600"
-              >event_busy</span
-            >
-            <span>Review Cancellation Request</span>
-          </h3>
-          <button
-            type="button"
-            data-modal-close="cancelReviewModal"
-            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
-          >
-            <span class="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
-        <div class="p-6 space-y-4">
-          <input type="hidden" id="cancelRequestId" />
-          <div
-            id="cancelReviewSummary"
-            class="text-xs text-gray-600 space-y-2"
-          ></div>
-          <div>
-            <label
-              class="block text-xs font-bold text-gray-700 mb-1"
-              for="cancelStaffComment"
-              >Staff Comment (Mandatory on Rejection)</label
-            >
-            <textarea
-              id="cancelStaffComment"
-              rows="2"
-              placeholder="Provide note or justification..."
-              class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b] resize-none"
-            ></textarea>
-          </div>
-          <div class="pt-3 border-t border-gray-100 flex justify-end gap-2.5">
-            <button
-              type="button"
-              id="btn-reject-cancel-req"
-              class="px-4 py-2.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
-            >
-              Decline Request
-            </button>
-            <button
-              type="button"
-              id="btn-approve-cancel-req"
-              class="px-5 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
-            >
-              <span class="material-symbols-outlined text-[17px]"
-                >done_all</span
-              >
-              <span>Confirm &amp; Release Room</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Modal 8: Conflict Override Request Review Modal -->
     <div
       id="conflictOverrideModal"
@@ -3116,7 +3067,9 @@
     ></div>
 
     <!-- Shared Schedules Script & Admin Logic -->
+    <script src="js/util.js"></script>
     <script src="js/schedule.js"></script>
+    <script src="js/logArchive.js"></script>
     <script src="js/admin-dashboard.js"></script>
   </body>
 </html>

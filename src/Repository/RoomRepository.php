@@ -157,6 +157,20 @@ class RoomRepository
      *
      * @return array|null Updated row, or null if not found.
      */
+    /**
+     * Whether a room always needs Staff sign-off, whatever the schedule says.
+     * Drives ReservationController::approvalOutcome(): true forces a
+     * Pending / 'special' booking instead of auto-approval.
+     */
+    public function requiresApproval(string $roomId): bool
+    {
+        $stmt = $this->db->query(
+            'SELECT requires_approval FROM Rooms WHERE room_id = :room_id LIMIT 1',
+            [':room_id' => $roomId]
+        );
+        return (bool) $stmt->fetchColumn();
+    }
+
     public function update(string $roomId, ?string $status, ?bool $isActive, array $details = []): ?array
     {
         $sets   = [];

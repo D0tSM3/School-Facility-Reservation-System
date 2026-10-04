@@ -61,7 +61,7 @@
     // No clock times here: hours and closed days are set in System Settings,
     // and the booking form shows the current ones.
     ['schedule', 'Open during set hours', 'Hours and closed days are set in System Settings. Closed on listed holidays.', 'v'],
-    ['event_busy', 'Cancelling an approved booking', 'File a Cancellation Request — and not on the day itself.', 'x'],
+    ['event_busy', 'Cancelling a booking', 'Cancel it yourself from My Reservations — not on the day itself.', 'x'],
     ['edit_calendar', 'Changing the date or time', 'File a Move Request. One open request at a time.', 'ix'],
     ['school', 'Classes always win', 'A room in class cannot be booked during that slot.', 'vi'],
     ['delete_sweep', 'Removing a booking', 'Hides it from your list only. Staff keep the record.', 'xii'],
