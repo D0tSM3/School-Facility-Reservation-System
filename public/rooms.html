@@ -8,7 +8,7 @@
     <!-- Must load before app.js: app.js reads window.CampusRoomShell (defined
          here) and bounces to index.html if it is missing. Also paints the
          role-aware sidebar early to avoid a flash. -->
-    <script src="js/shell-guard.js"></script>
+    <script src="js/shell-guard.js?v=20261005-2"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
@@ -625,7 +625,7 @@
                 Cancel
               </button>
               <!-- Request Slip Button -->
-              <button id="requestSlipBtn" type="button" class="hidden w-full sm:w-auto px-6 py-2.5 bg-yellow-500 text-white font-medium text-sm rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm hover:bg-yellow-600">
+              <button id="requestSlipBtn" type="button" disabled title="Available when the selected time conflicts with an existing booking." class="w-full sm:w-auto px-6 py-2.5 bg-gray-200 text-gray-400 font-medium text-sm rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm cursor-not-allowed">
                 <span class="material-symbols-outlined text-[18px]">assignment_add</span>
                 Request Slip
               </button>
@@ -648,8 +648,8 @@
 
     <script src="js/util.js"></script>
     <script src="js/schedule.js"></script>
-    <script src="js/roomCalendar.js"></script>
-    <script src="js/booking.js"></script>
+    <script src="js/roomCalendar.js?v=20261005-2"></script>
+    <script src="js/booking.js?v=20261005-5"></script>
     <script src="js/app.js"></script>
     <script src="js/rooms.js"></script>
 

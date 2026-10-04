@@ -76,6 +76,34 @@ class ReservationController
     }
 
     // ---------------------------------------------------------------
+    // Staff/Admin: GET /api/reservations/conflicts
+    // The Pending bookings that currently fail validation (a class or another
+    // booking landed on them since they were filed). Drives the "Conflict"
+    // badge on the staff queue. (Restored: the router calls this; without it
+    // the request 500s and the whole approval queue is stuck "Loading…".)
+    // ---------------------------------------------------------------
+
+    public function conflicts(): never
+    {
+        Auth::requireRole(['Staff', 'Admin']);
+
+        $out = [];
+        foreach ($this->reservations->findAll('Pending', 500, 0) as $row) {
+            $reason = ReservationValidator::check(
+                $row['room_id'], $row['start_time'], $row['end_time'], $row['reservation_id']
+            );
+            if ($reason !== null) {
+                $out[] = [
+                    'reservation_id' => $row['reservation_id'],
+                    'reason'         => $reason,
+                ];
+            }
+        }
+
+        Response::json($out);
+    }
+
+    // ---------------------------------------------------------------
     // Any role: GET /api/reservations/{id}
     // Customers may only read their own booking.
     // ---------------------------------------------------------------

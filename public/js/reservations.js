@@ -559,10 +559,14 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderReservations() {
     if (!reservationList) return;
 
-    // No longer filters out Cancelled â€” every status renders, and the
+    // Group reservations by series_id so multi-day bookings appear as one entry
+    const groupedReservations = groupBySeries(allReservations);
+
+    // No longer filters out Cancelled — every status renders, and the
     // existing 'history' tab filter (below) already accepts it.
-    reservationList.innerHTML = allReservations.map(reservation => {
+    reservationList.innerHTML = groupedReservations.map(reservation => {
       const date = formatDate(reservation.start_time);
+
       const isPast = isPastEnd(reservation);
 
       // Guard against a row with a missing/null status (e.g. bad data,

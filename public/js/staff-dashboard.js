@@ -740,13 +740,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     
 
-    const [reservations, rooms, moves, cancels, overrides, conflicts, suggestions] = await Promise.all([
+    // NOTE: api('api/reservations/conflicts') is intentionally NOT in this
+    // Promise.all — it re-validates every Pending booking (many remote-DB round
+    // trips) and can take 15s+. Waiting on it here left the whole queue stuck on
+    // "Loading…". It is loaded separately below and only adds "Conflict" badges.
+    const [reservations, rooms, moves, cancels, overrides, suggestions] = await Promise.all([
       api('api/reservations'),
       api('api/rooms'),
       api('api/reservations/move-requests?status=Pending'),
       api('api/reservations/cancel-requests?status=Pending'),
       api('api/conflict-override-requests?status=Pending'),
-      api('api/reservations/conflicts'),
       api('api/facility-suggestions')
     ]);
 
@@ -762,23 +765,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cancels.ok) state.cancelRequests = cancels.data || [];
     if (overrides.ok) state.overrideRequests = overrides.data || [];
 
-    // Conflict reasons keyed by reservation (Pending rows that fail validation now).
-    state.conflicts = {};
-    if (conflicts.ok) (conflicts.data || []).forEach((c) => { state.conflicts[c.reservation_id] = c.reason; });
-
     // Latest facility suggestion per booking (the list is newest-first).
     state.suggestionsByRes = {};
     if (suggestions.ok) (suggestions.data || []).forEach((s) => {
       if (!state.suggestionsByRes[s.reservation_id]) state.suggestionsByRes[s.reservation_id] = s;
     });
 
-    renderAll();
+    state.conflicts = {}; // Ensure initialized before first render
+    renderAll();   // render the queue NOW; don't block on the slow conflict scan
 
     if (failed) {
       showToast(failed.error, 'error');
     } else if (options.notify) {
       showToast('Dispatch queue refreshed.', 'success');
     }
+
+    // Conflict badges arrive separately so they never hold up the queue.
+    api('api/reservations/conflicts').then((conflicts) => {
+      if (!conflicts.ok) return;
+      state.conflicts = {};
+      (conflicts.data || []).forEach((c) => { state.conflicts[c.reservation_id] = c.reason; });
+      renderAll();   // repaint with the "Conflict" badges once they're known
+    });
   }
 
   // ---------------------------------------------------------------
