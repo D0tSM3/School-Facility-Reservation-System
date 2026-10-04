@@ -614,18 +614,19 @@ class ReservationRepository
     // ---------------------------------------------------------------
 
     /** $reason: why the move was proposed, when it wasn't the holder's own idea. */
-    public function createMoveRequest(string $reservationId, string $requestedStart, string $requestedEnd, ?string $reason = null): array
+    public function createMoveRequest(string $reservationId, string $requestedStart, string $requestedEnd, ?string $reason = null, ?string $newRoomId = null): array
     {
         $requestId = self::uuidv4();
         $this->db->query(
-            'INSERT INTO ReservationMoveRequests (request_id, reservation_id, requested_start_time, requested_end_time, reason)
-             VALUES (:request_id, :reservation_id, :requested_start_time, :requested_end_time, :reason)',
+            'INSERT INTO ReservationMoveRequests (request_id, reservation_id, requested_start_time, requested_end_time, reason, new_room_id)
+             VALUES (:request_id, :reservation_id, :requested_start_time, :requested_end_time, :reason, :new_room_id)',
             [
                 ':request_id'           => $requestId,
                 ':reservation_id'       => $reservationId,
                 ':requested_start_time' => $requestedStart,
                 ':requested_end_time'   => $requestedEnd,
                 ':reason'               => $reason,
+                ':new_room_id'          => $newRoomId,
             ]
         );
 
@@ -867,6 +868,24 @@ class ReservationRepository
                     end_time = :end_time
               WHERE reservation_id = :reservation_id',
             [
+                ':start_time'     => $startTime,
+                ':end_time'       => $endTime,
+                ':reservation_id' => $reservationId,
+            ]
+        );
+    }
+
+    /** Move a reservation to a new room and time window at once (staff relocate). */
+    public function updateRoomAndTimes(string $reservationId, string $roomId, string $startTime, string $endTime): void
+    {
+        $this->db->query(
+            'UPDATE Reservations
+                SET room_id = :room_id,
+                    start_time = :start_time,
+                    end_time = :end_time
+              WHERE reservation_id = :reservation_id',
+            [
+                ':room_id'        => $roomId,
                 ':start_time'     => $startTime,
                 ':end_time'       => $endTime,
                 ':reservation_id' => $reservationId,
