@@ -896,11 +896,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tbody.innerHTML = rooms.map(room => {
       const isMaint = room.status === 'Maintenance';
-      const statusPill = isMaint
+      const operationalPill = isMaint
         ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Maintenance</span>`
         : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Available</span>`;
 
-      const lifecyclePill = room.is_active
+      const statusPill = room.is_active
         ? `<span class="text-xs font-semibold text-emerald-600 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Active</span>`
         : `<span class="text-xs font-semibold text-gray-400 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>Decommissioned</span>`;
 
@@ -920,8 +920,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="text-gray-400 font-normal"> &bull; Floor ${escapeHtml(room.floor || 1)}</span>
           </td>
           <td class="py-4 px-6 text-xs font-semibold text-gray-700">${escapeHtml(room.capacity)} Seats</td>
+          <td class="py-4 px-6">${operationalPill}</td>
           <td class="py-4 px-6">${statusPill}</td>
-          <td class="py-4 px-6">${lifecyclePill}</td>
           <td class="py-4 px-6 text-right">
             <div class="inline-flex items-center gap-1.5">
               <button type="button" class="btn-inspect-calendar p-1.5 text-gray-500 hover:text-[#7a1f2b] hover:bg-gray-100 rounded-lg transition-colors" data-id="${room.room_id}" title="Inspect Room Schedule">
@@ -932,6 +932,9 @@ document.addEventListener('DOMContentLoaded', () => {
               </button>
               <button type="button" class="btn-edit-room p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" data-id="${room.room_id}" title="Edit Specifications">
                 <span class="material-symbols-outlined text-[19px]">edit</span>
+              </button>
+              <button type="button" class="btn-delete-room p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" data-id="${room.room_id}" title="Delete Facility">
+                <span class="material-symbols-outlined text-[19px]">delete</span>
               </button>
             </div>
           </td>
@@ -978,6 +981,9 @@ document.addEventListener('DOMContentLoaded', () => {
               <button type="button" class="btn-edit-room p-1.5 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-gray-100" data-id="${room.room_id}" title="Edit Room">
                 <span class="material-symbols-outlined text-[18px]">edit</span>
               </button>
+              <button type="button" class="btn-delete-room p-1.5 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-50" data-id="${room.room_id}" title="Delete Facility">
+                <span class="material-symbols-outlined text-[18px]">delete</span>
+              </button>
             </div>
           </div>
         </div>
@@ -985,6 +991,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
 
     attachFacilityRowEvents();
+  }
+
+  async function deleteFacility(roomId) {
+    const room = state.rooms.find(r => r.room_id === roomId);
+    if (!room) return;
+
+    const ok = await confirmAction({
+      title: 'Delete Facility',
+      message: `Are you sure you want to delete "${room.name}"? This facility will be preserved in the Data Archive for 30 calendar days before permanent removal.`,
+      proceedText: 'Delete Facility',
+      icon: 'delete',
+      isDestructive: true,
+    });
+    if (!ok) return;
+
+    try {
+      const res = await apiFetch(`api/rooms/${roomId}`, {
+        method: 'DELETE',
+      });
+      showToast(res.message || `Facility "${room.name}" deleted and archived for 30 days.`, 'success');
+      closeModal('editFacilityModal');
+      await loadAllData();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   }
 
   function attachFacilityRowEvents() {
@@ -1056,9 +1087,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (resList) resList.innerHTML = `<p class="text-xs text-gray-400">Loading bookings...</p>`;
 
         try {
-          const cal = await apiFetch(`api/rooms/${id}/calendar`);
-          const classes = (cal && cal.classes) || [];
-          const bookings = (cal && cal.reservations) || [];
+          const now = new Date();
+          const y = now.getFullYear();
+          const m = String(now.getMonth() + 1).padStart(2, '0');
+          const d = String(now.getDate()).padStart(2, '0');
+          const startStr = `${y}-${m}-${d}`;
+
+          const future = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+          const fy = future.getFullYear();
+          const fm = String(future.getMonth() + 1).padStart(2, '0');
+          const fd = String(future.getDate()).padStart(2, '0');
+          const endStr = `${fy}-${fm}-${fd}`;
+
+          const cal = await apiFetch(`api/rooms/${id}/calendar?start=${startStr}&end=${endStr}`);
+          const classes = (cal && (cal.class_schedules || cal.classes)) || [];
+          const allBookings = (cal && (cal.reservations || cal.bookings)) || [];
+          const bookings = allBookings.filter(b => b.status === 'Approved');
 
           if (classesList) {
             if (classes.length === 0) {
@@ -1084,8 +1128,8 @@ document.addEventListener('DOMContentLoaded', () => {
               resList.innerHTML = bookings.map(b => `
                 <div class="p-3 bg-amber-50/50 rounded-xl border border-amber-100 flex items-center justify-between text-xs">
                   <div>
-                    <span class="font-bold text-gray-900">${escapeHtml(b.title || b.category)}</span>
-                    <span class="text-gray-500">by ${escapeHtml(b.user_name || 'Requester')}</span>
+                    <span class="font-bold text-gray-900">${escapeHtml(b.purpose || b.title || b.category || 'Reservation')}</span>
+                    <span class="text-gray-500">by ${escapeHtml(b.customer_name || b.user_name || 'Requester')}</span>
                   </div>
                   <div class="text-amber-900 font-semibold">${formatRange(b.start_time, b.end_time)}</div>
                 </div>
@@ -1094,10 +1138,33 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         } catch (err) {
           if (classesList) classesList.innerHTML = `<p class="text-xs text-red-500">Failed to load schedule calendar.</p>`;
+          if (resList) resList.innerHTML = `<p class="text-xs text-red-500">Failed to load reservations.</p>`;
         }
       });
     });
+
+    // 4. Delete Room
+    document.querySelectorAll('.btn-delete-room').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        await deleteFacility(id);
+      });
+    });
   }
+
+  // Maximum capacity configuration for facility rooms
+  const MAX_ROOM_CAPACITY = 1000;
+
+  // Enforce Capacity and Floor boundaries on input
+  ['newRoomCapacity', 'editRoomCapacity'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      let val = parseInt(el.value, 10);
+      if (val > MAX_ROOM_CAPACITY) el.value = MAX_ROOM_CAPACITY;
+      else if (val < 1 && el.value !== '') el.value = 1;
+    });
+  });
 
   // Create Facility Form Submit
   const addFacilityForm = document.getElementById('addFacilityForm');
@@ -1109,6 +1176,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const floor = parseInt(document.getElementById('newRoomFloor').value, 10);
       const capacity = parseInt(document.getElementById('newRoomCapacity').value, 10);
       const status = document.getElementById('newRoomStatus').value;
+
+      if (isNaN(floor) || floor < 1 || floor > 15) {
+        showToast('Floor number must be between 1 and 15.', 'error');
+        return;
+      }
+      if (isNaN(capacity) || capacity < 1 || capacity > MAX_ROOM_CAPACITY) {
+        showToast(`Facility capacity must be between 1 and ${MAX_ROOM_CAPACITY.toLocaleString()} persons.`, 'error');
+        return;
+      }
 
       try {
         await apiFetch('api/rooms', {
@@ -1138,6 +1214,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const status = document.getElementById('editRoomStatus').value;
       const is_active = document.getElementById('editRoomIsActive').value === 'true';
 
+      if (isNaN(floor) || floor < 1 || floor > 15) {
+        showToast('Floor number must be between 1 and 15.', 'error');
+        return;
+      }
+      if (isNaN(capacity) || capacity < 1 || capacity > MAX_ROOM_CAPACITY) {
+        showToast(`Facility capacity must be between 1 and ${MAX_ROOM_CAPACITY.toLocaleString()} persons.`, 'error');
+        return;
+      }
+
       try {
         await apiFetch(`api/rooms/${id}`, {
           method: 'PATCH',
@@ -1148,6 +1233,17 @@ document.addEventListener('DOMContentLoaded', () => {
         await loadAllData();
       } catch (err) {
         showToast(err.message, 'error');
+      }
+    });
+  }
+
+  // Delete Facility from Edit Modal
+  const btnDeleteFacilityFromModal = document.getElementById('btnDeleteFacilityFromModal');
+  if (btnDeleteFacilityFromModal) {
+    btnDeleteFacilityFromModal.addEventListener('click', async () => {
+      const id = document.getElementById('editRoomId').value;
+      if (id) {
+        await deleteFacility(id);
       }
     });
   }
@@ -2682,6 +2778,8 @@ document.addEventListener('DOMContentLoaded', () => {
         typePill = `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">Holiday Closure</span>`;
       } else if (a.table_name === 'reservations') {
         typePill = `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Reservation</span>`;
+      } else if (a.table_name === 'rooms') {
+        typePill = `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Facility / Room</span>`;
       } else {
         typePill = `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-50 text-gray-700 border border-gray-200">${escapeHtml(a.table_name)}</span>`;
       }

@@ -110,6 +110,7 @@ $routes = [
     ['GET',   '#^/api/rooms/(?P<id>[^/]+)/calendar$#', fn(string $id) => (new RoomController())->getCalendar($id)],
     ['POST',  '#^/api/rooms$#',                    fn() => (new RoomController())->store()],
     ['PATCH', '#^/api/rooms/(?P<id>[^/]+)$#',        fn(string $id) => (new RoomController())->update($id)],
+    ['DELETE', '#^/api/rooms/(?P<id>[^/]+)$#',       fn(string $id) => (new RoomController())->destroy($id)],
 
     // Reservations
     // NOTE: the literal GET routes /mine and /move-requests MUST stay above GET /{id},
