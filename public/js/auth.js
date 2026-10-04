@@ -169,10 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
           
           localStorage.setItem('campus_role', payload.role);
-            if (payload.role === 'Admin') {
+            if (payload.role === 'Admin' || payload.role === 'Staff') {
+            // Staff share the admin dashboard (admin-only tabs are hidden there).
             window.location.href = 'admin-governance.html';
-          } else if (payload.role === 'Staff') {
-            window.location.href = 'staff-dashboard.html';
           } else {
             window.location.href = 'dashboard.html';
           }

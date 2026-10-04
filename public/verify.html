@@ -276,12 +276,6 @@
               class="text-on-surface-variant font-normal"
             ></span>
           </button>
-          <!--
-        Resending sends a real email, so it is bot-checked. The widget is
-        rendered only when GET /api/config reports reCAPTCHA enabled; with it
-        off this stays empty and Resend behaves as before.
-      -->
-          <div id="resendRecaptcha" class="flex justify-center mt-3"></div>
         </div>
 
         <p class="mt-5 text-center text-xs text-on-surface-variant">
@@ -401,10 +395,8 @@
                   sessionStorage.removeItem("otp_email");
                   sessionStorage.removeItem("dev_otp");
                   var role = payload.role;
-                  if (role === "Admin") {
+                  if (role === "Admin" || role === "Staff") {
                     window.location.replace(BASE + "admin-governance.html");
-                  } else if (role === "Staff") {
-                    window.location.replace(BASE + "staff-dashboard.html");
                   } else {
                     window.location.replace(BASE + "dashboard.html");
                   }
@@ -495,58 +487,14 @@
           }, 1000);
         }
 
-        // --- reCAPTCHA for the resend button -------------------------------------
-        // Site key comes from the server so .env stays its only home.
-        var captchaWidget = null;
-        var captchaOn = false;
-
-        function resendToken() {
-          if (captchaWidget === null || !window.grecaptcha) return "";
-          return window.grecaptcha.getResponse(captchaWidget) || "";
-        }
-        function resetResendCaptcha() {
-          if (captchaWidget !== null && window.grecaptcha)
-            window.grecaptcha.reset(captchaWidget);
-        }
-
-        fetch(BASE + "api/config", { credentials: "same-origin" })
-          .then(function (res) {
-            return res.json();
-          })
-          .then(function (json) {
-            var cfg = (json && json.data) || {};
-            if (!cfg.recaptcha_enabled || !cfg.recaptcha_site_key) return;
-            captchaOn = true;
-            window.onVerifyCaptchaLoad = function () {
-              captchaWidget = window.grecaptcha.render("resendRecaptcha", {
-                sitekey: cfg.recaptcha_site_key,
-              });
-            };
-            var s = document.createElement("script");
-            s.src =
-              "https://www.google.com/recaptcha/api.js?onload=onVerifyCaptchaLoad&render=explicit";
-            s.async = true;
-            s.defer = true;
-            document.head.appendChild(s);
-          })
-          .catch(function () {
-            /* config unreachable: leave Resend as it is */
-          });
-
+        // No reCAPTCHA on this screen: the user already passed the challenge on
+        // the sign-in page, and the 30-second cooldown below throttles Resend.
         resendBtn.addEventListener("click", function () {
-          if (captchaOn && captchaWidget !== null && !resendToken()) {
-            showError("Please confirm you are not a robot before resending.");
-            return;
-          }
-
           fetch(BASE + "api/auth/resend-otp", {
             method: "POST",
             credentials: "same-origin",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: email,
-              recaptcha_token: resendToken(),
-            }),
+            body: JSON.stringify({ email: email }),
           })
             .then(function (res) {
               return res.json().then(function (d) {
@@ -554,9 +502,6 @@
               });
             })
             .then(function (r) {
-              // The token is spent either way, so clear it before anything else.
-              resetResendCaptcha();
-
               if (r.status !== 200) {
                 showError(
                   (r.data && r.data.error) ||
@@ -574,7 +519,6 @@
               startCooldown();
             })
             .catch(function () {
-              resetResendCaptcha();
               showError("Could not resend code. Please try again.");
             });
         });

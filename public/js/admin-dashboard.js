@@ -316,18 +316,46 @@ document.addEventListener('DOMContentLoaded', () => {
   // 2. AUTHENTICATION & SUPERUSER SESSION GUARD
   // =========================================================================
 
+  // Views/sidebar links only an Admin may use. Staff get the same reservation
+  // queues (overview, reservations, approval-queue, moves, cancels, overrides,
+  // facilities/Rooms) but NOT these administration tools.
+  const ADMIN_ONLY_VIEWS = ['classes', 'holidays', 'users', 'archives', 'config', 'logs'];
+
+  function applyStaffVisibility() {
+    document.documentElement.setAttribute('data-role', 'staff');
+    // Hide each admin-only sidebar link.
+    ADMIN_ONLY_VIEWS.forEach((v) => {
+      document.querySelectorAll('[data-nav="' + v + '"]').forEach((el) => {
+        const row = el.closest('button, a, li') || el;
+        row.style.display = 'none';
+      });
+    });
+    // Hide the now-empty "ADMINISTRATION" section label.
+    document.querySelectorAll('span').forEach((el) => {
+      if (el.textContent.trim() === 'ADMINISTRATION') {
+        const grp = el.closest('div');
+        if (grp) grp.style.display = 'none';
+      }
+    });
+  }
+
   async function checkAdminAuth() {
     try {
       const user = await apiFetch('api/auth/me');
       if (!user) return false;
 
-      if (user.role !== 'Admin') {
-        alert('Access Restricted: This dashboard requires institutional Administrator privileges.');
-        window.location.href = user.role === 'Staff' ? 'staff-dashboard.html' : 'dashboard.html';
+      // Staff share this dashboard with Admins — same reservation queues — but
+      // NOT the administration tools (users, classes, holidays, archives,
+      // config, audit logs). Only a Customer is turned away.
+      if (user.role !== 'Admin' && user.role !== 'Staff') {
+        alert('Access Restricted: This dashboard requires Staff or Administrator privileges.');
+        window.location.href = 'dashboard.html';
         return false;
       }
 
       state.currentUser = user;
+      state.isStaffOnly = (user.role === 'Staff');
+      if (state.isStaffOnly) applyStaffVisibility();
 
       // Update sidebar & header profile pills
       const initials = getInitials(user.name);
@@ -440,6 +468,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function switchView(viewName) {
     if (!viewTitles[viewName]) return;
+    // Staff may not open administration views even via a direct hash — send
+    // them to the approval queue instead.
+    if (state.isStaffOnly && ADMIN_ONLY_VIEWS.indexOf(viewName) !== -1) {
+      viewName = 'approval-queue';
+    }
     state.activeView = viewName;
 
     // Synchronize URL hash seamlessly without page reload
