@@ -181,7 +181,7 @@ class ReservationRepository
             "SELECT res.reservation_id,
                     res.customer_id,
                     u.name          AS customer_name,
-                    u.email         AS customer_email,
+                    u.email         AS customer_email, u.account_type AS customer_account_type,
                     res.room_id,
                     r.name          AS room_name,
                     r.floor         AS floor,
@@ -227,7 +227,7 @@ class ReservationRepository
             'SELECT res.reservation_id,
                     res.customer_id,
                     u.name          AS customer_name,
-                    u.email         AS customer_email,
+                    u.email         AS customer_email, u.account_type AS customer_account_type,
                     res.room_id,
                     r.name          AS room_name,
                     r.floor         AS floor,
@@ -650,7 +650,7 @@ class ReservationRepository
             SELECT mr.*, 
                    r.customer_id, r.room_id, r.start_time AS original_start_time, r.end_time AS original_end_time,
                    rm.name AS room_name,
-                   c.name AS customer_name, c.email AS customer_email
+                   c.name AS customer_name, c.email AS customer_email, c.account_type AS customer_account_type
               FROM ReservationMoveRequests mr
               JOIN Reservations r ON r.reservation_id = mr.reservation_id
               JOIN Rooms rm ON rm.room_id = r.room_id
@@ -749,7 +749,7 @@ class ReservationRepository
                    r.customer_id, r.room_id, r.purpose,
                    r.start_time, r.end_time, r.status AS reservation_status,
                    rm.name AS room_name,
-                   c.name  AS customer_name, c.email AS customer_email,
+                   c.name  AS customer_name, c.email AS customer_email, c.account_type AS customer_account_type,
                    p.name  AS processed_by_name
               FROM ReservationCancellationRequests cr
               JOIN Reservations r ON r.reservation_id = cr.reservation_id

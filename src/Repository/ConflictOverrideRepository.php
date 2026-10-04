@@ -122,7 +122,7 @@ class ConflictOverrideRepository
      */
     public function findAll(?string $status = null): array
     {
-        $sql = 'SELECT o.request_id, o.requested_by, u.name AS requester_name, u.email AS requester_email,
+        $sql = 'SELECT o.request_id, o.requested_by, u.name AS requester_name, u.email AS requester_email, u.account_type AS requester_account_type,
                        o.room_id, rm.name AS room_name, rm.room_type, rm.floor, rm.capacity,
                        o.start_time, o.end_time, o.purpose, o.category, o.equipment_notes, o.reason,
                        o.status, o.staff_comment, o.outcome, o.outcome_note,

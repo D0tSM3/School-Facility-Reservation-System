@@ -1794,7 +1794,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (summary) {
           summary.innerHTML = `
             <div class="p-3 bg-gray-50 rounded-xl space-y-1">
-              <p><strong>Requester:</strong> ${escapeHtml(req.customer_name)} (${escapeHtml(req.customer_email)})</p>
+              <p><strong>Requester:</strong> ${escapeHtml(req.customer_name)} (${escapeHtml(req.customer_email)})<br><span class="text-xs text-gray-500">Account Type: ${escapeHtml(req.customer_account_type || 'Student')}</span></p>
               <p><strong>Facility:</strong> ${escapeHtml(req.room_name)}</p>
               <p><strong>Current:</strong> ${formatRange(req.current_start_time, req.current_end_time)}</p>
               <p class="text-blue-700 font-bold"><strong>Requested:</strong> ${formatRange(req.requested_start_time, req.requested_end_time)}</p>
@@ -1905,7 +1905,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (summary) {
           summary.innerHTML = `
             <div class="p-3 bg-gray-50 rounded-xl space-y-1">
-              <p><strong>Requester:</strong> ${escapeHtml(req.customer_name)} (${escapeHtml(req.customer_email)})</p>
+              <p><strong>Requester:</strong> ${escapeHtml(req.customer_name)} (${escapeHtml(req.customer_email)})<br><span class="text-xs text-gray-500">Account Type: ${escapeHtml(req.customer_account_type || 'Student')}</span></p>
               <p><strong>Facility:</strong> ${escapeHtml(req.room_name)}</p>
               <p><strong>Scheduled Slot:</strong> ${formatRange(req.start_time, req.end_time)}</p>
               <p class="text-red-700"><strong>Customer Reason:</strong> "${escapeHtml(req.reason)}"</p>
@@ -2222,7 +2222,10 @@ document.addEventListener('DOMContentLoaded', () => {
               ${isCurrentAdmin ? '<span class="text-[10px] text-emerald-600 font-semibold">(You)</span>' : ''}
             </div>
           </td>
-          <td class="py-4 px-6 text-xs text-gray-600 font-mono">${escapeHtml(u.email)}</td>
+          <td class="py-4 px-6 text-xs text-gray-600 font-mono">
+              <div>${escapeHtml(u.email)}</div>
+              <div class="text-[11px] text-indigo-600 font-semibold mt-0.5">${escapeHtml(u.account_type || 'Student')}</div>
+            </td>
           <td class="py-4 px-6 text-xs">${rolePill}</td>
           <td class="py-4 px-6 text-xs">
             ${u.is_verified

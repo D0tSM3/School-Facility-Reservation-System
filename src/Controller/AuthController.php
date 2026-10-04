@@ -113,9 +113,14 @@ class AuthController
         $name     = trim((string) ($body['name']     ?? ''));
         $email    = strtolower(trim((string) ($body['email'] ?? '')));
         $password = (string) ($body['password'] ?? '');
+        $accountType = trim((string) ($body['account_type'] ?? ''));
 
-        if ($name === '' || $email === '' || $password === '') {
-            Response::error('name, email and password are required.', 422);
+        if ($name === '' || $email === '' || $password === '' || $accountType === '') {
+            Response::error('name, email, password, and account_type are required.', 422);
+        }
+        
+        if (!in_array($accountType, ['Student', 'Faculty'], true)) {
+            Response::error('Account type must be either Student or Faculty.', 422);
         }
         if (mb_strlen($name) > 150) {
             Response::error('Name must be 150 characters or fewer.', 422);
@@ -144,7 +149,7 @@ class AuthController
 
         try {
             // Role is fixed: the request body never chooses it.
-            $user = $this->users->create($name, $email, password_hash($password, PASSWORD_DEFAULT), 'Customer');
+            $user = $this->users->create($name, $email, password_hash($password, PASSWORD_DEFAULT), 'Customer', $accountType);
         } catch (PDOException $e) {
             // Lost the race between findByEmail() and INSERT (UNIQUE on email).
             // Postgres's unique_violation SQLSTATE is always '23505' (a fixed

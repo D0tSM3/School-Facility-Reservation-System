@@ -22,7 +22,7 @@ class UserRepository
     public function findByEmailFull(string $email): ?array
     {
         $stmt = $this->db->query(
-            'SELECT user_id, name, email, password_hash, role, is_verified::int AS is_verified,
+            'SELECT user_id, name, email, password_hash, role, account_type, is_verified::int AS is_verified,
                     otp_code, otp_expires_at, created_at
                FROM Users
               WHERE email = :email
@@ -37,7 +37,7 @@ class UserRepository
     public function findByEmail(string $email): ?array
     {
         $stmt = $this->db->query(
-            'SELECT user_id, name, email, role, is_verified::int AS is_verified, created_at
+            'SELECT user_id, name, email, role, account_type, is_verified::int AS is_verified, created_at
                FROM Users
               WHERE email = :email
               LIMIT 1',
@@ -51,7 +51,7 @@ class UserRepository
     public function findById(string $userId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT user_id, name, email, role, is_verified::int AS is_verified, created_at
+            'SELECT user_id, name, email, role, account_type, is_verified::int AS is_verified, created_at
                FROM Users
               WHERE user_id = :user_id
               LIMIT 1',
@@ -66,16 +66,17 @@ class UserRepository
      *
      * @return array The newly created user row.
      */
-    public function create(string $name, string $email, string $passwordHash, string $role = 'Customer'): array
+    public function create(string $name, string $email, string $passwordHash, string $role = 'Customer', ?string $accountType = null): array
     {
         $this->db->query(
-            'INSERT INTO Users (name, email, password_hash, role, is_verified)
-             VALUES (:name, :email, :password_hash, :role, false)',
+            'INSERT INTO Users (name, email, password_hash, role, is_verified, account_type)
+             VALUES (:name, :email, :password_hash, :role, false, :account_type)',
             [
                 ':name'          => $name,
                 ':email'         => $email,
                 ':password_hash' => $passwordHash,
                 ':role'          => $role,
+                ':account_type'  => $accountType,
             ]
         );
         return $this->findByEmail($email) ?? [];
@@ -103,7 +104,7 @@ class UserRepository
     public function findAll(): array
     {
         $stmt = $this->db->query(
-            'SELECT user_id, name, email, role, is_verified::int AS is_verified, created_at
+            'SELECT user_id, name, email, role, account_type, is_verified::int AS is_verified, created_at
                FROM Users
            ORDER BY created_at DESC'
         );

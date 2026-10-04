@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // -----------------------------------------------------------------------
       const roleLabel = (currentUser.role === 'Staff' || currentUser.role === 'Admin')
         ? `${currentUser.role} / Registrar`
-        : 'Student';
+        : (currentUser.account_type || 'Student');
 
       const parts   = currentUser.name.split(' ').filter(p => p.toLowerCase() !== 'dr.');
       const i1      = parts[0] ? parts[0][0] : '';
