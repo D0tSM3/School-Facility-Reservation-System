@@ -1284,18 +1284,43 @@ class ReservationController
             $reservationId
         );
         if ($error !== null) {
-            Response::error($error, 409);
+            $startDate  = substr($startTime, 0, 10);
+            $endDate    = substr($endTime, 0, 10);
+            $dailyStart = substr($startTime, 11);
+            $dailyEnd   = substr($endTime, 11);
+
+            $conflict = ReservationValidator::findConflictingReservation($existing['room_id'], $startDate, $endDate, $dailyStart, $dailyEnd);
+            // Overridable only if it's another user's reservation and general rules (hours, closed days, holidays, classes) pass
+            $isOverridable = ($conflict !== null 
+                && $conflict['customer_id'] !== Auth::userId() 
+                && ReservationValidator::checkRange($existing['room_id'], $startDate, $endDate, $dailyStart, $dailyEnd, [$reservationId], []) === null);
+
+            Response::error($error, 409, [
+                'override_eligible' => $isOverridable,
+                'conflict'          => $conflict ? [
+                    'reservation_id' => $conflict['reservation_id'],
+                    'start_time'     => $conflict['start_time'],
+                    'end_time'       => $conflict['end_time'],
+                    'status'         => $conflict['status']
+                ] : null,
+            ]);
         }
 
-        $request = $this->reservations->createMoveRequest($reservationId, $startTime, $endTime, $activeDates);
-        
-        $this->reservations->insertLog(
+        $request = $this->reservations->createApprovedMove(
+            $reservationId,
+            $startTime,
+            $endTime,
             Auth::userId(),
-            'Move request submitted',
-            $reservationId
+            'Auto-approved (No scheduling conflict)'
         );
 
-        Response::json($request, 201);
+        Response::json([
+            'auto_approved' => true,
+            'message'       => 'Reservation successfully moved to the new schedule (Auto-approved).',
+            'start_time'    => $startTime,
+            'end_time'      => $endTime,
+            'move_request'  => $request,
+        ], 200);
     }
 
     public function getMoveRequests(): never

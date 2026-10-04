@@ -70,6 +70,23 @@
     html[data-role="admin"] aside nav a[data-path="admin-governance"] {
       display: flex !important;
     }
+
+    /* Print styles for Request Slip modal */
+    @media print {
+      @page { margin: 12mm; }
+      body.cr-request-slip-printing > *:not(#requestSlipViewModal) { display: none !important; }
+      body.cr-request-slip-printing aside, body.cr-request-slip-printing header { display: none !important; }
+      body.cr-request-slip-printing { height: auto !important; min-height: 0 !important;
+        overflow: visible !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
+      body.cr-request-slip-printing #requestSlipViewModal { position: static !important; display: block !important;
+        overflow: visible !important; background: none !important; padding: 0 !important; }
+      body.cr-request-slip-printing #requestSlipViewModal > div { max-width: none !important; margin: 0 !important;
+        border-radius: 0 !important; box-shadow: none !important; max-height: none !important; overflow: visible !important; }
+      body.cr-request-slip-printing #requestSlipViewModal [data-slip-toolbar] { display: none !important; }
+      body.cr-request-slip-printing #requestSlipViewModal [data-slip-footer] { display: none !important; }
+      body.cr-request-slip-printing #requestSlipPaperArea { padding: 0 !important; overflow: visible !important; font-size: 12px !important; }
+      body.cr-request-slip-printing * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
   </style>
 
  </head>
@@ -343,17 +360,17 @@
       </div>
     </div>
 
-    <!-- ── Move Request Modal ──────────────────────────────────────── -->
+    <!-- ── Move / Reschedule Reservation Modal ─────────────────────── -->
     <div id="moveModalOverlay" class="opacity-0 pointer-events-none fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4 transition-opacity duration-200 overflow-y-auto">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-[1000px] p-6 flex flex-col gap-4 my-auto">
         <div class="flex items-start justify-between gap-3">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined text-[20px] text-blue-600">event_repeat</span>
+            <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 text-[#7a1f2b]">
+              <span class="material-symbols-outlined text-[20px]">event_repeat</span>
             </div>
             <div>
-              <h2 class="text-base font-bold text-gray-900">Request a Move</h2>
-              <p class="text-sm text-gray-500">Choose a new date and time for this booking. Staff will review before confirming.</p>
+              <h2 class="text-base font-bold text-gray-900">Reschedule / Move Reservation</h2>
+              <p class="text-sm text-gray-500">Choose a new date and time for your booking. Conflict-free moves are automatically approved immediately.</p>
             </div>
           </div>
           <button id="moveModalCloseIcon" type="button" class="text-gray-400 hover:text-gray-700 transition-colors p-1 bg-gray-50 rounded-lg shrink-0">
@@ -361,15 +378,15 @@
           </button>
         </div>
         
-        <form id="moveForm" class="flex flex-col gap-6" novalidate>
+        <form id="moveForm" class="flex flex-col gap-5" novalidate>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="flex flex-col gap-1.5">
               <label class="text-xs font-bold text-gray-700 uppercase tracking-wider">New Date <span class="text-red-500">*</span></label>
-              <input id="moveDate" type="date" required class="w-full px-3 py-2 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600" />
+              <input id="moveDate" type="date" required class="w-full px-3 py-2 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" />
             </div>
             <div class="flex flex-col gap-1.5">
               <label class="text-xs font-bold text-gray-700 uppercase tracking-wider">Start <span class="text-red-500">*</span></label>
-              <select id="moveStartTime" required class="w-full px-3 py-2 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 appearance-none focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600">
+              <select id="moveStartTime" required class="w-full px-3 py-2 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 appearance-none focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]">
                 <option value="">Start time</option>
                 <option value="06:00">6:00 AM</option><option value="06:30">6:30 AM</option>
                 <option value="07:00">7:00 AM</option><option value="07:30">7:30 AM</option>
@@ -390,7 +407,7 @@
             </div>
             <div class="flex flex-col gap-1.5">
               <label class="text-xs font-bold text-gray-700 uppercase tracking-wider">End <span class="text-red-500">*</span></label>
-              <select id="moveEndTime" required class="w-full px-3 py-2 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 appearance-none focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600">
+              <select id="moveEndTime" required class="w-full px-3 py-2 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 appearance-none focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]">
                 <option value="">End time</option>
                 <option value="06:30">6:30 AM</option><option value="07:00">7:00 AM</option>
                 <option value="07:30">7:30 AM</option><option value="08:00">8:00 AM</option>
@@ -419,20 +436,34 @@
             </div>
           </div>
 
+          <!-- Conflict Banner with Request Slip Option -->
+          <div id="moveConflictBanner" class="hidden p-4 rounded-xl border border-amber-300 bg-amber-50 flex flex-col gap-2.5">
+            <div class="flex items-start gap-2.5 text-amber-900 text-xs font-medium">
+              <span class="material-symbols-outlined text-[18px] text-amber-600 shrink-0 mt-0.5">warning</span>
+              <span id="moveConflictText" class="flex-1 leading-relaxed">This time slot collides with an existing reservation.</span>
+            </div>
+            <div id="moveRequestSlipPrompt" class="hidden flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-amber-200">
+              <span class="text-xs text-amber-800">You can submit an academic/administrative Request Slip to request a conflict review.</span>
+              <button id="moveOpenRequestSlipBtn" type="button" class="px-3.5 py-1.5 bg-[#7a1f2b] hover:bg-[#5b0617] text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">assignment</span>Submit Request Slip
+              </button>
+            </div>
+          </div>
+
           <p id="moveErrorMsg" class="hidden text-xs font-semibold text-red-600"></p>
           <div class="flex items-center justify-end gap-3 pt-2">
-            <button id="moveModalCancelBtn" type="button" class="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
-            <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm flex items-center gap-2">
-              <span class="material-symbols-outlined text-[18px]">send</span> Submit Move
+            <button id="moveModalCancelBtn" type="button" class="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">Cancel</button>
+            <button type="submit" class="px-6 py-2.5 bg-[#7a1f2b] hover:bg-[#5b0617] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm flex items-center gap-2 cursor-pointer">
+              <span class="material-symbols-outlined text-[18px]">event_repeat</span> Confirm Reschedule
             </button>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- ── View Request Slip Modal ─────────────────────────────────── -->
-    <div id="requestSlipViewModal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in duration-200">
+    <!-- ── Request Slip Submission Modal (From Move Conflict) ──────── -->
+    <div id="moveRequestSlipModalOverlay" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in duration-200">
         
         <!-- Header -->
         <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-amber-50/50">
@@ -441,87 +472,240 @@
               <span class="material-symbols-outlined text-[22px]">assignment</span>
             </div>
             <div>
-              <div class="flex items-center gap-2">
-                <h2 class="text-base font-bold text-gray-900 leading-tight">Facility Request Slip</h2>
-                <span id="rsvCodeBadge" class="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200">#REQ-SLIP-——</span>
-              </div>
-              <p class="text-xs text-gray-500 mt-0.5">Conflict Override Review · Buenavista Polytechnic University</p>
+              <h2 class="text-base font-bold text-gray-900 leading-tight">Submit Request Slip</h2>
+              <p class="text-xs text-gray-500 mt-0.5">Conflict Override Request · Buenavista Polytechnic University</p>
             </div>
           </div>
-          <button id="closeRequestSlipViewBtn" type="button" class="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-lg hover:bg-gray-100">
+          <button id="closeMoveRequestSlipModalBtn" type="button" class="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-lg hover:bg-gray-100 cursor-pointer">
             <span class="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
-        <!-- Scrollable Slip Content -->
+        <!-- Form Body -->
         <div class="p-6 overflow-y-auto flex flex-col gap-4 text-sm text-gray-700">
           
-          <!-- Status Banner -->
-          <div id="rsvStatusBanner" class="p-3.5 rounded-xl border flex items-start gap-3 bg-amber-50 border-amber-200 text-amber-900">
-            <span id="rsvStatusIcon" class="material-symbols-outlined text-[20px] text-amber-700 shrink-0 mt-0.5">hourglass_top</span>
-            <div class="flex-1 text-xs">
-              <span id="rsvStatusTitle" class="font-bold text-amber-950 block mb-0.5">Status: Under Review</span>
-              <span id="rsvStatusDesc" class="leading-relaxed">Staff will evaluate your request to determine if the conflicting booking can be relocated or rescheduled.</span>
+          <!-- Summary card -->
+          <div class="bg-amber-50/70 border border-amber-200/80 rounded-xl p-4 text-xs">
+            <h3 class="font-bold text-amber-900 mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wider">
+              <span class="material-symbols-outlined text-[16px]">info</span> Target Schedule Details
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div><span class="text-gray-500 font-semibold block text-[10px] uppercase">Facility:</span> <span id="mrsFacility" class="font-bold text-gray-900 text-xs"></span></div>
+              <div><span class="text-gray-500 font-semibold block text-[10px] uppercase">Target Date:</span> <span id="mrsDate" class="font-bold text-gray-900 text-xs"></span></div>
+              <div><span class="text-gray-500 font-semibold block text-[10px] uppercase">Target Time Window:</span> <span id="mrsTime" class="font-bold text-gray-900 text-xs"></span></div>
+              <div><span class="text-gray-500 font-semibold block text-[10px] uppercase">Collision:</span> <span id="mrsConflictInfo" class="font-semibold text-amber-800 text-xs">Scheduling Conflict</span></div>
             </div>
           </div>
 
-          <!-- Schedule & Room Summary Grid -->
-          <div class="bg-gray-50/80 rounded-xl border border-gray-100 p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <form id="moveRequestSlipForm" class="flex flex-col gap-4">
             <div>
-              <span class="text-gray-400 font-semibold uppercase tracking-wider block text-[10px]">Facility / Room</span>
-              <span id="rsvRoomName" class="font-bold text-gray-900 text-sm mt-0.5 block">—</span>
+              <label class="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1 block">Request Type <span class="text-red-500">*</span></label>
+              <select name="request_type" class="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-lg text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" required>
+                <option value="Schedule Conflict" selected>Schedule Conflict</option>
+                <option value="Academic Requirement">Academic Requirement</option>
+                <option value="Faculty-Directed Activity">Faculty-Directed Activity</option>
+                <option value="Special Event">Special Event</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
+
             <div>
-              <span class="text-gray-400 font-semibold uppercase tracking-wider block text-[10px]">Request Category</span>
-              <span id="rsvRequestType" class="font-semibold text-gray-800 mt-0.5 block">—</span>
+              <label class="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1 block">Alternative Schedule Proposal?</label>
+              <select id="mrsAltSchedule" class="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-lg text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]">
+                <option value="No" selected>No, I strictly need this target slot</option>
+                <option value="Yes">Yes, I can consider an alternative window</option>
+              </select>
             </div>
-            <div>
-              <span class="text-gray-400 font-semibold uppercase tracking-wider block text-[10px]">Requested Date(s)</span>
-              <span id="rsvDates" class="font-semibold text-gray-800 mt-0.5 block">—</span>
+
+            <div id="mrsAltScheduleFields" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+              <div>
+                <label class="text-[10px] font-bold text-gray-600 uppercase tracking-wider block mb-1">Alt Date</label>
+                <input type="date" name="alt_date" class="w-full p-2 bg-white border border-gray-300 rounded-lg text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] font-bold text-gray-600 uppercase tracking-wider block mb-1">Alt Start</label>
+                <input type="time" name="alt_start" class="w-full p-2 bg-white border border-gray-300 rounded-lg text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] font-bold text-gray-600 uppercase tracking-wider block mb-1">Alt End</label>
+                <input type="time" name="alt_end" class="w-full p-2 bg-white border border-gray-300 rounded-lg text-xs">
+              </div>
             </div>
+
             <div>
-              <span class="text-gray-400 font-semibold uppercase tracking-wider block text-[10px]">Requested Time Window</span>
-              <span id="rsvTimes" class="font-semibold text-gray-800 mt-0.5 block">—</span>
+              <label class="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1 block">Justification / Urgent Reason <span class="text-red-500">*</span></label>
+              <textarea name="reason" rows="3" maxlength="400" required class="w-full p-3 bg-white border border-gray-300 rounded-lg text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" placeholder="Explain why your booking needs this specific slot and why you are requesting to move..."></textarea>
+            </div>
+
+            <div>
+              <label class="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1 block">Additional Information / Notes</label>
+              <textarea name="additional_info" rows="2" maxlength="200" class="w-full p-3 bg-white border border-gray-300 rounded-lg text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" placeholder="Logistical notes, equipment requirements, or extra context..."></textarea>
+            </div>
+
+            <div id="mrsErrorBanner" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700"></div>
+
+            <div class="p-3.5 bg-amber-50 rounded-xl border border-amber-200">
+              <label class="flex items-start gap-2.5 cursor-pointer">
+                <input id="mrsAcknowledgement" class="mt-0.5 rounded text-[#7a1f2b] focus:ring-[#7a1f2b] w-4 h-4 shrink-0" type="checkbox" required />
+                <div class="flex flex-col text-xs">
+                  <span class="font-bold text-amber-950">Request Slip Acknowledgement</span>
+                  <p class="text-amber-800 mt-0.5 leading-relaxed text-[11px]">
+                    Submitting this request does not guarantee approval. Your current active reservation remains unchanged until campus staff explicitly evaluates and resolves the override request.
+                  </p>
+                </div>
+              </label>
+            </div>
+          </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-3.5 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
+          <button type="button" id="cancelMoveRequestSlipBtn" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
+            Cancel
+          </button>
+          <button id="submitMoveRequestSlipBtn" type="submit" form="moveRequestSlipForm" class="px-5 py-2 bg-[#7a1f2b] text-white hover:bg-[#5b0617] text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">send</span>
+            <span>Submit Request Slip</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── View Request Slip Modal (Conformed to Confirmation Slip Design) ─────────── -->
+    <div id="requestSlipViewModal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-[720px] max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in duration-200">
+        
+        <!-- Top Toolbar (matching Confirmation Slip) -->
+        <div data-slip-toolbar class="px-6 pt-6 pb-2 bg-white flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px]">assignment</span>
+            </div>
+            <h2 class="text-base font-bold text-gray-900 leading-tight">Facility Request Slip</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="rsvPrintBtn" type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#7a1f2b] text-white hover:bg-[#52131c] text-xs font-semibold rounded-lg transition-all shadow-sm cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">print</span>
+              <span>Print</span>
+            </button>
+            <button id="closeRequestSlipViewBtn" type="button" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer">
+              <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Scrollable Paper Slip Content -->
+        <div id="requestSlipPaperArea" class="px-6 pb-6 pt-2 overflow-y-auto flex-1 text-sm text-gray-700">
+          
+          <!-- Slip Head: University Logo + Request Reference -->
+          <div class="flex items-start justify-between gap-4 pb-3.5 border-b-2 border-[#7a1f2b]">
+            <img src="assets/logo.svg" alt="Buenavista Polytechnic University" class="h-11 w-auto block" />
+            <div class="text-right">
+              <div class="text-[10px] uppercase font-semibold text-gray-500 tracking-wider">Request Reference</div>
+              <div id="rsvCodeBadge" class="text-xl font-extrabold text-[#7a1f2b] tracking-tight">#REQ-SLIP-——</div>
+              <div id="rsvUuid" class="text-[10px] font-mono text-gray-400 break-all leading-tight">——</div>
             </div>
           </div>
 
-          <!-- Justification -->
-          <div>
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1.5">Urgent Need / Justification</span>
-            <div id="rsvReason" class="p-3.5 rounded-xl bg-gray-50 border border-gray-200 text-xs sm:text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
-              —
-            </div>
+          <!-- Document Title & Status Pill Bar -->
+          <div class="flex items-center justify-between gap-3 flex-wrap my-3.5">
+            <h2 class="text-lg font-bold text-gray-900 leading-tight">Facility Request Slip (Conflict Override)</h2>
+            <span id="rsvStatusChip" class="px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-amber-100 text-amber-800">Under Review</span>
           </div>
 
-          <!-- Alternative Schedule -->
-          <div>
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1.5">Proposed Alternative Schedule</span>
-            <div id="rsvAltSchedule" class="p-3.5 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-700 flex items-center gap-2">
-              <span class="material-symbols-outlined text-[18px] text-gray-400">schedule</span>
-              <span id="rsvAltScheduleText">None provided (Strictly requesting the designated slot).</span>
+          <!-- Requester Section -->
+          <section class="border-t border-gray-200 pt-2 mt-3">
+            <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Requester</h3>
+            <div class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Name</span>
+              <span id="rsvRequesterName" class="text-gray-900 font-medium">—</span>
             </div>
-          </div>
+            <div class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Email</span>
+              <span id="rsvRequesterEmail" class="text-gray-900 font-medium">—</span>
+            </div>
+          </section>
 
-          <!-- Additional Logistics -->
-          <div id="rsvAdditionalBlock">
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1.5">Additional Logistics & Notes</span>
-            <div id="rsvAdditionalText" class="p-3 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-600 leading-relaxed">
-              —
+          <!-- Facility Section -->
+          <section class="border-t border-gray-200 pt-2 mt-3">
+            <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Facility</h3>
+            <div class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Room</span>
+              <span id="rsvRoomName" class="text-gray-900 font-medium">—</span>
             </div>
+            <div class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Details</span>
+              <span id="rsvRoomDetails" class="text-gray-900 font-medium">—</span>
+            </div>
+          </section>
+
+          <!-- Booking / Request Details Section -->
+          <section class="border-t border-gray-200 pt-2 mt-3">
+            <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Booking</h3>
+            <div class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Category</span>
+              <span id="rsvCategory" class="text-gray-900 font-medium">—</span>
+            </div>
+            <div class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Purpose</span>
+              <span id="rsvPurpose" class="text-gray-900 font-medium">—</span>
+            </div>
+            <div class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Equipment notes</span>
+              <span id="rsvEquipment" class="text-gray-900 font-medium">—</span>
+            </div>
+            <div class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Starts</span>
+              <span id="rsvStarts" class="text-gray-900 font-medium">—</span>
+            </div>
+            <div class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Ends</span>
+              <span id="rsvEnds" class="text-gray-900 font-medium">—</span>
+            </div>
+            <div class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Justification</span>
+              <span id="rsvReason" class="text-gray-900 font-medium whitespace-pre-wrap">—</span>
+            </div>
+            <div class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Alt schedule</span>
+              <span id="rsvAltSchedule" class="text-gray-900 font-medium">—</span>
+            </div>
+            <div id="rsvAdditionalRow" class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Additional notes</span>
+              <span id="rsvAdditional" class="text-gray-900 font-medium whitespace-pre-wrap">—</span>
+            </div>
+          </section>
+
+          <!-- Record Section -->
+          <section class="border-t border-gray-200 pt-2 mt-3">
+            <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Record</h3>
+            <div class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Filed on</span>
+              <span id="rsvFiledOn" class="text-gray-900 font-medium">—</span>
+            </div>
+            <div class="grid grid-cols-[140px_1fr] gap-3 py-1 text-sm">
+              <span class="text-gray-500 font-semibold">Review status</span>
+              <span id="rsvReviewStatus" class="text-gray-900 font-medium">—</span>
+            </div>
+          </section>
+
+          <!-- Foot Note -->
+          <div class="border-t-2 border-[#7a1f2b] mt-4 pt-2.5 text-center text-[11px] text-gray-500">
+            <div>Generated <span id="rsvGeneratedTime">—</span> — conflict override review slip.</div>
+            <div>All times are Philippine Standard Time (Asia/Manila).</div>
           </div>
 
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-3.5 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
+        <div data-slip-footer class="px-6 py-3.5 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
           <button id="rsvWithdrawBtn" type="button" class="hidden px-4 py-2 bg-white text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 text-xs font-semibold rounded-xl transition-all shadow-sm cursor-pointer">
-            <span class="material-symbols-outlined text-[15px] align-middle mr-1">cancel</span>Withdraw Request
+            <span class="material-symbols-outlined text-[15px] align-middle mr-1">free_cancellation</span>Cancel Request
           </button>
-          <div class="flex items-center gap-2 ml-auto">
-            <button id="closeRequestSlipViewFooterBtn" type="button" class="px-5 py-2 bg-[#7a1f2b] text-white hover:bg-[#5b0617] text-xs font-semibold rounded-xl transition-all shadow-sm cursor-pointer">
-              Close
-            </button>
-          </div>
+          <button id="closeRequestSlipViewFooterBtn" type="button" class="px-5 py-2 bg-[#7a1f2b] text-white hover:bg-[#5b0617] text-xs font-semibold rounded-xl transition-all shadow-sm cursor-pointer ml-auto">
+            Close
+          </button>
         </div>
 
       </div>
