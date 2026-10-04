@@ -434,6 +434,49 @@ class ReservationRepository
         return $row ? $row['end_time'] : 'Available now';
     }
 
+    /**
+     * Batched version of getNextAvailableSlot(): the end_time of each room's
+     * first upcoming or currently-blocking reservation, in ONE query instead of
+     * one per room. Rooms with no such reservation are omitted (the caller
+     * treats a missing entry as "Available now"). This is what the room
+     * directory (RoomController::index) uses so N rooms cost one round trip,
+     * not N — the per-room loop made the Rooms page take several seconds.
+     *
+     * @param string[] $roomIds
+     * @return array<string, string> Room ID to end_time.
+     */
+    public function getNextAvailableSlots(array $roomIds): array
+    {
+        $roomIds = array_values(array_unique($roomIds));
+        if ($roomIds === []) {
+            return [];
+        }
+
+        $placeholders = [];
+        $params = [];
+        foreach ($roomIds as $index => $roomId) {
+            $placeholder = ':room_' . $index;
+            $placeholders[] = $placeholder;
+            $params[$placeholder] = $roomId;
+        }
+
+        $stmt = $this->db->query(
+            "SELECT DISTINCT ON (room_id) room_id, end_time
+               FROM Reservations
+              WHERE room_id IN (" . implode(', ', $placeholders) . ")
+                AND status IN ('Pending', 'Approved')
+                AND end_time > NOW()
+           ORDER BY room_id, start_time ASC",
+            $params
+        );
+
+        $slots = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $slots[$row['room_id']] = $row['end_time'];
+        }
+        return $slots;
+    }
+
     // ---------------------------------------------------------------
     // System_Logs
     // ---------------------------------------------------------------

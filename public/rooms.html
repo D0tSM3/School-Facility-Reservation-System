@@ -5,6 +5,10 @@
     <title>CampusRoom — Rooms Directory | BPU Facility Gateway</title>
     <meta name="description" content="View all academic facilities and their real-time availability." />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <!-- Must load before app.js: app.js reads window.CampusRoomShell (defined
+         here) and bounces to index.html if it is missing. Also paints the
+         role-aware sidebar early to avoid a flash. -->
+    <script src="js/shell-guard.js"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
