@@ -111,110 +111,81 @@
               >RESERVATIONS &amp; QUEUES</span
             >
           </div>
-          <!-- 1. All Reservations -->
-          <button
-            type="button"
-            data-nav="reservations"
-            data-hash="#reservations"
-            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
-          >
-            <div class="flex items-center gap-3">
-              <span
-                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
-                >assignment</span
-              >
-              <span>All Reservations</span>
-            </div>
-            <span
-              id="badge-pending-count"
-              class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-white"
-              >0</span
+          <!-- 1. All Reservations (Collapsible) -->
+          <div class="mb-1">
+            <button
+              type="button"
+              onclick="document.getElementById('reservations-submenu').classList.toggle('hidden')"
+              class="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
             >
-          </button>
-
-          <!-- 2. Approval Queue (Fixed replacement for Staff Queue) -->
-          <button
-            type="button"
-            data-nav="approval-queue"
-            data-hash="#staff-queue"
-            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
-          >
-            <div class="flex items-center gap-3">
-              <span
-                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
-                >hourglass_top</span
-              >
-              <span>Approval Queue</span>
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-[19px] text-gray-400 group-hover:text-white transition-colors">assignment</span>
+                <span>All Reservations</span>
+              </div>
+              <span class="material-symbols-outlined text-[18px] text-gray-500 group-hover:text-gray-300 transition-colors">expand_more</span>
+            </button>
+            <div id="reservations-submenu" class="pl-9 pr-2 py-1 mt-1 space-y-1">
+               <button
+                 type="button"
+                 data-nav="reservations"
+                 data-hash="#reservations"
+                 class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-400 font-medium text-[13px] hover:bg-white/5 hover:text-white transition-all text-left group"
+               >
+                 <span>View All</span>
+                 <span id="badge-pending-count" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-white">0</span>
+               </button>
+               <button
+                 type="button"
+                 data-nav="approval-queue"
+                 data-hash="#staff-queue"
+                 class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-400 font-medium text-[13px] hover:bg-white/5 hover:text-white transition-all text-left group"
+               >
+                 <span>Approval Queue</span>
+                 <span id="badge-approval-queue-count" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-white">0</span>
+               </button>
+               <button
+                 type="button"
+                 onclick="document.querySelector('[data-nav=\'reservations\']').click(); setTimeout(() => document.querySelector('[data-res-subtab=\'Approved\']').click(), 10)"
+                 class="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-400 font-medium text-[13px] hover:bg-white/5 hover:text-white transition-all text-left group"
+               >
+                 <span>Approved</span>
+               </button>
+               <button
+                 type="button"
+                 onclick="document.querySelector('[data-nav=\'reservations\']').click(); setTimeout(() => document.querySelector('[data-res-subtab=\'Rejected\']').click(), 10)"
+                 class="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-400 font-medium text-[13px] hover:bg-white/5 hover:text-white transition-all text-left group"
+               >
+                 <span>Rejected</span>
+               </button>
+               <button
+                 type="button"
+                 data-nav="moves"
+                 data-hash="#move-requests"
+                 class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-400 font-medium text-[13px] hover:bg-white/5 hover:text-white transition-all text-left group"
+               >
+                 <span>Move Requests</span>
+                 <span id="badge-moves-count" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500 text-white">0</span>
+               </button>
+               <button
+                 type="button"
+                 data-nav="cancels"
+                 data-hash="#cancellations"
+                 class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-400 font-medium text-[13px] hover:bg-white/5 hover:text-white transition-all text-left group"
+               >
+                 <span>Cancel Requests</span>
+                 <span id="badge-cancels-count" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white">0</span>
+               </button>
+               <button
+                 type="button"
+                 data-nav="overrides"
+                 data-hash="#overrides"
+                 class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-400 font-medium text-[13px] hover:bg-white/5 hover:text-white transition-all text-left group"
+               >
+                 <span>Overrides</span>
+                 <span id="badge-overrides-count" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-600 text-white">0</span>
+               </button>
             </div>
-            <span
-              id="badge-approval-queue-count"
-              class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-white"
-              >0</span
-            >
-          </button>
-
-          <!-- 3. Move Requests -->
-          <button
-            type="button"
-            data-nav="moves"
-            data-hash="#move-requests"
-            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
-          >
-            <div class="flex items-center gap-3">
-              <span
-                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
-                >edit_calendar</span
-              >
-              <span>Move Requests</span>
-            </div>
-            <span
-              id="badge-moves-count"
-              class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500 text-white"
-              >0</span
-            >
-          </button>
-
-          <!-- 4. Cancellations -->
-          <button
-            type="button"
-            data-nav="cancels"
-            data-hash="#cancellations"
-            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
-          >
-            <div class="flex items-center gap-3">
-              <span
-                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
-                >event_busy</span
-              >
-              <span>Cancellations</span>
-            </div>
-            <span
-              id="badge-cancels-count"
-              class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white"
-              >0</span
-            >
-          </button>
-
-          <!-- 5. Overrides -->
-          <button
-            type="button"
-            data-nav="overrides"
-            data-hash="#overrides"
-            class="nav-item w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group"
-          >
-            <div class="flex items-center gap-3">
-              <span
-                class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors"
-                >priority_high</span
-              >
-              <span>Overrides</span>
-            </div>
-            <span
-              id="badge-overrides-count"
-              class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-600 text-white"
-              >0</span
-            >
-          </button>
+          </div>
         </div>
 
         <!-- GROUP 2: FACILITY & ACADEMIC GOVERNANCE (Catalog & Scheduling) -->
