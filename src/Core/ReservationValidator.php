@@ -46,6 +46,12 @@ class ReservationValidator
             return "Invalid time range.";
         }
 
+        // Reject reservations whose start time is in the past or exactly now.
+        // This guards against frontend bypass (direct API calls with past times).
+        if ($start <= time()) {
+            return "Reservations must start in the future.";
+        }
+
         if (date('Y-m-d', $start) !== date('Y-m-d', $end)) {
             return "A single reservation must start and end on the same day.";
         }

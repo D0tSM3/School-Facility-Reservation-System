@@ -403,10 +403,10 @@ window.initBookingForm = function() {
   // GET api/config answers.
   let rules = window.CampusSchedule.DEFAULT_RULES;
 
-  // Earliest bookable day: tomorrow, skipping closed days.
+  // Earliest bookable day: today (same-day booking is allowed), skipping closed days.
   function earliestOpenDay() {
     const d = new Date();
-    d.setDate(d.getDate() + 1);
+    // Start from today; skip forward only if today itself is a closed day.
     for (let i = 0; i < 7 && window.CampusSchedule.isClosedDay(toYMD(d), rules.closedDays); i++) {
       d.setDate(d.getDate() + 1);
     }
@@ -648,13 +648,18 @@ window.initBookingForm = function() {
       const start = startDateValue();
       const now = new Date();
       const todayStr = toYMD(now);
-      const nowTimeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-      
-      if (mode === 'single' && start === todayStr && startTimeInput.value <= nowTimeStr) {
-          const conflictBanner = document.getElementById('conflictBanner');
-          const requestSlipBtn = document.getElementById('requestSlipBtn');
-          if (conflictBanner) conflictBanner.classList.add('hidden');
-          if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
+      // Use HH:MM for an exact current-time comparison (respects minutes)
+      const nowHHMM = String(now.getHours()).padStart(2, '0') + ':' +
+                      String(now.getMinutes()).padStart(2, '0');
+
+      // Past-time guard — applies to ALL booking modes when start date is today.
+      // For Consecutive Range the start date is the first day of the range.
+      // For Specific Days it is the earliest selected date.
+      if (start === todayStr && startTimeInput.value <= nowHHMM) {
+        const conflictBanner = document.getElementById('conflictBanner');
+        const requestSlipBtn = document.getElementById('requestSlipBtn');
+        if (conflictBanner) conflictBanner.classList.add('hidden');
+        if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
         showCollisionError('Reservations must start in the future.', 'Invalid time');
         return false;
       }
@@ -669,37 +674,46 @@ window.initBookingForm = function() {
           return false;
         }
 
-        // Time boundaries are valid, check for conflict over the requested range
+        // Time boundaries are valid — check the full requested range for conflicts
         hideCollisionError();
         const clash = rangeConflicts(startTimeInput.value, endTimeInput.value);
         if (clash.length) {
           // Show conflict UI
           const conflictBanner = document.getElementById('conflictBanner');
           const requestSlipBtn = document.getElementById('requestSlipBtn');
-          if (conflictBanner) conflictBanner.classList.remove('hidden');
+          if (conflictBanner) {
+            conflictBanner.classList.remove('hidden');
+            conflictBanner.classList.add('flex');
+          }
           if (requestSlipBtn) requestSlipBtn.classList.remove('hidden');
-          
-          // Populate Request Slip details
+
+          // Populate Request Slip preview
           const facilitySpan = document.getElementById('rsFacility');
-          const dateSpan = document.getElementById('rsDate');
-          const timeSpan = document.getElementById('rsTime');
+          const dateSpan     = document.getElementById('rsDate');
+          const timeSpan     = document.getElementById('rsTime');
           const conflictSpan = document.getElementById('rsConflictInfo');
           if (facilitySpan && roomSelect && roomSelect.options[roomSelect.selectedIndex]) {
-             facilitySpan.textContent = roomSelect.options[roomSelect.selectedIndex].text;
+            facilitySpan.textContent = roomSelect.options[roomSelect.selectedIndex].text;
           }
           if (dateSpan) dateSpan.textContent = mode === 'single' ? start : (start + ' to ' + endDateValue());
-          if (timeSpan) timeSpan.textContent = startTimeInput.options[startTimeInput.selectedIndex].text + ' - ' + endTimeInput.options[endTimeInput.selectedIndex].text;
-          if (conflictSpan) conflictSpan.textContent = window.CampusSchedule.describeRange(clash, startTimeInput.value, endTimeInput.value);
+          if (timeSpan) timeSpan.textContent =
+            startTimeInput.options[startTimeInput.selectedIndex].text + ' - ' +
+            endTimeInput.options[endTimeInput.selectedIndex].text;
+          if (conflictSpan) conflictSpan.textContent =
+            window.CampusSchedule.describeRange(clash, startTimeInput.value, endTimeInput.value);
 
-          const evt = new Event('change'); document.getElementById('roomReservationForm')?.dispatchEvent(evt);
+          document.getElementById('roomReservationForm')?.dispatchEvent(new Event('change'));
           return false; // blocks normal submit
         } else {
-          // Hide conflict UI
+          // No conflict — hide conflict UI
           const conflictBanner = document.getElementById('conflictBanner');
           const requestSlipBtn = document.getElementById('requestSlipBtn');
-          if (conflictBanner) conflictBanner.classList.add('hidden');
+          if (conflictBanner) {
+            conflictBanner.classList.add('hidden');
+            conflictBanner.classList.remove('flex');
+          }
           if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
-          const evt = new Event('change'); document.getElementById('roomReservationForm')?.dispatchEvent(evt);
+          document.getElementById('roomReservationForm')?.dispatchEvent(new Event('change'));
           return true;
         }
       }
@@ -838,6 +852,7 @@ window.initBookingForm = function() {
     Array.from(startTimeInput.options).forEach(opt => {
       if (!opt.value) return;
       opt.disabled = false;
+      opt.hidden = false;
       opt.textContent = opt.dataset.label;
     });
   }
@@ -889,17 +904,35 @@ window.initBookingForm = function() {
       }
     }
 
-    // ---- Grey out start-time blocks that are taken on every day of the range ----
+    // ---- For today: hide/disable past time slots; for future dates: show all ----
+    const nowForFilter = new Date();
+    const todayYMD = toYMD(nowForFilter);
+    // "now time string" in HH:MM — slots whose value is <= this are in the past
+    const nowHHMM = String(nowForFilter.getHours()).padStart(2, '0') + ':' +
+                    String(nowForFilter.getMinutes()).padStart(2, '0');
+    // A start date of today means we must block past slots.
+    // For Consecutive Range / Specific Days modes start === first date in range.
+    const isStartToday = (start === todayYMD);
+
     Array.from(startTimeInput.options).forEach(opt => {
       if (!opt.value) return;
-      const i = BLOCKS.indexOf(opt.value);
-      const [bs, be] = [BLOCKS[i], BLOCKS[i + 1] || rules.close];
-      const clash = window.CampusSchedule.findRangeConflicts(data, dates, bs, be);
-      // The UI is now handled by validateTime() on selection.
+      // Restore any previously applied past-time restriction first
+      opt.disabled = false;
+      opt.hidden   = false;
+      opt.textContent = opt.dataset.label; // keep label clean — no status text
+
+      if (isStartToday && opt.value <= nowHHMM) {
+        // Past or exactly-now slot: hide it so the dropdown looks clean
+        opt.disabled = true;
+        opt.hidden   = true;
+      }
     });
 
+    // If the currently chosen start time was just hidden, clear it
     const chosen = startTimeInput.selectedOptions[0];
-    if (chosen && chosen.disabled) startTimeInput.value = '';
+    if (chosen && (chosen.disabled || chosen.hidden)) {
+      startTimeInput.value = '';
+    }
 
     syncEndOptions();
   }
