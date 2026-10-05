@@ -163,12 +163,11 @@
     }
 
     var initialsEl = document.querySelector('.header-initials');
-      if (initialsEl) {
-        var parts = String(user.name || '').split(' ').filter(function (p) { return p && p.toLowerCase() !== 'dr.'; });
-        var i1 = parts[0] ? parts[0][0] : '';
-        var i2 = parts.length > 1 ? parts[parts.length - 1][0] : '';
-        initialsEl.textContent = (i1 + i2).toUpperCase();
-      }
+    if (initialsEl) {
+      var parts = String(user.name || '').split(' ').filter(function (p) { return p && p.toLowerCase() !== 'dr.'; });
+      var i1 = parts[0] ? parts[0][0] : '';
+      var i2 = parts.length > 1 ? parts[parts.length - 1][0] : '';
+      initialsEl.textContent = (i1 + i2).toUpperCase();
     }
     return true;
   }
