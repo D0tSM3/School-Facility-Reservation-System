@@ -91,9 +91,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // 3. Update profile header
       //    Supports both old class-based selectors and new header-* classes.
       // -----------------------------------------------------------------------
-      const roleLabel = (currentUser.role === 'Staff' || currentUser.role === 'Admin')
-        ? `${currentUser.role} / Registrar`
-        : (currentUser.account_type || 'Student');
+      let roleLabel = currentUser.role.toUpperCase();
+      if (currentUser.role === 'Customer' || currentUser.role === 'customer') {
+        roleLabel = (currentUser.account_type || 'STUDENT').toUpperCase();
+      }
 
       const parts   = currentUser.name.split(' ').filter(p => p.toLowerCase() !== 'dr.');
       const i1      = parts[0] ? parts[0][0] : '';
