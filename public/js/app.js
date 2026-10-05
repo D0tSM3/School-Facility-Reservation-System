@@ -31,9 +31,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const currentUser = json.success ? json.data : null;
       if (!currentUser) {
         localStorage.removeItem('campus_role');
+        if (window.CampusRoomShell && window.CampusRoomShell.clearUser) {
+          window.CampusRoomShell.clearUser();
+        }
         // No active session — send to login page.
         window.location.href = 'index.html';
         return;
+      }
+
+      if (window.CampusRoomShell && window.CampusRoomShell.saveUser) {
+        window.CampusRoomShell.saveUser(currentUser);
       }
 
       // Expose user globally so other scripts can read it without re-fetching.
@@ -150,11 +157,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // -----------------------------------------------------------------------
   function attachLogout(btn) {
     btn.addEventListener('click', () => {
+      if (window.CampusRoomShell && window.CampusRoomShell.clearUser) {
+        window.CampusRoomShell.clearUser();
+      }
+      localStorage.removeItem('campus_role');
       fetch(BASE + 'api/auth/logout', { method: 'POST', credentials: 'include' })
-        .then(() => { localStorage.removeItem('campus_role'); window.location.href = 'index.html'; })
+        .then(() => { window.location.href = 'index.html'; })
         .catch(err => {
           console.error(err);
-          localStorage.removeItem('campus_role');
           window.location.href = 'index.html';
         });
     });
