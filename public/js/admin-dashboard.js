@@ -373,6 +373,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const nameEl = document.getElementById('adminUserName');
       if (nameEl) nameEl.textContent = user.name;
 
+      const roleEl = document.getElementById('adminUserRole');
+      if (roleEl) roleEl.textContent = user.role.toUpperCase();
+
       const emailEl = document.getElementById('adminUserEmail');
       if (emailEl) emailEl.textContent = user.email;
 
