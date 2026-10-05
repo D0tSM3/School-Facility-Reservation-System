@@ -2136,8 +2136,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnRejectOverride = document.getElementById('btn-reject-override');
   if (btnRejectOverride) {
     btnRejectOverride.addEventListener('click', async () => {
-      const id = document.getElementById('overrideRequestId').value;
-      const comment = document.getElementById('overrideStaffComment').value.trim();
+      const id = document.getElementById('overrideRequestId')?.value;
+      const comment = (document.getElementById('overrideStaffComment')?.value || '').trim();
       const errorEl = document.getElementById('overrideErrorMsg');
 
       if (!comment) {
@@ -2156,7 +2156,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('Conflict override request rejected.', 'info');
         closeModal('conflictOverrideModal');
         await loadAllData();
-        switchResSubtab('overrides');
+        renderOverridesTable();
       } catch (err) {
         if (errorEl) {
           errorEl.textContent = err.message;
@@ -2169,19 +2169,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnApproveOverride = document.getElementById('btn-approve-override');
   if (btnApproveOverride) {
     btnApproveOverride.addEventListener('click', async () => {
-      const id = document.getElementById('overrideRequestId').value;
-      const comment = document.getElementById('overrideStaffComment').value.trim();
+      const id = document.getElementById('overrideRequestId')?.value;
+      const comment = (document.getElementById('overrideStaffComment')?.value || '').trim();
       const errorEl = document.getElementById('overrideErrorMsg');
       const showErr = (msg) => { if (errorEl) { errorEl.textContent = msg; errorEl.classList.remove('hidden'); } };
 
-      const isClass = !document.getElementById('overrideResolveClass')?.classList.contains('hidden');
+      const clsPanel = document.getElementById('overrideResolveClass');
+      const isClass = clsPanel ? !clsPanel.classList.contains('hidden') : false;
       let payload;
 
       if (isClass) {
-        const room = document.getElementById('overrideClassRoom').value;
-        const day = document.getElementById('overrideClassDay').value;
-        const cStart = document.getElementById('overrideClassStart').value;
-        const cEnd = document.getElementById('overrideClassEnd').value;
+        const room = document.getElementById('overrideClassRoom')?.value || '';
+        const day = document.getElementById('overrideClassDay')?.value || '';
+        const cStart = document.getElementById('overrideClassStart')?.value || '';
+        const cEnd = document.getElementById('overrideClassEnd')?.value || '';
 
         if (!room && !day && !cStart && !cEnd) {
           return showErr('Choose a new room and/or a new weekday/time for the class.');
@@ -2201,10 +2202,10 @@ document.addEventListener('DOMContentLoaded', () => {
           class_end_time: cEnd || undefined,
         };
       } else {
-        const room = document.getElementById('overrideMoveRoom').value;
-        const date = document.getElementById('overrideMoveDate').value;
-        const start = document.getElementById('overrideMoveStart').value;
-        const end = document.getElementById('overrideMoveEnd').value;
+        const room = document.getElementById('overrideMoveRoom')?.value || '';
+        const date = document.getElementById('overrideMoveDate')?.value || '';
+        const start = document.getElementById('overrideMoveStart')?.value || '';
+        const end = document.getElementById('overrideMoveEnd')?.value || '';
 
         if (!date || !start || !end) {
           return showErr('Please choose the date and times to move the conflicting booking to.');
@@ -2231,7 +2232,7 @@ document.addEventListener('DOMContentLoaded', () => {
           : 'Conflict override approved! Conflicting booking move request filed.'), 'success');
         closeModal('conflictOverrideModal');
         await loadAllData();
-        switchResSubtab('overrides');
+        renderOverridesTable();
       } catch (err) {
         showErr(err.message);
       }
