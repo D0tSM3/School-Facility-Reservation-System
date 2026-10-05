@@ -680,7 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadAllData() {
     try {
-      const [rooms, reservations, pendingRes, moveReqs, cancelReqs, overrideReqs, users, settings, archivesRes] = await Promise.all([
+      const promises = [
         apiFetch('api/rooms').catch(() => []),
         apiFetch('api/reservations').catch(() => []),
         // Dedicated Pending fetch: api/reservations returns only the newest 200
@@ -689,11 +689,20 @@ document.addEventListener('DOMContentLoaded', () => {
         apiFetch('api/reservations?status=Pending&limit=500').catch(() => []),
         apiFetch('api/reservations/move-requests').catch(() => []),
         apiFetch('api/reservations/cancellations').catch(() => []),
-        apiFetch('api/conflict-override-requests').catch(() => []),
-        apiFetch('api/users').catch(() => []),
-        apiFetch('api/settings').catch(() => null),
-        apiFetch('api/archives').catch(() => null),
-      ]);
+        apiFetch('api/conflict-override-requests').catch(() => [])
+      ];
+
+      if (!state.isStaffOnly) {
+        promises.push(
+          apiFetch('api/users').catch(() => []),
+          apiFetch('api/settings').catch(() => null),
+          apiFetch('api/archives').catch(() => null)
+        );
+      } else {
+        promises.push(Promise.resolve([]), Promise.resolve(null), Promise.resolve(null));
+      }
+
+      const [rooms, reservations, pendingRes, moveReqs, cancelReqs, overrideReqs, users, settings, archivesRes] = await Promise.all(promises);
 
       state.rooms = Array.isArray(rooms) ? rooms : [];
       state.reservations = mergePendingReservations(reservations, pendingRes);
@@ -839,6 +848,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadRecentLogs() {
+    if (state.isStaffOnly) return;
     const tbody = document.getElementById('overviewRecentLogsTable');
     if (!tbody) return;
     try {
@@ -2697,6 +2707,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Audit Logs ────────────────────────────────────────────────────────────
 
   async function loadAuditLogs() {
+    if (state.isStaffOnly) return;
     const tbody = document.getElementById('logsTableBody');
     if (!tbody) return;
     tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-gray-400 text-xs">Loading audit logs...</td></tr>`;
