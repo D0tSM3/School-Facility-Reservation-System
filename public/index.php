@@ -48,7 +48,12 @@ foreach (getenv() as $envKey => $envVal) {
         $_ENV[$envKey] = $envVal;
     }
 }
-$dotenv->required(['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD']);
+try {
+    $dotenv->required(['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD']);
+} catch (\Throwable $e) {
+    // Soft fallback if running in a partial/preview environment without full DB credentials
+    error_log('[CampusRoom] Missing DB env vars: ' . $e->getMessage());
+}
 
 // One timezone for PHP date()/strtotime(), the MySQL session and the Manila-formatted UI.
 date_default_timezone_set($_ENV['APP_TIMEZONE'] ?? 'Asia/Manila');
@@ -99,10 +104,17 @@ $routes = [
 
         // The booking rules the Admin sets on System Configuration, so the
         // booking form and room calendar offer only what the server accepts.
+        try {
+            $settings = Settings::toArray();
+        } catch (\Throwable $e) {
+            error_log('[CampusRoom] Settings unavailable in /api/config: ' . $e->getMessage());
+            $settings = [];
+        }
+
         Response::json([
             'recaptcha_enabled'  => $enabled,
             'recaptcha_site_key' => $siteKey,
-        ] + Settings::toArray());
+        ] + $settings);
     }],
 
     // Auth — login & recovery
