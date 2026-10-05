@@ -207,6 +207,52 @@ class ReservationValidator
     }
 
     /**
+     * The first official class in this room that overlaps the daily window on
+     * any date of the range, or null. A class repeats weekly, so any requested
+     * date landing on its weekday and sharing a minute counts. Returns
+     * schedule_id, course_code, section, day_of_week, start_time, end_time.
+     *
+     * Used to tell an overridable class collision (staff can relocate or
+     * reschedule the class) apart from the hard rules — holidays, closed days,
+     * business hours — that no override can resolve.
+     */
+    public static function findConflictingClass(
+        string $roomId,
+        string $startDate,
+        string $endDate,
+        string $dailyStart,
+        string $dailyEnd,
+        ?array $activeDates = null
+    ): ?array {
+        $pdo  = Database::getInstance()->getPdo();
+        $stmt = $pdo->prepare("
+            SELECT schedule_id, course_code, section, day_of_week, start_time, end_time
+              FROM ClassSchedules
+             WHERE room_id = ?
+               AND day_of_week::text = ?
+               AND ? < end_time
+               AND ? > start_time
+             ORDER BY start_time
+             LIMIT 1
+        ");
+
+        $days = self::datesBetween($startDate, $endDate) ?? [];
+        if ($activeDates !== null && count($activeDates) > 0) {
+            $days = array_values(array_intersect($days, $activeDates));
+        }
+
+        foreach ($days as $day) {
+            $dayOfWeek = date('l', strtotime($day));
+            $stmt->execute([$roomId, $dayOfWeek, $dailyStart, $dailyEnd]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row !== false) {
+                return $row;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Every 'Y-m-d' from $startDate to $endDate inclusive, or null if the
      * range is backwards or either date is malformed.
      *

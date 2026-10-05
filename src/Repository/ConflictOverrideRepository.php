@@ -28,18 +28,21 @@ class ConflictOverrideRepository
         string $category,
         ?string $equipmentNotes,
         string $reason,
-        string $conflictingReservationId,
+        ?string $conflictingReservationId,
         ?string $requestType = null,
         ?string $altStartTime = null,
         ?string $altEndTime = null,
-        ?string $additionalInfo = null
+        ?string $additionalInfo = null,
+        ?string $conflictingClassId = null
     ): array {
         $stmt = $this->db->query(
             'INSERT INTO ConflictOverrideRequests
                     (requested_by, room_id, start_time, end_time, purpose, category,
-                     equipment_notes, reason, conflicting_reservation_id, request_type, alt_start_time, alt_end_time, additional_info)
+                     equipment_notes, reason, conflicting_reservation_id, conflicting_class_id,
+                     request_type, alt_start_time, alt_end_time, additional_info)
              VALUES (:requested_by, :room_id, :start_time, :end_time, :purpose, :category,
-                     :equipment_notes, :reason, :conflicting_reservation_id, :request_type, :alt_start_time, :alt_end_time, :additional_info)
+                     :equipment_notes, :reason, :conflicting_reservation_id, :conflicting_class_id,
+                     :request_type, :alt_start_time, :alt_end_time, :additional_info)
              RETURNING request_id',
             [
                 ':requested_by'               => $requestedBy,
@@ -51,6 +54,7 @@ class ConflictOverrideRepository
                 ':equipment_notes'            => $equipmentNotes,
                 ':reason'                     => $reason,
                 ':conflicting_reservation_id' => $conflictingReservationId,
+                ':conflicting_class_id'       => $conflictingClassId,
                 ':request_type'               => $requestType,
                 ':alt_start_time'             => $altStartTime,
                 ':alt_end_time'               => $altEndTime,
@@ -84,6 +88,20 @@ class ConflictOverrideRepository
         return (bool) $stmt->fetchColumn();
     }
 
+    /** Does this customer already have an open request against that class? */
+    public function hasPendingForClass(string $requestedBy, string $conflictingClassId): bool
+    {
+        $stmt = $this->db->query(
+            "SELECT 1 FROM ConflictOverrideRequests
+              WHERE requested_by = :requested_by
+                AND conflicting_class_id = :conflicting_class_id
+                AND status = 'Pending'
+              LIMIT 1",
+            [':requested_by' => $requestedBy, ':conflicting_class_id' => $conflictingClassId]
+        );
+        return (bool) $stmt->fetchColumn();
+    }
+
     /**
      * A customer's own override requests, newest first, with the room name.
      * Deliberately nothing about the conflicting booking's owner.
@@ -96,7 +114,8 @@ class ConflictOverrideRepository
                     o.purpose, o.category, o.reason, o.status, o.staff_comment,
                     o.outcome, o.outcome_note, o.created_reservation_id,
                     o.processed_at, o.created_at, o.request_type, o.alt_start_time, o.alt_end_time,
-                    o.additional_info, o.equipment_notes, o.conflicting_reservation_id,
+                    o.additional_info, o.equipment_notes, o.conflicting_reservation_id, o.conflicting_class_id,
+                    CASE WHEN o.conflicting_class_id IS NOT NULL THEN \'class\' ELSE \'reservation\' END AS conflict_kind,
                     u.name AS customer_name, u.email AS customer_email
                FROM ConflictOverrideRequests o
                JOIN Rooms r ON r.room_id = o.room_id
@@ -130,13 +149,18 @@ class ConflictOverrideRepository
                        o.start_time, o.end_time, o.purpose, o.category, o.equipment_notes, o.reason,
                        o.status, o.staff_comment, o.outcome, o.outcome_note,
                        o.move_request_id, o.created_reservation_id, o.processed_at, o.created_at,
-                       o.conflicting_reservation_id,
+                       o.conflicting_reservation_id, o.conflicting_class_id,
+                       CASE WHEN o.conflicting_class_id IS NOT NULL THEN \'class\' ELSE \'reservation\' END AS conflict_kind,
                        c.start_time AS conflict_start_time, c.end_time AS conflict_end_time,
-                       c.status AS conflict_status
+                       c.status AS conflict_status,
+                       cls.course_code AS class_course_code, cls.section AS class_section,
+                       cls.day_of_week AS class_day_of_week,
+                       cls.start_time AS class_start_time, cls.end_time AS class_end_time
                   FROM ConflictOverrideRequests o
-                  JOIN Users u         ON u.user_id = o.requested_by
-                  JOIN Rooms rm        ON rm.room_id = o.room_id
-                  JOIN Reservations c  ON c.reservation_id = o.conflicting_reservation_id';
+                  JOIN Users u              ON u.user_id = o.requested_by
+                  JOIN Rooms rm             ON rm.room_id = o.room_id
+             LEFT JOIN Reservations c       ON c.reservation_id = o.conflicting_reservation_id
+             LEFT JOIN ClassSchedules cls   ON cls.schedule_id = o.conflicting_class_id';
         $params = [];
         if ($status !== null) {
             $sql .= ' WHERE o.status = :status';

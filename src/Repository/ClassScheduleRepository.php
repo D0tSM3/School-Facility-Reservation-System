@@ -57,24 +57,28 @@ class ClassScheduleRepository
      * @param string $start 'HH:MM:SS'
      * @param string $end   'HH:MM:SS'
      */
-    public function findOverlappingClasses(string $roomId, string $day, string $start, string $end): array
+    public function findOverlappingClasses(string $roomId, string $day, string $start, string $end, ?string $excludeScheduleId = null): array
     {
-        $stmt = $this->db->query(
-            "SELECT course_code, section, start_time, end_time
-               FROM ClassSchedules
-              WHERE room_id = :room_id
-                AND day_of_week = :day
-                AND :start < end_time
-                AND :end   > start_time
-           ORDER BY start_time",
-            [
-                ':room_id' => $roomId,
-                ':day'     => $day,
-                ':start'   => $start,
-                ':end'     => $end,
-            ]
-        );
-        return $stmt->fetchAll();
+        $sql = "SELECT course_code, section, start_time, end_time
+                  FROM ClassSchedules
+                 WHERE room_id = :room_id
+                   AND day_of_week = :day
+                   AND :start < end_time
+                   AND :end   > start_time";
+        $params = [
+            ':room_id' => $roomId,
+            ':day'     => $day,
+            ':start'   => $start,
+            ':end'     => $end,
+        ];
+        // When a class is being rescheduled/relocated, it must not count as
+        // overlapping its own (about to change) placement.
+        if ($excludeScheduleId !== null) {
+            $sql .= " AND schedule_id <> :exclude";
+            $params[':exclude'] = $excludeScheduleId;
+        }
+        $sql .= " ORDER BY start_time";
+        return $this->db->query($sql, $params)->fetchAll();
     }
 
     /**
@@ -86,15 +90,17 @@ class ClassScheduleRepository
      */
     public function findOverlappingReservations(string $roomId, string $day, string $start, string $end): array
     {
+        // PostgreSQL: trim(to_char(ts,'Day')) gives the weekday name ('Friday')
+        // and ::time the time-of-day. (DAYNAME()/TIME() are MySQL-only.)
         $stmt = $this->db->query(
             "SELECT reservation_id, status, start_time, end_time
                FROM Reservations
               WHERE room_id = :room_id
                 AND status IN ('Pending', 'Approved')
                 AND end_time > NOW()
-                AND DAYNAME(start_time) = :day
-                AND TIME(start_time) < :end
-                AND TIME(end_time)   > :start
+                AND trim(to_char(start_time, 'Day')) = :day
+                AND start_time::time < :end
+                AND end_time::time   > :start
            ORDER BY start_time",
             [
                 ':room_id' => $roomId,
@@ -156,6 +162,23 @@ class ClassScheduleRepository
         $this->db->query(
             "UPDATE ClassSchedules SET room_id = :room_id WHERE schedule_id = :schedule_id",
             [':room_id' => $newRoomId, ':schedule_id' => $scheduleId]
+        );
+    }
+
+    /** Move a class to a new room and/or weekday/time in one update. */
+    public function updatePlacement(string $scheduleId, string $roomId, string $day, string $start, string $end): void
+    {
+        $this->db->query(
+            "UPDATE ClassSchedules
+                SET room_id = :room_id, day_of_week = :day, start_time = :start, end_time = :end
+              WHERE schedule_id = :schedule_id",
+            [
+                ':room_id'     => $roomId,
+                ':day'         => $day,
+                ':start'       => $start,
+                ':end'         => $end,
+                ':schedule_id' => $scheduleId,
+            ]
         );
     }
 }
