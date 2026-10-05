@@ -363,6 +363,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       state.currentUser = user;
       state.isStaffOnly = (user.role === 'Staff');
+      // Authoritative role from the server corrects any stale pre-paint hint,
+      // so the data-role CSS shows/hides exactly the right tabs.
+      document.documentElement.setAttribute('data-role', String(user.role || '').toLowerCase());
       if (state.isStaffOnly) applyStaffVisibility();
 
       // Update sidebar & header profile pills

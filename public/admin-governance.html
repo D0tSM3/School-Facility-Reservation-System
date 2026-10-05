@@ -65,7 +65,28 @@
       .active-nav-link .nav-icon {
         color: #ffc641 !important;
       }
+      /* Pre-paint role gating: a Staff user must never see the admin-only
+         tools, not even for a frame. data-role is set synchronously below from
+         the last login; the server still verifies via /api/auth/me. */
+      html[data-role="staff"] [data-nav="holidays"],
+      html[data-role="staff"] [data-nav="users"],
+      html[data-role="staff"] [data-nav="archives"],
+      html[data-role="staff"] [data-nav="config"],
+      html[data-role="staff"] [data-nav="logs"],
+      html[data-role="staff"] [data-admin-label] {
+        display: none !important;
+      }
     </style>
+    <script>
+      // Hint the role before first paint so the rules above apply immediately
+      // (no flash of admin tabs for Staff). Cosmetic only — never authorization.
+      (function () {
+        try {
+          var r = localStorage.getItem('campus_role');
+          if (r) document.documentElement.setAttribute('data-role', r.toLowerCase());
+        } catch (e) { /* ignore */ }
+      })();
+    </script>
   </head>
   <body class="bg-[#F8F9FA] font-sans text-gray-900 antialiased min-h-screen">
     <!-- ========================================================================= -->
@@ -281,7 +302,7 @@
 
         <!-- GROUP 3: SYSTEM & ACCOUNTS (Administration) -->
         <div class="space-y-1">
-          <div class="px-3.5 pt-2 pb-1 border-t border-white/5">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5" data-admin-label>
             <span
               class="text-[10px] font-bold text-gray-500 uppercase tracking-wider"
               >ADMINISTRATION</span
@@ -409,20 +430,18 @@
       <div class="flex items-center gap-3">
         <div class="flex flex-col text-right">
           <span id="adminUserName" class="font-semibold text-sm text-gray-800"
-            >Administrator</span
+            ></span
           >
           <span
             id="adminUserRole"
             class="text-[10px] font-bold uppercase tracking-wider text-gray-500"
-            >Admin</span
+            ></span
           >
         </div>
         <div
           id="adminAvatarInitials"
           class="w-9 h-9 rounded-full bg-[#7a1f2b] text-white font-bold flex items-center justify-center text-xs shadow-sm header-initials"
-        >
-          AD
-        </div>
+        ></div>
         <span id="adminUserEmail" class="hidden">admin@bpu.edu.ph</span>
       </div>
     </header>
