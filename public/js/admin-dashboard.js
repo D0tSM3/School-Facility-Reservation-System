@@ -1994,9 +1994,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </td>
           <td class="py-4 px-6 text-xs font-semibold text-gray-800">${escapeHtml(ov.room_name || 'Facility')}</td>
           <td class="py-4 px-6 text-xs font-semibold text-violet-700 bg-violet-50/40 rounded">${formatRange(ov.start_time, ov.end_time)}</td>
-          <td class="py-4 px-6 text-xs text-gray-500">${ov.conflict_kind === 'class'
-            ? `<span class="inline-flex items-center gap-1 text-amber-700 font-semibold"><span class="material-symbols-outlined text-[14px]">school</span>${escapeHtml(((ov.class_course_code || '') + ' ' + (ov.class_section || '')).trim() || 'Class')}</span><div class="text-[11px] text-gray-400">${escapeHtml(ov.class_day_of_week || '')} ${ov.class_start_time ? formatTime(ov.class_start_time) + '–' + formatTime(ov.class_end_time) : ''}</div>`
-            : formatRange(ov.conflict_start_time, ov.conflict_end_time)}</td>
+          <td class="py-4 px-6 text-xs text-gray-500">${formatRange(ov.conflict_start_time, ov.conflict_end_time)}</td>
           <td class="py-4 px-6 text-xs text-gray-700 italic max-w-xs truncate" title="${escapeHtml(ov.reason)}">
             "${escapeHtml(ov.reason || '—')}"
           </td>
@@ -2027,8 +2025,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const errorEl = document.getElementById('overrideErrorMsg');
         if (errorEl) errorEl.classList.add('hidden');
 
-        const isClass = req.conflict_kind === 'class';
-
         const dateEl = document.getElementById('overrideMoveDate');
         const startEl = document.getElementById('overrideMoveStart');
         const endEl = document.getElementById('overrideMoveEnd');
@@ -2037,60 +2033,30 @@ document.addEventListener('DOMContentLoaded', () => {
         if (startEl) startEl.value = '';
         if (endEl) endEl.value = '';
 
-        // Show the resolution panel that fits this conflict kind.
-        const resPanel = document.getElementById('overrideResolveReservation');
-        const clsPanel = document.getElementById('overrideResolveClass');
-        if (resPanel) resPanel.classList.toggle('hidden', isClass);
-        if (clsPanel) clsPanel.classList.toggle('hidden', !isClass);
-
-        // Populate the room selects (all rooms; blank = keep current).
-        const roomOpts = '<option value="">Keep the same room</option>' +
-          (state.rooms || []).map(r => `<option value="${r.room_id}">${escapeHtml(r.name)} (${escapeHtml(r.room_type || 'Facility')})</option>`).join('');
-        const moveRoomEl = document.getElementById('overrideMoveRoom');
-        const clsRoomEl = document.getElementById('overrideClassRoom');
-        if (moveRoomEl) moveRoomEl.innerHTML = roomOpts;
-        if (clsRoomEl) clsRoomEl.innerHTML = roomOpts;
-
-        // Reset the class reschedule controls.
-        const clsDayEl = document.getElementById('overrideClassDay');
-        const clsStartEl = document.getElementById('overrideClassStart');
-        const clsEndEl = document.getElementById('overrideClassEnd');
-        if (clsDayEl) clsDayEl.value = '';
-        if (clsStartEl) clsStartEl.value = '';
-        if (clsEndEl) clsEndEl.value = '';
-
-        const approveBtnLabel = document.querySelector('#btn-approve-override span:last-child');
-        if (approveBtnLabel) approveBtnLabel.textContent = isClass ? 'Approve & Move Class' : 'Approve & Propose Move';
-
         const summary = document.getElementById('overrideReviewSummary');
         if (summary) {
-          const conflictLine = isClass
-            ? `${escapeHtml(((req.class_course_code || '') + ' ' + (req.class_section || '')).trim() || 'Class')} · ${escapeHtml(req.class_day_of_week || '')} ${req.class_start_time ? formatTime(req.class_start_time) + '–' + formatTime(req.class_end_time) : ''}`
-            : formatRange(req.conflict_start_time, req.conflict_end_time);
           summary.innerHTML = `
             <div><span class="font-semibold text-gray-900">Requester:</span> ${escapeHtml(req.requester_name || 'Requester')} (${escapeHtml(req.requester_email || '—')})</div>
             <div><span class="font-semibold text-gray-900">Facility:</span> ${escapeHtml(req.room_name || 'Facility')}</div>
             <div><span class="font-semibold text-gray-900">Requested:</span> ${formatRange(req.start_time, req.end_time)}</div>
-            <div><span class="font-semibold text-gray-900">${isClass ? 'Conflicting class:' : 'Conflicting booking:'}</span> ${conflictLine}</div>
+            <div><span class="font-semibold text-gray-900">Conflicting booking:</span> ${formatRange(req.conflict_start_time, req.conflict_end_time)}</div>
             <div><span class="font-semibold text-violet-700">Urgency reason:</span> "${escapeHtml(req.reason || 'None')}"</div>
           `;
         }
 
         openModal('conflictOverrideModal');
 
-        if (isClass) return; // classes resolve via the class panel; no slot suggestion
-
-        // Suggest move slot (reservation conflicts only)
+        // Suggest move slot
         if (hintEl) hintEl.textContent = 'Analyzing schedule for a recommended free slot...';
         suggestMoveSlot(req).then((slot) => {
           if (!slot) {
-            if (hintEl) hintEl.textContent = 'No free slot found in next 14 days. Enter a custom date and time, or relocate to another room.';
+            if (hintEl) hintEl.textContent = 'No free slot found in next 14 days. Enter a custom date and time.';
             return;
           }
           if (dateEl) dateEl.value = slot.date;
           if (startEl) startEl.value = slot.start;
           if (endEl) endEl.value = slot.end;
-          if (hintEl) hintEl.textContent = 'Suggested: the first free slot of the same length in this room. Or pick another room above.';
+          if (hintEl) hintEl.textContent = 'Suggested: the first free slot of the same length in this room.';
         });
       });
     });
@@ -2174,62 +2140,28 @@ document.addEventListener('DOMContentLoaded', () => {
       const errorEl = document.getElementById('overrideErrorMsg');
       const showErr = (msg) => { if (errorEl) { errorEl.textContent = msg; errorEl.classList.remove('hidden'); } };
 
-      const clsPanel = document.getElementById('overrideResolveClass');
-      const isClass = clsPanel ? !clsPanel.classList.contains('hidden') : false;
-      let payload;
+      const date = document.getElementById('overrideMoveDate').value;
+      const start = document.getElementById('overrideMoveStart').value;
+      const end = document.getElementById('overrideMoveEnd').value;
 
-      if (isClass) {
-        const room = document.getElementById('overrideClassRoom')?.value || '';
-        const day = document.getElementById('overrideClassDay')?.value || '';
-        const cStart = document.getElementById('overrideClassStart')?.value || '';
-        const cEnd = document.getElementById('overrideClassEnd')?.value || '';
-
-        if (!room && !day && !cStart && !cEnd) {
-          return showErr('Choose a new room and/or a new weekday/time for the class.');
-        }
-        if ((cStart && !cEnd) || (!cStart && cEnd)) {
-          return showErr('Set both a start and end time for the class, or leave both unchanged.');
-        }
-        if (cStart && cEnd && cEnd <= cStart) {
-          return showErr('The class end time must be after its start time.');
-        }
-        payload = {
-          status: 'Approved',
-          staff_comment: comment,
-          class_room_id: room || undefined,
-          class_day_of_week: day || undefined,
-          class_start_time: cStart || undefined,
-          class_end_time: cEnd || undefined,
-        };
-      } else {
-        const room = document.getElementById('overrideMoveRoom')?.value || '';
-        const date = document.getElementById('overrideMoveDate')?.value || '';
-        const start = document.getElementById('overrideMoveStart')?.value || '';
-        const end = document.getElementById('overrideMoveEnd')?.value || '';
-
-        if (!date || !start || !end) {
-          return showErr('Please choose the date and times to move the conflicting booking to.');
-        }
-        if (end <= start) {
-          return showErr('The end time must be after the start time.');
-        }
-        payload = {
-          status: 'Approved',
-          staff_comment: comment,
-          move_room_id: room || undefined,
-          move_start_time: `${date} ${start}:00`,
-          move_end_time: `${date} ${end}:00`,
-        };
+      if (!date || !start || !end) {
+        return showErr('Please choose the date and times to move the conflicting booking to.');
+      }
+      if (end <= start) {
+        return showErr('The end time must be after the start time.');
       }
 
       try {
         const res = await apiFetch(`api/conflict-override-requests/${id}`, {
           method: 'PATCH',
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            status: 'Approved',
+            staff_comment: comment,
+            move_start_time: `${date} ${start}:00`,
+            move_end_time: `${date} ${end}:00`,
+          }),
         });
-        showToast((res && res.message) || (isClass
-          ? 'Request approved — class moved and booking created.'
-          : 'Conflict override approved! Conflicting booking move request filed.'), 'success');
+        showToast((res && res.message) || 'Conflict override approved! Conflicting booking move request filed.', 'success');
         closeModal('conflictOverrideModal');
         await loadAllData();
         renderOverridesTable();

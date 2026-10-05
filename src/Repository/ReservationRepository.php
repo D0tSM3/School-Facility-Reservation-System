@@ -614,19 +614,18 @@ class ReservationRepository
     // ---------------------------------------------------------------
 
     /** $reason: why the move was proposed, when it wasn't the holder's own idea. */
-    public function createMoveRequest(string $reservationId, string $requestedStart, string $requestedEnd, ?string $reason = null, ?string $newRoomId = null): array
+    public function createMoveRequest(string $reservationId, string $requestedStart, string $requestedEnd, ?string $reason = null): array
     {
         $requestId = self::uuidv4();
         $this->db->query(
-            'INSERT INTO ReservationMoveRequests (request_id, reservation_id, requested_start_time, requested_end_time, reason, new_room_id)
-             VALUES (:request_id, :reservation_id, :requested_start_time, :requested_end_time, :reason, :new_room_id)',
+            'INSERT INTO ReservationMoveRequests (request_id, reservation_id, requested_start_time, requested_end_time, reason)
+             VALUES (:request_id, :reservation_id, :requested_start_time, :requested_end_time, :reason)',
             [
                 ':request_id'           => $requestId,
                 ':reservation_id'       => $reservationId,
                 ':requested_start_time' => $requestedStart,
                 ':requested_end_time'   => $requestedEnd,
                 ':reason'               => $reason,
-                ':new_room_id'          => $newRoomId,
             ]
         );
 

@@ -280,14 +280,10 @@ class ReservationController
      * start/end follow the POST convention: dates = range, clocks = daily window.
      */
     /**
-     * What a request slip could resolve for this slot, or null if nothing can.
-     * Returns one of:
-     *   ['type' => 'class',       'class' => [...schedule row...]]
-     *   ['type' => 'reservation', 'reservation' => [...reservation row...]]
-     *
-     * A class block is resolvable — staff relocate or reschedule the class.
-     * Another customer's booking is resolvable — staff move it. The hard rules
-     * (holiday, closed day, business hours, dead room) are not.
+     * The other customer's booking a request slip could resolve for this slot,
+     * or null if nothing can. Only a clash with another user's Pending/Approved
+     * reservation is overridable; a class schedule, holiday, closed day or
+     * business-hours violation is a hard block a slip cannot resolve.
      */
     private function overridableConflict(string $roomId, string $startTime, string $endTime, ?array $activeDates = null): ?array {
         $startDate  = substr($startTime, 0, 10);
@@ -295,17 +291,9 @@ class ReservationController
         $dailyStart = substr($startTime, 11);
         $dailyEnd   = substr($endTime, 11);
 
-        // checkRange with blockingStatuses=[] ignores reservations but still
-        // reports room/closed/hours/holiday/class problems — the first one.
-        $rangeErr = ReservationValidator::checkRange($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, [], [], $activeDates);
-        if ($rangeErr !== null) {
-            // Only a class collision is resolvable; everything else is a hard rule.
-            if (strpos($rangeErr, 'official class schedule') !== false) {
-                $class = ReservationValidator::findConflictingClass($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, $activeDates);
-                if ($class !== null) {
-                    return ['type' => 'class', 'class' => $class];
-                }
-            }
+        // General rules (room, hours, closed days, holidays, classes) are hard
+        // blocks: if any trips here — reservations ignored — no slip can help.
+        if (ReservationValidator::checkRange($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, [], [], $activeDates) !== null) {
             return null;
         }
 
@@ -621,7 +609,6 @@ class ReservationController
         }
 
         $conflictId = $override['conflicting_reservation_id'];
-        $isClass    = !empty($override['conflicting_class_id']);
 
         if ($status === 'Rejected') {
             $updated = $overrides->decide($requestId, 'Rejected', Auth::userId(), $staffComment !== '' ? $staffComment : null);
@@ -629,12 +616,14 @@ class ReservationController
             Response::json($updated);
         }
 
-        // --- Approve a CLASS conflict: relocate and/or reschedule the class. ---
-        if ($isClass) {
-            $this->approveClassOverride($override, $body, $staffComment !== '' ? $staffComment : null);
+        // A class schedule can no longer be resolved by a slip. Any such request
+        // left over from the old flow (no conflicting reservation) is rejected
+        // only — staff relocate the class directly from Class Schedules instead.
+        if (empty($conflictId)) {
+            Response::error('This request is against a class schedule and cannot be approved. Reject it, then relocate the class from Class Schedules if the room is needed.', 422);
         }
 
-        // --- Approve a RESERVATION conflict: propose moving it out of the way ---
+        // --- Approve: propose moving the conflicting booking out of the way ---
         $conflict = $this->reservations->findById($conflictId);
         if ($conflict === null || !in_array($conflict['status'], ['Approved', 'Pending'], true)) {
             Response::error(
@@ -647,17 +636,6 @@ class ReservationController
             Response::error('The conflicting booking already has a move request awaiting review. Resolve that first.', 409);
         }
 
-        // Optionally relocate the conflicting booking to a different room.
-        $moveRoomId = trim((string) ($body['move_room_id'] ?? ''));
-        $targetRoom = $conflict['room_id'];
-        if ($moveRoomId !== '' && $moveRoomId !== $conflict['room_id']) {
-            if (!self::isUuid($moveRoomId) || (new RoomRepository())->findById($moveRoomId) === null) {
-                Response::error('The destination room for the conflicting booking was not found.', 404);
-            }
-            $targetRoom = $moveRoomId;
-        }
-        $relocating = $targetRoom !== $conflict['room_id'];
-
         $moveStart = DateTimeHelper::toMysqlDateTime(trim((string) ($body['move_start_time'] ?? '')));
         $moveEnd   = DateTimeHelper::toMysqlDateTime(trim((string) ($body['move_end_time'] ?? '')));
         if ($moveStart === null || $moveEnd === null) {
@@ -667,31 +645,26 @@ class ReservationController
             Response::error('The new time for the conflicting booking must be in the future.', 422);
         }
 
-        // Keeping it in the SAME room but inside the requested window frees
-        // nothing. Relocating to another room frees the room regardless of time.
-        if (!$relocating) {
-            $days    = ReservationValidator::datesBetween(substr($override['start_time'], 0, 10), substr($override['end_time'], 0, 10)) ?? [];
-            $moveDay = substr($moveStart, 0, 10);
-            if (in_array($moveDay, $days, true)
-                && substr($moveStart, 11) < substr($override['end_time'], 11)
-                && substr($moveEnd, 11) > substr($override['start_time'], 11)) {
-                Response::error('That new time still overlaps the slot being requested. Pick another time, or move it to a different room.', 422);
-            }
+        // Moving it into another part of the requested slot would free nothing.
+        $days = ReservationValidator::datesBetween(substr($override['start_time'], 0, 10), substr($override['end_time'], 0, 10)) ?? [];
+        $moveDay = substr($moveStart, 0, 10);
+        if (in_array($moveDay, $days, true)
+            && substr($moveStart, 11) < substr($override['end_time'], 11)
+            && substr($moveEnd, 11) > substr($override['start_time'], 11)) {
+            Response::error('That new time still overlaps the slot being requested. Pick a time outside it.', 422);
         }
 
-        $error = ReservationValidator::check($targetRoom, $moveStart, $moveEnd, $conflictId);
+        $error = ReservationValidator::check($conflict['room_id'], $moveStart, $moveEnd, $conflictId);
         if ($error !== null) {
             Response::error("The conflicting booking can't move there: {$error}", 409);
         }
 
-        $newRoomForMove = $relocating ? $targetRoom : null;
-        $updated = $this->reservations->transaction(function () use ($overrides, $requestId, $conflictId, $moveStart, $moveEnd, $staffComment, $newRoomForMove): array {
+        $updated = $this->reservations->transaction(function () use ($overrides, $requestId, $conflictId, $moveStart, $moveEnd, $staffComment): array {
             $move = $this->reservations->createMoveRequest(
                 $conflictId,
                 $moveStart,
                 $moveEnd,
-                'Staff proposed this move so an urgent request can use the original time slot.',
-                $newRoomForMove
+                'Staff proposed this move so an urgent request can use the original time slot.'
             );
             return $overrides->decide(
                 $requestId, 'Approved', Auth::userId(),
@@ -1595,12 +1568,9 @@ class ReservationController
         }
 
         if ($status === 'Approved') {
-            // A staff-proposed move may also relocate the booking's room.
-            $targetRoom = !empty($existing['new_room_id']) ? (string) $existing['new_room_id'] : (string) $existing['room_id'];
-
-            // Run validator against wherever it's actually going.
+            // Run validator
             $error = ReservationValidator::check(
-                $targetRoom,
+                $existing['room_id'],
                 $existing['requested_start_time'],
                 $existing['requested_end_time'],
                 $existing['reservation_id']
@@ -1609,20 +1579,12 @@ class ReservationController
                 Response::error($error, 409);
             }
 
-            if ($targetRoom !== (string) $existing['room_id']) {
-                $this->reservations->updateRoomAndTimes(
-                    $existing['reservation_id'],
-                    $targetRoom,
-                    $existing['requested_start_time'],
-                    $existing['requested_end_time']
-                );
-            } else {
-                $this->reservations->updateTimes(
-                    $existing['reservation_id'],
-                    $existing['requested_start_time'],
-                    $existing['requested_end_time']
-                );
-            }
+            // Update actual reservation times
+            $this->reservations->updateTimes(
+                $existing['reservation_id'],
+                $existing['requested_start_time'],
+                $existing['requested_end_time']
+            );
         }
 
         $request = $this->reservations->updateMoveRequestStatus(
