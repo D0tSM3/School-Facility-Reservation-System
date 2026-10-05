@@ -5,6 +5,7 @@
     <title>CampusRoom — Register | BPU Facility Gateway</title>
     <meta name="description" content="Register for a CampusRoom account." />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
 
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
@@ -395,35 +396,105 @@
       </div>
     </main>
 
-    <!-- Load Google reCAPTCHA -->
-    <script
-      src="https://www.google.com/recaptcha/api.js?render=explicit"
-      async
-      defer
-    ></script>
+    <!-- Google reCAPTCHA loader -->
     <script>
       const BASE = window.location.pathname.replace(/[^\/]*$/, "");
-
+      const DEFAULT_RECAPTCHA_SITE_KEY = "6LenfsUtAAAAAJMakfoU3JfbkJk0s5950zLy2GdY";
       let recaptchaWidgetId = null;
 
-      window.onload = function () {
-        fetch(BASE + "api/config")
-          .then((res) => res.json())
-          .then((res) => {
-            const config = res.data;
-            if (
-              config &&
-              config.recaptcha_enabled &&
-              config.recaptcha_site_key &&
-              window.grecaptcha
-            ) {
-              recaptchaWidgetId = grecaptcha.render("registerRecaptcha", {
-                sitekey: config.recaptcha_site_key,
-                theme: "light",
-              });
+      function initRegisterCaptcha() {
+        const container = document.getElementById("registerRecaptcha");
+        if (!container) return;
+
+        function startCaptcha(config) {
+          if (!config || !config.recaptcha_enabled || !config.recaptcha_site_key) {
+            return;
+          }
+
+          container.innerHTML = '<div class="w-full text-center text-[11px] rounded border px-3 py-2 border-[#dcc0c0] bg-[#f8f9fb] text-[#564242]">Loading verification…</div>';
+
+          const mount = () => {
+            if (recaptchaWidgetId !== null) return;
+            container.innerHTML = '';
+            try {
+              if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+                recaptchaWidgetId = window.grecaptcha.render("registerRecaptcha", {
+                  sitekey: config.recaptcha_site_key,
+                  theme: "light",
+                });
+              }
+            } catch (err) {
+              console.error('[reCAPTCHA] render failed:', err);
+              container.innerHTML = '<div class="w-full text-center text-[11px] rounded border px-3 py-2 border-[#f3c9c6] bg-[#fdf4f3] text-[#93000a]">Verification could not load. Check that this domain is registered in the Google reCAPTCHA console.</div>';
             }
+          };
+
+          if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+            mount();
+            return;
+          }
+
+          window.onRegisterCaptchaLoad = function () {
+            mount();
+          };
+
+          if (!document.querySelector('script[src*="recaptcha/api.js"]')) {
+            const loadScript = (src, onFail) => {
+              const script = document.createElement("script");
+              script.src = src;
+              script.async = true;
+              script.defer = true;
+              script.onerror = onFail;
+              document.head.appendChild(script);
+            };
+
+            // Attempt google.com first, then fall back to recaptcha.net mirror (e.g. for QUIC protocol errors)
+            loadScript(
+              "https://www.google.com/recaptcha/api.js?onload=onRegisterCaptchaLoad&render=explicit",
+              () => {
+                console.warn('[reCAPTCHA] Failed to load from google.com, trying recaptcha.net mirror...');
+                loadScript(
+                  "https://www.recaptcha.net/recaptcha/api.js?onload=onRegisterCaptchaLoad&render=explicit",
+                  () => {
+                    container.innerHTML = '<div class="w-full text-center text-[11px] rounded border px-3 py-2 border-[#f3c9c6] bg-[#fdf4f3] text-[#93000a]">Could not reach Google verification service. Check your connection or disable QUIC protocol.</div>';
+                  }
+                );
+              }
+            );
+          } else {
+            const poll = setInterval(() => {
+              if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+                clearInterval(poll);
+                mount();
+              }
+            }, 100);
+            setTimeout(() => clearInterval(poll), 8000);
+          }
+        }
+
+        fetch(BASE + "api/config")
+          .then((res) => {
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.json();
+          })
+          .then((res) => {
+            const config = (res && res.data) ? res.data : (res || {});
+            startCaptcha(config);
+          })
+          .catch((err) => {
+            console.warn('[reCAPTCHA] Failed to load /api/config, falling back to default site key:', err);
+            startCaptcha({
+              recaptcha_enabled: true,
+              recaptcha_site_key: DEFAULT_RECAPTCHA_SITE_KEY,
+            });
           });
-      };
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initRegisterCaptcha);
+      } else {
+        initRegisterCaptcha();
+      }
 
       // Eye Icon Password Toggle
       document.querySelectorAll(".toggle-password").forEach((btn) => {

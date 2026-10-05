@@ -50,55 +50,104 @@ document.addEventListener('DOMContentLoaded', () => {
       '">' + text + '</div>';
   }
 
+  const DEFAULT_RECAPTCHA_SITE_KEY = '6LenfsUtAAAAAJMakfoU3JfbkJk0s5950zLy2GdY';
+
   function initCaptcha(containerIds) {
     const present = containerIds.filter(id => document.getElementById(id));
     if (!present.length) return;
 
-    fetch(BASE_URI + 'api/config', { credentials: 'same-origin' })
-      .then(res => res.json())
-      .then(json => {
-        const cfg = (json && json.data) || {};
-        if (!cfg.recaptcha_enabled || !cfg.recaptcha_site_key) return;
+    const startCaptcha = (cfg) => {
+      if (!cfg.recaptcha_enabled || !cfg.recaptcha_site_key) return;
 
-        captcha.enabled = true;
-        present.forEach(id => captchaNotice(document.getElementById(id), 'Loading verification…', false));
+      captcha.enabled = true;
+      present.forEach(id => captchaNotice(document.getElementById(id), 'Loading verification…', false));
 
-        window.onCampusRoomCaptchaLoad = () => {
-          present.forEach(id => {
-            const el = document.getElementById(id);
-            el.innerHTML = '';                       // clear the placeholder
-            try {
+      const mountWidgets = () => {
+        present.forEach(id => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.innerHTML = '';                       // clear the placeholder
+          try {
+            if (captcha.widgets[id] === undefined && window.grecaptcha && typeof window.grecaptcha.render === 'function') {
               captcha.widgets[id] = window.grecaptcha.render(id, { sitekey: cfg.recaptcha_site_key });
-            } catch (err) {
-              console.error('[captcha] render failed for #' + id, err);
-              captchaNotice(el, 'Verification could not load. Check that this site’s domain is registered for the reCAPTCHA key.', true);
             }
-          });
-          captcha.ready = true;
+          } catch (err) {
+            console.error('[captcha] render failed for #' + id, err);
+            captchaNotice(el, 'Verification could not load. Check that this site’s domain is registered for the reCAPTCHA key.', true);
+          }
+        });
+        captcha.ready = true;
+      };
+
+      if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+        mountWidgets();
+        return;
+      }
+
+      window.onCampusRoomCaptchaLoad = mountWidgets;
+
+      if (!document.querySelector('script[src*="recaptcha/api.js"]')) {
+        const loadScript = (src, onFail) => {
+          const script = document.createElement('script');
+          script.src = src;
+          script.async = true;
+          script.defer = true;
+          script.onerror = onFail;
+          document.head.appendChild(script);
         };
 
-        const script = document.createElement('script');
-        script.src = 'https://www.google.com/recaptcha/api.js?onload=onCampusRoomCaptchaLoad&render=explicit';
-        script.async = true;
-        script.defer = true;
-        // The server REQUIRES a token, so a checkbox that never appears is a
-        // silent lockout. Say so rather than leaving a blank gap.
-        script.onerror = () => present.forEach(id =>
-          captchaNotice(document.getElementById(id),
-            'Could not reach Google to load the robot check. You may be offline.', true));
-        document.head.appendChild(script);
+        // Attempt google.com first, then fall back to recaptcha.net mirror (e.g. for QUIC protocol errors)
+        loadScript(
+          'https://www.google.com/recaptcha/api.js?onload=onCampusRoomCaptchaLoad&render=explicit',
+          () => {
+            console.warn('[captcha] Failed to load from google.com, trying recaptcha.net mirror...');
+            loadScript(
+              'https://www.recaptcha.net/recaptcha/api.js?onload=onCampusRoomCaptchaLoad&render=explicit',
+              () => {
+                present.forEach(id =>
+                  captchaNotice(document.getElementById(id),
+                    'Could not reach Google verification service. Check your connection or disable QUIC protocol.', true));
+              }
+            );
+          }
+        );
+      } else {
+        const poll = setInterval(() => {
+          if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+            clearInterval(poll);
+            mountWidgets();
+          }
+        }, 100);
+        setTimeout(() => clearInterval(poll), 8000);
+      }
 
-        window.setTimeout(() => {
-          if (captcha.ready) return;
-          present.forEach(id => {
-            const el = document.getElementById(id);
-            if (el && !el.querySelector('iframe')) {
-              captchaNotice(el, 'The robot check did not load. Try refreshing; if it persists, contact the facilities desk.', true);
-            }
-          });
-        }, 8000);
+      window.setTimeout(() => {
+        if (captcha.ready) return;
+        present.forEach(id => {
+          const el = document.getElementById(id);
+          if (el && !el.querySelector('iframe')) {
+            captchaNotice(el, 'The robot check did not load. Try refreshing; if it persists, contact the facilities desk.', true);
+          }
+        });
+      }, 8000);
+    };
+
+    fetch(BASE_URI + 'api/config', { credentials: 'same-origin' })
+      .then(res => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
       })
-      .catch(() => { /* config unreachable: leave the forms as they are */ });
+      .then(json => {
+        const cfg = (json && json.data) || {};
+        startCaptcha(cfg);
+      })
+      .catch((err) => {
+        console.warn('[captcha] /api/config unavailable, falling back to default site key:', err);
+        startCaptcha({
+          recaptcha_enabled: true,
+          recaptcha_site_key: DEFAULT_RECAPTCHA_SITE_KEY
+        });
+      });
   }
 
   initCaptcha(['loginRecaptcha', 'registerRecaptcha']);

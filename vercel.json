@@ -1,4 +1,5 @@
 {
+<<<<<<< Updated upstream
   "version": 2,
   "outputDirectory": "public",
   "builds": [
@@ -20,5 +21,10 @@
       "src": "/(.*)",
       "dest": "/public/$1"
     }
+=======
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/api/config", "destination": "/api/config.json" }
+>>>>>>> Stashed changes
   ]
 }

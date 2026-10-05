@@ -97,6 +97,8 @@ document.addEventListener('DOMContentLoaded', () => {
       '">' + text + '</div>';
   }
 
+  const DEFAULT_RECAPTCHA_SITE_KEY = '6LenfsUtAAAAAJMakfoU3JfbkJk0s5950zLy2GdY';
+
   /**
    * Initializes reCAPTCHA dynamically by querying GET api/config.
    */
@@ -104,78 +106,102 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById(recaptchaContainerId);
     if (!container) return;
 
-    fetch(BASE_URI + 'api/config', { credentials: 'same-origin' })
-      .then(res => res.json())
-      .then(json => {
-        const cfg = (json && json.data) ? json.data : (json || {});
-        if (!cfg.recaptcha_enabled || !cfg.recaptcha_site_key) {
-          captcha.enabled = false;
-          return;
-        }
+    function startCaptcha(cfg) {
+      if (!cfg.recaptcha_enabled || !cfg.recaptcha_site_key) {
+        captcha.enabled = false;
+        return;
+      }
 
-        captcha.enabled = true;
-        captcha.siteKey = cfg.recaptcha_site_key;
-        renderCaptchaNotice(container, 'Loading verification…', false);
+      captcha.enabled = true;
+      captcha.siteKey = cfg.recaptcha_site_key;
+      renderCaptchaNotice(container, 'Loading verification…', false);
 
-        const mountWidget = () => {
-          container.innerHTML = '';
-          try {
-            if (captcha.widgetId === null && window.grecaptcha && typeof window.grecaptcha.render === 'function') {
-              captcha.widgetId = window.grecaptcha.render(recaptchaContainerId, {
-                sitekey: cfg.recaptcha_site_key
-              });
-              captcha.ready = true;
-            }
-          } catch (err) {
-            console.error('[reCAPTCHA] render failed:', err);
-            renderCaptchaNotice(container, 'Verification could not load. Please check your connection.', true);
+      const mountWidget = () => {
+        container.innerHTML = '';
+        try {
+          if (captcha.widgetId === null && window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+            captcha.widgetId = window.grecaptcha.render(recaptchaContainerId, {
+              sitekey: cfg.recaptcha_site_key
+            });
+            captcha.ready = true;
           }
-        };
-
-        if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
-          mountWidget();
-          return;
+        } catch (err) {
+          console.error('[reCAPTCHA] render failed:', err);
+          renderCaptchaNotice(container, 'Verification could not load. Check that this domain is registered in the Google reCAPTCHA console.', true);
         }
+      };
 
-        const existingScript = document.querySelector('script[src*="recaptcha/api.js"]');
-        if (existingScript) {
-          const pollInterval = setInterval(() => {
-            if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
-              clearInterval(pollInterval);
-              mountWidget();
-            }
-          }, 100);
-          setTimeout(() => clearInterval(pollInterval), 8000);
-          return;
-        }
+      if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+        mountWidget();
+        return;
+      }
 
-        const callbackName = 'onCampusRoomForgotCaptchaLoad';
-        window[callbackName] = () => {
-          mountWidget();
-          try {
-            delete window[callbackName];
-          } catch (e) {
-            window[callbackName] = undefined;
+      const existingScript = document.querySelector('script[src*="recaptcha/api.js"]');
+      if (existingScript) {
+        const pollInterval = setInterval(() => {
+          if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+            clearInterval(pollInterval);
+            mountWidget();
           }
-        };
+        }, 100);
+        setTimeout(() => clearInterval(pollInterval), 8000);
+        return;
+      }
 
+      const callbackName = 'onCampusRoomForgotCaptchaLoad';
+      window[callbackName] = () => {
+        mountWidget();
+        try {
+          delete window[callbackName];
+        } catch (e) {
+          window[callbackName] = undefined;
+        }
+      };
+
+      const loadScript = (src, onFail) => {
         const script = document.createElement('script');
-        script.src = `https://www.google.com/recaptcha/api.js?onload=${callbackName}&render=explicit`;
+        script.src = src;
         script.async = true;
         script.defer = true;
-        script.onerror = () => {
-          renderCaptchaNotice(container, 'Could not reach Google verification service. You may be offline.', true);
-        };
+        script.onerror = onFail;
         document.head.appendChild(script);
+      };
 
-        setTimeout(() => {
-          if (!captcha.ready && container && !container.querySelector('iframe')) {
-            renderCaptchaNotice(container, 'Verification took too long to load. Try refreshing the page.', true);
-          }
-        }, 8000);
+      loadScript(
+        `https://www.google.com/recaptcha/api.js?onload=${callbackName}&render=explicit`,
+        () => {
+          console.warn('[reCAPTCHA] Failed to load from google.com, trying recaptcha.net mirror...');
+          loadScript(
+            `https://www.recaptcha.net/recaptcha/api.js?onload=${callbackName}&render=explicit`,
+            () => {
+              renderCaptchaNotice(container, 'Could not reach Google verification service. Check your connection or disable QUIC protocol.', true);
+            }
+          );
+        }
+      );
+
+      setTimeout(() => {
+        if (!captcha.ready && container && !container.querySelector('iframe')) {
+          renderCaptchaNotice(container, 'Verification took too long to load. Try refreshing the page.', true);
+        }
+      }, 8000);
+    }
+
+    fetch(BASE_URI + 'api/config', { credentials: 'same-origin' })
+      .then(res => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
       })
-      .catch(() => {
-        captcha.enabled = false;
+      .then(json => {
+        const cfg = (json && json.data) ? json.data : (json || {});
+        startCaptcha(cfg);
+      })
+      .catch((err) => {
+        console.warn('[reCAPTCHA] /api/config unavailable, using default client config:', err);
+        startCaptcha({
+          recaptcha_enabled: true,
+          recaptcha_site_key: DEFAULT_RECAPTCHA_SITE_KEY
+        });
       });
   }
 

@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "data": {
+    "recaptcha_enabled": true,
+    "recaptcha_site_key": "6LenfsUtAAAAAJMakfoU3JfbkJk0s5950zLy2GdY",
+    "google_client_id": "803362924780-illqusn0mhn75g3qumjib2un626aojq3.apps.googleusercontent.com"
+  },
+  "error": null
+}
