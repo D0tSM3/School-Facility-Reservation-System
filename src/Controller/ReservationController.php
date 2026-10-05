@@ -199,9 +199,10 @@ class ReservationController
         }
 
         // The booking's audit trail now starts at submission, not approval.
+        $dayLabel = self::compactDates([substr((string) $startTime, 0, 10)], true);
         $this->reservations->insertLog(
             Auth::userId(),
-            'Reservation submitted by requester',
+            "Reservation submitted by requester [{$dayLabel}]",
             $reservation['reservation_id']
         );
         $this->logAutoApproval($status, $approvalType, [$reservation['reservation_id']]);
@@ -491,15 +492,25 @@ class ReservationController
             throw $e;
         }
 
-        $count = count($rows);
-        foreach ($rows as $i => $row) {
+        // One combined audit entry for the whole booking, not one per day.
+        // A consecutive range reads 'Oct 1 - 3'; separately chosen days read
+        // 'Oct 1, 2, 4'. Attached to the first day, which anchors the series.
+        $dates   = array_map(static fn(array $r): string => substr((string) $r['start_time'], 0, 10), $rows);
+        $isRange = !(is_array($activeDates) && count($activeDates) > 0);
+        $label   = self::compactDates($dates, $isRange);
+
+        $this->reservations->insertLog(
+            Auth::userId(),
+            "Reservation submitted by requester [{$label}]",
+            $rows[0]['reservation_id']
+        );
+        if ($status === 'Approved' && $approvalType === 'auto') {
             $this->reservations->insertLog(
                 Auth::userId(),
-                'Reservation submitted by requester (day ' . ($i + 1) . " of $count)",
-                $row['reservation_id']
+                "Auto-approved: no conflicts found [{$label}]",
+                $rows[0]['reservation_id']
             );
         }
-        $this->logAutoApproval($status, $approvalType, array_column($rows, 'reservation_id'));
 
         Response::json($rows[0] + ['series' => $rows], 201);
     }
@@ -875,6 +886,48 @@ class ReservationController
     private static function isUuid(string $value): bool
     {
         return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $value) === 1;
+    }
+
+    /**
+     * A booking's dates as one compact label for the audit log:
+     *   single day            -> 'Oct 1'
+     *   consecutive range      -> 'Oct 1 - 2'   (month repeated only across months)
+     *   specific/separate days -> 'Oct 1, 2, 3'
+     *
+     * @param string[] $ymd    'Y-m-d' dates
+     * @param bool     $asRange true for a consecutive range, false for a day list
+     */
+    private static function compactDates(array $ymd, bool $asRange): string
+    {
+        $ymd = array_values(array_unique(array_filter($ymd)));
+        sort($ymd);
+        if ($ymd === []) {
+            return '';
+        }
+
+        $token = static fn(string $d): string => date('M j', (int) strtotime($d)); // 'Oct 1'
+        if (count($ymd) === 1) {
+            return $token($ymd[0]);
+        }
+
+        if ($asRange) {
+            $first = $ymd[0];
+            $last  = $ymd[count($ymd) - 1];
+            // Same month: 'Oct 1 - 2'. Across months: 'Oct 30 - Nov 2'.
+            return date('Y-m', (int) strtotime($first)) === date('Y-m', (int) strtotime($last))
+                ? $token($first) . ' - ' . date('j', (int) strtotime($last))
+                : $token($first) . ' - ' . $token($last);
+        }
+
+        // Separate days: name the month once per month it appears.
+        $parts = [];
+        $lastMonth = null;
+        foreach ($ymd as $d) {
+            $month = date('Y-m', (int) strtotime($d));
+            $parts[] = $month === $lastMonth ? date('j', (int) strtotime($d)) : $token($d);
+            $lastMonth = $month;
+        }
+        return implode(', ', $parts);
     }
 
     // ---------------------------------------------------------------
