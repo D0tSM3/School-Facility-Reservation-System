@@ -71,17 +71,42 @@ header('Content-Type: application/json; charset=utf-8');
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Strip query string.
-$uri = strtok($_SERVER['REQUEST_URI'], '?');
+$uri = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
 
-// Strip the application base path so routes work under a subdirectory
-// (e.g. /Project/public/api/... → /api/...).
-// SCRIPT_NAME is something like /Project/public/index.php.
-$basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
-if ($basePath !== '' && str_starts_with($uri, $basePath)) {
-    $uri = substr($uri, strlen($basePath));
+// Strip the application's mount prefix so routes work both under a subdirectory
+// (XAMPP: /Project/public/api/... -> /api/...) and at a domain root (Vercel).
+// Only strip when SCRIPT_NAME actually points at the front controller; on
+// Vercel SCRIPT_NAME can be set to the request path itself, and the old logic
+// then ate a real route segment (e.g. /api), producing "Route not found".
+$scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+if (basename($scriptName) === 'index.php') {
+    $basePath = rtrim(dirname($scriptName), '/');
+    if ($basePath !== '' && $basePath !== '/' && str_starts_with($uri, $basePath . '/')) {
+        $uri = substr($uri, strlen($basePath));
+    }
+}
+
+// A rewrite target can leave the front controller's own file path in the URI;
+// treat that as the site root.
+if (in_array($uri, ['/index.php', '/public/index.php', '/public'], true)) {
+    $uri = '/';
 }
 
 $uri = rtrim($uri, '/') ?: '/';
+
+// TEMPORARY routing diagnostic — remove once Vercel routing is confirmed.
+// Returns only request-path values, no secrets.
+if (isset($_GET['__diag']) && $_GET['__diag'] === 'routing') {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'request_uri'  => $_SERVER['REQUEST_URI'] ?? null,
+        'script_name'  => $_SERVER['SCRIPT_NAME'] ?? null,
+        'php_self'     => $_SERVER['PHP_SELF'] ?? null,
+        'path_info'    => $_SERVER['PATH_INFO'] ?? null,
+        'computed_uri' => $uri,
+    ]);
+    exit;
+}
 
 // -----------------------------------------------------------------------
 // 3. Route table
