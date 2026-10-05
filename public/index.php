@@ -94,20 +94,6 @@ if (in_array($uri, ['/index.php', '/public/index.php', '/public'], true)) {
 
 $uri = rtrim($uri, '/') ?: '/';
 
-// TEMPORARY routing diagnostic — remove once Vercel routing is confirmed.
-// Returns only request-path values, no secrets.
-if (isset($_GET['__diag']) && $_GET['__diag'] === 'routing') {
-    header('Content-Type: application/json');
-    echo json_encode([
-        'request_uri'  => $_SERVER['REQUEST_URI'] ?? null,
-        'script_name'  => $_SERVER['SCRIPT_NAME'] ?? null,
-        'php_self'     => $_SERVER['PHP_SELF'] ?? null,
-        'path_info'    => $_SERVER['PATH_INFO'] ?? null,
-        'computed_uri' => $uri,
-    ]);
-    exit;
-}
-
 // -----------------------------------------------------------------------
 // 3. Route table
 // -----------------------------------------------------------------------
