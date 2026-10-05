@@ -92,7 +92,9 @@ final class Recaptcha
         ]);
         $raw    = curl_exec($ch);
         $error  = curl_error($ch);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80500) {
+            @curl_close($ch);
+        }
 
         // Could not reach Google. This is the fail-open/closed decision.
         if ($raw === false) {
