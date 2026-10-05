@@ -29,14 +29,27 @@ class Auth
     public static function startSession(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
+            // On serverless hosts (Vercel) the filesystem session store is wiped
+            // between requests, so keep sessions in the database there. Local
+            // XAMPP keeps the default files handler. Must be set before start.
+            if (self::useDbSessions()) {
+                try {
+                    session_set_save_handler(new DbSessionHandler(), true);
+                } catch (\Throwable $e) {
+                    error_log('[CampusRoom] could not register DB session handler: ' . $e->getMessage());
+                }
+            }
+
             if (!headers_sent()) {
+                // isSecure() honours X-Forwarded-Proto so the cookie is marked
+                // Secure behind Vercel's proxy (where $_SERVER['HTTPS'] is unset).
                 session_set_cookie_params([
                     'lifetime' => 0,
                     'path'     => '/',
                     'domain'   => '',
                     'secure'   => self::isSecure(),
                     'httponly' => true,
-                    'samesite' => 'Lax',
+                    'samesite' => 'Lax', // Strict drops the cookie on some cross-site returns; Lax keeps same-site API calls working
                 ]);
             }
 
@@ -48,6 +61,20 @@ class Auth
         if (empty($_SESSION['user_id'])) {
             self::restoreFromSignedCookie();
         }
+    }
+
+    /**
+     * True when sessions should be stored in the database rather than on disk.
+     *
+     * Opt-in via SESSION_DRIVER=db. On Vercel, login persistence is handled by
+     * the stateless signed cookie below (no per-request DB round-trip, which at
+     * ~1.5s each would slow every page), so DB sessions are NOT auto-enabled —
+     * set SESSION_DRIVER=db only if you want server-side, revocable sessions
+     * and accept the latency.
+     */
+    private static function useDbSessions(): bool
+    {
+        return ($_ENV['SESSION_DRIVER'] ?? getenv('SESSION_DRIVER')) === 'db';
     }
 
     /**
