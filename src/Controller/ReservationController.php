@@ -96,6 +96,10 @@ class ReservationController
             Response::error('Forbidden.', 403);
         }
 
+        if ($reservation['series_id'] !== null) {
+            $reservation['series'] = $this->reservations->findSeries($reservation['series_id']);
+        }
+
         Response::json($reservation);
     }
 

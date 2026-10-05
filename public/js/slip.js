@@ -199,12 +199,20 @@
       row('Room', textOrDash(r.room_name)) +
       row('Details', roomDetails(r) || '—'));
 
+    let displayStart = r.start_time;
+    let displayEnd = r.end_time;
+    
+    if (r.series && r.series.length > 1) {
+      displayStart = r.series[0].start_time;
+      displayEnd = r.series[r.series.length - 1].end_time;
+    }
+
     const booking = section('Booking',
       row('Category', textOrDash(r.category)) +
       row('Purpose', textOrDash(r.purpose)) +
       (has(r.equipment_notes) ? row('Equipment notes', escapeHtml(r.equipment_notes)) : '') +
-      row('Starts', escapeHtml(formatLong(r.start_time))) +
-      row('Ends', escapeHtml(formatLong(r.end_time))));
+      row('Starts', escapeHtml(formatLong(displayStart))) +
+      row('Ends', escapeHtml(formatLong(displayEnd))));
 
     const processedBy = has(r.processed_by_name)
       ? escapeHtml(r.processed_by_name)
