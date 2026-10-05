@@ -145,11 +145,24 @@
     if (nameEl) {
       nameEl.textContent = user.name || '';
       if (roleEl) {
-        roleEl.textContent = user.role === 'Staff' || user.role === 'Admin'
-          ? user.role + ' / Registrar'
-          : 'Student';
+        var roleLabel = user.role ? user.role.toUpperCase() : '';
+        if (user.role === 'Customer' || user.role === 'customer') {
+          roleLabel = (user.account_type || 'STUDENT').toUpperCase();
+        }
+        roleEl.textContent = roleLabel;
       }
-      var initialsEl = document.querySelector('.header-initials');
+    }
+    
+    // Fast cosmetic update for Admin Dashboard header
+    var adminNameEl = document.getElementById('adminUserName');
+    if (adminNameEl) adminNameEl.textContent = user.name || '';
+    
+    var adminRoleEl = document.getElementById('adminUserRole');
+    if (adminRoleEl) {
+      adminRoleEl.textContent = (user.role || '').toUpperCase();
+    }
+
+    var initialsEl = document.querySelector('.header-initials');
       if (initialsEl) {
         var parts = String(user.name || '').split(' ').filter(function (p) { return p && p.toLowerCase() !== 'dr.'; });
         var i1 = parts[0] ? parts[0][0] : '';
