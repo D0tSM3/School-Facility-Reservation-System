@@ -696,7 +696,30 @@ function renderReservations() {
         const date = formatDate(reservation.start_time);
         const multi = String(reservation.start_time).slice(0, 10) !== String(reservation.end_time).slice(0, 10);
         const endDateObj = multi ? formatDate(reservation.end_time) : null;
-        const daysText = multi ? ` to ${endDateObj.month} ${endDateObj.day}, ${endDateObj.year}` : '';
+        
+        let extraOverrideHtml = '';
+        if (multi) {
+           let datesText = '';
+           if (date.year !== endDateObj.year) {
+               datesText = `${date.month} ${date.day}, ${date.year} – ${endDateObj.month} ${endDateObj.day}, ${endDateObj.year}`;
+           } else if (date.month !== endDateObj.month) {
+               datesText = `${date.month} ${date.day} – ${endDateObj.month} ${endDateObj.day}, ${date.year}`;
+           } else {
+               datesText = `${date.month} ${date.day}–${endDateObj.day}, ${date.year}`;
+           }
+           extraOverrideHtml = `
+                <span class="text-gray-300 select-none">&bull;</span>
+                <span class="flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[15px] text-gray-400">calendar_month</span>
+                  <span>${datesText}</span>
+                </span>
+                <span class="text-gray-300 select-none">&bull;</span>
+                <span class="flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[15px] text-gray-400">style</span>
+                  <span>Multiple Days — Consecutive Range</span>
+                </span>
+           `;
+        }
 
         const dateBlockHtml = `
           <div class="border border-amber-300 rounded-lg overflow-hidden text-center min-w-[68px] shrink-0 flex flex-col bg-white shadow-xs">
@@ -725,16 +748,17 @@ function renderReservations() {
                   <span class="material-symbols-outlined text-[15px] text-gray-400">location_on</span>
                   <span class="font-medium text-gray-700">${escapeHtml(reservation.room_name || reservation.room_id)}</span>
                 </span>
-                <span class="text-gray-300 select-none">•</span>
+                <span class="text-gray-300 select-none">&bull;</span>
                 <span class="flex items-center gap-1">
                   <span class="material-symbols-outlined text-[15px] text-gray-400">assignment</span>
                   <span class="font-medium text-gray-700">${escapeHtml(reservation.request_type || 'Conflict Override')}</span>
                 </span>
-                <span class="text-gray-300 select-none">•</span>
+                <span class="text-gray-300 select-none">&bull;</span>
                 <span class="flex items-center gap-1">
                   <span class="material-symbols-outlined text-[15px] text-gray-400">schedule</span>
-                  <span>${formatTime(reservation.start_time)} – ${formatTime(reservation.end_time)}${multi ? ' (' + daysText + ')' : ''}</span>
+                  <span>${formatTime(reservation.start_time)} – ${formatTime(reservation.end_time)}</span>
                 </span>
+                ${extraOverrideHtml}
               </div>
             </div>
 
