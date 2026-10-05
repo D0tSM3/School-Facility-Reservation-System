@@ -34,9 +34,20 @@ use CampusRoom\Controller\HolidayController;
 use CampusRoom\Controller\UserController;
 use CampusRoom\Controller\SettingsController;
 
-// Load .env (immutable so it never overwrites real server env vars).
+// Load .env when it exists (local dev). On serverless hosts like Vercel there
+// is no .env file — configuration comes from the platform's environment
+// variables — so safeLoad() is used: load() throws on a missing file and would
+// fatal every request (500s on /api/config, so the captcha never renders).
+// Those platform variables may be visible only through getenv() when PHP's
+// variables_order excludes 'E', so mirror them into $_ENV (which the rest of
+// the app reads) without overwriting anything .env already provided.
 $dotenv = Dotenv::createImmutable(BASE_DIR);
-$dotenv->load();
+$dotenv->safeLoad();
+foreach (getenv() as $envKey => $envVal) {
+    if (!array_key_exists($envKey, $_ENV)) {
+        $_ENV[$envKey] = $envVal;
+    }
+}
 $dotenv->required(['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD']);
 
 // One timezone for PHP date()/strtotime(), the MySQL session and the Manila-formatted UI.
