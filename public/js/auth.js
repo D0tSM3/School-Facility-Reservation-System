@@ -174,8 +174,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (loginForm) {
+    let loginSubmitting = false;
     loginForm.addEventListener('submit', (e) => {
       e.preventDefault();
+      // A reCAPTCHA token is single-use; a double-submit reuses it and Google
+      // rejects the second as "timeout-or-duplicate". Block the re-entry.
+      if (loginSubmitting) return;
+      const submitBtn = loginForm.querySelector('button[type="submit"]');
       const emailInput = document.getElementById('bpu-email');
       const passwordInput = document.getElementById('bpu-password');
 
@@ -202,6 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoginError('Please confirm you are not a robot.');
         return;
       }
+
+      loginSubmitting = true;
+      if (submitBtn) submitBtn.disabled = true;
 
       const BASE = window.location.pathname.replace(/[^\/]*$/, '');
       fetch(BASE + 'api/auth/login', {
@@ -230,6 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
           window.location.href = 'verify.html';
         } else {
           // Single-use token: clear it so a retry starts from a fresh tick.
+          loginSubmitting = false;
+          if (submitBtn) submitBtn.disabled = false;
           captchaReset('loginRecaptcha');
           const errorMsg = payload.error || json.error || 'Authentication failed: Invalid credentials provided.';
           showLoginError(errorMsg);
@@ -241,6 +251,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       })
       .catch((err) => {
+        loginSubmitting = false;
+        if (submitBtn) submitBtn.disabled = false;
         captchaReset('loginRecaptcha');
         showLoginError('Network error. Please try again later.');
       });
