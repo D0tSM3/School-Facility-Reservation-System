@@ -786,7 +786,7 @@ class ReservationController
             try {
                 $rows = $this->createBookingRows(
                     $override['requested_by'], $override['room_id'], $override['purpose'], $override['category'],
-                    $override['equipment_notes'], $override['start_time'], $override['end_time'], null, 'Pending'
+                    $override['equipment_notes'], $override['start_time'], $override['end_time'], null, 'Approved'
                 );
                 $createdId = $rows[0]['reservation_id'] ?? null;
             } catch (PDOException $e) {
@@ -806,7 +806,7 @@ class ReservationController
 
         $updated = $overrides->findById($override['request_id']) ?? [];
         $updated['message'] = $createdId !== null
-            ? 'Class moved and the requester\'s booking was created (now Pending).'
+            ? 'Class moved and the requester\'s booking was created and Approved.'
             : "The class was moved, but the requester's booking couldn't be created: {$error}";
         Response::json($updated);
     }
@@ -865,7 +865,7 @@ class ReservationController
             try {
                 $rows = $this->createBookingRows(
                     $override['requested_by'], $override['room_id'], $override['purpose'], $override['category'],
-                    $override['equipment_notes'], $override['start_time'], $override['end_time'], null, 'Pending'
+                    $override['equipment_notes'], $override['start_time'], $override['end_time'], null, 'Approved'
                 );
             } catch (PDOException $e) {
                 if ($e->getCode() !== '45000') {
@@ -884,7 +884,7 @@ class ReservationController
         foreach ($rows as $row) {
             $this->reservations->insertLog(Auth::userId(), 'Reservation created from an approved conflict override request', $row['reservation_id']);
         }
-        return 'The override requester\'s booking was created and is now in the Pending queue.';
+        return 'The override requester\'s booking was created and Approved.';
     }
 
     private static function isUuid(string $value): bool
