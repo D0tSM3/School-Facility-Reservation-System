@@ -65,6 +65,24 @@
       .active-nav-link .nav-icon {
         color: #ffc641 !important;
       }
+      [data-nav="holidays"],
+      [data-nav="users"],
+      [data-nav="archives"],
+      [data-nav="config"],
+      [data-nav="logs"],
+      [data-admin-label] {
+        display: none !important;
+      }
+      html[data-role="admin"] [data-nav="holidays"],
+      html[data-role="admin"] [data-nav="users"],
+      html[data-role="admin"] [data-nav="archives"],
+      html[data-role="admin"] [data-nav="config"],
+      html[data-role="admin"] [data-nav="logs"] {
+        display: flex !important;
+      }
+      html[data-role="admin"] [data-admin-label] {
+        display: block !important;
+      }
       /* Pre-paint role gating: a Staff user must never see the admin-only
          tools, not even for a frame. data-role is set synchronously below from
          the last login; the server still verifies via /api/auth/me. */
