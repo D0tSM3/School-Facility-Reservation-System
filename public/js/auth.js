@@ -209,7 +209,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       loginSubmitting = true;
-      if (submitBtn) submitBtn.disabled = true;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-60', 'cursor-not-allowed');
+        submitBtn.dataset.originalHtml = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">sync</span> Logging in...';
+      }
 
       const BASE = window.location.pathname.replace(/[^\/]*$/, '');
       fetch(BASE + 'api/auth/login', {
@@ -239,7 +244,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           // Single-use token: clear it so a retry starts from a fresh tick.
           loginSubmitting = false;
-          if (submitBtn) submitBtn.disabled = false;
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+            if (submitBtn.dataset.originalHtml) submitBtn.innerHTML = submitBtn.dataset.originalHtml;
+          }
           captchaReset('loginRecaptcha');
           const errorMsg = payload.error || json.error || 'Authentication failed: Invalid credentials provided.';
           showLoginError(errorMsg);
@@ -252,7 +261,11 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .catch((err) => {
         loginSubmitting = false;
-        if (submitBtn) submitBtn.disabled = false;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+          if (submitBtn.dataset.originalHtml) submitBtn.innerHTML = submitBtn.dataset.originalHtml;
+        }
         captchaReset('loginRecaptcha');
         showLoginError('Network error. Please try again later.');
       });
@@ -388,9 +401,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Form Submission
+    let registerSubmitting = false;
     registerForm.addEventListener('submit', (e) => {
       e.preventDefault();
+      if (registerSubmitting) return;
 
+      const submitBtn = registerForm.querySelector('button[type="submit"]');
       const fullName = fullNameInput ? fullNameInput.value.trim() : '';
       const email = emailInput ? emailInput.value.trim() : '';
       const password = passwordInput ? passwordInput.value : '';
@@ -404,6 +420,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (captcha.enabled && captcha.ready && !captchaToken('registerRecaptcha')) {
         showRegisterError('Please confirm you are not a robot.');
         return;
+      }
+
+      registerSubmitting = true;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-60', 'cursor-not-allowed');
+        submitBtn.dataset.originalHtml = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">sync</span> Registering...';
       }
 
       const BASE = window.location.pathname.replace(/[^\/]*$/, '');
@@ -426,11 +450,23 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           window.location.href = 'verify.html';
         } else {
+          registerSubmitting = false;
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+            if (submitBtn.dataset.originalHtml) submitBtn.innerHTML = submitBtn.dataset.originalHtml;
+          }
           captchaReset('registerRecaptcha');
           showRegisterError(json.error || 'An error occurred during account registration.');
         }
       })
       .catch(err => {
+        registerSubmitting = false;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+          if (submitBtn.dataset.originalHtml) submitBtn.innerHTML = submitBtn.dataset.originalHtml;
+        }
         showRegisterError('Network error. Please try again later.');
       });
     });
