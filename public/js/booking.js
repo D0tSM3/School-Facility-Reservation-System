@@ -1325,6 +1325,15 @@ window.initBookingForm = function() {
     if (submitBtn) {
       submitBtn.disabled = on;
       submitBtn.classList.toggle('opacity-60', on);
+      submitBtn.classList.toggle('cursor-not-allowed', on);
+      if (on) {
+        submitBtn.dataset.originalHtml = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">sync</span> Submitting...';
+      } else {
+        if (submitBtn.dataset.originalHtml) {
+          submitBtn.innerHTML = submitBtn.dataset.originalHtml;
+        }
+      }
     }
   }
 
