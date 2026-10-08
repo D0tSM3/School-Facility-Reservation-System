@@ -21,13 +21,13 @@ class RoomCalendar {
     this.container = document.getElementById(config.containerId);
     this.roomId = config.roomId;
     this.baseUri = window.location.pathname.replace(/[^\/]*$/, '');
-    this.selectedDate    = config.initialDate    || '';
+    this.selectedDate = config.initialDate || '';
     this.selectedEndDate = config.initialEndDate || this.selectedDate;
-    this.minDate         = config.minDate        || '';
-    this.requestSeq      = 0;
-    this.loadingTimer    = null;
-    this.lastDates       = null;
-    this.lastData        = null;
+    this.minDate = config.minDate || '';
+    this.requestSeq = 0;
+    this.loadingTimer = null;
+    this.lastDates = null;
+    this.lastData = null;
 
     // activeDates: when set, ONLY these specific dates are highlighted.
     // When null, every date from selectedDate to selectedEndDate is highlighted.
@@ -81,8 +81,8 @@ class RoomCalendar {
 
   formatDateYMD(date) {
     return date.getFullYear() + '-' +
-           String(date.getMonth() + 1).padStart(2, '0') + '-' +
-           String(date.getDate()).padStart(2, '0');
+      String(date.getMonth() + 1).padStart(2, '0') + '-' +
+      String(date.getDate()).padStart(2, '0');
   }
 
   /** '13:30' -> '1:30 PM' */
@@ -112,7 +112,7 @@ class RoomCalendar {
         const diff = Math.round((e - s) / 86400000) + 1; // inclusive
         if (diff >= 1 && diff <= 7) {
           startD = s;
-          count  = diff;
+          count = diff;
         }
       }
     }
@@ -157,10 +157,10 @@ class RoomCalendar {
     const sDate = this.parseYMD(start);
     if (!sDate) return;
 
-    this.selectedDate    = start || '';
+    this.selectedDate = start || '';
     this.selectedEndDate = (end && end >= start) ? end : start;
-    this.activeDates     = Array.isArray(activeDates) ? activeDates : null;
-    this.browsing        = false;   // return to selection-snap mode
+    this.activeDates = Array.isArray(activeDates) ? activeDates : null;
+    this.browsing = false;   // return to selection-snap mode
 
     // Snap view to the start date
     this.currentDate = new Date(sDate);
@@ -168,9 +168,9 @@ class RoomCalendar {
 
     const newDates = this.getDatesToRender();
     const newStart = this.formatDateYMD(newDates[0]);
-    const newEnd   = this.formatDateYMD(newDates[newDates.length - 1]);
+    const newEnd = this.formatDateYMD(newDates[newDates.length - 1]);
     const oldStart = this.lastDates && this.lastDates.length ? this.formatDateYMD(this.lastDates[0]) : '';
-    const oldEnd   = this.lastDates && this.lastDates.length ? this.formatDateYMD(this.lastDates[this.lastDates.length - 1]) : '';
+    const oldEnd = this.lastDates && this.lastDates.length ? this.formatDateYMD(this.lastDates[this.lastDates.length - 1]) : '';
 
     if (newStart === oldStart && newEnd === oldEnd) {
       // Same window — just re-paint highlights with the cached data, no fetch
@@ -196,7 +196,7 @@ class RoomCalendar {
     }
     // Clear stale cache so we don't briefly flash old data
     this.lastDates = null;
-    this.lastData  = null;
+    this.lastData = null;
     // Cancel any old in-flight fetch
     const seq = ++this.requestSeq;
     clearTimeout(this.loadingTimer);
@@ -299,9 +299,9 @@ class RoomCalendar {
   // ---- data --------------------------------------------------------------
 
   loadData() {
-    const dates    = this.getDatesToRender();
+    const dates = this.getDatesToRender();
     const startStr = this.formatDateYMD(dates[0]);
-    const endStr   = this.formatDateYMD(dates[dates.length - 1]);
+    const endStr = this.formatDateYMD(dates[dates.length - 1]);
 
     const opts = { month: 'short', day: 'numeric' };
     const weekLabel = this.container.querySelector('.week-label');
@@ -332,7 +332,7 @@ class RoomCalendar {
         clearTimeout(this.loadingTimer);
         if (json.success) {
           this.lastDates = dates;
-          this.lastData  = json.data;
+          this.lastData = json.data;
           this.renderGrid(dates, json.data);
           // Notify booking.js that fresh data is available (for time-slot greying)
           if (typeof this.onDataLoaded === 'function') this.onDataLoaded(dates, json.data);
@@ -373,9 +373,9 @@ class RoomCalendar {
     this.requestSeq++;           // any pending fetch callback sees an old seq and discards itself
 
     // Return to selection-snap mode (browsing mode was set by prev/next, not by ingestData)
-    this.browsing  = false;
+    this.browsing = false;
     this.lastDates = dates;
-    this.lastData  = data;
+    this.lastData = data;
     this.renderGrid(dates, data);
   }
 
@@ -418,7 +418,7 @@ class RoomCalendar {
 
   setSelectionTimes(startTime, endTime) {
     this.selectedStartTime = startTime;
-    this.selectedEndTime   = endTime;
+    this.selectedEndTime = endTime;
     if (this.lastDates && this.lastData) {
       this.renderGrid(this.lastDates, this.lastData);
     }
@@ -471,7 +471,7 @@ class RoomCalendar {
   }
 
   renderGrid(dates, data) {
-    const days     = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const todayYMD = this.formatDateYMD(new Date());
 
@@ -491,9 +491,9 @@ class RoomCalendar {
     dates.forEach((date) => {
       const dayIndex = date.getDay();
       const dayShort = days[dayIndex];
-      const dayFull  = dayNames[dayIndex];
-      const ymd      = this.formatDateYMD(date);
-      const isToday  = ymd === todayYMD;
+      const dayFull = dayNames[dayIndex];
+      const ymd = this.formatDateYMD(date);
+      const isToday = ymd === todayYMD;
       const isSelected = this.isInSelection(ymd);
       const isClosed = this.rules.closedDays.includes(dayFull);
 
@@ -522,9 +522,9 @@ class RoomCalendar {
       const tr = document.createElement('tr');
       tr.className = 'border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors';
 
-      const nextBlock  = this.blocks[index + 1];
-      const blockEnd   = nextBlock ? nextBlock.start : this.dayEnd;
-      const endLabel   = nextBlock ? nextBlock.label : this.fmt12(this.dayEnd);
+      const nextBlock = this.blocks[index + 1];
+      const blockEnd = nextBlock ? nextBlock.start : this.dayEnd;
+      const endLabel = nextBlock ? nextBlock.label : this.fmt12(this.dayEnd);
 
       // Time cell
       const tdTime = document.createElement('td');
@@ -537,10 +537,10 @@ class RoomCalendar {
       const overlaps = (s, e) => s < blockEnd && e > block.start;
 
       dates.forEach((date) => {
-        const dateYMD  = this.formatDateYMD(date);
-        const dayName  = dayNames[date.getDay()];
-        const isSelected  = this.isInSelection(dateYMD);
-        const beforeOpen  = this.minDate && dateYMD < this.minDate;
+        const dateYMD = this.formatDateYMD(date);
+        const dayName = dayNames[date.getDay()];
+        const isSelected = this.isInSelection(dateYMD);
+        const beforeOpen = this.minDate && dateYMD < this.minDate;
 
         // Closed day (System Configuration) — single merged "Closed" cell
         if (this.rules.closedDays.includes(dayName)) {
@@ -561,8 +561,8 @@ class RoomCalendar {
         td.dataset.date = dateYMD;
 
         const overlapsSelected = isSelected && this.selectedStartTime && this.selectedEndTime &&
-                                 overlaps(this.selectedStartTime, this.selectedEndTime);
-                                 
+          overlaps(this.selectedStartTime, this.selectedEndTime);
+
         const hasClass = (data.class_schedules || []).some(c => c.day_of_week === dayName && overlaps(c.start_time.slice(0, 5), c.end_time.slice(0, 5)));
         const hasReservation = (data.reservations || []).some(r => r.start_time.startsWith(dateYMD) && overlaps(r.start_time.slice(11, 16), r.end_time.slice(11, 16)));
         const isConflict = overlapsSelected && (hasClass || hasReservation);
@@ -587,7 +587,7 @@ class RoomCalendar {
         // Classes
         (data.class_schedules || [])
           .filter(c => c.day_of_week === dayName &&
-                       overlaps(c.start_time.slice(0, 5), c.end_time.slice(0, 5)))
+            overlaps(c.start_time.slice(0, 5), c.end_time.slice(0, 5)))
           .forEach(c => {
             td.className = td.className.replace(/bg-\S+/g, '') + ' bg-blue-50 p-0.5';
             td.appendChild(this.chip(
@@ -601,7 +601,7 @@ class RoomCalendar {
         const reservations = data.reservations || [];
         reservations
           .filter(r => r.start_time.startsWith(dateYMD) &&
-                       overlaps(r.start_time.slice(11, 16), r.end_time.slice(11, 16)))
+            overlaps(r.start_time.slice(11, 16), r.end_time.slice(11, 16)))
           .forEach(r => {
             const pending = r.status === 'Pending';
             td.className = td.className.replace(/bg-\S+/g, '') + (pending ? ' bg-amber-50 p-0.5' : ' bg-emerald-50 p-0.5');
@@ -621,14 +621,10 @@ class RoomCalendar {
             const span = pos.first === pos.last ? '' :
               ` (${this.parseYMD(pos.first).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ` +
               `${this.parseYMD(pos.last).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} this week)`;
-            const shape = [
-              'border-y',
-              pos.hasPrev ? 'rounded-l-none border-l-0 -ml-[3px]' : 'border-l',
-              pos.hasNext ? 'rounded-r-none border-r-0 -mr-[3px]' : 'border-r'
-            ].join(' ');
+            const shape = 'border';
             const chip = this.chip(`${colors} ${shape}`,
-              pos.hasPrev ? ' ' : r.purpose,
-              pos.hasPrev ? '' : (r.customer_name || r.status) + ' · multi-day',
+              r.purpose,
+              (r.customer_name || r.status) + ' · multi-day',
               `${r.status}: ${r.purpose}, ${times} daily — multi-day booking${span}`);
             chip.dataset.seriesId = r.series_id;
             td.appendChild(chip);
