@@ -225,8 +225,13 @@ document.addEventListener('DOMContentLoaded', () => {
           hideLoginError();
 
           
-          localStorage.setItem('campus_role', payload.role);
-            if (payload.role === 'Admin' || payload.role === 'Staff') {
+          try {
+            sessionStorage.setItem('campus_role', payload.role);
+            localStorage.setItem('campus_role', payload.role);
+          } catch (err) {
+            console.warn('Unable to save the session role hint', err);
+          }
+          if (payload.role === 'Admin' || payload.role === 'Staff') {
             // Staff share the admin dashboard (admin-only tabs are hidden there).
             window.location.href = 'admin-governance.html';
           } else {

@@ -82,9 +82,9 @@
       // (no flash of admin tabs for Staff). Cosmetic only — never authorization.
       (function () {
         try {
-          var r = localStorage.getItem('campus_role');
+          var r = sessionStorage.getItem('campus_role') || localStorage.getItem('campus_role');
           if (r) document.documentElement.setAttribute('data-role', r.toLowerCase());
-        } catch (e) { /* ignore */ }
+        } catch (e) { console.warn('Unable to read the session role hint', e); }
       })();
     </script>
   </head>

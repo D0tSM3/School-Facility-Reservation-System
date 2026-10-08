@@ -96,7 +96,12 @@
     <!-- FOUC Preventer -->
     <script>
       (function () {
-        const role = localStorage.getItem("campus_role");
+        let role = null;
+        try {
+          role = sessionStorage.getItem("campus_role") || localStorage.getItem("campus_role");
+        } catch (err) {
+          console.warn("Unable to read the session role hint", err);
+        }
         if (role) {
           document.documentElement.setAttribute(
             "data-role",

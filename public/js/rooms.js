@@ -31,9 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentPage = 1;
 
   function fetchCurrentRole() {
-    return fetch(BASE + 'api/auth/me', { credentials: 'include' })
-      .then(res => res.json())
-      .then(json => {
+    const sessionRequest = window.CampusRoomSession ||
+      fetch(BASE + 'api/auth/me', { credentials: 'include' })
+        .then(async response => ({ status: response.status, json: await response.json() }));
+    return sessionRequest
+      .then(({ json }) => {
         const currentUser = json.success ? json.data : null;
         currentRole = String(currentUser && currentUser.role || '').toLowerCase();
       })

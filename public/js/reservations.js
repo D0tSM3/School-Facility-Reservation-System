@@ -19,12 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Staff and Admin are not allowed on this page (Customer-only reservation history).
   // Nav-hiding in app.js isn't enough on its own since a Staff/Admin user can still
-  // type this URL directly, so bounce them to the Staff Queue instead.
+  // type this URL directly, so bounce them to the Staff Dashboard instead.
   (function guardStaffAccess() {
     const BASE = window.location.pathname.replace(/[^\/]*$/, '');
-    fetch(BASE + 'api/auth/me', { credentials: 'include' })
-      .then(res => res.json())
-      .then(json => {
+    const sessionRequest = window.CampusRoomSession ||
+      fetch(BASE + 'api/auth/me', { credentials: 'include' })
+        .then(async response => ({ status: response.status, json: await response.json() }));
+    sessionRequest
+      .then(({ json }) => {
         const currentUser = json.success ? json.data : null;
         const role = String(currentUser && currentUser.role || '').toLowerCase();
         if (role === 'staff' || role === 'admin') {
@@ -1850,8 +1852,6 @@ function renderReservations() {
 
   fetchReservations();
 });
-
-
 
 
 
