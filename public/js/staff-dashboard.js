@@ -1436,9 +1436,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     closeOverrideModal();
     showToast(
-      status === 'Approved'
-        ? 'Override approved. A move request is now in Move Requests; approving it books the requester.'
-        : 'Override rejected. The requester will see your comment.',
+      result.message || (status === 'Approved'
+        ? 'Override approved. A move request is now in Move Requests; approving it approves the requester.'
+        : 'Override rejected. The requester will see your comment.'),
       'success'
     );
     await loadAll();
