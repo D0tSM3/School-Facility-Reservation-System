@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const confirmInput = document.getElementById('confirm-password');
   const usernameInput = document.getElementById('activation-username');
   const successName = document.getElementById('successName');
+  const activationFooter = document.getElementById('activationFooter');
   const requestMessage = document.getElementById('requestMessage');
   const stage2Message = document.getElementById('stage2Message');
   const verifyMessage = document.getElementById('verifyMessage');
@@ -54,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     Object.entries(stages).forEach(([key, section]) => {
       section.hidden = Number(key) !== number;
     });
+    activationFooter.hidden = number === 4;
     if (number === 1) mountCaptcha('activationRecaptcha');
     if (number === 2) mountCaptcha('resendRecaptcha');
   }
