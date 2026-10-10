@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const otpInput = document.getElementById('activation-code');
   const passwordInput = document.getElementById('new-password');
   const confirmInput = document.getElementById('confirm-password');
+  const usernameInput = document.getElementById('activation-username');
   const requestMessage = document.getElementById('requestMessage');
   const stage2Message = document.getElementById('stage2Message');
   const verifyMessage = document.getElementById('verifyMessage');
@@ -28,21 +29,22 @@ document.addEventListener('DOMContentLoaded', () => {
   let captchaScriptLoaded = false;
   let captchaWidgets = {};
   let captchaConfigPromise;
+  let passwordMinimum = null;
+  let rosterName = '';
+  let confirmationTouched = false;
+  let strengthTimer = null;
 
   const requestGeneric = 'If eligible, an activation code has been sent to the email address on the school roster.';
-  const errorMessages = {
-    whitespace_edges: 'Do not use spaces at the beginning or end of your password.',
-    password_required: 'Enter a password.',
-    password_policy: 'Choose a password that meets the password requirements.',
-    already_activated: 'This school account has already been activated.',
-    activation_failed: 'Activation could not be completed. Please try again.',
-  };
-  const passwordPolicyMessages = {
-    'Password must be valid UTF-8.': 'Use a password containing valid text characters.',
-    'Password must be between 12 and 128 characters.': 'Use between 12 and 128 characters.',
-    'Choose a less common password.': 'This password is too common. Choose a different one.',
-    'This password appears in known data breaches. Choose another password.':
-      'This password appears in known breach data. Choose a different one.',
+  const policyMessages = {
+    too_short: () => `Use at least ${passwordMinimum} characters.`,
+    too_long: () => 'Use 128 characters or fewer.',
+    whitespace_edges: () => 'Remove spaces at the start or end.',
+    contains_personal: () => "Don't include your name, student number or email.",
+    repetitive: () => 'Avoid repeated or sequential characters.',
+    common: () => 'That password is too common. Choose a less predictable one.',
+    breached: () => 'This password has appeared in a data breach. Choose a different one.',
+    mismatch: () => "The two passwords don't match.",
+    invalid_input: () => 'Enter a valid password.',
   };
 
   function showStage(number) {
@@ -192,27 +194,106 @@ document.addEventListener('DOMContentLoaded', () => {
   function clearPasswordFields() {
     passwordInput.value = '';
     confirmInput.value = '';
-    updatePasswordChecklist();
+    confirmationTouched = false;
+    clearFieldErrors();
+    updatePasswordGuidance();
+    updateStrength();
   }
 
-  function updatePasswordChecklist() {
+  function setGuidance(id, valid, visible = true) {
+    const item = document.getElementById(id);
+    item.hidden = !visible;
+    if (visible) {
+      item.firstElementChild.textContent = valid ? '✓' : '○';
+      item.classList.toggle('font-semibold', valid);
+    }
+  }
+
+  function includesPersonalInformation(value) {
+    const candidate = value.toLocaleLowerCase();
+    const schoolId = studentIdInput.value.trim().toLocaleLowerCase();
+    if (schoolId && candidate.includes(schoolId)) return true;
+    const tokens = rosterName.toLocaleLowerCase().split(/[^\p{L}\p{N}]+/u);
+    return tokens.some((token) => Array.from(token).length >= 4 && candidate.includes(token));
+  }
+
+  function updatePasswordGuidance() {
     const password = passwordInput.value;
-    const confirmation = confirmInput.value;
-    const lengthOkay = [...password].length >= 12 && [...password].length <= 128;
-    const matches = password !== '' && password === confirmation;
-    const whitespaceOkay = password === password.trim();
-    [
-      ['check-length', lengthOkay],
-      ['check-match', matches],
-      ['check-whitespace', whitespaceOkay],
-    ].forEach(([id, okay]) => {
-      const item = document.getElementById(id);
-      item.classList.toggle('text-green-700', okay);
-      item.classList.toggle('text-gray-500', !okay);
-    });
+    const validLength = passwordMinimum !== null && Array.from(password).length >= passwordMinimum;
+    const validEdges = !(/^\s|\s$/u.test(password));
+    const validPersonal = !includesPersonalInformation(password);
+    const matches = password !== '' && password === confirmInput.value;
+    setGuidance('check-length', validLength);
+    setGuidance('check-whitespace', validEdges);
+    setGuidance('check-personal', validPersonal);
+    setGuidance('check-match', matches, confirmationTouched);
   }
 
-  function showCompleteError(json, status) {
+  function updateStrength() {
+    const length = Array.from(passwordInput.value).length;
+    const label = document.getElementById('strength-label');
+    const bar = document.getElementById('strength-bar');
+    if (passwordMinimum === null || length < passwordMinimum) {
+      label.textContent = 'Too short';
+      bar.className = 'h-full w-1/3 bg-red-700';
+    } else if (length < 20) {
+      label.textContent = 'Okay';
+      bar.className = 'h-full w-2/3 bg-yellow-600';
+    } else {
+      label.textContent = 'Strong';
+      bar.className = 'h-full w-full bg-green-700';
+    }
+  }
+
+  function scheduleStrengthUpdate() {
+    if (strengthTimer) window.clearTimeout(strengthTimer);
+    strengthTimer = window.setTimeout(updateStrength, 400);
+  }
+
+  function clearFieldErrors() {
+    [
+      [passwordInput, document.getElementById('password-error')],
+      [confirmInput, document.getElementById('confirm-error')],
+    ].forEach(([input, message]) => {
+      input.removeAttribute('aria-invalid');
+      message.textContent = '';
+      message.hidden = true;
+    });
+    completeMessage.textContent = '';
+    completeMessage.hidden = true;
+  }
+
+  function showPolicyErrors(codes, focusSummary = true) {
+    clearFieldErrors();
+    const passwordCodes = codes.filter((code) => code !== 'mismatch');
+    const confirmationCodes = codes.filter((code) => code === 'mismatch');
+    if (passwordCodes.length > 0) {
+      passwordInput.setAttribute('aria-invalid', 'true');
+      const message = document.getElementById('password-error');
+      message.textContent = passwordCodes.map((code) => policyMessages[code]?.() || policyMessages.invalid_input()).join(' ');
+      message.hidden = false;
+    }
+    if (confirmationCodes.length > 0) {
+      confirmInput.setAttribute('aria-invalid', 'true');
+      const message = document.getElementById('confirm-error');
+      message.textContent = policyMessages.mismatch();
+      message.hidden = false;
+    }
+    completeMessage.textContent = codes.map((code) => policyMessages[code]?.() || policyMessages.invalid_input()).join(' ');
+    completeMessage.hidden = false;
+    if (focusSummary) completeMessage.focus();
+  }
+
+  function checkClientPolicy(password, confirmation) {
+    const codes = [];
+    if (Array.from(password).length < passwordMinimum) codes.push('too_short');
+    if (/^\s|\s$/u.test(password)) codes.push('whitespace_edges');
+    if (includesPersonalInformation(password)) codes.push('contains_personal');
+    if (password !== confirmation) codes.push('mismatch');
+    return codes;
+  }
+
+  function handleCompleteResponse(json, status) {
     if (status === 401) {
       clearPasswordFields();
       requestMessage.hidden = true;
@@ -220,27 +301,60 @@ document.addEventListener('DOMContentLoaded', () => {
       showStage(1);
       return;
     }
-    const code = json.data && typeof json.data.code === 'string' ? json.data.code : '';
-    const message = code === 'password_policy'
-      ? (passwordPolicyMessages[json.error] || errorMessages.password_policy)
-      : errorMessages[code];
-    showMessage(completeMessage, message || 'Unable to complete activation. Check your details and try again.');
-    clearPasswordFields();
+    if (status === 429) {
+      completeMessage.textContent = 'Please wait before trying again.';
+      completeMessage.hidden = false;
+      completeMessage.focus();
+      return;
+    }
+    if (status === 422) {
+      const codes = Array.isArray(json.data?.codes) ? json.data.codes : ['invalid_input'];
+      showPolicyErrors(codes);
+      return;
+    }
+    completeMessage.textContent = 'Unable to complete activation. Please try again.';
+    completeMessage.hidden = false;
+    completeMessage.focus();
   }
 
-  document.querySelectorAll('[data-toggle-password]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const input = document.getElementById(button.dataset.togglePassword);
-      const show = input.type === 'password';
-      input.type = show ? 'text' : 'password';
-      button.textContent = show ? 'Hide' : 'Show';
-      button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-    });
+  document.getElementById('toggle-passwords').addEventListener('click', (event) => {
+    const button = event.currentTarget;
+    const show = passwordInput.type === 'password';
+    passwordInput.type = show ? 'text' : 'password';
+    confirmInput.type = show ? 'text' : 'password';
+    button.textContent = show ? 'Hide password' : 'Show password';
+    button.setAttribute('aria-label', button.textContent);
+    button.setAttribute('aria-pressed', String(show));
   });
 
-  [passwordInput, confirmInput].forEach((input) => {
-    input.addEventListener('input', updatePasswordChecklist);
+  passwordInput.addEventListener('input', () => {
+    clearFieldErrors();
+    updatePasswordGuidance();
+    scheduleStrengthUpdate();
   });
+  confirmInput.addEventListener('input', () => {
+    confirmationTouched = true;
+    clearFieldErrors();
+    updatePasswordGuidance();
+    scheduleStrengthUpdate();
+  });
+  confirmInput.addEventListener('blur', () => {
+    confirmationTouched = true;
+    updatePasswordGuidance();
+  });
+
+  function loadPasswordContext(context) {
+    const policy = context.policy || {};
+    if (!Number.isInteger(policy.min_length) || !Number.isInteger(policy.max_length)) {
+      throw new Error('Password policy limits missing from activation context.');
+    }
+    passwordMinimum = policy.min_length;
+    rosterName = typeof context.name === 'string' ? context.name : '';
+    usernameInput.value = studentIdInput.value.trim();
+    document.getElementById('minimum-length').textContent = String(passwordMinimum);
+    updatePasswordGuidance();
+    updateStrength();
+  }
 
   requestForm.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -281,7 +395,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       document.getElementById('welcomeMessage').textContent = `Welcome, ${context.json.data.name || ''}`;
       document.getElementById('activationEmail').textContent = context.json.data.email || '';
-      completeMessage.hidden = true;
+      loadPasswordContext(context.json.data);
+      clearPasswordFields();
       showStage(3);
     } catch {
       showMessage(verifyMessage, 'Unable to verify the code right now. Please try again.');
@@ -296,7 +411,6 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await activationRequest('resendRecaptcha');
       showStage(2);
-      startResendCountdown();
     } finally {
       setBusy(false);
     }
@@ -314,30 +428,28 @@ document.addEventListener('DOMContentLoaded', () => {
   completeForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (busy) return;
-    completeMessage.hidden = true;
-    const password = passwordInput.value;
-    const confirmation = confirmInput.value;
-    if ([...password].length < 12 || [...password].length > 128 || password !== confirmation
-      || password !== password.trim()) {
-      showMessage(completeMessage, password !== password.trim()
-        ? errorMessages.whitespace_edges
-        : 'Check the password requirements and confirmation.');
-      clearPasswordFields();
+    const codes = checkClientPolicy(passwordInput.value, confirmInput.value);
+    if (codes.length > 0) {
+      showPolicyErrors(codes);
       return;
     }
 
     setBusy(true);
     try {
-      const { response, json } = await postJson('api/auth/activate/complete', { password });
+      const { response, json } = await postJson('api/auth/activate/complete', {
+        password: passwordInput.value,
+        password_confirm: confirmInput.value,
+      });
       if (!response.ok || !json.success) {
-        showCompleteError(json, response.status);
+        handleCompleteResponse(json, response.status);
         return;
       }
       clearPasswordFields();
       window.location.assign(baseUri + 'index.html?activated=1');
     } catch {
-      clearPasswordFields();
-      showMessage(completeMessage, 'Unable to complete activation right now. Please try again.');
+      completeMessage.textContent = 'Unable to complete activation right now. Please try again.';
+      completeMessage.hidden = false;
+      completeMessage.focus();
     } finally {
       setBusy(false);
     }
@@ -349,6 +461,5 @@ document.addEventListener('DOMContentLoaded', () => {
   refreshCsrfToken().catch(() => {
     showMessage(requestMessage, 'Unable to initialize activation. Please refresh and try again.');
   });
-  updatePasswordChecklist();
   updateResendButton();
 });

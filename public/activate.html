@@ -50,29 +50,42 @@
         <p id="welcomeMessage" class="mb-1 text-lg font-semibold"></p>
         <p id="activationEmail" class="mb-5 text-sm text-gray-600"></p>
         <form id="completeForm" class="space-y-4" novalidate>
+          <input id="activation-username" class="sr-only" type="text" autocomplete="username"
+            readonly tabindex="-1" aria-hidden="true" value="" />
           <div>
             <label class="mb-1 block text-sm font-medium" for="new-password">Password</label>
             <div class="flex">
               <input id="new-password" name="password" type="password" autocomplete="new-password" required
+                spellcheck="false" autocapitalize="off" autocorrect="off" aria-describedby="password-guidance password-error"
                 class="min-w-0 flex-1 rounded-l-lg border border-gray-300 px-3 py-3" />
-              <button class="rounded-r-lg border border-l-0 border-gray-300 px-3 text-sm" type="button" data-toggle-password="new-password" aria-label="Show password">Show</button>
             </div>
+            <p id="password-error" class="mt-1 text-sm text-red-700" hidden></p>
           </div>
           <div>
             <label class="mb-1 block text-sm font-medium" for="confirm-password">Confirm password</label>
             <div class="flex">
               <input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password" required
+                spellcheck="false" autocapitalize="off" autocorrect="off" aria-describedby="password-guidance confirm-error"
                 class="min-w-0 flex-1 rounded-l-lg border border-gray-300 px-3 py-3" />
-              <button class="rounded-r-lg border border-l-0 border-gray-300 px-3 text-sm" type="button" data-toggle-password="confirm-password" aria-label="Show password">Show</button>
             </div>
+            <p id="confirm-error" class="mt-1 text-sm text-red-700" hidden></p>
           </div>
-          <ul class="space-y-1 text-sm" aria-live="polite">
-            <li id="check-length" class="text-gray-500">At least 12 characters</li>
-            <li id="check-match" class="text-gray-500">Passwords match</li>
-            <li id="check-whitespace" class="text-gray-500">No leading or trailing spaces</li>
+          <button id="toggle-passwords" class="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            type="button" aria-controls="new-password confirm-password" aria-pressed="false" aria-label="Show password">Show password</button>
+          <ul id="password-guidance" class="space-y-1 text-sm">
+            <li id="check-length" class="text-gray-700"><span aria-hidden="true">○</span> <span>At least <span id="minimum-length"></span> characters</span></li>
+            <li id="check-whitespace" class="text-gray-700"><span aria-hidden="true">○</span> <span>No spaces at the start or end</span></li>
+            <li id="check-personal" class="text-gray-700"><span aria-hidden="true">○</span> <span>Doesn't include your name or student number</span></li>
+            <li id="check-match" class="text-gray-700" hidden><span aria-hidden="true">○</span> <span>Both passwords match</span></li>
           </ul>
-          <p class="text-xs text-gray-600">The server also checks against common passwords and known breach data.</p>
-          <p id="completeMessage" class="hidden rounded-lg bg-red-50 p-3 text-sm text-red-900" role="alert"></p>
+          <p class="text-xs text-gray-600">A few unrelated words, like a short sentence, is easy to remember and hard to guess.</p>
+          <div class="rounded-lg bg-gray-100 p-3" aria-label="Password strength">
+            <div class="h-2 overflow-hidden rounded bg-gray-300">
+              <div id="strength-bar" class="h-full w-0 bg-gray-600"></div>
+            </div>
+            <p id="strength-label" class="mt-1 text-sm" aria-live="polite">Too short</p>
+          </div>
+          <div id="completeMessage" class="rounded-lg bg-red-50 p-3 text-sm text-red-900" role="alert" tabindex="-1" hidden></div>
           <button id="completeButton" class="w-full rounded-lg bg-[#7a2839] px-4 py-3 font-semibold text-white disabled:opacity-60" type="submit">Activate account</button>
         </form>
       </section>
