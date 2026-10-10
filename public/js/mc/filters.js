@@ -294,7 +294,7 @@
   /** Section header value + "has a selection" state + per-section Clear links. */
   function paintSections(w) {
     const sums = {
-      seats: f.seats === '' ? '' : '≥ ' + f.seats + (f.tight ? ' · tight fit' : ''),
+      seats: f.seats === '' ? '' : '≥ ' + f.seats + (f.tight ? ' · no oversized rooms' : ''),
       types: summarize(pickedLabels('types', f.types)),
       floors: summarize(pickedLabels('floors', f.floors)),
       window: !w.any ? '' : (w.valid || (f.winDate && f.winFrom && f.winTo))
