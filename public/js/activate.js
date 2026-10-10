@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let captchaWidgets = {};
   let captchaConfigPromise;
   let passwordMinimum = null;
+  let passwordMaximum = null;
   let rosterName = '';
   let confirmationTouched = false;
   let strengthTimer = null;
@@ -37,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const requestGeneric = 'If eligible, an activation code has been sent to the email address on the school roster.';
   const policyMessages = {
     too_short: () => `Use at least ${passwordMinimum} characters.`,
-    too_long: () => 'Use 128 characters or fewer.',
+    too_long: () => `Use ${passwordMaximum} characters or fewer.`,
     whitespace_edges: () => 'Remove spaces at the start or end.',
     contains_personal: () => "Don't include your name, student number or email.",
     repetitive: () => 'Avoid repeated or sequential characters.',
@@ -349,6 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
       throw new Error('Password policy limits missing from activation context.');
     }
     passwordMinimum = policy.min_length;
+    passwordMaximum = policy.max_length;
     rosterName = typeof context.name === 'string' ? context.name : '';
     usernameInput.value = studentIdInput.value.trim();
     document.getElementById('minimum-length').textContent = String(passwordMinimum);
