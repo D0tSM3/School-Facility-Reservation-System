@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const floorFilter = document.getElementById('floorFilter');
   const roomTypeFilter = document.getElementById('roomTypeFilter');
   const statusFilter = document.getElementById('statusFilter');
+  const capacityFilter = document.getElementById('capacityFilter');
   const visibleCount = document.getElementById('visibleRoomsCount');
   const totalCount = document.getElementById('totalRoomsCount');
   const noResults = document.getElementById('noResultsNotice');
@@ -135,11 +136,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const fFloor = floorFilter.value;
     const fType = roomTypeFilter.value;
     const fStatus = statusFilter.value.toLowerCase();
+    const minSeats = capacityFilter ? parseInt(capacityFilter.value, 10) : NaN;
+    const hasSeats = Number.isFinite(minSeats) && minSeats > 0;
 
     // Filter array
     const filteredRooms = allRooms.filter(r => {
       let status = r.live_status || r.status;
       if (q && !r.name.toLowerCase().includes(q)) return false;
+      if (hasSeats && !(Number(r.capacity) >= minSeats)) return false;
       if (fFloor !== 'all' && String(r.floor) !== fFloor) return false;
       if (fType !== 'all' && r.room_type !== fType) return false;
       if (fStatus !== 'all') {
@@ -149,6 +153,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return true;
     });
+
+    // With a seat count set, the closest fit comes first (a 30-seat class should not see the 300-seat hall first).
+    if (hasSeats) {
+      filteredRooms.sort((a, b) => (Number(a.capacity) - Number(b.capacity)) ||
+        String(a.name).localeCompare(String(b.name), undefined, { numeric: true }));
+    }
 
     const totalPages = Math.ceil(filteredRooms.length / ITEMS_PER_PAGE) || 1;
     if (currentPage > totalPages) currentPage = totalPages;
@@ -287,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
   floorFilter.addEventListener('change', handleFilterChange);
   roomTypeFilter.addEventListener('change', handleFilterChange);
   statusFilter.addEventListener('change', handleFilterChange);
+  if (capacityFilter) capacityFilter.addEventListener('input', handleFilterChange);
 
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
@@ -294,6 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
       floorFilter.value = 'all';
       roomTypeFilter.value = 'all';
       statusFilter.value = 'all';
+      if (capacityFilter) capacityFilter.value = '';
       handleFilterChange();
     });
   }
@@ -304,6 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
       floorFilter.value = 'all';
       roomTypeFilter.value = 'all';
       statusFilter.value = 'all';
+      if (capacityFilter) capacityFilter.value = '';
       handleFilterChange();
     });
   }

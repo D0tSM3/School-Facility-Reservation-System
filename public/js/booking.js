@@ -236,7 +236,15 @@ window.initBookingForm = function() {
         }
 
         roomSelect.innerHTML = '<option value="">Select a room</option>';
-        json.data.forEach(r => {
+        // With a long room list, group the dropdown by room type (Laboratories, Lecture Halls, …).
+        const grouped = json.data.length > 10;
+        const typeGroups = new Map();
+        const rooms = grouped
+          ? json.data.slice().sort((a, b) =>
+              String(a.room_type || '\uffff').localeCompare(String(b.room_type || '\uffff')) ||
+              String(a.name).localeCompare(String(b.name), undefined, { numeric: true }))
+          : json.data;
+        rooms.forEach(r => {
           roomsById[r.room_id] = r;
           const opt = document.createElement('option');
           opt.value = r.room_id;
@@ -245,7 +253,19 @@ window.initBookingForm = function() {
             opt.textContent += ' [Under Maintenance]';
             opt.disabled = true;
           }
-          roomSelect.appendChild(opt);
+          if (grouped) {
+            const typeName = r.room_type || 'Other';
+            let grp = typeGroups.get(typeName);
+            if (!grp) {
+              grp = document.createElement('optgroup');
+              grp.label = typeName;
+              typeGroups.set(typeName, grp);
+              roomSelect.appendChild(grp);
+            }
+            grp.appendChild(opt);
+          } else {
+            roomSelect.appendChild(opt);
+          }
         });
 
         // Only preselect a room that exists and is bookable.

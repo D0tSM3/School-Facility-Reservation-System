@@ -124,7 +124,8 @@
 
     <!-- Main Content Area -->
     <div class="pl-[250px] flex flex-col min-h-screen w-full">
-      <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-end px-8 z-40 sticky top-0">
+      <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 z-40 sticky top-0">
+        <h1 class="text-lg font-bold text-gray-900">Calendar</h1>
         <div class="flex items-center gap-3">
           <div class="flex flex-col text-right">
             <span class="text-sm font-semibold text-gray-900 leading-tight header-name">—</span>
@@ -135,105 +136,173 @@
       </header>
 
       <main class="flex-1 w-full p-6">
-        <div class="flex flex-wrap items-center gap-3 mb-3">
-          <h1 class="text-xl font-bold text-gray-900 mr-2">Calendar</h1>
-          <button id="mcFiltersBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm font-medium hover:bg-gray-50" aria-controls="mcFilters" aria-expanded="true" title="Show / hide filters ( [ )">
-            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">tune</span>Filters
-            <span id="mcFiltersBtnBadge" class="hidden mc-count-badge">0</span>
-          </button>
-          <div class="flex items-center gap-1">
-            <button id="mcPrev" type="button" class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm hover:bg-gray-50" aria-label="Previous">‹</button>
-            <button id="mcToday" type="button" class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm font-medium hover:bg-gray-50 disabled:opacity-50">Today</button>
-            <button id="mcNext" type="button" class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm hover:bg-gray-50" aria-label="Next">›</button>
+        <!-- Toolbar: row 1 = where am I (filters, date, view); row 2 = quick filters + result count.
+             Rows wrap on narrow screens instead of scrolling sideways. -->
+        <div id="mcToolbar" class="mc-toolbar" role="toolbar" aria-label="Calendar controls">
+          <div class="mc-tb-row mc-tb-main">
+            <button id="mcFiltersBtn" type="button" class="mc-tb-btn" aria-controls="mcFilters" aria-expanded="true" title="Show / hide filters ( [ )">
+              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">tune</span><span class="mc-tb-l">Filters</span>
+              <span id="mcFiltersBtnBadge" class="hidden mc-count-badge">0</span>
+            </button>
+            <div class="mc-tb-group" role="group" aria-label="Change date">
+              <button id="mcPrev" type="button" class="mc-tb-btn mc-tb-icon" aria-label="Previous">‹</button>
+              <button id="mcToday" type="button" class="mc-tb-btn font-medium disabled:opacity-50">Today</button>
+              <button id="mcNext" type="button" class="mc-tb-btn mc-tb-icon" aria-label="Next">›</button>
+            </div>
+            <span id="mcTitle" class="mc-tb-title">Loading…</span>
+            <input id="mcDate" type="date" class="mc-tb-date" aria-label="Jump to date" />
+
+            <div class="mc-tb-right">
+              <div class="mc-seg inline-flex" role="group" aria-label="View">
+                <button id="mcViewDay" type="button" class="is-active">Day</button>
+                <button id="mcViewWeek" type="button">Week</button>
+                <button id="mcViewMonth" type="button">Month</button>
+              </div>
+              <div id="mcLayoutModes" class="mc-seg inline-flex" role="group" aria-label="Display as">
+                <button type="button" data-layout="grid" class="is-active" aria-pressed="true" title="Calendar grid"><span class="material-symbols-outlined mc-seg-ic" aria-hidden="true">grid_view</span><span class="mc-tb-l">Grid</span></button>
+                <button type="button" data-layout="agenda" aria-pressed="false" title="Agenda — bookings as a simple list"><span class="material-symbols-outlined mc-seg-ic" aria-hidden="true">view_agenda</span><span class="mc-tb-l">Agenda</span></button>
+              </div>
+              <!-- Legend lives behind one "?" button instead of a permanent strip -->
+              <button id="mcLegendBtn" type="button" class="mc-tb-btn mc-tb-icon" aria-haspopup="dialog" aria-expanded="false" aria-controls="mcLegendPop" title="What do the colours mean?">
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">help</span><span class="sr-only">Legend</span>
+              </button>
+              <button id="mcSummaryBtn" type="button" class="mc-tb-btn" aria-controls="mcSummary" aria-expanded="false" title="Show / hide booking summary ( ] )">
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">receipt_long</span><span class="mc-tb-l">Booking summary</span>
+                <span id="mcSummaryBtnBadge" class="hidden mc-count-badge" aria-label="1 slot selected">1</span>
+              </button>
+            </div>
           </div>
-          <span id="mcTitle" class="text-base font-semibold text-gray-800 min-w-[190px]">Loading…</span>
-          <input id="mcDate" type="date" class="px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-sm" aria-label="Jump to date" />
-          <div class="mc-seg inline-flex" role="group" aria-label="View">
-            <button id="mcViewDay" type="button" class="is-active">Day</button>
-            <button id="mcViewWeek" type="button">Week</button>
-            <button id="mcViewMonth" type="button">Month</button>
+
+          <div class="mc-tb-row mc-tb-sub">
+            <span class="mc-tb-sublabel">Quick filters</span>
+            <div id="mcChips" class="mc-tb-chips" aria-label="Quick filters"></div>
+            <label id="mcHideFullWrap" class="mc-chip mc-chip-check hidden" title="Hide rooms that have no free time left on this day"><input id="mcHideFull" type="checkbox" /><span class="material-symbols-outlined" aria-hidden="true">event_busy</span><span class="mc-chip-l">Hide fully booked</span></label>
+            <label class="hidden mc-tb-room">Room
+              <select id="mcRoom" class="mc-tb-select"></select>
+            </label>
+            <span id="mcCount" class="mc-tb-count" aria-live="polite"></span>
           </div>
-          <div id="mcDayModes" class="mc-seg inline-flex hidden" role="group" aria-label="Day layout"><button type="button" data-day-mode="rooms" class="is-active">Rooms</button><button type="button" data-day-mode="timeline">Timeline</button></div>
-          <label class="inline-flex items-center gap-1.5 text-xs text-gray-600"><input id="mcShowClasses" type="checkbox" /> Show classes</label>
-          <label class="hidden flex items-center gap-2 text-sm text-gray-600">Room
-            <select id="mcRoom" class="px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-sm"></select>
-          </label>
-          <button id="mcSummaryBtn" type="button" class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm font-medium hover:bg-gray-50" aria-controls="mcSummary" aria-expanded="false" title="Show / hide booking summary ( ] )">
-            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">receipt_long</span>Booking summary
-            <span id="mcSummaryBtnBadge" class="hidden mc-count-badge" aria-label="1 slot selected">1</span>
-          </button>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2 mb-3">
-          <div id="mcChips" class="flex flex-wrap items-center gap-2" aria-label="Quick filters"></div>
-          <span id="mcCount" class="text-xs text-gray-500 ml-1" aria-live="polite"></span>
+        <div id="mcLegendPop" class="mc-legend-pop" role="dialog" aria-label="Legend" hidden>
+          <strong>Legend</strong>
+          <div class="mc-legend" aria-label="Legend">
+            <span><i style="background:var(--mc-free)"></i>Available</span>
+            <span><i class="mc-lg-taken"></i>Reserved</span>
+            <span><i class="mc-lg-pending"></i>Reserved (pending)</span>
+            <span><i class="mc-lg-class"></i>Class</span>
+            <span class="mc-leg-cust"><i style="background:var(--mc-sel-bg);border:2px solid var(--mc-sel-line)"></i>Your selection</span>
+            <span class="mc-leg-cust"><i style="background:var(--mc-mine-bg)"></i>My booking</span>
+            <span class="mc-leg-cust"><i style="background:var(--mc-exam-bg);outline:2px solid var(--mc-mine-bg);outline-offset:-2px"></i>My Exam/Quiz</span>
+            <span><i style="background:var(--mc-maint-bg)"></i>Maintenance</span>
+            <span><i style="background:repeating-linear-gradient(135deg,var(--mc-hatch-a),var(--mc-hatch-a) 3px,var(--mc-hatch-b) 3px,var(--mc-hatch-b) 6px)"></i>Closed / holiday / past</span>
+          </div>
+          <div id="mcLegendTypes" class="mc-legend-types" aria-label="Room type colours" hidden>
+            <b>Room type <small>(colour stripe on every booking)</small></b>
+            <div class="mc-legend" id="mcLegendTypeList"></div>
+          </div>
+          <div id="mcLegendMonth" class="mc-legend hidden" aria-label="Month legend">
+            <span><i style="background:var(--mc-heat-4)"></i>Most rooms free</span>
+            <span><i style="background:var(--mc-heat-2)"></i>Some free</span>
+            <span><i style="background:var(--mc-heat-1)"></i>Few free</span>
+            <span><i style="background:var(--mc-heat-0)"></i>Fully booked</span>
+            <span><i style="background:repeating-linear-gradient(135deg,var(--mc-hatch-a),var(--mc-hatch-a) 3px,var(--mc-hatch-b) 3px,var(--mc-hatch-b) 6px)"></i>Closed / holiday</span>
+            <span class="text-gray-500">Click a day to open it.</span>
+          </div>
         </div>
 
-        <div class="mc-legend mb-3" aria-label="Legend">
-          <span><i style="background:var(--mc-free)"></i>Available</span>
-          <span><i style="background:var(--mc-taken-bg)"></i>Reserved</span>
-          <span><i style="background:var(--mc-pending-bg);border-style:dotted"></i>Reserved (pending)</span>
-          <span><i style="background:repeating-linear-gradient(45deg,var(--mc-class-a),var(--mc-class-a) 3px,var(--mc-class-b) 3px,var(--mc-class-b) 6px)"></i>Class</span>
-          <span class="mc-leg-cust"><i style="background:var(--mc-sel-bg);border:2px solid var(--mc-sel-line)"></i>Your selection</span>
-          <span class="mc-leg-cust"><i style="background:var(--mc-mine-bg)"></i>My booking</span>
-          <span class="mc-leg-cust"><i style="background:var(--mc-exam-bg);outline:2px solid var(--mc-mine-bg);outline-offset:-2px"></i>My Exam/Quiz</span>
-          <span><i style="background:var(--mc-maint-bg)"></i>Maintenance</span>
-          <span><i style="background:repeating-linear-gradient(135deg,var(--mc-hatch-a),var(--mc-hatch-a) 3px,var(--mc-hatch-b) 3px,var(--mc-hatch-b) 6px)"></i>Closed / holiday / past</span>
-        </div>
-
-        <div id="mcLegendMonth" class="mc-legend mb-3 hidden" aria-label="Month legend">
-          <span><i style="background:var(--mc-heat-4)"></i>Most rooms free</span>
-          <span><i style="background:var(--mc-heat-2)"></i>Some free</span>
-          <span><i style="background:var(--mc-heat-1)"></i>Few free</span>
-          <span><i style="background:var(--mc-heat-0)"></i>Fully booked</span>
-          <span><i style="background:repeating-linear-gradient(135deg,var(--mc-hatch-a),var(--mc-hatch-a) 3px,var(--mc-hatch-b) 3px,var(--mc-hatch-b) 6px)"></i>Closed / holiday</span>
-          <span class="text-gray-500">Click a day to open it.</span>
-        </div>
         <div id="mcError" class="hidden mb-3 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-800" role="alert"></div>
 
         <div id="mcLayout" class="mc-layout" data-filters="open">
           <aside id="mcFilters" class="mc-panel" aria-label="Room filters">
-            <div class="mc-panel-inner">
-              <div class="flex items-center justify-between mb-3">
+            <div class="mc-rail" id="mcRail" role="toolbar" aria-label="Filter shortcuts">
+              <button type="button" class="mc-rail-btn" data-rail-open="1" title="Show filters ( [ )" aria-label="Show filters"><span class="material-symbols-outlined" aria-hidden="true">keyboard_double_arrow_right</span></button>
+              <button type="button" class="mc-rail-btn" data-rail="seats" title="Seats needed" aria-label="Seats needed"><span class="material-symbols-outlined" aria-hidden="true">groups</span><i class="mc-rail-dot" hidden></i></button>
+              <button type="button" class="mc-rail-btn" data-rail="types" title="Room type" aria-label="Room type"><span class="material-symbols-outlined" aria-hidden="true">category</span><i class="mc-rail-dot" hidden></i></button>
+              <button type="button" class="mc-rail-btn" data-rail="floors" title="Floor" aria-label="Floor"><span class="material-symbols-outlined" aria-hidden="true">stairs</span><i class="mc-rail-dot" hidden></i></button>
+              <button type="button" class="mc-rail-btn" data-rail="window" title="Only free during…" aria-label="Only free during"><span class="material-symbols-outlined" aria-hidden="true">schedule</span><i class="mc-rail-dot" hidden></i></button>
+            </div>
+            <div class="mc-panel-inner mc-fpanel">
+              <div class="mc-fhead">
                 <h2 class="text-sm font-bold text-gray-900 flex items-center gap-2">Filters <span id="mcFilterBadge" class="hidden mc-count-badge">0</span></h2>
                 <button id="mcFiltersClose" type="button" class="mc-iconbtn" aria-label="Hide filters" title="Hide filters ( [ )">
                   <span class="material-symbols-outlined text-[18px]" aria-hidden="true">keyboard_double_arrow_left</span>
                 </button>
               </div>
 
-              <div class="mc-fsec">
-                <label for="mcSeats" class="mc-flabel">Seats needed</label>
-                <input id="mcSeats" type="number" min="1" max="9999" inputmode="numeric" placeholder="e.g. 40" class="mc-input" />
-                <label class="mc-opt mt-2"><input id="mcTight" type="checkbox" disabled><span>Tight fit only (≤ 1.5× seats)</span></label>
-                <p class="mc-fnote">Rooms with at least that many seats, closest fit first.</p>
+              <!-- Accordion: one section open at a time, so the panel never needs its own scrollbar.
+                   Each header shows the current value, so applied filters are readable while closed. -->
+              <div class="mc-accs">
+                <section class="mc-acc" data-sec="seats">
+                  <h3 class="mc-acc-h"><button type="button" class="mc-acc-btn" id="mcAccBtnSeats" aria-expanded="false" aria-controls="mcAccSeats">
+                    <span class="material-symbols-outlined mc-acc-ic" aria-hidden="true">groups</span>
+                    <span class="mc-acc-t">Seats needed</span>
+                    <span class="mc-acc-v" data-sum="seats">Any</span>
+                    <span class="material-symbols-outlined mc-acc-chev" aria-hidden="true">expand_more</span>
+                  </button></h3>
+                  <div class="mc-acc-body" id="mcAccSeats" role="region" aria-labelledby="mcAccBtnSeats" hidden>
+                    <div class="mc-acc-top"><p class="mc-fnote">Rooms with at least this many seats, closest fit first.</p><button type="button" class="mc-acc-clear" data-clear="seats" hidden>Clear</button></div>
+                    <label for="mcSeats" class="sr-only">Seats needed</label>
+                    <input id="mcSeats" type="number" min="1" max="9999" inputmode="numeric" placeholder="e.g. 40" class="mc-input" />
+                    <label id="mcTightWrap" class="mc-opt mc-tight" hidden><input id="mcTight" type="checkbox" disabled><span>Tight fit only (≤ 1.5× seats)</span></label>
+                  </div>
+                </section>
+
+                <section class="mc-acc" data-sec="types">
+                  <h3 class="mc-acc-h"><button type="button" class="mc-acc-btn" id="mcAccBtnTypes" aria-expanded="false" aria-controls="mcAccTypes">
+                    <span class="material-symbols-outlined mc-acc-ic" aria-hidden="true">category</span>
+                    <span class="mc-acc-t">Room type</span>
+                    <span class="mc-acc-v" data-sum="types">Any</span>
+                    <span class="material-symbols-outlined mc-acc-chev" aria-hidden="true">expand_more</span>
+                  </button></h3>
+                  <div class="mc-acc-body" id="mcAccTypes" role="region" aria-labelledby="mcAccBtnTypes" hidden>
+                    <div class="mc-acc-top"><p class="mc-fnote">Tick one or more.</p><button type="button" class="mc-acc-clear" data-clear="types" hidden>Clear</button></div>
+                    <div id="mcTypesSearchWrap" class="mc-osearch-wrap">
+                      <div class="mc-osearch"><span class="material-symbols-outlined" aria-hidden="true">search</span><input id="mcTypesSearch" type="search" class="mc-osearch-in" placeholder="Search room types…" aria-label="Search room types" autocomplete="off" spellcheck="false"><button type="button" class="mc-osearch-x" id="mcTypesSearchX" aria-label="Clear search" hidden><span class="material-symbols-outlined" aria-hidden="true">close</span></button></div>
+                      <div class="mc-obar"><span class="mc-ocount" id="mcTypesCount" role="status" aria-live="polite"></span><button type="button" class="mc-oall" id="mcTypesAll">Select all</button></div>
+                    </div>
+                    <div class="mc-scrollwrap"><div id="mcTypes" class="mc-opts" role="group" aria-label="Room types"></div><span class="mc-scroll-cue" aria-hidden="true"><span class="material-symbols-outlined">expand_more</span>Scroll for more</span></div><p id="mcTypesNone" class="mc-onone" hidden></p>
+                  </div>
+                </section>
+
+                <section class="mc-acc" data-sec="floors">
+                  <h3 class="mc-acc-h"><button type="button" class="mc-acc-btn" id="mcAccBtnFloors" aria-expanded="false" aria-controls="mcAccFloors">
+                    <span class="material-symbols-outlined mc-acc-ic" aria-hidden="true">stairs</span>
+                    <span class="mc-acc-t">Floor</span>
+                    <span class="mc-acc-v" data-sum="floors">Any</span>
+                    <span class="material-symbols-outlined mc-acc-chev" aria-hidden="true">expand_more</span>
+                  </button></h3>
+                  <div class="mc-acc-body" id="mcAccFloors" role="region" aria-labelledby="mcAccBtnFloors" hidden>
+                    <div class="mc-acc-top"><p class="mc-fnote">Tick one or more.</p><button type="button" class="mc-acc-clear" data-clear="floors" hidden>Clear</button></div>
+                    <div id="mcFloorsSearchWrap" class="mc-osearch-wrap" hidden>
+                      <div class="mc-osearch"><span class="material-symbols-outlined" aria-hidden="true">search</span><input id="mcFloorsSearch" type="search" class="mc-osearch-in" placeholder="Search floors…" aria-label="Search floors" autocomplete="off" spellcheck="false"><button type="button" class="mc-osearch-x" id="mcFloorsSearchX" aria-label="Clear search" hidden><span class="material-symbols-outlined" aria-hidden="true">close</span></button></div>
+                      <div class="mc-obar"><span class="mc-ocount" id="mcFloorsCount" role="status" aria-live="polite"></span><button type="button" class="mc-oall" id="mcFloorsAll">Select all</button></div>
+                    </div>
+                    <div class="mc-scrollwrap"><div id="mcFloors" class="mc-opts" role="group" aria-label="Floors"></div><span class="mc-scroll-cue" aria-hidden="true"><span class="material-symbols-outlined">expand_more</span>Scroll for more</span></div><p id="mcFloorsNone" class="mc-onone" hidden></p>
+                  </div>
+                </section>
+
+                <section class="mc-acc" data-sec="window">
+                  <h3 class="mc-acc-h"><button type="button" class="mc-acc-btn" id="mcAccBtnWindow" aria-expanded="false" aria-controls="mcAccWindow">
+                    <span class="material-symbols-outlined mc-acc-ic" aria-hidden="true">schedule</span>
+                    <span class="mc-acc-t">Free during</span>
+                    <span class="mc-acc-v" data-sum="window">Any time</span>
+                    <span class="material-symbols-outlined mc-acc-chev" aria-hidden="true">expand_more</span>
+                  </button></h3>
+                  <div class="mc-acc-body" id="mcAccWindow" role="region" aria-labelledby="mcAccBtnWindow" hidden>
+                    <div class="mc-acc-top"><p class="mc-fnote">Keeps rooms free for the whole window.</p><button type="button" class="mc-acc-clear" data-clear="window" hidden>Clear</button></div>
+                    <input id="mcWinDate" type="date" class="mc-input" aria-label="Date" />
+                    <div class="mc-win-times">
+                      <input id="mcWinFrom" type="time" step="900" class="mc-input" aria-label="From" />
+                      <span class="text-xs text-gray-400" aria-hidden="true">to</span>
+                      <input id="mcWinTo" type="time" step="900" class="mc-input" aria-label="To" />
+                    </div>
+                    <p id="mcWinHint" class="hidden mc-fwarn" role="status"></p>
+                  </div>
+                </section>
               </div>
 
-              <div class="mc-fsec">
-                <span class="mc-flabel">Room type</span>
-                <div id="mcTypes" class="mc-opts"></div>
-              </div>
-
-              <div class="mc-fsec">
-                <span class="mc-flabel">Floor</span>
-                <div id="mcFloors" class="mc-opts"></div>
-              </div>
-
-              <div class="mc-fsec">
-                <div class="flex items-center justify-between">
-                  <span class="mc-flabel">Only free during…</span>
-                  <button id="mcWinClear" type="button" class="text-xs text-[#7a1f2b] hover:underline">Reset</button>
-                </div>
-                <input id="mcWinDate" type="date" class="mc-input" aria-label="Date" />
-                <div class="flex items-center gap-2 mt-2">
-                  <input id="mcWinFrom" type="time" step="900" class="mc-input" aria-label="From" />
-                  <span class="text-xs text-gray-400">to</span>
-                  <input id="mcWinTo" type="time" step="900" class="mc-input" aria-label="To" />
-                </div>
-                <p id="mcWinHint" class="hidden mc-fwarn" role="status"></p>
-                <p class="mc-fnote">Keeps only rooms that are free for the whole window.</p>
-              </div>
-
-              <button id="mcClear" type="button" class="mc-clear" disabled>Clear filters</button>
+              <button id="mcClear" type="button" class="mc-clear" disabled>Clear all filters</button>
             </div>
           </aside>
 
@@ -241,13 +310,15 @@
             <div id="mcDaySummary" class="mc-day-summary hidden"><span id="mcDaySummaryDate"></span><button id="mcDaySummaryOpen" type="button"><span id="mcDaySummaryCount">0 bookings</span> ›</button></div>
             <div id="mcDayStrip" class="mc-daystrip hidden" aria-label="Choose a day"></div>
             <div id="mcDayDrawer" class="mc-day-drawer hidden" role="dialog" aria-label="Bookings for selected day"><div class="flex items-center justify-between gap-3"><strong id="mcDayDrawerTitle">Bookings</strong><button id="mcDayDrawerClose" type="button" aria-label="Close bookings list">×</button></div><div id="mcDayDrawerList"></div></div>
+        <div id="mcRoomBar" class="mc-roombar hidden" aria-label="Room groups and pages"></div>
         <div id="mcGrid" class="mc-scroll mc-loading" role="region" aria-label="Room availability calendar" aria-busy="true" tabindex="-1"><div class="mc-skel" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div><p class="sr-only" role="status">Loading calendar…</p></div>
           </div>
 
           <aside id="mcSummary" class="mc-panel mc-panel-right" aria-label="Booking summary">
             <div class="mc-panel-inner">
-              <div class="flex items-center justify-between mb-3">
-                <h2 class="text-sm font-bold text-gray-900">Booking summary</h2>
+              <div class="mc-sum-head">
+                <div class="min-w-0"><h2 class="text-sm font-bold text-gray-900">Booking summary</h2>
+                <p id="mcSumHeadSub" class="mc-sum-headsub" hidden></p></div>
                 <button id="mcSummaryClose" type="button" class="mc-iconbtn" aria-label="Hide booking summary" title="Hide booking summary ( ] )">
                   <span class="material-symbols-outlined text-[18px]" aria-hidden="true">keyboard_double_arrow_right</span>
                 </button>
@@ -265,11 +336,14 @@
     <script src="js/util.js"></script>
     <script src="js/schedule.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/mc/roomcolor.js"></script>
     <script src="js/mc/lanes.js"></script>
     <script src="js/mc/series.js"></script>
     <script src="js/mc/daystrip.js"></script>
     <script src="js/mc/popover.js"></script>
     <script src="js/mc/grid.js"></script>
+    <script src="js/mc/gantt.js"></script>
+    <script src="js/mc/weekmatrix.js"></script>
     <script src="js/mc/filters.js"></script>
     <script src="js/mc/summary.js"></script>
     <script src="js/mc/suggest.js"></script>

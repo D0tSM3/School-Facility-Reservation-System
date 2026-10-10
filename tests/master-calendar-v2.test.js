@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const window = {};
 const context = vm.createContext({ window, Date, Error, Number, Array, String, Math, Infinity });
-for (const file of ['public/js/mc/lanes.js', 'public/js/mc/series.js']) {
+for (const file of ['public/js/util.js', 'public/js/schedule.js', 'public/js/mc/filters.js', 'public/js/mc/lanes.js', 'public/js/mc/series.js']) {
   vm.runInContext(fs.readFileSync(file, 'utf8'), context, { filename: file });
 }
 
@@ -67,4 +67,35 @@ test('specific-day payload matches the existing reservation API shape', () => {
   assert.deepEqual(JSON.parse(JSON.stringify(payload)), {
     room_id:'room-1', start_time:'2026-10-12T09:00', end_time:'2026-10-14T10:00', purpose:'Meeting', category:'Student Org Meeting', equipment_notes:'HDMI', active_dates:['2026-10-12','2026-10-14']
   });
+});
+
+// ---- "Hide fully booked" (Day view) ----
+const RULES = { open: '08:00', close: '10:00', closedDays: ['Sunday'], periods: [] };   // four 30-minute units
+const DAY = '2026-10-12';                                                                  // a Monday
+const room = (reservations = [], extra = {}) => Object.assign({ room_id: 'r', status: 'Available', classes: [], reservations }, extra);
+const rv = (s, e) => ({ start_time: DAY + 'T' + s + ':00', end_time: DAY + 'T' + e + ':00' });
+const full = (r, now) => window.MCFilters.isFullyBooked(r, DAY, { holidays: [] }, RULES, now || null);
+
+test('a room with every unit taken is fully booked; one free unit is not', () => {
+  assert.equal(full(room([rv('08:00', '10:00')])), true);
+  assert.equal(full(room([rv('08:00', '09:30')])), false);
+  assert.equal(full(room([])), false);
+});
+
+test('classes and back-to-back bookings together can fill a day', () => {
+  const r = room([rv('09:00', '10:00')], { classes: [{ day_of_week: 'Monday', start_time: '08:00:00', end_time: '09:00:00' }] });
+  assert.equal(full(r), true);
+});
+
+test('for today only the units still ahead count', () => {
+  const r = room([rv('09:00', '10:00')]);
+  assert.equal(full(r, { ymd: DAY, min: 8 * 60 + 29 }), false);   // 08:30 unit still ahead and free
+  assert.equal(full(r, { ymd: DAY, min: 8 * 60 + 30 }), true);    // only booked units left
+});
+
+test('past days, closed days, holidays and maintenance rooms are never "fully booked"', () => {
+  assert.equal(full(room([rv('08:00', '10:00')]), { ymd: '2026-10-13', min: 0 }), false);
+  assert.equal(window.MCFilters.isFullyBooked(room([]), '2026-10-11', { holidays: [] }, RULES, null), false);
+  assert.equal(window.MCFilters.isFullyBooked(room([rv('08:00', '10:00')]), DAY, { holidays: [{ holiday_date: DAY, name: 'X' }] }, RULES, null), false);
+  assert.equal(full(room([rv('08:00', '10:00')], { status: 'Maintenance' })), false);
 });

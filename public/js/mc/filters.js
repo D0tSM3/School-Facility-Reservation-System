@@ -14,6 +14,11 @@
  *     and, for today, it starts after "now" (the server requires a future start).
  *
  * Filter keys: seats | types | floors | window | now
+ *
+ * Room type and Floor each have a search box + "select all matching". The search text is
+ * view-only state (it narrows which checkboxes are listed, never what is filtered); only the
+ * ticked boxes live in the filter object. A multi-word search needs every word to match, so
+ * "comp lab" finds "Computer Lab".
  */
 (function () {
   'use strict';
@@ -31,7 +36,13 @@
   let onChange = () => {};
   let getNow = () => null;
   let optionSig = '';
+  let optLabels = { types: new Map(), floors: new Map() };   // key -> label, for the section summaries
+  let openSec = null;        // accordion: key of the one open section (null = all closed)
+  let secChosen = false;     // true once the user (or the rail) picked a section: stop auto-choosing
   let ui = null;
+  const query = { types: '', floors: '' };      // search text per list (not part of the filter)
+  const FLOOR_SEARCH_MIN = 7;                    // the Floor search box appears once there are this many floors
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   // ---------- pure helpers ----------
   const typeKey = t => String(t == null ? '' : t).trim().toLowerCase();
@@ -80,6 +91,17 @@
       });
     }
     return { state: 'open', label: '', free, total: us.length };
+  }
+
+  /**
+   * "Fully booked" = an open day with bookable units but none left (for today: none still ahead of
+   * "now"). Past days, closed/holiday days and rooms under maintenance are never called fully booked,
+   * so the "Hide fully booked" toggle can't blank out a whole calendar by accident.
+   */
+  function isFullyBooked(room, date, entry, r, now) {
+    if (now && date < now.ymd) return false;
+    const inf = dayInfo(room, date, entry, r, now);
+    return inf.state === 'open' && inf.total > 0 && inf.free === 0;
   }
 
   function isFreeNow(room, entry, r, now) {
@@ -215,7 +237,8 @@
   }
 
   const optionHtml = (kind, o, checked) =>
-    '<label class="mc-opt"><input type="checkbox" data-' + kind + '="' + esc(o.key) + '"' + (checked ? ' checked' : '') + '>' +
+    '<label class="mc-opt' + (kind === 'type' && window.MCRoomColor ? ' ' + window.MCRoomColor.cls(o.key) : '') + '"><input type="checkbox" data-' + kind + '="' + esc(o.key) + '"' + (checked ? ' checked' : '') + '>' +
+    (kind === 'type' ? '<i class="mc-rt-dot" aria-hidden="true"></i>' : '') +
     '<span>' + esc(o.label) + '</span><em>' + o.count + '</em></label>';
 
   // ---------- UI ----------
@@ -229,6 +252,7 @@
     if (document.activeElement !== ui.seats) ui.seats.value = f.seats === '' ? '' : String(f.seats);
     ui.tight.checked = f.tight && f.seats !== '';
     ui.tight.disabled = f.seats === '';
+    ui.tightWrap.hidden = f.seats === '';      // only offered once a seat count is set
     ui.types.querySelectorAll('input').forEach(i => { i.checked = f.types.includes(i.getAttribute('data-type')); });
     ui.floors.querySelectorAll('input').forEach(i => { i.checked = f.floors.includes(i.getAttribute('data-floor')); });
     ui.winDate.value = f.winDate; ui.winFrom.value = f.winFrom; ui.winTo.value = f.winTo;
@@ -249,6 +273,8 @@
     const n = activeKeys(f, now).length;
     [ui.badge, ui.btnBadge].forEach(b => { b.textContent = String(n); b.classList.toggle('hidden', n === 0); });
     ui.clear.disabled = n === 0 && !w.any;
+    paintSections(w);
+    paintLists();
 
     ui.chips.querySelectorAll('button[data-chip]').forEach(btn => {
       const c = CHIPS.find(x => x.id === btn.getAttribute('data-chip'));
@@ -256,8 +282,160 @@
       btn.classList.toggle('is-on', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
       btn.disabled = !enabled;
-      btn.title = enabled ? '' : 'No rooms of this kind in the system';
+      btn.title = enabled ? c.label : 'No rooms of this kind in the system';
     });
+  }
+
+  // ---------- accordion ----------
+  const pickedLabels = (kind, keys) => keys.map(k => optLabels[kind].get(k) || (kind === 'floors' ? 'Floor ' + k : k));
+  const summarize = list => list.length <= 1 ? (list[0] || '') : list[0] + ' +' + (list.length - 1);
+  const shortDate = d => { const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(d || ''); return m ? MONTHS[+m[1] - 1] + ' ' + (+m[2]) : ''; };
+
+  /** Section header value + "has a selection" state + per-section Clear links. */
+  function paintSections(w) {
+    const sums = {
+      seats: f.seats === '' ? '' : '≥ ' + f.seats + (f.tight ? ' · tight fit' : ''),
+      types: summarize(pickedLabels('types', f.types)),
+      floors: summarize(pickedLabels('floors', f.floors)),
+      window: !w.any ? '' : (w.valid || (f.winDate && f.winFrom && f.winTo))
+        ? shortDate(f.winDate) + ' · ' + S.fmt12(f.winFrom) + '–' + S.fmt12(f.winTo)
+        : 'Incomplete'
+    };
+    const empty = { seats: 'Any', types: 'Any', floors: 'Any', window: 'Any time' };
+    ui.accs.forEach(acc => {
+      const key = acc.getAttribute('data-sec'), has = sums[key] !== '';
+      acc.classList.toggle('has-value', has);
+      acc.classList.toggle('is-warn', key === 'window' && (!!w.problem || sums.window === 'Incomplete'));
+      acc.querySelector('[data-sum]').textContent = has ? sums[key] : empty[key];
+      const clr = acc.querySelector('[data-clear]'); if (clr) clr.hidden = !has;
+    });
+  }
+
+  function paintAccordion() {
+    ui.accs.forEach(acc => {
+      const key = acc.getAttribute('data-sec'), on = key === openSec;
+      acc.classList.toggle('is-open', on);
+      acc.querySelector('.mc-acc-btn').setAttribute('aria-expanded', on ? 'true' : 'false');
+      acc.querySelector('.mc-acc-body').hidden = !on;
+    });
+    ui.lists.forEach(paintScrollCue);
+  }
+
+  /** Open one section (closing the rest); toggling the open one closes it. */
+  function setOpen(key, on) {
+    secChosen = true;
+    openSec = on === false ? (openSec === key ? null : openSec) : key;
+    paintAccordion();
+  }
+
+  /** Opened from outside (the collapsed rail's icons): focus the section's first control. */
+  function openSection(key) {
+    setOpen(key, true);
+    const acc = ui && ui.accs.find(a => a.getAttribute('data-sec') === key);
+    const t = acc && acc.querySelector('.mc-acc-body input:not([disabled])');
+    if (t) t.focus({ preventScroll: true });
+  }
+
+  /** Framed + scrollbar + fade only when the list really overflows; plain when it fits. */
+  function paintScrollCue(list) {
+    const wrap = list.parentElement, can = list.scrollHeight > list.clientHeight + 1;
+    wrap.classList.toggle('is-scrollable', can);
+    wrap.classList.toggle('is-end', !can || list.scrollTop + list.clientHeight >= list.scrollHeight - 2);
+    if (can) list.setAttribute('tabindex', '0'); else list.removeAttribute('tabindex');   // keyboard users can scroll it
+  }
+
+  /** First open: the section that already has a selection, otherwise Room type (the most used). */
+  function chooseDefaultSection() {
+    if (secChosen || !ui) return;
+    const w = windowState(f, getNow());
+    const has = { seats: f.seats !== '', types: f.types.length > 0, floors: f.floors.length > 0, window: w.any };
+    openSec = ['seats', 'types', 'floors', 'window'].find(k => has[k]) || 'types';
+    paintAccordion();
+  }
+
+  // ---------- search + select-all-matching (Room type / Floor) ----------
+  const LISTS = {
+    types:  { attr: 'type',  noun: 'room types', one: 'room type', optKey: 'types' },
+    floors: { attr: 'floor', noun: 'floors',     one: 'floor',     optKey: 'floors' }
+  };
+
+  /** Every typed word must appear in the option's label (or key): "comp lab" → "Computer Lab". */
+  function textMatches(label, key, q) {
+    const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) return true;
+    const hay = (String(label) + ' ' + String(key)).toLowerCase();
+    return words.every(w => hay.includes(w));
+  }
+
+  /** Option keys of one list that the current search text keeps visible, in list order. */
+  function visibleKeys(kind) {
+    return [...optLabels[LISTS[kind].optKey].entries()]
+      .filter(([k, label]) => textMatches(label, k, query[kind]))
+      .map(([k]) => k);
+  }
+
+  function paintList(kind) {
+    const L = LISTS[kind], el = ui[kind + 'S'];
+    if (!el) return;
+    const q = query[kind].trim(), total = optLabels[L.optKey].size;
+    const shown = new Set(visibleKeys(kind));
+    const picked = f[kind];
+
+    // Floors: only worth a search box when the list is long (or while a search is active).
+    el.wrap.hidden = kind === 'floors' && total < FLOOR_SEARCH_MIN && !q;
+
+    el.list.querySelectorAll('input[data-' + L.attr + ']').forEach(i => {
+      i.closest('label').hidden = !shown.has(i.getAttribute('data-' + L.attr));
+    });
+    el.clearBtn.hidden = !query[kind];
+
+    const m = shown.size;
+    el.count.textContent = !total ? '' : q ? m + ' of ' + total + ' match' : total + ' ' + (total === 1 ? L.one : L.noun);
+
+    const allOn = m > 0 && [...shown].every(k => picked.includes(k));
+    el.all.textContent = (allOn ? 'Deselect ' : 'Select ') + (q ? 'matching' : 'all');
+    el.all.disabled = m === 0;
+    el.all.setAttribute('aria-label', (allOn ? 'Deselect ' : 'Select ') + (q ? m + ' matching ' : 'all ') + L.noun);
+
+    const none = !!total && m === 0;
+    el.none.hidden = !none;
+    if (none) el.none.innerHTML = 'No ' + L.noun + ' match “' + esc(q) + '”. <button type="button" data-clear-search="' + kind + '">Clear search</button>';
+    paintScrollCue(el.list);
+  }
+
+  function paintLists() { if (ui && ui.typesS) { paintList('types'); paintList('floors'); } }
+
+  function setQuery(kind, v) {
+    query[kind] = v;
+    if (ui[kind + 'S'].input.value !== v) ui[kind + 'S'].input.value = v;
+    paintList(kind);
+    ui[kind + 'S'].list.scrollTop = 0;
+  }
+
+  /** Tick every visible option, or — if they are all ticked already — untick them. */
+  function toggleMatching(kind) {
+    const keys = visibleKeys(kind);
+    if (!keys.length) return;
+    const allOn = keys.every(k => f[kind].includes(k));
+    const set = new Set(f[kind]);
+    keys.forEach(k => { if (allOn) set.delete(k); else set.add(k); });
+    f[kind] = [...set];
+    fire(kind);
+  }
+
+  function bindSearch(kind, Kind) {
+    const S = ui[kind + 'S'] = {
+      wrap: $('mc' + Kind + 'SearchWrap'), input: $('mc' + Kind + 'Search'), clearBtn: $('mc' + Kind + 'SearchX'),
+      count: $('mc' + Kind + 'Count'), all: $('mc' + Kind + 'All'), none: $('mc' + Kind + 'None'), list: ui[kind]
+    };
+    S.input.addEventListener('input', () => setQuery(kind, S.input.value));
+    S.input.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && S.input.value) { e.preventDefault(); e.stopPropagation(); setQuery(kind, ''); }
+      else if (e.key === 'Enter') e.preventDefault();
+    });
+    S.clearBtn.addEventListener('click', () => { setQuery(kind, ''); S.input.focus(); });
+    S.all.addEventListener('click', () => toggleMatching(kind));
+    S.none.addEventListener('click', e => { if (e.target.closest('[data-clear-search]')) { setQuery(kind, ''); S.input.focus(); } });
   }
 
   function renderOptions() {
@@ -265,10 +443,12 @@
     const sig = JSON.stringify(o);
     if (sig === optionSig) return;
     optionSig = sig;
+    optLabels = { types: new Map(o.types.map(t => [t.key, t.label])), floors: new Map(o.floors.map(x => [x.key, x.label])) };
     ui.types.innerHTML = o.types.map(t => optionHtml('type', t, f.types.includes(t.key))).join('') ||
       '<p class="text-xs text-gray-400">No rooms.</p>';
     ui.floors.innerHTML = o.floors.map(x => optionHtml('floor', x, f.floors.includes(x.key))).join('') ||
       '<p class="text-xs text-gray-400">No rooms.</p>';
+    paintLists();
   }
 
   function toggleIn(arr, v, on) {
@@ -283,12 +463,29 @@
     ui = {
       seats: $('mcSeats'), tight: $('mcTight'), types: $('mcTypes'), floors: $('mcFloors'),
       winDate: $('mcWinDate'), winFrom: $('mcWinFrom'), winTo: $('mcWinTo'), winHint: $('mcWinHint'),
-      clear: $('mcClear'), badge: $('mcFilterBadge'), btnBadge: $('mcFiltersBtnBadge'), chips: $('mcChips')
+      clear: $('mcClear'), badge: $('mcFilterBadge'), btnBadge: $('mcFiltersBtnBadge'), chips: $('mcChips'),
+      tightWrap: $('mcTightWrap'), accs: [...document.querySelectorAll('#mcFilters .mc-acc')]
     };
+    ui.lists = [ui.types, ui.floors];
+    bindSearch('types', 'Types');
+    bindSearch('floors', 'Floors');
+
+    // Accordion headers (one open at a time) and the per-section "Clear" links.
+    ui.accs.forEach(acc => acc.querySelector('.mc-acc-btn').addEventListener('click', () => {
+      const key = acc.getAttribute('data-sec');
+      setOpen(key, openSec !== key);
+    }));
+    $('mcFilters').addEventListener('click', e => {
+      const c = e.target.closest('[data-clear]');
+      if (c) remove(c.getAttribute('data-clear'));
+    });
+    ui.lists.forEach(l => l.addEventListener('scroll', () => paintScrollCue(l), { passive: true }));
+    if ('ResizeObserver' in window) { const ro = new ResizeObserver(entries => entries.forEach(en => paintScrollCue(en.target))); ui.lists.forEach(l => ro.observe(l)); }
+    window.addEventListener('resize', () => ui.lists.forEach(paintScrollCue));
 
     ui.chips.innerHTML = CHIPS.map(c =>
       '<button type="button" class="mc-chip" data-chip="' + c.id + '" aria-pressed="false">' +
-      '<span class="material-symbols-outlined" aria-hidden="true">' + c.icon + '</span>' + esc(c.label) + '</button>').join('');
+      '<span class="material-symbols-outlined" aria-hidden="true">' + c.icon + '</span><span class="mc-chip-l">' + esc(c.label) + '</span></button>').join('');
     ui.chips.addEventListener('click', e => {
       const btn = e.target.closest('button[data-chip]');
       if (!btn || btn.disabled) return;
@@ -324,8 +521,8 @@
 
     const readWindow = () => { f.winDate = ui.winDate.value; f.winFrom = ui.winFrom.value; f.winTo = ui.winTo.value; fire('window'); };
     [ui.winDate, ui.winFrom, ui.winTo].forEach(i => i.addEventListener('change', readWindow));
-    $('mcWinClear').addEventListener('click', () => { f.winDate = f.winFrom = f.winTo = ''; fire('window'); });
     ui.clear.addEventListener('click', () => { clear(); });
+    chooseDefaultSection();
     sync();
   }
 
@@ -333,26 +530,38 @@
     rooms = list;
     if (!ui) return;
     renderOptions();
+    chooseDefaultSection();
     sync();
   }
 
-  function clear() { f = blank(); fire('clear'); }
+  function clear() {
+    f = blank();
+    if (ui && ui.typesS) { query.types = query.floors = ''; ui.typesS.input.value = ui.floorsS.input.value = ''; }
+    fire('clear');
+  }
 
   /** Drop one filter group (used by the empty-state "relax" buttons). */
   function remove(key) {
     if (key === 'seats') { f.seats = ''; f.tight = false; }
-    else if (key === 'types') f.types = [];
-    else if (key === 'floors') f.floors = [];
+    else if (key === 'types') { f.types = []; if (ui && ui.typesS) setQuery('types', ''); }
+    else if (key === 'floors') { f.floors = []; if (ui && ui.floorsS) setQuery('floors', ''); }
     else if (key === 'window') f.winDate = f.winFrom = f.winTo = '';
     else if (key === 'now') f.now = false;
     fire('remove');
+  }
+
+  /** Set floors/types from outside the panel (the "choose a floor / room type" gate). */
+  function set(patch, reason) {
+    if (patch.floors) f.floors = patch.floors.map(String);
+    if (patch.types) f.types = patch.types.map(String);
+    fire(reason || 'set');
   }
 
   const get = () => ({ ...f, types: f.types.slice(), floors: f.floors.slice() });
   function setRules(r) { rules = r; sync(); }
 
   window.MCFilters = Object.freeze({
-    init, setRooms, setRules, get, clear, remove, sync,
-    apply, relaxHints, activeKeys, windowState, dayInfo, buildOptions, typeKey, units
+    init, setRooms, setRules, get, set, clear, remove, sync, openSection,
+    apply, relaxHints, activeKeys, windowState, dayInfo, isFullyBooked, buildOptions, typeKey, units, textMatches
   });
 })();

@@ -235,6 +235,22 @@
               </span>
             </div>
 
+            <!-- Capacity Filter (minimum seats) -->
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-[18px]">group</span>
+              <input
+                id="capacityFilter"
+                type="number"
+                min="1"
+                max="9999"
+                inputmode="numeric"
+                placeholder="Min seats"
+                aria-label="Minimum seats"
+                title="Only rooms with at least this many seats, smallest fit first"
+                class="w-[128px] bg-[#f8f9fb] border border-gray-200/80 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-gray-700 font-medium placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b] transition-colors"
+              />
+            </div>
+
             <!-- Status Filter Redesign -->
             <div class="flex bg-[#f8f9fb] border border-gray-200/80 rounded-xl p-1 gap-1">
               <button type="button" class="status-btn active px-3 py-1.5 rounded-lg text-xs font-semibold bg-white shadow-sm text-gray-800 transition-all" data-status="all">All</button>
@@ -320,7 +336,7 @@
           </div>
           <h3 class="text-base font-bold text-gray-800">No Facilities Match Your Criteria</h3>
           <p class="text-xs text-gray-500 max-w-sm leading-relaxed">
-            Try adjusting your search terms, changing floor or room type selections, or clearing filters.
+            Try adjusting your search terms, lowering the minimum seats, changing floor or room type selections, or clearing filters.
           </p>
           <button
             id="clearAllFiltersBtn"

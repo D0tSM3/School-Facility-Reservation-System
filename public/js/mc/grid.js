@@ -29,7 +29,11 @@
 (function () {
   'use strict';
 
-  let SCALE = 1.2; // px per minute; recalculated for the available viewport
+  const PX_PER_MIN = 1.8;  // 30 minutes = 54px
+  let SCALE = PX_PER_MIN;  // px per minute (fixed)
+  const MAX_VISIBLE = 3;   // cards shown in one overlap cluster; the rest go behind "+N more"
+  const CASCADE_PX = 10;   // horizontal offset per stacked card
+  const NUDGE_PX = 4;      // vertical offset when two stacked cards start at (almost) the same minute
   const esc = v => window.CampusRoomUtil.escapeHtml(v);
   const toMin = t => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
   const hm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
@@ -46,13 +50,16 @@
   function blockHtml(b, openMin, closeMin, lane) {
     const s = Math.max(b.startMin, openMin), e = Math.min(b.endMin, closeMin);
     if (e <= s) return '';
-    const top = (s - openMin) * SCALE;
-    const height = Math.max((e - s) * SCALE, 14);
+    lane = lane || { lane: 0, laneCount: 1, nudge: 0 };
+    const nudge = Math.min(lane.nudge || 0, 3) * NUDGE_PX;
+    const top = (s - openMin) * SCALE + nudge;
+    const height = Math.max((e - s) * SCALE - nudge, 14);
     const time = range12(b.startMin, b.endMin);
-    lane = lane || { lane: 0, laneCount: 1 };
-    const left = lane.lane * 100 / lane.laneCount, width = 100 / lane.laneCount;
-    return '<div class="mc-block ' + esc(b.cls) + '" tabindex="0"' +
-      ' style="top:' + top + 'px;height:' + height + 'px;left:' + left + '%;width:' + width + '%"' +
+    const stacked = lane.lane > 0 || lane.laneCount > 1;
+    // Stacked "deck of cards": each later card sits a few px further right (and a touch lower when
+    // it would otherwise hide the title of the card beneath). Hover/focus lifts a card to the front.
+    return '<div class="mc-block ' + esc(b.cls) + (b.rt ? ' ' + esc(b.rt) : '') + (stacked ? ' is-stacked' : '') + '" tabindex="0"' +
+      ' style="top:' + top + 'px;height:' + height + 'px;left:' + (3 + lane.lane * CASCADE_PX) + 'px;z-index:' + (3 + lane.lane) + '"' +
       ' data-tip="' + esc(b.tip) + '" aria-label="' + esc(b.tip) + '">' +
       '<span class="mc-block-t">' + esc(b.label) + '</span>' +
       '<span class="mc-block-s">' + esc(b.sub || time) + '</span></div>';
@@ -73,7 +80,7 @@
       if(hidden.length) {
         const first=hidden.reduce((a,x)=>x.b.startMin<a.b.startMin?x:a,hidden[0]);
         const n=hidden.length, top=(first.b.startMin-openMin)*SCALE;
-        out.push('<button type="button" class="mc-more-chip" data-more-ci="'+ci+'" data-more-index="'+first.i+'" style="top:'+top+'px;left:66.666%;width:33.334%;" aria-label="Show '+n+' more bookings">+'+n+' more</button>');
+        out.push('<button type="button" class="mc-more-chip" data-more-ci="'+ci+'" data-more-index="'+first.i+'" style="top:'+top+'px;right:4px;" aria-haspopup="dialog" aria-label="Show '+n+' more booking'+(n===1?'':'s')+'">+'+n+' more</button>');
       }
       cluster=[]; end=-Infinity;
     }
@@ -83,8 +90,8 @@
 
   function columnHtml(c, ci, m, total, hr, off) {
     const { openMin, closeMin, units, blocked } = m;
-    const lanes = window.MCLanes ? window.MCLanes.layout(c.blocks, 3) : c.blocks.map(() => ({ lane: 0, laneCount: 1, hidden: false }));
-    let h = '<div class="mc-col" data-ci="' + ci + '" style="height:' + total + 'px;--hr:' + hr + 'px;--half:' + (30 * SCALE) + 'px;--off:' + off + 'px">';
+    const lanes = window.MCLanes ? window.MCLanes.layout(c.blocks, MAX_VISIBLE, { minGapMin: Math.ceil(16 / SCALE) }) : c.blocks.map(() => ({ lane: 0, laneCount: 1, hidden: false, nudge: 0 }));
+    let h = '<div class="mc-col' + (c.head && c.head.weekend ? ' is-weekend' : '') + '" data-ci="' + ci + '" style="height:' + total + 'px;--hr:' + hr + 'px;--half:' + (30 * SCALE) + 'px;--qtr:' + (15 * SCALE) + 'px;--off:' + off + 'px;--offq:' + (((15 - (openMin % 15)) % 15) * SCALE) + 'px">';
 
     if (c.overlay) {
       h += '<div class="mc-ov is-' + esc(c.overlay.kind) + '" style="top:0;height:' + total + 'px"><span>' +
@@ -265,7 +272,9 @@
       if (window.MCPopover && anchor) {
         let cluster=blocks.filter(b=>b.startMin<anchor.endMin && b.endMin>anchor.startMin), changed=true;
         while(changed){changed=false;cluster.forEach(a=>blocks.forEach(b=>{if(b.startMin<Math.max(...cluster.map(x=>x.endMin)) && b.endMin>Math.min(...cluster.map(x=>x.startMin)) && !cluster.includes(b)){cluster.push(b);changed=true;}}));}
-        window.MCPopover.open(more,cluster.map(b=>({title:b.label,detail:b.sub||range12(b.startMin,b.endMin)})));
+        cluster.sort((a,b)=>a.startMin-b.startMin||a.endMin-b.endMin);
+        const lo=Math.min(...cluster.map(x=>x.startMin)), hi=Math.max(...cluster.map(x=>x.endMin));
+        window.MCPopover.open(more,cluster.map(b=>{const t=range12(b.startMin,b.endMin);return {title:b.label,time:t,detail:b.sub&&b.sub!==t?b.sub:'',cls:(/is-mine/.test(b.cls)?'is-mine':/is-class/.test(b.cls)?'is-class':/is-pending/.test(b.cls)?'is-pending':'')+(b.rt?' '+b.rt:'')};}),{title:'Bookings '+range12(lo,hi)});
       }
       e.preventDefault(); return;
     }
@@ -340,8 +349,9 @@
   /** Draw the grid into `container` (the single scroll element). Returns {scrollToMin}. */
   function render(container, model) {
     const openMin = toMin(model.open), closeMin = toMin(model.close);
-    const availableHeight = Math.max(320, Math.min((window.innerHeight || 900) - 260, 1000));
-    SCALE = Math.max(0.9, Math.min(1.6, availableHeight / Math.max(1, closeMin - openMin)));
+    // Fixed density: every 30-minute row is the same height on every screen, so labels and
+    // bookings read the same everywhere. The scroller (not the page) handles tall days.
+    SCALE = PX_PER_MIN;
     const total = (closeMin - openMin) * SCALE;
     const hr = 60 * SCALE;
     const off = ((60 - (openMin % 60)) % 60) * SCALE;
@@ -360,14 +370,16 @@
     let h = '<div class="mc-grid" style="--mc-ppm:' + SCALE + 'px;grid-template-columns:var(--mc-time-col,64px) repeat(' + n + ',minmax(var(--mc-col-min,120px),1fr))">';
     h += '<div class="mc-corner"></div>';
     h += model.columns.map(c =>
-      '<div class="mc-head' + (c.head.today ? ' is-today' : '') + '">' +
+      '<div class="mc-head' + (c.head.today ? ' is-today' : '') + (c.head.weekend ? ' is-weekend' : '') + '">' +
       '<div class="mc-head-title">' + esc(c.head.title) +
       (c.head.badge ? '<span class="mc-badge">' + esc(c.head.badge) + '</span>' : '') + '</div>' +
       '<div class="mc-head-sub">' + esc(c.head.sub) + '</div></div>').join('');
 
     h += '<div class="mc-times" style="height:' + total + 'px">';
-    for (let m = Math.ceil(openMin / 60) * 60; m <= closeMin; m += 60) {
-      h += '<span class="mc-time-label" style="top:' + ((m - openMin) * SCALE) + 'px">' + esc(fmt12(hm(m))) + '</span>';
+    // The axis labels every half hour (hours bold, half hours muted).
+    const labelStep = 30;
+    for (let m = Math.ceil(openMin / labelStep) * labelStep; m <= closeMin; m += labelStep) {
+      h += '<span class="mc-time-label' + (m % 60 ? ' is-minor' : '') + '" style="top:' + ((m - openMin) * SCALE) + 'px">' + esc(fmt12(hm(m))) + '</span>';
     }
     h += '</div>';
 
@@ -415,7 +427,7 @@
   function renderMonth(container, model) {
     ctx = null; drag = null; sel = null;
     let h = '<div class="mc-month">';
-    h += model.weekdays.map(w => '<div class="mc-mhead">' + esc(w) + '</div>').join('');
+    h += model.weekdays.map((w, i) => '<div class="mc-mhead' + (i >= 5 ? ' is-weekend' : '') + '">' + esc(w) + '</div>').join('');
     h += model.cells.map(c => {
       const ratio = c.total ? c.free / c.total : 0;
       const heat = c.kind !== 'open' ? 'x' : c.free === 0 ? '0' : ratio <= 0.25 ? '1' : ratio <= 0.5 ? '2' : ratio <= 0.75 ? '3' : '4';
@@ -424,7 +436,7 @@
         : c.free === 0 ? 'Fully booked'
         : c.free + (c.free === 1 ? ' room free' : ' rooms free');
       return '<button type="button" class="mc-mcell heat-' + heat + (c.inMonth ? '' : ' is-out') +
-        (c.today ? ' is-today' : '') + (c.past ? ' is-past' : '') + '"' +
+        (c.today ? ' is-today' : '') + (c.weekend ? ' is-weekend' : '') + (c.past ? ' is-past' : '') + '"' +
         ' data-date="' + esc(c.date) + '" data-tip="' + esc(c.tip) + '" aria-label="' + esc(c.tip) + '">' +
         '<span class="mc-mday">' + esc(c.day) + '</span>' +
         '<span class="mc-mtext">' + esc(text) + '</span>' +
@@ -434,5 +446,8 @@
     container.innerHTML = h + '</div>';
   }
 
-  window.MCGrid = Object.freeze({ render, renderMonth, scrollTo, dragging, toMin, hm, scale: () => SCALE });
+  /** Forget the current grid (Agenda / Month replaced it) so stale drag + selection state can't fire. */
+  function reset() { ctx = null; drag = null; sel = null; }
+
+  window.MCGrid = Object.freeze({ render, renderMonth, reset, scrollTo, dragging, toMin, hm, scale: () => SCALE });
 })();
