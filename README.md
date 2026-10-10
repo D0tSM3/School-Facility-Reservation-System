@@ -88,17 +88,11 @@ DB_PASSWORD=<your-supabase-db-password>
 ## 4 — Run locally
 
 ```bash
-php -S localhost:8000 -t public router.php
+php -S 127.0.0.1:8000 -t public public/index.php
 ```
 
-The `router.php` argument is required: this app is a front-controller
-(every /api/... route is matched inside public/index.php's routing table,
-not served from real files), and PHP's built-in server only falls back to
-index.php for the exact document-root path without a router script.
-Without it, every /api/... request 404s directly and no role's dashboard
-loads any data. router.php lives at the project root, next to
-composer.json. (Apache/XAMPP doesn't need this — public/.htaccess
-already handles routing for that case.)
+`public/index.php` is the built-in server router and passes real static files
+through to PHP's development server.
 
 ---
 
@@ -111,12 +105,11 @@ All responses follow the envelope:
 
 ### Auth
 
-#### Register
-```bash
-curl -s -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"alice@uni.edu","password":"Secret123"}' | jq
-```
+#### Activate an account
+
+Open `http://127.0.0.1:8000/activate.html` and follow the roster verification
+steps. Activation requires a current `school_directory` row with an allowed-
+domain email address.
 
 #### Login (session cookie saved to `cookies.txt`)
 ```bash

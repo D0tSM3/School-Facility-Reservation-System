@@ -23,6 +23,21 @@ error_reporting(E_ALL & ~E_DEPRECATED);
 
 define('BASE_DIR', dirname(__DIR__));
 
+if (PHP_SAPI === 'cli-server') {
+    $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+    $publicRoot = realpath(__DIR__);
+    $requestedFile = is_string($requestPath)
+        ? realpath(__DIR__ . DIRECTORY_SEPARATOR . ltrim($requestPath, '/\\'))
+        : false;
+    if ($publicRoot !== false
+        && $requestedFile !== false
+        && is_file($requestedFile)
+        && str_starts_with($requestedFile, $publicRoot . DIRECTORY_SEPARATOR)
+        && strtolower(pathinfo($requestedFile, PATHINFO_EXTENSION)) !== 'php') {
+        return false;
+    }
+}
+
 require BASE_DIR . '/vendor/autoload.php';
 
 use Dotenv\Dotenv;
