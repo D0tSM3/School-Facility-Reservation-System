@@ -6,21 +6,21 @@ namespace CampusRoom\Controller;
 
 use CampusRoom\Core\Auth;
 use CampusRoom\Core\Mailer;
+use CampusRoom\Core\PasswordPolicy;
 use CampusRoom\Core\RateLimiter;
 use CampusRoom\Core\Recaptcha;
+use CampusRoom\Core\RequestSecurity;
 use CampusRoom\Core\Response;
+use CampusRoom\Core\Timing;
 use CampusRoom\Repository\ReservationRepository;
 use CampusRoom\Repository\UserRepository;
 use PDOException;
 
 /**
- * AuthController — handles email/password auth and OTP verification.
- * Google OAuth has been removed in favour of a native signup/login flow.
+ * AuthController — handles password login, login OTP verification, and recovery.
  *
- * The three unauthenticated routes here — register, login and resend-otp —
- * are the system's only doors that open without a session, so each one runs a
- * reCAPTCHA check first. Everything else in the application sits behind
- * Auth::requireRole(), where the session is the gate.
+ * Roster activation is handled separately by ActivationController. Protected
+ * operations use Auth::requireRole(), where the session is the gate.
  */
 class AuthController
 {
@@ -98,91 +98,13 @@ class AuthController
     }
 
     // ---------------------------------------------------------------
-    // POST /api/auth/register
-    // ---------------------------------------------------------------
-
-    public function register(): never
-    {
-        $body = $this->jsonBody();
-
-        // Before any validation, hashing or database work — the point is to
-        // turn a bot away cheaply. Fails CLOSED: creating accounts is costly
-        // enough that a Google outage is the better thing to lose.
-        $this->requireHuman($body);
-
-        $name     = trim((string) ($body['name']     ?? ''));
-        $email    = strtolower(trim((string) ($body['email'] ?? '')));
-        $password = (string) ($body['password'] ?? '');
-        $accountType = trim((string) ($body['account_type'] ?? ''));
-
-        if ($name === '' || $email === '' || $password === '' || $accountType === '') {
-            Response::error('name, email, password, and account_type are required.', 422);
-        }
-        
-        if (!in_array($accountType, ['Student', 'Faculty'], true)) {
-            Response::error('Account type must be either Student or Faculty.', 422);
-        }
-        if (mb_strlen($name) > 150) {
-            Response::error('Name must be 150 characters or fewer.', 422);
-        }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 255) {
-            Response::error('Please enter a valid email address.', 422);
-        }
-
-        // Optional institutional-domain lock. Set ALLOWED_EMAIL_DOMAIN=bpu.edu.ph
-        // in .env to restrict signup; leave it blank to allow any address.
-        $domain = strtolower(trim($_ENV['ALLOWED_EMAIL_DOMAIN'] ?? ''));
-        if ($domain !== '' && !str_ends_with($email, '@' . ltrim($domain, '@'))) {
-            Response::error('Please register with your @' . ltrim($domain, '@') . ' email address.', 422);
-        }
-
-        if (strlen($password) < 8 || strlen($password) > 72) {
-            Response::error('Password must be between 8 and 72 characters.', 422);
-        }
-        if (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password) || !preg_match('/[^A-Za-z0-9]/', $password)) {
-            Response::error('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.', 422);
-        }
-
-        if ($this->users->findByEmail($email) !== null) {
-            Response::error('An account with this email already exists.', 409);
-        }
-
-        try {
-            // Role is fixed: the request body never chooses it.
-            $user = $this->users->create($name, $email, password_hash($password, PASSWORD_DEFAULT), 'Customer', $accountType);
-        } catch (PDOException $e) {
-            // Lost the race between findByEmail() and INSERT (UNIQUE on email).
-            // Postgres's unique_violation SQLSTATE is always '23505' (a fixed
-            // standard code, unlike the double-booking trigger's custom one) —
-            // '23000' is the MySQL/MariaDB code and never fires here.
-            if ($e->getCode() === '23505') {
-                Response::error('An account with this email already exists.', 409);
-            }
-            throw $e;
-        }
-
-        $otp  = $this->issueOtp($user['user_id']);
-        $sent = Mailer::sendOtp($email, $user['name'], $otp);
-
-        $payload = [
-            'email'   => $email,
-            'message' => 'Account created. Enter the verification code we sent to your email.',
-        ];
-
-        if (!$sent || empty($_ENV['SMTP_HOST'] ?? '') || empty($_ENV['SMTP_USER'] ?? '')) {
-            $payload['dev_otp']  = $otp;
-            $payload['dev_note'] = 'SMTP not configured — OTP returned for development use only.';
-        }
-
-        Response::json($payload, 201);
-    }
-
-    // ---------------------------------------------------------------
     // POST /api/auth/login
     // ---------------------------------------------------------------
 
     public function login(): never
     {
+        $startedAt = hrtime(true);
+        RequestSecurity::requireProtectedJsonPost();
         $body = $this->jsonBody();
 
         // Fails OPEN: if Google is unreachable, a password is still required,
@@ -191,8 +113,8 @@ class AuthController
         // still fails here.
         $this->requireHuman($body, true);
 
-        $email    = trim($body['email']    ?? '');
-        $password = trim($body['password'] ?? '');
+        $email    = strtolower(trim((string) ($body['email'] ?? '')));
+        $password = (string) ($body['password'] ?? '');
 
         if ($email === '' || $password === '') {
             Response::error('email and password are required.', 422);
@@ -202,53 +124,44 @@ class AuthController
             Response::error('Email must be 255 characters or fewer.', 422);
         }
 
-        if (strlen($password) > 72) {
+        if (strlen($password) > 128) {
             Response::error('Invalid email or password.', 401);
         }
 
-        if (RateLimiter::isLocked('login')) {
-            $remaining = RateLimiter::getRemainingSeconds('login');
-            Response::json([
-                'error' => "Too many failed attempts. Please wait {$remaining}s before trying again.",
-                'retry_after' => $remaining,
-                'remaining_attempts' => 0,
-                'attempts' => RateLimiter::MAX_ATTEMPTS,
-            ], 429);
-            exit;
+        if (self::isStudentId($email)) {
+            if (!self::validStudentId($email)) {
+                Response::error('Invalid email or password.', 401);
+            }
+            $email = $this->users->emailBySchoolId($email) ?? $email;
+        }
+        if (!self::allowedEmail($email)) {
+            Response::error('Invalid email or password.', 401);
+        }
+
+        $rateId = strtolower($email);
+        if (RateLimiter::isLocked('login', $rateId)) {
+            Response::error('Invalid email or password.', 401);
         }
 
         $user = $this->users->findByEmailFull($email);
-
-        if ($user === null || empty($user['password_hash']) || !password_verify($password, $user['password_hash'])) {
-            $failure = RateLimiter::recordFailure('login');
-            if ($failure['is_locked']) {
-                Response::json([
-                    'error' => "Too many failed attempts. Please wait {$failure['retry_after']}s before trying again.",
-                    'retry_after' => $failure['retry_after'],
-                    'remaining_attempts' => 0,
-                    'attempts' => $failure['attempts'],
-                ], 401);
-            } else {
-                $word = $failure['remaining_attempts'] === 1 ? 'attempt' : 'attempts';
-                Response::json([
-                    'error' => "Invalid email or password. {$failure['remaining_attempts']} {$word} remaining.",
-                    'retry_after' => 0,
-                    'remaining_attempts' => $failure['remaining_attempts'],
-                    'attempts' => $failure['attempts'],
-                ], 401);
-            }
-            exit;
+        $hash = (string) ($user['password_hash'] ?? self::dummyPasswordHash());
+        $passwordValid = password_verify($password, $hash);
+        if ($user === null || !$passwordValid || empty($user['is_active'])) {
+            RateLimiter::recordFailure('login', $rateId, 5, 300);
+            Timing::pad($startedAt, 1500);
+            Response::error('Invalid email or password.', 401);
         }
 
-        // A correct password clears the failed-attempt counter (merged's rate
-        // limiting) but does NOT open a session on its own.
-        RateLimiter::clear('login');
+        if (password_needs_rehash($user['password_hash'], PASSWORD_ARGON2ID)) {
+            $this->users->updatePasswordHash(
+                $user['user_id'],
+                password_hash($password, PASSWORD_ARGON2ID)
+            );
+        }
+        RateLimiter::clear('login', $rateId);
 
-        // Two-factor authentication: EVERY login issues a fresh one-time code to
-        // the account's email, and the session is created only once that code is
-        // confirmed at POST /api/auth/verify-otp (the verify.html step). An
-        // unverified account rides the same challenge — confirming the code also
-        // completes its first-time email verification.
+        // Two-factor authentication: every active account receives a fresh
+        // one-time code, and a session is created only after it is confirmed.
         $otp  = $this->issueOtp($user['user_id']);
         $sent = Mailer::sendOtp($email, $user['name'], $otp);
 
@@ -260,11 +173,6 @@ class AuthController
             'requires_verification' => true,
         ];
 
-        if (!$sent || empty($_ENV['SMTP_HOST'] ?? '') || empty($_ENV['SMTP_USER'] ?? '')) {
-            $payload['dev_otp']  = $otp;
-            $payload['dev_note'] = 'SMTP not configured — OTP returned for development use only.';
-        }
-
         Response::json($payload, 403);
     }
 
@@ -274,6 +182,7 @@ class AuthController
 
     public function verifyOtp(): never
     {
+        RequestSecurity::requireProtectedJsonPost();
         $body  = $this->jsonBody();
         $email = trim($body['email'] ?? '');
         $code  = trim($body['otp']   ?? '');
@@ -282,20 +191,19 @@ class AuthController
             Response::error('email and otp are required.', 422);
         }
 
-        if (RateLimiter::isLocked('verify_otp')) {
-            $remaining = RateLimiter::getRemainingSeconds('verify_otp');
-            Response::json([
-                'error' => "Too many failed attempts. Please wait {$remaining}s before trying again.",
-                'retry_after' => $remaining,
-                'remaining_attempts' => 0,
-                'attempts' => RateLimiter::MAX_ATTEMPTS,
-            ], 429);
-            exit;
+        if (RateLimiter::isLocked('verify_otp', $email)) {
+            Response::error('Invalid or expired verification code.', 422);
         }
 
         $user = $this->users->findByEmailFull($email);
         if ($user === null) {
-            Response::error('Invalid verification attempt.', 404);
+            RateLimiter::recordFailure('verify_otp', $email);
+            Response::error('Invalid or expired verification code.', 422);
+        }
+
+        if ((int) $user['is_active'] !== 1) {
+            RateLimiter::recordFailure('verify_otp', $email);
+            Response::error('Invalid or expired verification code.', 422);
         }
 
         // A code must be outstanding (incoming's replay fix). It is cleared the
@@ -304,39 +212,22 @@ class AuthController
         // here instead of silently opening a second session. This is what makes
         // the login challenge a real second factor rather than a skippable step.
         if (empty($user['otp_code'])) {
-            Response::error('This code is no longer valid. Please log in again to get a new one.', 422);
+            Response::error('Invalid or expired verification code.', 422);
         }
 
-        // Validate OTP (with merged's attempt limiting on a wrong code).
         if ($code !== $user['otp_code']) {
-            $failure = RateLimiter::recordFailure('verify_otp');
-            if ($failure['is_locked']) {
-                Response::json([
-                    'error' => "Too many failed attempts. Please wait {$failure['retry_after']}s before trying again.",
-                    'retry_after' => $failure['retry_after'],
-                    'remaining_attempts' => 0,
-                    'attempts' => $failure['attempts'],
-                ], 422);
-            } else {
-                $word = $failure['remaining_attempts'] === 1 ? 'attempt' : 'attempts';
-                Response::json([
-                    'error' => "Incorrect verification code. {$failure['remaining_attempts']} {$word} remaining.",
-                    'retry_after' => 0,
-                    'remaining_attempts' => $failure['remaining_attempts'],
-                    'attempts' => $failure['attempts'],
-                ], 422);
-            }
-            exit;
+            RateLimiter::recordFailure('verify_otp', $email);
+            Response::error('Invalid or expired verification code.', 422);
         }
 
         // Check expiry
         $expiresAt = strtotime($user['otp_expires_at'] ?? '1970-01-01');
         if (time() > $expiresAt) {
-            Response::error('This code has expired. Please request a new one.', 422);
+            Response::error('Invalid or expired verification code.', 422);
         }
 
         // Clear rate limit on successful verification
-        RateLimiter::clear('verify_otp');
+        RateLimiter::clear('verify_otp', $email);
 
         // Mark verified, clear OTP, and log in
         $this->users->markVerified($user['user_id']);
@@ -354,6 +245,7 @@ class AuthController
 
     public function forgotPassword(): never
     {
+        RequestSecurity::requireProtectedJsonPost();
         $body = $this->jsonBody();
 
         // Fails CLOSED. Sending email consumes institutional quota and
@@ -366,27 +258,22 @@ class AuthController
             Response::error('Email is required.', 422);
         }
 
+        $payload = [
+            'email' => $email,
+            'message' => 'If an account exists with this email, a verification code has been dispatched.',
+        ];
+        if (RateLimiter::isLocked('forgot_password', $email)) {
+            Response::json($payload);
+        }
+        RateLimiter::recordFailure('forgot_password', $email);
+
         $user = $this->users->findByEmailFull($email);
-        if ($user === null) {
-            // Don't leak whether the email is registered
-            Response::json([
-                'email'   => $email,
-                'message' => 'If an account exists with this email, a verification code has been dispatched.'
-            ]);
+        if ($user === null || (int) $user['is_active'] !== 1) {
+            Response::json($payload);
         }
 
         $otp  = $this->issueOtp($user['user_id']);
-        $sent = Mailer::sendOtp($email, $user['name'], $otp);
-
-        $payload = [
-            'email'   => $email,
-            'message' => 'If an account exists with this email, a verification code has been dispatched.'
-        ];
-
-        if (!$sent || empty($_ENV['SMTP_HOST'] ?? '') || empty($_ENV['SMTP_USER'] ?? '')) {
-            $payload['dev_otp']  = $otp;
-            $payload['dev_note'] = 'SMTP not configured — OTP returned for development use only.';
-        }
+        Mailer::sendOtp((string) $user['email'], (string) $user['name'], $otp);
 
         Response::json($payload);
     }
@@ -397,6 +284,7 @@ class AuthController
 
     public function resetPassword(): never
     {
+        RequestSecurity::requireProtectedJsonPost();
         $body  = $this->jsonBody();
         $email = strtolower(trim((string) ($body['email'] ?? '')));
         $otp   = trim((string) ($body['otp'] ?? ''));
@@ -406,62 +294,40 @@ class AuthController
             Response::error('Email, verification code, and new password are required.', 422);
         }
 
-        if (strlen($password) < 8 || strlen($password) > 72) {
-            Response::error('Password must be between 8 and 72 characters.', 422);
-        }
-        if (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password) || !preg_match('/[^A-Za-z0-9]/', $password)) {
-            Response::error('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.', 422);
+        $passwordError = PasswordPolicy::validate($password);
+        if ($passwordError !== null) {
+            Response::error($passwordError, 422);
         }
 
-        if (RateLimiter::isLocked('reset_otp')) {
-            $remaining = RateLimiter::getRemainingSeconds('reset_otp');
-            Response::json([
-                'error' => "Too many failed attempts. Please wait {$remaining}s before trying again.",
-                'retry_after' => $remaining,
-                'remaining_attempts' => 0,
-                'attempts' => RateLimiter::MAX_ATTEMPTS,
-            ], 429);
-            exit;
+        if (RateLimiter::isLocked('reset_otp', $email)) {
+            Response::error('Invalid or expired verification code.', 422);
         }
 
         $user = $this->users->findByEmailFull($email);
-        if ($user === null) {
-            Response::error('Invalid password reset request.', 404);
+        if ($user === null || (int) $user['is_active'] !== 1) {
+            Response::error('Invalid or expired verification code.', 422);
         }
 
         // Validate OTP
         if ($user['otp_code'] === null || $otp !== $user['otp_code']) {
-            $failure = RateLimiter::recordFailure('reset_otp');
-            if ($failure['is_locked']) {
-                Response::json([
-                    'error' => "Too many failed attempts. Please wait {$failure['retry_after']}s before trying again.",
-                    'retry_after' => $failure['retry_after'],
-                    'remaining_attempts' => 0,
-                    'attempts' => $failure['attempts'],
-                ], 422);
-            } else {
-                $word = $failure['remaining_attempts'] === 1 ? 'attempt' : 'attempts';
-                Response::json([
-                    'error' => "Incorrect verification code. {$failure['remaining_attempts']} {$word} remaining.",
-                    'retry_after' => 0,
-                    'remaining_attempts' => $failure['remaining_attempts'],
-                    'attempts' => $failure['attempts'],
-                ], 422);
-            }
-            exit;
+            RateLimiter::recordFailure('reset_otp', $email);
+            Response::error('Invalid or expired verification code.', 422);
         }
 
         // Check expiry
         $expiresAt = strtotime($user['otp_expires_at'] ?? '1970-01-01');
         if (time() > $expiresAt) {
-            Response::error('This verification code has expired. Please request a new one.', 422);
+            Response::error('Invalid or expired verification code.', 422);
         }
 
         // Clear rate limit on successful password reset
-        RateLimiter::clear('reset_otp');
+        RateLimiter::clear('reset_otp', $email);
 
         // Update password and clear OTP
-        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+        $passwordHash = password_hash($password, PASSWORD_ARGON2ID);
+        if ($passwordHash === false) {
+            throw new \RuntimeException('Unable to hash reset password.');
+        }
         $this->users->updatePassword($user['user_id'], $passwordHash);
 
         Response::json([
@@ -475,6 +341,7 @@ class AuthController
 
     public function resendOtp(): never
     {
+        RequestSecurity::requireProtectedJsonPost();
         $body = $this->jsonBody();
 
         // No reCAPTCHA here by product decision: the caller already cleared the
@@ -487,23 +354,21 @@ class AuthController
             Response::error('email is required.', 422);
         }
 
+        if (RateLimiter::isLocked('resend_otp', $email)) {
+            Response::json(['message' => 'If an account is eligible, a verification code has been sent.']);
+        }
+        RateLimiter::recordFailure('resend_otp', $email);
+
         $user = $this->users->findByEmailFull($email);
-        if ($user === null) {
-            // Don't reveal whether the email exists
-            Response::json(['message' => 'If this email is registered, a new code has been sent.']);
+        if ($user === null || (int) $user['is_active'] !== 1) {
+            Response::json(['message' => 'If an account is eligible, a verification code has been sent.']);
         }
 
         // No "already verified" short-circuit: a verified account still needs a
         // fresh code for every login (two-factor), so Resend must work for it.
         $otp  = $this->issueOtp($user['user_id']);
-        $sent = Mailer::sendOtp($email, $user['name'], $otp);
-
-        $payload = ['message' => 'A new verification code has been sent to your email.'];
-        if (!$sent || empty($_ENV['SMTP_HOST'] ?? '') || empty($_ENV['SMTP_USER'] ?? '')) {
-            $payload['dev_otp']  = $otp;
-            $payload['dev_note'] = 'SMTP not configured — OTP returned for development use only.';
-        }
-        Response::json($payload);
+        Mailer::sendOtp((string) $user['email'], (string) $user['name'], $otp);
+        Response::json(['message' => 'If an account is eligible, a verification code has been sent.']);
     }
 
     // ---------------------------------------------------------------
@@ -512,6 +377,7 @@ class AuthController
 
     public function logout(): never
     {
+        RequestSecurity::requireProtectedJsonPost();
         Auth::logout();
         Response::json(['message' => 'Logged out successfully.']);
     }
@@ -539,5 +405,30 @@ class AuthController
             Response::error('Request body must be valid JSON.', 400);
         }
         return $body;
+    }
+
+    private static function isStudentId(string $value): bool
+    {
+        return preg_match('/^(19|20)\d{6}$/', $value) === 1;
+    }
+
+    private static function validStudentId(string $value): bool
+    {
+        return self::isStudentId($value)
+            && (int) substr($value, 0, 4) <= (int) date('Y');
+    }
+
+    private static function allowedEmail(string $email): bool
+    {
+        $domain = strtolower(ltrim(trim((string) ($_ENV['ALLOWED_EMAIL_DOMAIN'] ?? '')), '@'));
+        $at = strrpos($email, '@');
+        return $domain !== ''
+            && $at !== false
+            && hash_equals($domain, strtolower(substr($email, $at + 1)));
+    }
+
+    private static function dummyPasswordHash(): string
+    {
+        return '$argon2id$v=19$m=65536,t=4,p=1$a3dIdGgwMkZBT28zTVVTTA$Gr29UnKQ9EswvnK7cKlN058wArNEsjxbco3Sy92zCbI';
     }
 }

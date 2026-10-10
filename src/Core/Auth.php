@@ -11,6 +11,7 @@ class Auth
 {
     private const COOKIE_NAME = 'campusroom_session';
     private const COOKIE_LIFETIME = 604800; // 7 days in seconds
+    private static ?string $validatedIdentity = null;
 
     /**
      * Determine whether the current request is HTTPS.
@@ -34,26 +35,30 @@ class Auth
             // XAMPP keeps the default files handler. Must be set before start.
             if (self::useDbSessions()) {
                 try {
-                    session_set_save_handler(new DbSessionHandler(), true);
+                    if (!session_set_save_handler(new DbSessionHandler(), true)) {
+                        throw new \RuntimeException('PHP refused the configured DB session handler.');
+                    }
                 } catch (\Throwable $e) {
                     error_log('[CampusRoom] could not register DB session handler: ' . $e->getMessage());
+                    throw new \RuntimeException('Unable to initialize the configured session handler.', 0, $e);
                 }
             }
 
             if (!headers_sent()) {
-                // isSecure() honours X-Forwarded-Proto so the cookie is marked
-                // Secure behind Vercel's proxy (where $_SERVER['HTTPS'] is unset).
                 session_set_cookie_params([
                     'lifetime' => 0,
                     'path'     => '/',
                     'domain'   => '',
-                    'secure'   => self::isSecure(),
+                    'secure'   => self::secureCookies(),
                     'httponly' => true,
                     'samesite' => 'Lax', // Strict drops the cookie on some cross-site returns; Lax keeps same-site API calls working
                 ]);
             }
 
-            @session_start();
+            if (!session_start()) {
+                throw new \RuntimeException('Unable to start the session.');
+            }
+            self::getSigningKey();
         }
 
         // If native session is missing user identity (e.g. Lambda container switch on Vercel),
@@ -61,20 +66,41 @@ class Auth
         if (empty($_SESSION['user_id'])) {
             self::restoreFromSignedCookie();
         }
+
+        $userId = (string) ($_SESSION['user_id'] ?? '');
+        $role = (string) ($_SESSION['role'] ?? '');
+        if ($userId === '' || $role === '') {
+            self::$validatedIdentity = null;
+            return;
+        }
+
+        $identityKey = $userId . "\0" . $role;
+        if (self::$validatedIdentity !== $identityKey) {
+            if (!(new \CampusRoom\Repository\UserRepository())->isActiveIdentity($userId, $role)) {
+                unset($_SESSION['user_id'], $_SESSION['role']);
+                self::clearSignedCookie();
+                self::$validatedIdentity = null;
+                return;
+            }
+            self::$validatedIdentity = $identityKey;
+        }
     }
 
     /**
      * True when sessions should be stored in the database rather than on disk.
      *
-     * Opt-in via SESSION_DRIVER=db. On Vercel, login persistence is handled by
-     * the stateless signed cookie below (no per-request DB round-trip, which at
-     * ~1.5s each would slow every page), so DB sessions are NOT auto-enabled —
-     * set SESSION_DRIVER=db only if you want server-side, revocable sessions
-     * and accept the latency.
+     * Vercel needs shared server-side sessions for the short-lived activation
+     * verification state; other deployments may opt in via SESSION_DRIVER=db.
      */
     private static function useDbSessions(): bool
     {
-        return ($_ENV['SESSION_DRIVER'] ?? getenv('SESSION_DRIVER')) === 'db';
+        return ($_ENV['SESSION_DRIVER'] ?? getenv('SESSION_DRIVER')) === 'db'
+            || (($_ENV['VERCEL'] ?? getenv('VERCEL')) === '1');
+    }
+
+    private static function secureCookies(): bool
+    {
+        return self::isSecure() || (($_ENV['APP_ENV'] ?? 'development') === 'production');
     }
 
     /**
@@ -84,9 +110,16 @@ class Auth
     {
         self::startSession();
         // Regenerate session ID on privilege change to prevent fixation.
-        session_regenerate_id(true);
+        if (!session_regenerate_id(true)) {
+            throw new \RuntimeException('Unable to regenerate session after login.');
+        }
         $_SESSION['user_id'] = $userId;
         $_SESSION['role']    = $role;
+        if (!(new \CampusRoom\Repository\UserRepository())->isActiveIdentity($userId, $role)) {
+            unset($_SESSION['user_id'], $_SESSION['role']);
+            throw new \RuntimeException('Cannot establish a session for an inactive account.');
+        }
+        self::$validatedIdentity = $userId . "\0" . $role;
 
         // Issue stateless signed cookie so other serverless instances recognise this user
         self::issueSignedCookie($userId, $role);
@@ -103,7 +136,7 @@ class Auth
                 'expires'  => time() - 42000,
                 'path'     => $params['path'],
                 'domain'   => $params['domain'],
-                'secure'   => self::isSecure(),
+                'secure'   => self::secureCookies(),
                 'httponly' => $params['httponly'],
                 'samesite' => 'Lax',
             ]);
@@ -113,6 +146,7 @@ class Auth
         self::clearSignedCookie();
 
         $_SESSION = [];
+        self::$validatedIdentity = null;
         session_destroy();
     }
 
@@ -153,13 +187,12 @@ class Auth
 
     private static function getSigningKey(): string
     {
-        return $_ENV['APP_SECRET']
-            ?? (getenv('APP_SECRET') ?: null)
-            ?? $_ENV['DB_PASSWORD']
-            ?? (getenv('DB_PASSWORD') ?: null)
-            ?? $_ENV['RECAPTCHA_SECRET_KEY']
-            ?? (getenv('RECAPTCHA_SECRET_KEY') ?: null)
-            ?? 'campusroom-signing-key-salt-2026';
+        $configured = $_ENV['APP_SECRET'] ?? getenv('APP_SECRET');
+        $key = is_string($configured) ? trim($configured) : '';
+        if (strlen($key) < 32) {
+            throw new \RuntimeException('APP_SECRET must contain at least 32 characters.');
+        }
+        return $key;
     }
 
     private static function issueSignedCookie(string $userId, string $role): void
@@ -182,7 +215,7 @@ class Auth
                 'expires'  => $exp,
                 'path'     => '/',
                 'domain'   => '',
-                'secure'   => self::isSecure(),
+                'secure'   => self::secureCookies(),
                 'httponly' => true,
                 'samesite' => 'Lax',
             ]);
@@ -197,7 +230,7 @@ class Auth
                 'expires'  => time() - 42000,
                 'path'     => '/',
                 'domain'   => '',
-                'secure'   => self::isSecure(),
+                'secure'   => self::secureCookies(),
                 'httponly' => true,
                 'samesite' => 'Lax',
             ]);

@@ -22,7 +22,12 @@ final class ActivationRepository
      *
      * @return array{eligible: bool, email?: string, name?: string, person_type?: string}
      */
-    public function requestOtp(string $schoolId, string $codeHash, int $ttlSeconds): array
+    public function requestOtp(
+        string $schoolId,
+        string $codeHash,
+        int $ttlSeconds,
+        string $allowedDomain
+    ): array
     {
         $pdo = $this->db->getPdo();
         $pdo->beginTransaction();
@@ -39,6 +44,13 @@ final class ActivationRepository
             $roster = $rosterQuery->fetch(PDO::FETCH_ASSOC);
 
             if (!$roster) {
+                $pdo->commit();
+                return ['eligible' => false];
+            }
+
+            $email = strtolower((string) $roster['email']);
+            $at = strrpos($email, '@');
+            if ($at === false || !hash_equals($allowedDomain, substr($email, $at + 1))) {
                 $pdo->commit();
                 return ['eligible' => false];
             }
@@ -165,7 +177,8 @@ final class ActivationRepository
     public function complete(
         string $schoolId,
         string $passwordHash,
-        string $personType
+        string $personType,
+        string $verifiedEmail
     ): array {
         $pdo = $this->db->getPdo();
         $pdo->beginTransaction();
@@ -181,7 +194,9 @@ final class ActivationRepository
             $rosterQuery->execute([':school_id' => $schoolId]);
             $roster = $rosterQuery->fetch(PDO::FETCH_ASSOC);
 
-            if (!$roster || strcasecmp((string) $roster['person_type'], $personType) !== 0) {
+            if (!$roster
+                || strcasecmp((string) $roster['person_type'], $personType) !== 0
+                || strcasecmp((string) $roster['email'], $verifiedEmail) !== 0) {
                 $pdo->commit();
                 return ['created' => false];
             }

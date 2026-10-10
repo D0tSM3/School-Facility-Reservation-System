@@ -10,8 +10,7 @@ use PHPMailer\PHPMailer\Exception as MailException;
 /**
  * Mailer — sends OTP verification emails via SMTP.
  *
- * Dev mode: If SMTP_HOST or SMTP_USER is not set in .env,
- * the OTP is only written to the PHP error log (no real email).
+ * If SMTP is unavailable, sending fails without exposing the OTP to logs or responses.
  */
 class Mailer
 {
@@ -20,16 +19,16 @@ class Mailer
      *
      * @return bool  true = email sent (or dev-mode skipped); false = SMTP failure
      */
-    public static function sendOtp(string $toEmail, string $toName, string $otp): bool
+    public static function sendOtp(string $toEmail, string $toName, string $otp, int $ttlSeconds = 600): bool
     {
         $host = $_ENV['SMTP_HOST'] ?? '';
         $user = $_ENV['SMTP_USER'] ?? '';
+        $ttlMinutes = (int) ($ttlSeconds / 60);
 
-        // ── Dev mode ────────────────────────────────────────────────────────
-        // No SMTP configured → just log the OTP so the developer can copy it.
+        // ── Missing SMTP configuration ─────────────────────────────────────
         if (empty($host) || empty($user)) {
-            error_log("[CampusRoom/Mailer] DEV MODE — OTP for {$toEmail} is: {$otp}");
-            return true;
+            error_log('[CampusRoom/Mailer] SMTP host/user is not configured.');
+            return false;
         }
 
         // ── Production send ─────────────────────────────────────────────────
@@ -43,15 +42,17 @@ class Mailer
             $mail->Password   = str_replace(' ', '', (string)$rawPass);
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port       = (int)($_ENV['SMTP_PORT'] ?? 587);
+            $mail->Timeout    = 1;
 
-            // Windows / XAMPP often lacks local CA root certs, which causes STARTTLS verify failure
-            $mail->SMTPOptions = [
-                'ssl' => [
-                    'verify_peer'       => false,
-                    'verify_peer_name'  => false,
-                    'allow_self_signed' => true,
-                ],
-            ];
+            if (($_ENV['APP_ENV'] ?? 'production') === 'development') {
+                $mail->SMTPOptions = [
+                    'ssl' => [
+                        'verify_peer'       => false,
+                        'verify_peer_name'  => false,
+                        'allow_self_signed' => true,
+                    ],
+                ];
+            }
 
             $fromAddr = $_ENV['SMTP_FROM'] ?? 'noreply@campusroom.bpu.edu.ph';
             $mail->setFrom($fromAddr, 'CampusRoom BPU');
@@ -59,8 +60,8 @@ class Mailer
 
             $mail->isHTML(true);
             $mail->Subject = 'CampusRoom — Your Verification Code';
-            $mail->Body    = self::buildHtml($otp, $toName);
-            $mail->AltBody = "Your CampusRoom verification code is: {$otp}\nIt expires in 10 minutes. Do not share it with anyone.";
+            $mail->Body    = self::buildHtml($otp, $toName, $ttlMinutes);
+            $mail->AltBody = "Your CampusRoom verification code is: {$otp}\nIt expires in {$ttlMinutes} minutes. Do not share it with anyone.";
 
             $mail->send();
             return true;
@@ -72,10 +73,11 @@ class Mailer
 
     // ── HTML email template ──────────────────────────────────────────────────
 
-    private static function buildHtml(string $otp, string $name): string
+    private static function buildHtml(string $otp, string $name, int $ttlMinutes): string
     {
         $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
         $safeOtp  = htmlspecialchars($otp,  ENT_QUOTES, 'UTF-8');
+        $safeTtlMinutes = htmlspecialchars((string) $ttlMinutes, ENT_QUOTES, 'UTF-8');
         return <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -109,7 +111,7 @@ class Mailer
             </p>
             <p style="margin:0 0 24px;font-size:15px;color:#191c1e;line-height:1.6;">
               Use the code below to verify your CampusRoom account.
-              It will expire in <strong>10 minutes</strong>.
+              It will expire in <strong>{$safeTtlMinutes} minutes</strong>.
             </p>
             <!-- OTP box -->
             <table width="100%" cellpadding="0" cellspacing="0">

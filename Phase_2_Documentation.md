@@ -53,9 +53,32 @@ CRUD (Create, Read, Update, Delete) functionality is handled through the Reposit
 
 The backend implements secure, session-based authentication without relying on external frameworks.
 
-*   **Password Security:** All user passwords are encrypted using `bcrypt` (`password_hash()`) before being stored. Passwords are never returned in any API response.
+*   **Password Security:** New and reset passwords are hashed with Argon2id (`password_hash()`). Passwords are never returned in any API response.
 *   **Session Management:** Upon successful login, the user's `user_id` and `role` are stored in a secure PHP session. The session ID is regenerated (`session_regenerate_id()`) during login to prevent session fixation attacks.
 *   **Role-Based Access Control (RBAC):** A central `Auth::requireRole()` helper is invoked at the very beginning of every protected endpoint. This guarantees that a Customer cannot access Staff or Admin routes, returning an HTTP 403 Forbidden error if unauthorized.
+
+### Roster-gated account activation
+
+New self-service activations must match a current `school_directory` entry by
+student ID, and the roster email must use `ALLOWED_EMAIL_DOMAIN`. The account
+does not exist in `users` until the roster OTP has been verified and the user
+chooses a password. The new account is created as an active `Customer` in one
+transaction using the name, email, and account type from the roster. Activation
+codes are stored as SHA-256 hashes in `activation_otps`; replacement codes
+invalidate the previous active code and insert the new one in the same
+transaction. The database's partial unique index enforces at most one active
+code per school ID and purpose.
+
+The activation API is `POST /api/auth/activate/request`, `POST
+/api/auth/activate/verify`, `GET /api/auth/activate/context`, and `POST
+/api/auth/activate/complete`. Verification state is session-bound, expires
+after 15 minutes, and is not included in the stateless signed login cookie.
+Activation and login POST endpoints require JSON, a same-origin request, and a
+CSRF token. Auth API responses use `Cache-Control: no-store`. Login
+two-factor codes for already-active accounts continue using the legacy OTP
+columns on `users`. Activation code lifetime and failed-attempt limit are
+configured with `ACTIVATION_OTP_TTL_SECONDS` and
+`ACTIVATION_OTP_MAX_ATTEMPTS` (defaults: 600 seconds and 5 attempts).
 
 ---
 

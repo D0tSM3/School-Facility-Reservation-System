@@ -17,7 +17,7 @@ use Throwable;
  * Persisting the session row in PostgreSQL (the same approach used for the OTP
  * code) fixes that. Registered by Auth::startSession() before session_start().
  */
-final class DbSessionHandler implements SessionHandlerInterface
+final class DbSessionHandler implements SessionHandlerInterface, \SessionIdInterface
 {
     /** Idle lifetime (seconds) before a session is eligible for garbage collection. */
     private int $ttl;
@@ -52,6 +52,25 @@ final class DbSessionHandler implements SessionHandlerInterface
         } catch (Throwable $e) {
             error_log('[CampusRoom] session read failed: ' . $e->getMessage());
             return '';
+        }
+    }
+
+    public function validateId(string $id): bool
+    {
+        try {
+            $stmt = Database::getInstance()->query(
+                "SELECT EXISTS (
+                    SELECT 1
+                      FROM Sessions
+                     WHERE session_id = :id
+                       AND last_active > (NOW() - (:ttl || ' seconds')::interval)
+                )",
+                [':id' => $id, ':ttl' => (string) $this->ttl]
+            );
+            return (bool) $stmt->fetchColumn();
+        } catch (Throwable $e) {
+            error_log('[CampusRoom] session ID validation failed: ' . $e->getMessage());
+            return false;
         }
     }
 

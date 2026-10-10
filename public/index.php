@@ -28,7 +28,9 @@ require BASE_DIR . '/vendor/autoload.php';
 use Dotenv\Dotenv;
 use CampusRoom\Core\Response;
 use CampusRoom\Core\Auth;
+use CampusRoom\Core\RequestSecurity;
 use CampusRoom\Core\Settings;
+use CampusRoom\Controller\ActivationController;
 use CampusRoom\Controller\AuthController;
 use CampusRoom\Controller\RoomController;
 use CampusRoom\Controller\ReservationController;
@@ -97,6 +99,11 @@ if (in_array($uri, ['/index.php', '/public/index.php', '/public'], true)) {
 
 $uri = rtrim($uri, '/') ?: '/';
 
+if (str_starts_with($uri, '/api/auth/')) {
+    header('Cache-Control: no-store, private');
+    header('Pragma: no-cache');
+}
+
 // -----------------------------------------------------------------------
 // 3. Route table
 // -----------------------------------------------------------------------
@@ -131,8 +138,12 @@ $routes = [
         ] + $settings);
     }],
 
-    // Auth — login & recovery
-    ['POST', '#^/api/auth/register$#',        fn() => (new AuthController())->register()],
+    // Auth — login, recovery, and roster-based activation
+    ['GET',  '#^/api/auth/csrf$#', fn() => Response::json(['token' => RequestSecurity::csrfToken()])],
+    ['POST', '#^/api/auth/activate/request$#',  fn() => (new ActivationController())->request()],
+    ['POST', '#^/api/auth/activate/verify$#',   fn() => (new ActivationController())->verify()],
+    ['GET',  '#^/api/auth/activate/context$#',  fn() => (new ActivationController())->context()],
+    ['POST', '#^/api/auth/activate/complete$#', fn() => (new ActivationController())->complete()],
     ['POST', '#^/api/auth/login$#',           fn() => (new AuthController())->login()],
     ['POST', '#^/api/auth/forgot-password$#', fn() => (new AuthController())->forgotPassword()],
     ['POST', '#^/api/auth/reset-password$#',  fn() => (new AuthController())->resetPassword()],
@@ -236,10 +247,10 @@ foreach ($routes as [$routeMethod, $pattern, $handler]) {
     } catch (\PDOException $e) {
         // Unhandled DB error — log internally, return generic 500.
         error_log('[CampusRoom] PDOException: ' . $e->getMessage());
-        Response::error('A database error occurred: ' . $e->getMessage(), 500);
+        Response::error('An unexpected error occurred.', 500);
     } catch (\Throwable $e) {
         error_log('[CampusRoom] Uncaught exception: ' . $e->getMessage());
-        Response::error('An unexpected error occurred: ' . $e->getMessage(), 500);
+        Response::error('An unexpected error occurred.', 500);
     }
 
     // If we reach here the handler returned without calling Response (shouldn't

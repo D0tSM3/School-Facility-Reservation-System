@@ -670,7 +670,6 @@
 
             // Successfully registered and OTP sent
             sessionStorage.setItem("otp_email", email);
-            if (data.dev_otp) sessionStorage.setItem("dev_otp", data.dev_otp);
             window.location.href = "verify.html";
           } catch (err) {
             errText.textContent = err.message;
