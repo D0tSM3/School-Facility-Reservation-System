@@ -37,6 +37,11 @@ final class DbSessionHandler implements SessionHandlerInterface, \SessionIdInter
         return true;
     }
 
+    public function create_sid(): string
+    {
+        return bin2hex(random_bytes(24));
+    }
+
     #[\ReturnTypeWillChange]
     public function read(string $id): string|false
     {

@@ -30,6 +30,10 @@ class Auth
     public static function startSession(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
+            if (ini_set('session.use_strict_mode', '1') === false || ini_get('session.use_strict_mode') !== '1') {
+                throw new \RuntimeException('Unable to enable strict session ID validation.');
+            }
+
             // On serverless hosts (Vercel) the filesystem session store is wiped
             // between requests, so keep sessions in the database there. Local
             // XAMPP keeps the default files handler. Must be set before start.
