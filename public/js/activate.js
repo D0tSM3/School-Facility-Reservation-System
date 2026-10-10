@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordInput = document.getElementById('new-password');
   const confirmInput = document.getElementById('confirm-password');
   const usernameInput = document.getElementById('activation-username');
+  const successName = document.getElementById('successName');
   const requestMessage = document.getElementById('requestMessage');
   const stage2Message = document.getElementById('stage2Message');
   const verifyMessage = document.getElementById('verifyMessage');
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     1: document.getElementById('activation-stage-1'),
     2: document.getElementById('activation-stage-2'),
     3: document.getElementById('activation-stage-3'),
+    4: document.getElementById('activation-stage-4'),
   };
 
   let csrfToken = '';
@@ -54,6 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     if (number === 1) mountCaptcha('activationRecaptcha');
     if (number === 2) mountCaptcha('resendRecaptcha');
+  }
+
+  function resetToInitialStage() {
+    completeForm.hidden = false;
+    clearPasswordFields();
+    showStage(1);
   }
 
   function showMessage(element, text) {
@@ -430,31 +438,52 @@ document.addEventListener('DOMContentLoaded', () => {
   completeForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (busy) return;
-    const codes = checkClientPolicy(passwordInput.value, confirmInput.value);
+    let password = passwordInput.value;
+    let confirmation = confirmInput.value;
+    const codes = checkClientPolicy(password, confirmation);
     if (codes.length > 0) {
       showPolicyErrors(codes);
       return;
     }
 
     setBusy(true);
+    let requestPayload = {
+      password,
+      password_confirm: confirmation,
+    };
     try {
-      const { response, json } = await postJson('api/auth/activate/complete', {
-        password: passwordInput.value,
-        password_confirm: confirmInput.value,
-      });
+      const { response, json } = await postJson('api/auth/activate/complete', requestPayload);
       if (!response.ok || !json.success) {
         handleCompleteResponse(json, response.status);
         return;
       }
+      password = '';
+      confirmation = '';
+      requestPayload.password = '';
+      requestPayload.password_confirm = '';
       clearPasswordFields();
-      window.location.assign(baseUri + 'index.html?activated=1');
+      completeForm.hidden = true;
+      successName.textContent = rosterName;
+      showStage(4);
+      document.getElementById('stage-4-heading').focus();
     } catch {
       completeMessage.textContent = 'Unable to complete activation right now. Please try again.';
       completeMessage.hidden = false;
       completeMessage.focus();
     } finally {
+      password = '';
+      confirmation = '';
+      if (requestPayload) {
+        requestPayload.password = '';
+        requestPayload.password_confirm = '';
+        requestPayload = null;
+      }
       setBusy(false);
     }
+  });
+
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) resetToInitialStage();
   });
 
   captchaConfigPromise = loadCaptchaConfig().catch(() => {
