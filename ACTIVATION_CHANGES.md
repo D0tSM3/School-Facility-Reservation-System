@@ -100,7 +100,7 @@ Already existed before this work: `school_directory`, `activation_otps`, and `us
 | Codes | 6 digits, random, stored as hashes (see limitations), single use, expire in 10 minutes at most, 5 wrong guesses per code |
 | Session gate | The password step works only after a verified code, with a time limit and single use |
 | Name privacy | The person's name is shown only after code verification |
-| Password rules | 12 to 128 characters, no composition rules, common-password list, breach check (k-anonymity, fails open after 2 seconds), no leading or trailing spaces, hashed with Argon2id |
+| Password rules | 15 to 128 Unicode code points, no composition rules, rejects edge whitespace, repetitive/sequential values, personal information and common passwords, then checks breach data with HIBP k-anonymity (fails open after 2 seconds); Argon2id hashing occurs only after validation |
 | Account creation | One transaction. Role always `Customer`. Name and email come from the roster. Duplicate attempts handled |
 | Rate limits | By IP and hashed identifier, for requests, code checks, activation and login |
 | CSRF | Token plus Origin check plus JSON content-type check on auth endpoints |
@@ -176,6 +176,7 @@ DELETE FROM public.auth_rate_limits WHERE rate_key LIKE 'activate%';
 
 ## 9. Known limitations and open items
 
+- **Password policy updated:** new activation and reset passwords require at least 15 code points and are checked for school ID, name, email-local-part, school-domain label and `campusroom` personal information.
 - **Login still sends an emailed code** that is stored in plain text in `users.otp_code`. Moving it to the hashed table is a later change.
 - Response timing is padded but **not yet measured**, so the claim that it reveals nothing is unproven.
 - The migration that revokes API-role permissions is written but **not applied**.
