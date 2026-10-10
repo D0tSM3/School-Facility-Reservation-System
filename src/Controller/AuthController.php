@@ -145,17 +145,26 @@ class AuthController
 
         $user = $this->users->findByEmailFull($email);
         $hash = (string) ($user['password_hash'] ?? self::dummyPasswordHash());
+        $passwordToRehash = $password;
         $passwordValid = password_verify($password, $hash);
+        if (!$passwordValid && $password !== trim($password)) {
+            $passwordToRehash = trim($password);
+            $passwordValid = password_verify($passwordToRehash, $hash);
+        }
         if ($user === null || !$passwordValid || empty($user['is_active'])) {
             RateLimiter::recordFailure('login', $rateId, 5, 300);
             Timing::pad($startedAt, 1500);
             Response::error('Invalid email or password.', 401);
         }
 
-        if (password_needs_rehash($user['password_hash'], PASSWORD_ARGON2ID)) {
+        if ($passwordToRehash !== $password || password_needs_rehash($user['password_hash'], PASSWORD_ARGON2ID)) {
+            $newHash = password_hash($passwordToRehash, PASSWORD_ARGON2ID);
+            if ($newHash === false) {
+                throw new \RuntimeException('Unable to rehash login password.');
+            }
             $this->users->updatePasswordHash(
                 $user['user_id'],
-                password_hash($password, PASSWORD_ARGON2ID)
+                $newHash
             );
         }
         RateLimiter::clear('login', $rateId);
@@ -294,9 +303,12 @@ class AuthController
             Response::error('Email, verification code, and new password are required.', 422);
         }
 
+        if (PasswordPolicy::hasWhitespaceEdges($password)) {
+            Response::error('Password must not start or end with whitespace.', 422, ['code' => 'whitespace_edges']);
+        }
         $passwordError = PasswordPolicy::validate($password);
         if ($passwordError !== null) {
-            Response::error($passwordError, 422);
+            Response::error($passwordError, 422, ['code' => 'password_policy']);
         }
 
         if (RateLimiter::isLocked('reset_otp', $email)) {

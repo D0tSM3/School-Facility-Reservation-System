@@ -43,6 +43,10 @@ final class PasswordPolicy
 
     public static function validate(string $password): ?string
     {
+        if (self::hasWhitespaceEdges($password)) {
+            return 'Password must not start or end with whitespace.';
+        }
+
         $length = preg_match_all('/./us', $password);
         if ($length === false) {
             return 'Password must be valid UTF-8.';
@@ -60,6 +64,11 @@ final class PasswordPolicy
         }
 
         return null;
+    }
+
+    public static function hasWhitespaceEdges(string $password): bool
+    {
+        return preg_match('/(?:\A[\s\p{Z}]|[\s\p{Z}]\z)/u', $password) === 1;
     }
 
     private static function isBreached(string $password): bool
