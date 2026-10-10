@@ -37,6 +37,13 @@ document.addEventListener('DOMContentLoaded', () => {
     already_activated: 'This school account has already been activated.',
     activation_failed: 'Activation could not be completed. Please try again.',
   };
+  const passwordPolicyMessages = {
+    'Password must be valid UTF-8.': 'Use a password containing valid text characters.',
+    'Password must be between 12 and 128 characters.': 'Use between 12 and 128 characters.',
+    'Choose a less common password.': 'This password is too common. Choose a different one.',
+    'This password appears in known data breaches. Choose another password.':
+      'This password appears in known breach data. Choose a different one.',
+  };
 
   function showStage(number) {
     Object.entries(stages).forEach(([key, section]) => {
@@ -214,7 +221,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     const code = json.data && typeof json.data.code === 'string' ? json.data.code : '';
-    showMessage(completeMessage, errorMessages[code] || 'Unable to complete activation. Check your details and try again.');
+    const message = code === 'password_policy'
+      ? (passwordPolicyMessages[json.error] || errorMessages.password_policy)
+      : errorMessages[code];
+    showMessage(completeMessage, message || 'Unable to complete activation. Check your details and try again.');
     clearPasswordFields();
   }
 
