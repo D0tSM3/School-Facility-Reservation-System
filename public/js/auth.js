@@ -1,12 +1,28 @@
 /**
- * CampusRoom — Authentication & Account Registration Logic
- * Handles user sign in, registration validation, and password strength checks.
+ * CampusRoom — Sign-in Logic
+ * Handles sign-in and reCAPTCHA bootstrap for the login page.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
   const BASE_URI = window.location.pathname.replace(/[^\/]*$/, '');
+  let csrfToken = '';
+  const csrfReady = fetch(BASE_URI + 'api/auth/csrf', { credentials: 'same-origin' })
+    .then(response => response.json())
+    .then(json => {
+      csrfToken = json && json.success && json.data && typeof json.data.token === 'string'
+        ? json.data.token
+        : '';
+    });
+  if (new URLSearchParams(window.location.search).get('activated') === '1') {
+    const successBanner = document.getElementById('activationSuccessBanner');
+    if (successBanner) {
+      successBanner.textContent = 'Your account is activated. You can now sign in.';
+      successBanner.hidden = false;
+      successBanner.classList.remove('hidden');
+    }
+  }
 
   // ==========================================
   // 0. reCAPTCHA bootstrap
@@ -217,11 +233,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const BASE = window.location.pathname.replace(/[^\/]*$/, '');
-      fetch(BASE + 'api/auth/login', {
+      csrfReady.then(() => {
+        if (!csrfToken) throw new Error('CSRF token unavailable.');
+        return fetch(BASE + 'api/auth/login', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({ email, password, recaptcha_token: captchaToken('loginRecaptcha') })
+        });
       })
       .then(res => res.json().then(json => ({ status: res.status, json })))
       .then(({ status, json }) => {

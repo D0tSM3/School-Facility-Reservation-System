@@ -283,6 +283,18 @@
       (function () {
         var BASE = window.location.pathname.replace(/[^\/]*$/, "");
         var email = sessionStorage.getItem("otp_email") || "";
+        var csrfToken = "";
+        var csrfReady = fetch(BASE + "api/auth/csrf", {
+          credentials: "same-origin",
+        })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (json) {
+            csrfToken = json && json.success && json.data && json.data.token
+              ? json.data.token
+              : "";
+          });
 
         // If arrived without an email, redirect back to login
         if (!email) {
@@ -357,11 +369,17 @@
             btn.disabled = true;
             btn.textContent = "Verifying\u2026";
 
-            fetch(BASE + "api/auth/verify-otp", {
+            csrfReady.then(function () {
+              if (!csrfToken) throw new Error("CSRF token unavailable.");
+              return fetch(BASE + "api/auth/verify-otp", {
               method: "POST",
               credentials: "same-origin",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-Token": csrfToken,
+              },
               body: JSON.stringify({ email: email, otp: otp }),
+              });
             })
               .then(function (res) {
                 return res.json().then(function (d) {
@@ -468,11 +486,17 @@
         // No reCAPTCHA on this screen: the user already passed the challenge on
         // the sign-in page, and the 30-second cooldown below throttles Resend.
         resendBtn.addEventListener("click", function () {
-          fetch(BASE + "api/auth/resend-otp", {
+          csrfReady.then(function () {
+            if (!csrfToken) throw new Error("CSRF token unavailable.");
+            return fetch(BASE + "api/auth/resend-otp", {
             method: "POST",
             credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": csrfToken,
+            },
             body: JSON.stringify({ email: email }),
+            });
           })
             .then(function (res) {
               return res.json().then(function (d) {
