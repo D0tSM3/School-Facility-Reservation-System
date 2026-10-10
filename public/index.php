@@ -36,6 +36,7 @@ use CampusRoom\Controller\ClassScheduleController;
 use CampusRoom\Controller\HolidayController;
 use CampusRoom\Controller\UserController;
 use CampusRoom\Controller\SettingsController;
+use CampusRoom\Controller\CalendarController;
 
 // Load .env when it exists (local dev). On serverless hosts like Vercel there
 // is no .env file — configuration comes from the platform's environment
@@ -143,6 +144,10 @@ $routes = [
     ['POST', '#^/api/auth/logout$#',      fn() => (new AuthController())->logout()],
 
     // Rooms — Customer (GET) + Admin (POST / PATCH)
+    // Master Calendar (read-only, Customer). Own prefix so it can never collide with /api/rooms/{id}.
+    ['GET',   '#^/api/calendar/master$#',          fn() => (new CalendarController())->master()],
+    ['GET',   '#^/api/calendar/suggest$#',         fn() => (new CalendarController())->suggest()],
+
     ['GET',   '#^/api/rooms$#',                    fn() => (new RoomController())->index()],
     ['GET',   '#^/api/rooms/(?P<id>[^/]+)/calendar$#', fn(string $id) => (new RoomController())->getCalendar($id)],
     ['POST',  '#^/api/rooms$#',                    fn() => (new RoomController())->store()],

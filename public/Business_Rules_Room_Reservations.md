@@ -82,6 +82,9 @@ Buenavista, Bohol
 
 ## ARTICLE V — HOURS OF OPERATION AND FACILITY AVAILABILITY
 
+- **Minimum duration:** Every reservation must be at least 30 minutes long.
+
+
 **Section 1.** No Facility may be reserved except within **the hours configured in System Settings.**
 
 **Section 2.** No Facility may be reserved on a day of the week designated as closed in System Settings, nor on any date entered in the Holidays table.

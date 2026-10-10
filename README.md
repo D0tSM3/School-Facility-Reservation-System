@@ -286,3 +286,38 @@ The front-end templates provided by the Stitch export contained several mock UI 
 *   **Department / ID Number:** Removed from the Register page (Users table only contains `email`, `password_hash`, `role`, and `name`).
 *   **Expected Attendees / Assets:** Removed from the booking flow since the schema only accepts `room_id`, `start_time`, `end_time`, and `purpose`.
 *   **Notification Bell & Advanced Filters:** Removed due to lack of corresponding backend tables (No `Notifications` or `Saved Filters` tables).
+
+## Master Calendar Plan V2 implementation notes
+
+The V2 calendar implementation adds a half-hour selection grid, class-period guide bands, flexible grid sizing, day strip/count drawer, room/timeline day layouts, an all-rooms week overview, overlap lanes with a `+N more` popover, repeat-booking controls, and iframe embeds on the customer/staff/admin dashboards. Staff/admin calendar reads use a separate `CalendarRepository::masterDetailed()` query; customer reads continue through the privacy-filtered `master()` query.
+
+### Decisions recorded
+
+- Dashboard integration uses same-origin iframe embedding (`?embed=1`).
+- Staff/admin calendar is read-only and may show requester display name, purpose, category, and status. It does not expose requester email or account credentials.
+- Week view defaults to the all-rooms overview; choosing a room in the selector switches to the bookable single-room week.
+- Day view offers Rooms and Timeline layouts.
+- The calendar UI uses 30-minute units and repeat bookings are capped at 7 days in the UI.
+- The server validator now rejects windows shorter than 30 minutes.
+
+### Before enabling the server minimum in a live database
+
+Run this read-only check against the target PostgreSQL database and inspect any returned rows before deploying the validator change. It identifies existing reservations shorter than the new rule:
+
+```sql
+SELECT reservation_id, start_time, end_time
+FROM reservations
+WHERE end_time - start_time < interval '30 minutes';
+```
+
+The database was not connected during this implementation pass, so this check has **not** been run against your live/local database. Do not deploy the validator change until you review its result and confirm how any affected records should be handled.
+
+### Local checks
+
+Run the pure JavaScript tests from the project root:
+
+```bash
+node --test tests/master-calendar-v2.test.js
+```
+
+PHP and JavaScript syntax checks can be run with `php -l` over `src/**/*.php` and `node --check` over `public/js/**/*.js`. Browser-level checks still need to be completed in your local app with a working PostgreSQL/Supabase connection and test accounts for Customer, Staff, and Admin.

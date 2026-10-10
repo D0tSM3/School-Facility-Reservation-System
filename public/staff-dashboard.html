@@ -104,6 +104,11 @@
       </div>
 
       <div class="space-y-1">
+                <a href="master-calendar.html" data-path="master-calendar" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all text-left group no-underline">
+          <span class="flex items-center gap-3"><span class="material-symbols-outlined text-[20px] nav-icon text-gray-400 group-hover:text-white transition-colors">calendar_month</span><span>Calendar</span></span>
+        </a>
+      </div>
+      <div class="space-y-1">
         <div class="px-3.5 pt-1 pb-1">
           <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">RESERVATIONS &amp; QUEUES</span>
         </div>
@@ -278,6 +283,15 @@
             <p class="text-xs font-semibold text-gray-500">Facility Status Grid</p>
           </button>
         </div>
+
+        <!-- Calendar preview (full page: master-calendar.html) -->
+        <section id="calendar" class="mt-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div><h2 class="text-lg font-bold text-gray-900">Calendar</h2><p class="text-sm text-gray-500 mt-1">Read-only view of room reservations, requester, purpose, category, and status.</p></div>
+            <a href="master-calendar.html" class="inline-flex items-center gap-2 rounded-lg bg-[#7a1f2b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#5e1821]">Open full calendar <span aria-hidden="true">↗</span></a>
+          </div>
+          <iframe title="Calendar" src="master-calendar.html?embed=1&amp;readonly=1&amp;view=week" loading="lazy" class="w-full rounded-xl border border-gray-200 bg-white" style="height:clamp(420px,70vh,760px)" referrerpolicy="same-origin"></iframe>
+        </section>
       </section>
 
       <!-- ====================== SHARED QUEUE TOOLBAR ====================== -->

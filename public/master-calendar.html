@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CampusRoom — Calendar | BPU Facility Gateway</title>
+    <meta name="description" content="See every room at a glance and find a free slot." />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/theme.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/master-calendar.css" />
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#7a1f2b",
+              "primary-hover": "#5b0617",
+              sidebar: "#1c1c1e",
+              background: "#F8F9FA",
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+  
+  <!-- FOUC Preventer -->
+  <script>
+    (function() {
+      const role = localStorage.getItem('campus_role');
+      if (role) {
+        document.documentElement.setAttribute('data-role', role.toLowerCase());
+      }
+    })();
+  </script>
+  <style>
+    /* Prevent sidebar flash */
+    html[data-role="staff"] aside nav a[data-path="customer-dashboard"],
+    html[data-role="staff"] aside nav a[data-path="rooms"],
+    html[data-role="staff"] aside nav a[data-path="my-reservations"],
+    html[data-role="admin"] aside nav a[data-path="customer-dashboard"],
+    html[data-role="admin"] aside nav a[data-path="rooms"],
+    html[data-role="admin"] aside nav a[data-path="my-reservations"] {
+      display: none !important;
+    }
+    
+    html[data-role="staff"] aside nav a[data-path="staff-dashboard"],
+    html[data-role="admin"] aside nav a[data-path="staff-dashboard"] {
+      display: flex !important;
+    }
+    
+    html[data-role="admin"] aside nav a[data-path="admin-governance"] {
+      display: flex !important;
+    }
+
+  </style>
+
+ </head>
+  <body class="bg-background font-sans text-gray-900 antialiased min-h-screen flex">
+    
+    <!-- Sidebar — identical structure to dashboard.html / rooms.html / handbook.html -->
+    <aside class="fixed left-0 top-0 h-full w-[250px] bg-[#1c1c1e] text-white z-50 flex flex-col shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+      <div class="h-16 px-6 flex items-center">
+        <a href="dashboard.html" class="flex items-center">
+          <img alt="CampusRoom Logo" class="h-7 w-auto object-contain" src="assets/logo.svg" />
+        </a>
+      </div>
+
+      <div class="px-5 pt-3 pb-2">
+        <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">WORKSPACE</span>
+      </div>
+      <nav class="px-3 space-y-1">
+        <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="customer-dashboard" href="dashboard.html">
+          <span class="material-symbols-outlined text-[20px]">grid_view</span>
+          <span>Dashboard</span>
+        </a>
+        <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="rooms" href="rooms.html">
+          <span class="material-symbols-outlined text-[20px]">meeting_room</span>
+          <span>Rooms Directory</span>
+        </a>
+        <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="master-calendar" href="master-calendar.html">
+          <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+          <span>Calendar</span>
+        </a>
+        <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="my-reservations" href="my-reservations.html">
+          <span class="material-symbols-outlined text-[20px]">event_available</span>
+          <span>My Reservations</span>
+        </a>
+        <a class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="staff-dashboard" href="staff-dashboard.html">
+          <span class="material-symbols-outlined text-[20px]">assignment</span>
+          <span>Staff Dashboard</span>
+        </a>
+        <a class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="admin-governance" href="admin-governance.html">
+          <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+          <span>Admin Governance</span>
+        </a>
+      </nav>
+
+      <div class="px-5 pt-6 pb-2">
+        <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">RESOURCES</span>
+      </div>
+      <nav class="px-3 space-y-1">
+        <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="handbook" href="handbook.html">
+          <span class="material-symbols-outlined text-[20px]">menu_book</span>
+          <span>Policy Handbook</span>
+        </a>
+      </nav>
+
+      <div id="logout-banner" class="mt-auto p-4 border-t border-white/5">
+        <button id="logoutBtn" class="flex items-center gap-2.5 text-sm text-gray-400 hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg" type="button">
+          <span class="material-symbols-outlined text-[18px]">logout</span>
+          <span class="font-medium">Sign Out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="pl-[250px] flex flex-col min-h-screen w-full">
+      <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 z-40 sticky top-0">
+        <div class="flex items-center gap-3">
+          <div class="flex flex-col text-right">
+            <span class="text-sm font-semibold text-gray-900 leading-tight header-name">—</span>
+            <span class="text-xs text-gray-500 font-medium header-role">—</span>
+          </div>
+          <div class="w-9 h-9 rounded-full bg-[#7a1f2b] text-white font-bold flex items-center justify-center text-sm shadow-sm header-initials">—</div>
+        </div>
+      </header>
+
+      <main class="flex-1 w-full p-6">
+        <div class="flex flex-wrap items-center gap-3 mb-3">
+          <h1 class="text-xl font-bold text-gray-900 mr-2">Calendar</h1>
+          <button id="mcFiltersBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm font-medium hover:bg-gray-50" aria-controls="mcFilters" aria-expanded="true" title="Show / hide filters ( [ )">
+            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">tune</span>Filters
+            <span id="mcFiltersBtnBadge" class="hidden mc-count-badge">0</span>
+          </button>
+          <div class="flex items-center gap-1">
+            <button id="mcPrev" type="button" class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm hover:bg-gray-50" aria-label="Previous">‹</button>
+            <button id="mcToday" type="button" class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm font-medium hover:bg-gray-50 disabled:opacity-50">Today</button>
+            <button id="mcNext" type="button" class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm hover:bg-gray-50" aria-label="Next">›</button>
+          </div>
+          <span id="mcTitle" class="text-base font-semibold text-gray-800 min-w-[190px]">Loading…</span>
+          <input id="mcDate" type="date" class="px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-sm" aria-label="Jump to date" />
+          <div class="mc-seg inline-flex" role="group" aria-label="View">
+            <button id="mcViewDay" type="button" class="is-active">Day</button>
+            <button id="mcViewWeek" type="button">Week</button>
+            <button id="mcViewMonth" type="button">Month</button>
+          </div>
+          <div id="mcDayModes" class="mc-seg inline-flex hidden" role="group" aria-label="Day layout"><button type="button" data-day-mode="rooms" class="is-active">Rooms</button><button type="button" data-day-mode="timeline">Timeline</button></div>
+          <label class="inline-flex items-center gap-1.5 text-xs text-gray-600"><input id="mcShowClasses" type="checkbox" /> Show classes</label>
+          <label class="hidden flex items-center gap-2 text-sm text-gray-600">Room
+            <select id="mcRoom" class="px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-sm"></select>
+          </label>
+          <button id="mcSummaryBtn" type="button" class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm font-medium hover:bg-gray-50" aria-controls="mcSummary" aria-expanded="false" title="Show / hide booking summary ( ] )">
+            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">receipt_long</span>Booking summary
+            <span id="mcSummaryBtnBadge" class="hidden mc-count-badge" aria-label="1 slot selected">1</span>
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 mb-3">
+          <div id="mcChips" class="flex flex-wrap items-center gap-2" aria-label="Quick filters"></div>
+          <span id="mcCount" class="text-xs text-gray-500 ml-1" aria-live="polite"></span>
+        </div>
+
+        <div class="mc-legend mb-3" aria-label="Legend">
+          <span><i style="background:var(--mc-free)"></i>Available</span>
+          <span><i style="background:var(--mc-taken-bg)"></i>Reserved</span>
+          <span><i style="background:var(--mc-pending-bg);border-style:dotted"></i>Reserved (pending)</span>
+          <span><i style="background:repeating-linear-gradient(45deg,var(--mc-class-a),var(--mc-class-a) 3px,var(--mc-class-b) 3px,var(--mc-class-b) 6px)"></i>Class</span>
+          <span class="mc-leg-cust"><i style="background:var(--mc-sel-bg);border:2px solid var(--mc-sel-line)"></i>Your selection</span>
+          <span class="mc-leg-cust"><i style="background:var(--mc-mine-bg)"></i>My booking</span>
+          <span class="mc-leg-cust"><i style="background:var(--mc-exam-bg);outline:2px solid var(--mc-mine-bg);outline-offset:-2px"></i>My Exam/Quiz</span>
+          <span><i style="background:var(--mc-maint-bg)"></i>Maintenance</span>
+          <span><i style="background:repeating-linear-gradient(135deg,var(--mc-hatch-a),var(--mc-hatch-a) 3px,var(--mc-hatch-b) 3px,var(--mc-hatch-b) 6px)"></i>Closed / holiday / past</span>
+        </div>
+
+        <div id="mcLegendMonth" class="mc-legend mb-3 hidden" aria-label="Month legend">
+          <span><i style="background:var(--mc-heat-4)"></i>Most rooms free</span>
+          <span><i style="background:var(--mc-heat-2)"></i>Some free</span>
+          <span><i style="background:var(--mc-heat-1)"></i>Few free</span>
+          <span><i style="background:var(--mc-heat-0)"></i>Fully booked</span>
+          <span><i style="background:repeating-linear-gradient(135deg,var(--mc-hatch-a),var(--mc-hatch-a) 3px,var(--mc-hatch-b) 3px,var(--mc-hatch-b) 6px)"></i>Closed / holiday</span>
+          <span class="text-gray-500">Click a day to open it.</span>
+        </div>
+        <div id="mcError" class="hidden mb-3 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-800" role="alert"></div>
+
+        <div id="mcLayout" class="mc-layout" data-filters="open">
+          <aside id="mcFilters" class="mc-panel" aria-label="Room filters">
+            <div class="mc-panel-inner">
+              <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-bold text-gray-900 flex items-center gap-2">Filters <span id="mcFilterBadge" class="hidden mc-count-badge">0</span></h2>
+                <button id="mcFiltersClose" type="button" class="mc-iconbtn" aria-label="Hide filters" title="Hide filters ( [ )">
+                  <span class="material-symbols-outlined text-[18px]" aria-hidden="true">keyboard_double_arrow_left</span>
+                </button>
+              </div>
+
+              <div class="mc-fsec">
+                <label for="mcSeats" class="mc-flabel">Seats needed</label>
+                <input id="mcSeats" type="number" min="1" max="9999" inputmode="numeric" placeholder="e.g. 40" class="mc-input" />
+                <label class="mc-opt mt-2"><input id="mcTight" type="checkbox" disabled><span>Tight fit only (≤ 1.5× seats)</span></label>
+                <p class="mc-fnote">Rooms with at least that many seats, closest fit first.</p>
+              </div>
+
+              <div class="mc-fsec">
+                <span class="mc-flabel">Room type</span>
+                <div id="mcTypes" class="mc-opts"></div>
+              </div>
+
+              <div class="mc-fsec">
+                <span class="mc-flabel">Floor</span>
+                <div id="mcFloors" class="mc-opts"></div>
+              </div>
+
+              <div class="mc-fsec">
+                <div class="flex items-center justify-between">
+                  <span class="mc-flabel">Only free during…</span>
+                  <button id="mcWinClear" type="button" class="text-xs text-[#7a1f2b] hover:underline">Reset</button>
+                </div>
+                <input id="mcWinDate" type="date" class="mc-input" aria-label="Date" />
+                <div class="flex items-center gap-2 mt-2">
+                  <input id="mcWinFrom" type="time" step="900" class="mc-input" aria-label="From" />
+                  <span class="text-xs text-gray-400">to</span>
+                  <input id="mcWinTo" type="time" step="900" class="mc-input" aria-label="To" />
+                </div>
+                <p id="mcWinHint" class="hidden mc-fwarn" role="status"></p>
+                <p class="mc-fnote">Keeps only rooms that are free for the whole window.</p>
+              </div>
+
+              <button id="mcClear" type="button" class="mc-clear" disabled>Clear filters</button>
+            </div>
+          </aside>
+
+          <div class="mc-main">
+            <div id="mcDaySummary" class="mc-day-summary hidden"><span id="mcDaySummaryDate"></span><button id="mcDaySummaryOpen" type="button"><span id="mcDaySummaryCount">0 bookings</span> ›</button></div>
+            <div id="mcDayStrip" class="mc-daystrip hidden" aria-label="Choose a day"></div>
+            <div id="mcDayDrawer" class="mc-day-drawer hidden" role="dialog" aria-label="Bookings for selected day"><div class="flex items-center justify-between gap-3"><strong id="mcDayDrawerTitle">Bookings</strong><button id="mcDayDrawerClose" type="button" aria-label="Close bookings list">×</button></div><div id="mcDayDrawerList"></div></div>
+        <div id="mcGrid" class="mc-scroll mc-loading" role="region" aria-label="Room availability calendar" aria-busy="true" tabindex="-1"><div class="mc-skel" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div><p class="sr-only" role="status">Loading calendar…</p></div>
+          </div>
+
+          <aside id="mcSummary" class="mc-panel mc-panel-right" aria-label="Booking summary">
+            <div class="mc-panel-inner">
+              <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-bold text-gray-900">Booking summary</h2>
+                <button id="mcSummaryClose" type="button" class="mc-iconbtn" aria-label="Hide booking summary" title="Hide booking summary ( ] )">
+                  <span class="material-symbols-outlined text-[18px]" aria-hidden="true">keyboard_double_arrow_right</span>
+                </button>
+              </div>
+              <div id="mcSumBody"></div>
+            </div>
+          </aside>
+        </div>
+        <div id="mcBackdrop" class="mc-backdrop" hidden></div>
+        <div id="mcTip" class="mc-tip" role="tooltip" hidden></div>
+        <div id="mcToast" class="mc-toast" role="status" aria-live="polite" hidden></div>
+      </main>
+    </div>
+
+    <script src="js/util.js"></script>
+    <script src="js/schedule.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/mc/lanes.js"></script>
+    <script src="js/mc/series.js"></script>
+    <script src="js/mc/daystrip.js"></script>
+    <script src="js/mc/popover.js"></script>
+    <script src="js/mc/grid.js"></script>
+    <script src="js/mc/filters.js"></script>
+    <script src="js/mc/summary.js"></script>
+    <script src="js/mc/suggest.js"></script>
+    <script src="js/masterCalendar.js"></script>
+  </body>
+</html>

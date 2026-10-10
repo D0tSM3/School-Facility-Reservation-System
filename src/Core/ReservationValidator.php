@@ -317,6 +317,12 @@ class ReservationValidator
     ): ?string {
         $startDate = date('Y-m-d', $start);
 
+        // Minimum reservation length: enforced for single bookings, ranges,
+        // moves and other flows that reuse this shared validation method.
+        if (($end - $start) < 30 * 60) {
+            return "Reservations must be at least 30 minutes long.";
+        }
+
         // 2. Closed Day Check (System Configuration)
         $dayOfWeek = date('l', $start);
         if (in_array($dayOfWeek, Settings::closedDays(), true)) {

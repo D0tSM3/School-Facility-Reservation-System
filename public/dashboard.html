@@ -105,6 +105,14 @@
         </a>
         <a
           class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
+          data-path="master-calendar"
+          href="master-calendar.html"
+        >
+          <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+          <span>Calendar</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
           data-path="rooms"
           href="rooms.html"
         >
@@ -277,6 +285,15 @@
             </div>
           </div>
         </div>
+        <!-- Calendar preview (full page: master-calendar.html) -->
+        <section id="calendar" class="mt-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div><h2 class="text-lg font-bold text-gray-900">Calendar</h2><p class="text-sm text-gray-500 mt-1">Browse room schedules before starting a reservation.</p></div>
+            <a href="master-calendar.html" class="inline-flex items-center gap-2 rounded-lg bg-[#7a1f2b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#5e1821]">Open full calendar <span aria-hidden="true">↗</span></a>
+          </div>
+          <iframe title="Calendar" src="master-calendar.html?embed=1&amp;view=week" loading="lazy" class="w-full rounded-xl border border-gray-200 bg-white" style="height:clamp(420px,70vh,760px)" referrerpolicy="same-origin"></iframe>
+        </section>
+
       </main>
     </div>
 

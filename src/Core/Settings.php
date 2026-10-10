@@ -21,6 +21,7 @@ final class Settings
         'business_hours_start' => '06:00',
         'business_hours_end'   => '21:00',
         'closed_days'          => '',
+        'class_periods'        => '',
     ];
 
     /** @var array<string, string>|null */
@@ -42,6 +43,37 @@ final class Settings
     public static function closedDays(): array
     {
         return self::parseDays(self::get('closed_days'));
+    }
+
+    /**
+     * Master Calendar snap periods from the 'class_periods' setting
+     * ('07:30-09:00,09:00-10:30,...') as [['07:30','09:00'], ...].
+     * Anything malformed, overlapping or out of order yields [] so the
+     * calendar falls back to its half-hour grid instead of breaking.
+     *
+     * @return array<int, array{0: string, 1: string}>
+     */
+    public static function periods(): array
+    {
+        $out  = [];
+        $prev = '';
+        foreach (explode(',', self::get('class_periods')) as $chunk) {
+            $chunk = trim($chunk);
+            if ($chunk === '') {
+                continue;
+            }
+            if (preg_match('/^([01]\d|2[0-3]):([0-5]\d)-([01]\d|2[0-3]):([0-5]\d)$/', $chunk, $m) !== 1) {
+                return [];
+            }
+            $from = $m[1] . ':' . $m[2];
+            $to   = $m[3] . ':' . $m[4];
+            if ($to <= $from || $from < $prev) {
+                return [];
+            }
+            $out[] = [$from, $to];
+            $prev  = $to;
+        }
+        return $out;
     }
 
     /** Everything, typed, for the API. */
