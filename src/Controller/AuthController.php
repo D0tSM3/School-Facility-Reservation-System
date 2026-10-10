@@ -124,10 +124,6 @@ class AuthController
             Response::error('Email must be 255 characters or fewer.', 422);
         }
 
-        if (strlen($password) > 128) {
-            Response::error('Invalid email or password.', 401);
-        }
-
         if (self::isStudentId($email)) {
             if (!self::validStudentId($email)) {
                 Response::error('Invalid email or password.', 401);
@@ -140,6 +136,11 @@ class AuthController
 
         $rateId = strtolower($email);
         if (RateLimiter::isLocked('login', $rateId)) {
+            Response::error('Invalid email or password.', 401);
+        }
+        if (strlen($password) > 256) {
+            RateLimiter::recordFailure('login', $rateId, 5, 300);
+            Timing::pad($startedAt, 1500);
             Response::error('Invalid email or password.', 401);
         }
 
