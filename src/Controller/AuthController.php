@@ -297,18 +297,17 @@ class AuthController
         $body  = $this->jsonBody();
         $email = strtolower(trim((string) ($body['email'] ?? '')));
         $otp   = trim((string) ($body['otp'] ?? ''));
-        $password = (string) ($body['password'] ?? '');
+        $password = $body['password'] ?? null;
 
-        if ($email === '' || $otp === '' || $password === '') {
+        if ($email === '' || $otp === '') {
             Response::error('Email, verification code, and new password are required.', 422);
         }
-
-        if (PasswordPolicy::hasWhitespaceEdges($password)) {
-            Response::error('Password must not start or end with whitespace.', 422, ['code' => 'whitespace_edges']);
-        }
-        $passwordError = PasswordPolicy::validate($password);
-        if ($passwordError !== null) {
-            Response::error($passwordError, 422, ['code' => 'password_policy']);
+        if (!is_string($password)) {
+            Response::error(
+                'Password does not meet requirements.',
+                422,
+                ['codes' => ['invalid_input']]
+            );
         }
 
         if (RateLimiter::isLocked('reset_otp', $email)) {
@@ -330,6 +329,19 @@ class AuthController
         $expiresAt = strtotime($user['otp_expires_at'] ?? '1970-01-01');
         if (time() > $expiresAt) {
             Response::error('Invalid or expired verification code.', 422);
+        }
+
+        $codes = PasswordPolicy::validateAll($password, [
+            'school_id' => (string) ($user['school_id'] ?? ''),
+            'full_name' => (string) $user['name'],
+            'email' => (string) $user['email'],
+        ]);
+        if ($codes !== []) {
+            Response::error(
+                'Password does not meet requirements.',
+                422,
+                ['codes' => $codes]
+            );
         }
 
         // Clear rate limit on successful password reset

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace CampusRoom\Controller;
 
-use CampusRoom\Core\Auth;
 use CampusRoom\Core\Mailer;
 use CampusRoom\Core\PasswordPolicy;
 use CampusRoom\Core\RateLimiter;
@@ -13,7 +12,6 @@ use CampusRoom\Core\RequestSecurity;
 use CampusRoom\Core\Response;
 use CampusRoom\Core\Timing;
 use CampusRoom\Repository\ActivationRepository;
-use CampusRoom\Repository\ReservationRepository;
 use PDOException;
 
 final class ActivationController
@@ -157,19 +155,36 @@ final class ActivationController
         if ($state === null) {
             Response::error('Activation verification is required.', 401);
         }
+        if (RateLimiter::isLocked('activate_complete', $state['school_id'])) {
+            Response::error('Please wait before trying again.', 429);
+        }
 
         $body = $this->jsonBody();
-        $password = (string) ($body['password'] ?? '');
-        if ($password === '') {
-            Response::error('A password is required.', 422, ['code' => 'password_required']);
-        }
-        if (PasswordPolicy::hasWhitespaceEdges($password)) {
-            Response::error('Password must not start or end with whitespace.', 422, ['code' => 'whitespace_edges']);
+        $password = $body['password'] ?? null;
+        if (!is_string($password)) {
+            Response::error(
+                'Password does not meet requirements.',
+                422,
+                ['codes' => ['invalid_input']]
+            );
         }
 
-        $passwordError = PasswordPolicy::validate($password);
-        if ($passwordError !== null) {
-            Response::error($passwordError, 422, ['code' => 'password_policy']);
+        $confirmation = $body['password_confirm'] ?? null;
+        $codes = PasswordPolicy::validateAll($password, [
+            'school_id' => $state['school_id'],
+            'full_name' => $state['name'],
+            'email' => $state['email'],
+        ]);
+        if (!is_string($confirmation) || $password !== $confirmation) {
+            $codes[] = 'mismatch';
+        }
+        if ($codes !== []) {
+            RateLimiter::recordFailure('activate_complete', $state['school_id']);
+            Response::error(
+                'Password does not meet requirements.',
+                422,
+                ['codes' => array_values(array_unique($codes))]
+            );
         }
 
         unset($_SESSION[self::STATE_KEY]);
@@ -197,11 +212,7 @@ final class ActivationController
             Response::error('Activation could not be completed.', 409, ['code' => 'activation_failed']);
         }
 
-        Auth::login((string) $result['user']['user_id'], 'Customer');
-        (new ReservationRepository())->insertLog(
-            (string) $result['user']['user_id'],
-            'Customer activated account'
-        );
+        RateLimiter::clear('activate_complete', $state['school_id']);
 
         Response::json($result['user'], 201);
     }
