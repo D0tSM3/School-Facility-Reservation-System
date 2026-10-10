@@ -143,6 +143,10 @@ final class ActivationController
             'email' => self::maskEmail($state['email']),
             'person_type' => $state['person_type'],
             'expires_in' => max(0, (int) $state['expires_at'] - time()),
+            'policy' => [
+                'min_length' => PasswordPolicy::MIN_LENGTH,
+                'max_length' => PasswordPolicy::MAX_LENGTH,
+            ],
         ]);
     }
 
