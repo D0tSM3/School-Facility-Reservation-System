@@ -110,7 +110,7 @@ final class PasswordPolicy
 
     private static function containsPersonalInformation(string $password, array $context): bool
     {
-        $candidate = self::lower($password);
+        $candidate = $password;
         $personal = [];
         foreach (['school_id', 'full_name', 'email'] as $key) {
             if (isset($context[$key]) && is_string($context[$key])) {
@@ -119,13 +119,13 @@ final class PasswordPolicy
         }
 
         if (($personal['school_id'] ?? '') !== ''
-            && str_contains($candidate, $personal['school_id'])) {
+            && self::containsIgnoreCase($candidate, $personal['school_id'])) {
             return true;
         }
 
         $name = $personal['full_name'] ?? '';
         foreach (preg_split('/[^\p{L}\p{N}]+/u', $name, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $token) {
-            if (self::codePointLength($token) >= 4 && str_contains($candidate, $token)) {
+            if (self::codePointLength($token) >= 4 && self::containsIgnoreCase($candidate, $token)) {
                 return true;
             }
         }
@@ -134,7 +134,7 @@ final class PasswordPolicy
         $at = strrpos($email, '@');
         if ($at !== false) {
             $localPart = substr($email, 0, $at);
-            if (self::codePointLength($localPart) >= 4 && str_contains($candidate, $localPart)) {
+            if (self::codePointLength($localPart) >= 4 && self::containsIgnoreCase($candidate, $localPart)) {
                 return true;
             }
         }
@@ -142,11 +142,11 @@ final class PasswordPolicy
         $domain = strtolower((string) ($_ENV['ALLOWED_EMAIL_DOMAIN'] ?? getenv('ALLOWED_EMAIL_DOMAIN') ?: ''));
         $domain = ltrim($domain, '@');
         $domainLabel = explode('.', $domain, 2)[0] ?? '';
-        if ($domainLabel !== '' && str_contains($candidate, $domainLabel)) {
+        if ($domainLabel !== '' && self::containsIgnoreCase($candidate, $domainLabel)) {
             return true;
         }
 
-        return str_contains($candidate, 'campusroom');
+        return self::containsIgnoreCase($candidate, 'campusroom');
     }
 
     /**
@@ -214,6 +214,11 @@ final class PasswordPolicy
     private static function lower(string $value): string
     {
         return function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
+    }
+
+    private static function containsIgnoreCase(string $haystack, string $needle): bool
+    {
+        return preg_match('/' . preg_quote($needle, '/') . '/iu', $haystack) === 1;
     }
 
     private static function isBreached(string $password): bool
