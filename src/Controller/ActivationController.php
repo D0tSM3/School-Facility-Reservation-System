@@ -139,6 +139,7 @@ final class ActivationController
         }
 
         Response::json([
+            'name' => $state['name'],
             'email' => self::maskEmail($state['email']),
             'person_type' => $state['person_type'],
             'expires_in' => max(0, (int) $state['expires_at'] - time()),
@@ -156,12 +157,15 @@ final class ActivationController
         $body = $this->jsonBody();
         $password = (string) ($body['password'] ?? '');
         if ($password === '') {
-            Response::error('A password is required.', 422);
+            Response::error('A password is required.', 422, ['code' => 'password_required']);
+        }
+        if (PasswordPolicy::hasWhitespaceEdges($password)) {
+            Response::error('Password must not start or end with whitespace.', 422, ['code' => 'whitespace_edges']);
         }
 
         $passwordError = PasswordPolicy::validate($password);
         if ($passwordError !== null) {
-            Response::error($passwordError, 422);
+            Response::error($passwordError, 422, ['code' => 'password_policy']);
         }
 
         unset($_SESSION[self::STATE_KEY]);
@@ -180,13 +184,13 @@ final class ActivationController
             );
         } catch (PDOException $e) {
             if ($e->getCode() === '23505') {
-                Response::error('This school account has already been activated.', 409);
+                Response::error('This school account has already been activated.', 409, ['code' => 'already_activated']);
             }
             throw $e;
         }
 
         if (!($result['created'] ?? false)) {
-            Response::error('Activation could not be completed.', 409);
+            Response::error('Activation could not be completed.', 409, ['code' => 'activation_failed']);
         }
 
         Auth::login((string) $result['user']['user_id'], 'Customer');

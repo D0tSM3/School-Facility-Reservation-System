@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Activate your CampusRoom account." />
+    <title>CampusRoom — Activate account</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+    <link rel="stylesheet" href="css/main.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen bg-gray-50 text-gray-900 antialiased flex items-center justify-center p-4">
+    <main class="w-full max-w-xl rounded-xl bg-white p-6 shadow-xl sm:p-10">
+      <a class="mb-8 inline-block text-sm font-semibold text-[#7a1f2b] hover:underline" href="index.html">CampusRoom</a>
+      <h1 class="mb-2 text-3xl font-bold">Activate your account</h1>
+      <p class="mb-8 text-sm text-gray-600">Verify your school ID, then choose a password.</p>
+
+      <section id="activation-stage-1" aria-labelledby="stage-1-heading">
+        <h2 id="stage-1-heading" class="mb-4 text-xl font-semibold">1. Request a code</h2>
+        <form id="requestForm" class="space-y-4">
+          <label class="block text-sm font-medium" for="student-id">School ID</label>
+          <input id="student-id" name="student_id" autocomplete="username" required
+            class="w-full rounded-lg border border-gray-300 px-3 py-3" />
+          <div id="activationRecaptcha" class="min-h-0"></div>
+          <p id="requestMessage" class="hidden rounded-lg bg-green-50 p-3 text-sm text-green-900" role="status"></p>
+          <button id="requestButton" class="w-full rounded-lg bg-[#7a2839] px-4 py-3 font-semibold text-white disabled:opacity-60" type="submit">Continue</button>
+        </form>
+      </section>
+
+      <section id="activation-stage-2" aria-labelledby="stage-2-heading" hidden>
+        <h2 id="stage-2-heading" class="mb-4 text-xl font-semibold">2. Verify your code</h2>
+        <p id="stage2Message" class="mb-4 text-sm text-gray-700" role="status"></p>
+        <form id="verifyForm" class="space-y-4">
+          <label class="block text-sm font-medium" for="activation-code">6-digit code</label>
+          <input id="activation-code" name="otp" inputmode="numeric" autocomplete="one-time-code"
+            pattern="[0-9]{6}" maxlength="6" required
+            class="w-full rounded-lg border border-gray-300 px-3 py-3 tracking-[0.3em]" />
+          <div id="resendRecaptcha" class="min-h-0"></div>
+          <p id="verifyMessage" class="hidden rounded-lg bg-red-50 p-3 text-sm text-red-900" role="alert"></p>
+          <button id="verifyButton" class="w-full rounded-lg bg-[#7a2839] px-4 py-3 font-semibold text-white disabled:opacity-60" type="submit">Verify</button>
+        </form>
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+          <button id="resendButton" class="font-semibold text-[#7a1f2b] hover:underline disabled:opacity-50" type="button" disabled>Resend in 60s</button>
+          <a id="differentIdLink" class="font-semibold text-[#7a1f2b] hover:underline" href="#stage1">Use a different ID</a>
+        </div>
+      </section>
+
+      <section id="activation-stage-3" aria-labelledby="stage-3-heading" hidden>
+        <h2 id="stage-3-heading" class="mb-2 text-xl font-semibold">3. Choose a password</h2>
+        <p id="welcomeMessage" class="mb-1 text-lg font-semibold"></p>
+        <p id="activationEmail" class="mb-5 text-sm text-gray-600"></p>
+        <form id="completeForm" class="space-y-4" novalidate>
+          <div>
+            <label class="mb-1 block text-sm font-medium" for="new-password">Password</label>
+            <div class="flex">
+              <input id="new-password" name="password" type="password" autocomplete="new-password" required
+                class="min-w-0 flex-1 rounded-l-lg border border-gray-300 px-3 py-3" />
+              <button class="rounded-r-lg border border-l-0 border-gray-300 px-3 text-sm" type="button" data-toggle-password="new-password" aria-label="Show password">Show</button>
+            </div>
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium" for="confirm-password">Confirm password</label>
+            <div class="flex">
+              <input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password" required
+                class="min-w-0 flex-1 rounded-l-lg border border-gray-300 px-3 py-3" />
+              <button class="rounded-r-lg border border-l-0 border-gray-300 px-3 text-sm" type="button" data-toggle-password="confirm-password" aria-label="Show password">Show</button>
+            </div>
+          </div>
+          <ul class="space-y-1 text-sm" aria-live="polite">
+            <li id="check-length" class="text-gray-500">At least 12 characters</li>
+            <li id="check-match" class="text-gray-500">Passwords match</li>
+            <li id="check-whitespace" class="text-gray-500">No leading or trailing spaces</li>
+          </ul>
+          <p id="completeMessage" class="hidden rounded-lg bg-red-50 p-3 text-sm text-red-900" role="alert"></p>
+          <button id="completeButton" class="w-full rounded-lg bg-[#7a2839] px-4 py-3 font-semibold text-white disabled:opacity-60" type="submit">Activate account</button>
+        </form>
+      </section>
+
+      <p class="mt-8 text-center text-sm text-gray-600"><a class="font-semibold text-[#7a1f2b] hover:underline" href="index.html">Back to sign in</a></p>
+    </main>
+    <script src="js/activate.js" defer></script>
+  </body>
+</html>
