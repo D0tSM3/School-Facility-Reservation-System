@@ -44,17 +44,6 @@ final class PasswordPolicy
         'qwerty!123456',
     ];
 
-    private const MESSAGES = [
-        'invalid_input' => 'Enter a valid password.',
-        'too_short' => 'Password must be at least 15 characters.',
-        'too_long' => 'Password must be 128 characters or fewer.',
-        'whitespace_edges' => 'Password must not start or end with whitespace.',
-        'repetitive' => 'Avoid repeated or sequential characters.',
-        'contains_personal' => 'Password must not contain personal information.',
-        'common' => 'Choose a less common password.',
-        'breached' => 'This password appears in known data breaches. Choose another password.',
-    ];
-
     /**
      * @param array{school_id?: string, full_name?: string, email?: string} $context
      * @return list<string>
@@ -100,7 +89,19 @@ final class PasswordPolicy
     public static function validate(string $password): ?string
     {
         $codes = self::validateAll($password);
-        return $codes === [] ? null : self::MESSAGES[$codes[0]];
+        if ($codes === []) {
+            return null;
+        }
+        return match ($codes[0]) {
+            'too_short' => 'Password must be at least ' . self::MIN_LENGTH . ' characters.',
+            'too_long' => 'Password must be ' . self::MAX_LENGTH . ' characters or fewer.',
+            'invalid_input' => 'Enter a valid password.',
+            'whitespace_edges' => 'Password must not start or end with whitespace.',
+            'repetitive' => 'Avoid repeated or sequential characters.',
+            'contains_personal' => 'Password must not contain personal information.',
+            'common' => 'Choose a less common password.',
+            'breached' => 'This password appears in known data breaches. Choose another password.',
+        };
     }
 
     public static function hasWhitespaceEdges(string $password): bool
