@@ -874,11 +874,186 @@ function closeMobileMenu() {
   const m = document.getElementById('mobileMenu');
   if (m) m.classList.add('hidden');
 }
+
+// ═══════ ZOOM LIGHTBOX MODAL SCRIPT ═══════
+(function () {
+  const modal = document.getElementById('zoomModal');
+  const zoomImg = document.getElementById('zoomImage');
+  const zoomTitle = document.getElementById('zoomTitle');
+  const zoomLevelText = document.getElementById('zoomLevelText');
+  const zoomInBtn = document.getElementById('zoomInBtn');
+  const zoomOutBtn = document.getElementById('zoomOutBtn');
+  const zoomResetBtn = document.getElementById('zoomResetBtn');
+  const zoomCloseBtn = document.getElementById('zoomCloseBtn');
+  const zoomViewport = document.getElementById('zoomViewport');
+
+  if (!modal || !zoomImg) return;
+
+  let scale = 1;
+  let translateX = 0;
+  let translateY = 0;
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+
+  function updateTransform() {
+    zoomImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    if (zoomLevelText) {
+      zoomLevelText.textContent = `${Math.round(scale * 100)}%`;
+    }
+  }
+
+  function resetZoom() {
+    scale = 1;
+    translateX = 0;
+    translateY = 0;
+    updateTransform();
+  }
+
+  function openZoom(src, title) {
+    zoomImg.src = src;
+    if (zoomTitle) zoomTitle.textContent = title || 'Floor Plan';
+    resetZoom();
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeZoom() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+
+  function zoomIn() {
+    scale = Math.min(scale + 0.35, 4.5);
+    updateTransform();
+  }
+
+  function zoomOut() {
+    scale = Math.max(scale - 0.35, 0.6);
+    updateTransform();
+  }
+
+  // Attach click listener to all floor plan wrappers
+  document.querySelectorAll('.floor-img-wrapper').forEach(wrapper => {
+    wrapper.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const src = wrapper.dataset.floorSrc || wrapper.querySelector('img')?.src;
+      const title = wrapper.dataset.floorTitle || 'Floor Plan';
+      if (src) openZoom(src, title);
+    });
+  });
+
+  if (zoomInBtn) zoomInBtn.addEventListener('click', (e) => { e.stopPropagation(); zoomIn(); });
+  if (zoomOutBtn) zoomOutBtn.addEventListener('click', (e) => { e.stopPropagation(); zoomOut(); });
+  if (zoomResetBtn) zoomResetBtn.addEventListener('click', (e) => { e.stopPropagation(); resetZoom(); });
+  if (zoomCloseBtn) zoomCloseBtn.addEventListener('click', (e) => { e.stopPropagation(); closeZoom(); });
+
+  // Close when clicking outside of image/controls
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal || e.target === zoomViewport) {
+      closeZoom();
+    }
+  });
+
+  // Wheel zoom
+  zoomViewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      scale = Math.min(scale + 0.2, 4.5);
+    } else {
+      scale = Math.max(scale - 0.2, 0.6);
+    }
+    updateTransform();
+  }, { passive: false });
+
+  // Mouse Drag / Pan
+  zoomViewport.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    isDragging = true;
+    startX = e.clientX - translateX;
+    startY = e.clientY - translateY;
+    zoomViewport.style.cursor = 'grabbing';
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    translateX = e.clientX - startX;
+    translateY = e.clientY - startY;
+    updateTransform();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      zoomViewport.style.cursor = 'grab';
+    }
+  });
+
+  // Touch Drag & Pinch Zoom
+  let initialTouchDist = null;
+  let initialScale = 1;
+
+  zoomViewport.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      isDragging = true;
+      startX = e.touches[0].clientX - translateX;
+      startY = e.touches[0].clientY - translateY;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      initialTouchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      initialScale = scale;
+    }
+  }, { passive: true });
+
+  zoomViewport.addEventListener('touchmove', (e) => {
+    if (isDragging && e.touches.length === 1) {
+      translateX = e.touches[0].clientX - startX;
+      translateY = e.touches[0].clientY - startY;
+      updateTransform();
+    } else if (e.touches.length === 2 && initialTouchDist) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      scale = Math.min(Math.max((dist / initialTouchDist) * initialScale, 0.6), 4.5);
+      updateTransform();
+    }
+  }, { passive: true });
+
+  zoomViewport.addEventListener('touchend', () => {
+    isDragging = false;
+    initialTouchDist = null;
+  });
+
+  // Double click to toggle 2x zoom
+  zoomViewport.addEventListener('dblclick', (e) => {
+    if (e.target.closest('button')) return;
+    if (scale > 1.2) {
+      resetZoom();
+    } else {
+      scale = 2;
+      updateTransform();
+    }
+  });
+
+  // Keyboard navigation
+  window.addEventListener('keydown', (e) => {
+    if (modal.classList.contains('hidden')) return;
+    if (e.key === 'Escape') closeZoom();
+    if (e.key === '+' || e.key === '=') zoomIn();
+    if (e.key === '-' || e.key === '_') zoomOut();
+    if (e.key === '0') resetZoom();
+  });
+})();
 </script>
 
-
 <!-- ═══════ ZOOM LIGHTBOX MODAL ═══════ -->
-<div id="zoomModal" class="fixed inset-0 z-[100] hidden bg-black/90 backdrop-blur-md flex flex-col items-center justify-between p-3 sm:p-5 select-none">
+<div id="zoomModal" class="fixed inset-0 z-[100] hidden bg-black/90 backdrop-blur-md flex-col items-center justify-between p-3 sm:p-5 select-none">
   <!-- Top Bar -->
   <div class="w-full max-w-[1400px] flex items-center justify-between text-white py-2 px-3 sm:px-4 border-b border-white/10">
     <div class="flex items-center gap-3">
@@ -912,7 +1087,7 @@ function closeMobileMenu() {
 
   <!-- Interactive Image Viewport -->
   <div id="zoomViewport" class="flex-1 w-full overflow-hidden flex items-center justify-center relative cursor-grab active:cursor-grabbing">
-    <img id="zoomImage" src="" alt="Zoomed Floor Plan" class="max-w-none transition-transform duration-75 origin-center will-change-transform shadow-2xl rounded bg-white" draggable="false" />
+    <img id="zoomImage" src="" alt="Zoomed Floor Plan" class="max-w-[90vw] max-h-[75vh] object-contain transition-transform duration-75 origin-center will-change-transform shadow-2xl rounded bg-white" draggable="false" />
   </div>
 
   <!-- Bottom Tip -->
