@@ -1,18 +1,15 @@
 /**
- * CampusRoom — Master Calendar booking summary (Phase 3, + override modal in Phase 4).
+ * CampusRoom — Master Calendar booking summary.
  *
  * The right-hand panel. It shows the slot picked on the grid, collects what
  * the booking form asks for (classification, purpose, equipment, policy) and
  * submits through the EXISTING POST api/reservations with exactly the payload
  * booking.js sends:
  *   { room_id, purpose, category, start_time, end_time, equipment_notes }
- * Nothing here changes a booking rule: the server (ReservationValidator, the
- * approval outcome, the DB trigger) still decides everything. The approval
- * line is only a hint that mirrors ReservationController::approvalOutcome().
- *
- * Phase 4: the suggestion card (mc/suggest.js) renders into #mcSumSuggest, and a
- * 409 with override_eligible opens the same urgent-override dialog booking.js has
- * (POST api/conflict-override-requests) instead of sending the user away.
+ * Nothing here changes a booking rule: the server (ReservationValidator and
+ * the DB trigger) still decides everything. Direct booking: a successful
+ * request is confirmed immediately, and a 409 means the slot is unavailable —
+ * the suggestion card (mc/suggest.js) offers other times/rooms instead.
  */
 (function () {
   'use strict';
@@ -41,14 +38,11 @@
   let sel = null;            // { roomId, date, start, end }
   let problem = '';
   let submitting = false, done = false;
-  let lastConflict = null;   // { payload, conflict } from the newest override-eligible 409
-  let overrideModal = null;
   const f = { category: '', purpose: '', policy: false, equip: new Set(EQUIPMENT.filter(e => e.on).map(e => e.name)), repeat: { mode: 'single', through: '', activeDates: null } };
   let seriesState = { days: [], blocked: [], valid: true };
   let seriesSig = '';
 
   const $ = id => document.getElementById(id);
-  const requiresApproval = v => v === true || v === 't' || v === 1 || v === '1' || v === 'true';
 
   const fmtDate = ymd => {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd || '');
@@ -175,9 +169,6 @@
         paintEquip();
       }
       refresh();
-    });
-    body.addEventListener('click', e => {
-      if (e.target.closest('#mcSumOverride') && lastConflict && !submitting && !done) openOverride(e.target.closest('#mcSumOverride'));
     });
     $('mcPurpose').addEventListener('input', e => { f.purpose = e.target.value; $('mcPurposeCount').textContent = e.target.value.length; refresh(); });
     $('mcSumForm').addEventListener('submit', e => { e.preventDefault(); openConfirm($('mcSumSubmit')); });
@@ -409,11 +400,8 @@
       row('Purpose', esc(f.purpose.trim())) +
       row('Equipment', esc(equipmentString()));
     const ap = wrap.querySelector('[data-confirm-approval]');
-    const needs = days.length > 3 || (room && requiresApproval(room.requires_approval));
-    ap.className = 'mc-sum-approval ' + (needs ? 'is-wait' : 'is-auto');
-    ap.innerHTML = needs
-      ? '<span class="material-symbols-outlined" aria-hidden="true">hourglass_top</span>This request will wait in the staff approval queue.'
-      : '<span class="material-symbols-outlined" aria-hidden="true">bolt</span>Approved instantly if the slot is still free when you confirm.';
+    ap.className = 'mc-sum-approval is-auto';
+    ap.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">bolt</span>Confirmed instantly if the slot is still free when you confirm.';
     wrap.classList.remove('hidden');
     wrap.querySelector('[data-confirm-ok]').focus();
   }
@@ -449,13 +437,8 @@
     paintRepeat();
 
     const ap = $('mcSumApproval');
-    if ((seriesState.days.length > 3) || (room && requiresApproval(room.requires_approval))) {
-      ap.className = 'mc-sum-approval is-wait';
-      ap.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">hourglass_top</span>This room needs staff approval — your request waits in the queue.';
-    } else {
-      ap.className = 'mc-sum-approval is-auto';
-      ap.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">bolt</span>Approved instantly if the slot is still free when you submit.';
-    }
+    ap.className = 'mc-sum-approval is-auto';
+    ap.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">bolt</span>Confirmed instantly if the slot is still free when you submit.';
 
     const prob = problem || (startedAlready() ? 'This time has already started. Pick a later period.' : '');
     const pe = $('mcSumProblem');
@@ -526,10 +509,9 @@
     if (res.ok && json && json.success !== false) {
       done = true; setBusy(true);
       const d = json.data || {};
-      const ref = d.reservation_id ? 'REQ-' + String(d.reservation_id).substring(0, 8).toUpperCase() : 'Your request';
-      const auto = d.status === 'Approved';
-      message('ok', '<b>' + (auto ? 'Reservation approved' : 'Reservation request created') + ':</b> ' + esc(ref) +
-        (auto ? ' is confirmed for ' : ' is now in the staff queue for ') + esc(room ? room.name : 'the room') + '. Redirecting to My Reservations…');
+      const ref = d.reservation_id ? 'REQ-' + String(d.reservation_id).substring(0, 8).toUpperCase() : 'Your booking';
+      message('ok', '<b>Reservation confirmed:</b> ' + esc(ref) +
+        ' is booked for ' + esc(room ? room.name : 'the room') + '. Redirecting to My Reservations…');
       if (opts.onBooked) opts.onBooked();
       setTimeout(() => { window.location.href = 'my-reservations.html'; }, 1500);
       return;
@@ -539,14 +521,10 @@
     const text = (json && (json.error || json.message)) || 'The server sent an unexpected response (HTTP ' + (res ? res.status : '?') + '). Please try again.';
     if (res.status === 409) {
       // Someone got there first (or a rule applies). Refresh the grid so the taken slot shows,
-      // and let the page offer other times/rooms (mc/suggest.js).
-      const eligible = !!(json && json.data && json.data.override_eligible);
-      lastConflict = eligible ? { payload, conflict: json.data.conflict || null } : null;
+      // and let the page offer other times/rooms (mc/suggest.js). Direct booking: a taken
+      // slot is simply unavailable — there is no override path.
       if (opts.onConflict) opts.onConflict(json, text);
-      message('error', '<b>Scheduling conflict.</b> ' + esc(text) + ' ' +
-        (eligible
-          ? 'Pick one of the options below, or, if this is urgent, <button type="button" id="mcSumOverride" class="underline font-semibold">request an override</button>.'
-          : 'Pick one of the options below or another time on the calendar.'));
+      message('error', '<b>Room unavailable.</b> ' + esc(text) + ' Pick one of the options below or another time on the calendar.');
     } else {
       message('error', '<b>Could not submit.</b> ' + esc(text));
     }
@@ -557,126 +535,6 @@
     const b = $('mcSumSubmit');
     b.textContent = on ? (done ? 'Submitted' : 'Submitting…') : 'Review & submit';
     body.querySelectorAll('input, textarea, button, select').forEach(x => { if (x !== b) x.disabled = on; });
-  }
-
-  // ---------- urgent override (same dialog and endpoint as booking.js) ----------
-  /** "2026-10-01 09:00:00" -> "Thu, Oct 1, 9:00 AM" (literal Manila wall-clock). */
-  function formatSlot(value) {
-    const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(value || ''));
-    if (!m) return String(value || '');
-    const day = new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    return day + ', ' + S.fmt12(m[4] + ':' + m[5]);
-  }
-
-  function buildOverrideModal() {
-    const wrap = document.createElement('div');
-    wrap.className = 'fixed inset-0 z-[100] hidden items-center justify-center bg-black/40 p-4';
-    wrap.setAttribute('role', 'dialog');
-    wrap.setAttribute('aria-modal', 'true');
-    wrap.setAttribute('aria-labelledby', 'mcOverrideTitle');
-    wrap.innerHTML =
-      '<div class="w-full max-w-md rounded-2xl bg-white shadow-xl p-6 space-y-4">' +
-        '<div class="flex items-start gap-3">' +
-          '<span class="material-symbols-outlined text-amber-500 text-[28px]" aria-hidden="true">event_busy</span>' +
-          '<div><h2 id="mcOverrideTitle" class="text-base font-bold text-gray-900">This room is already booked</h2>' +
-          '<p class="text-sm text-gray-600 mt-1" data-override-text></p></div>' +
-        '</div>' +
-        '<div data-override-choice class="flex flex-col sm:flex-row gap-2 sm:justify-end">' +
-          '<button type="button" data-override-back class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Choose a different time</button>' +
-          '<button type="button" data-override-open class="px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600">Request override (urgent)</button>' +
-        '</div>' +
-        '<form data-override-form class="hidden space-y-3" novalidate>' +
-          '<label class="block text-sm font-bold text-gray-800" for="mcOverrideReason">Why is this urgent? <span class="text-red-500">*</span></label>' +
-          '<textarea id="mcOverrideReason" rows="4" maxlength="500" class="w-full p-3 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[#7a1f2b]" placeholder="Explain why you need this exact slot. Staff will read this when deciding whether to ask the current holder to move."></textarea>' +
-          '<p class="text-xs text-gray-500">Staff review every override. If approved, the current booking is asked to move and your request joins the normal approval queue.</p>' +
-          '<p data-override-error class="hidden text-sm font-semibold text-red-600" role="alert"></p>' +
-          '<div class="flex flex-col sm:flex-row gap-2 sm:justify-end">' +
-            '<button type="button" data-override-back class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Choose a different time</button>' +
-            '<button type="submit" data-override-submit class="px-4 py-2 rounded-xl bg-[#7a1f2b] text-white text-sm font-semibold hover:opacity-90">Submit override request</button>' +
-          '</div>' +
-        '</form>' +
-      '</div>';
-    document.body.appendChild(wrap);
-
-    const m = { wrap, opener: null, busy: false };
-    m.close = () => {
-      if (m.busy) return;
-      wrap.classList.add('hidden'); wrap.classList.remove('flex');
-      if (m.opener && document.body.contains(m.opener)) m.opener.focus();
-    };
-    wrap.querySelectorAll('[data-override-back]').forEach(b => b.addEventListener('click', m.close));
-    wrap.addEventListener('click', e => { if (e.target === wrap) m.close(); });
-    document.addEventListener('keydown', e => {
-      if (wrap.classList.contains('hidden')) return;
-      if (e.key === 'Escape') { m.close(); return; }
-      if (e.key !== 'Tab') return;                        // keep Tab inside the dialog
-      const f = Array.from(wrap.querySelectorAll('button, textarea')).filter(x => !x.disabled && x.offsetParent !== null);
-      if (!f.length) return;
-      const first = f[0], last = f[f.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    });
-    wrap.querySelector('[data-override-open]').addEventListener('click', () => {
-      wrap.querySelector('[data-override-choice]').classList.add('hidden');
-      wrap.querySelector('[data-override-form]').classList.remove('hidden');
-      wrap.querySelector('#mcOverrideReason').focus();
-    });
-    wrap.querySelector('[data-override-form]').addEventListener('submit', e => { e.preventDefault(); submitOverride(); });
-    return m;
-  }
-
-  function openOverride(opener) {
-    if (!lastConflict) return;
-    if (!overrideModal) overrideModal = buildOverrideModal();
-    const { wrap } = overrideModal;
-    overrideModal.opener = opener || null;
-    const c = lastConflict.conflict;
-    const when = c && c.start_time
-      ? formatSlot(c.start_time) + ' – ' + S.fmt12(String(c.end_time).slice(11, 16))
-      : 'the time you picked';
-    wrap.querySelector('[data-override-text]').textContent =
-      'This room is already booked during ' + when + '. You can pick another time, or request a slip for a conflict override.';
-    wrap.querySelector('[data-override-choice]').classList.remove('hidden');
-    wrap.querySelector('[data-override-form]').classList.add('hidden');
-    wrap.querySelector('#mcOverrideReason').value = '';
-    wrap.querySelector('[data-override-error]').classList.add('hidden');
-    wrap.querySelector('[data-override-submit]').disabled = false;
-    wrap.classList.remove('hidden'); wrap.classList.add('flex');
-    wrap.querySelector('[data-override-back]').focus();
-  }
-
-  async function submitOverride() {
-    const m = overrideModal;
-    if (!m || m.busy || !lastConflict) return;
-    const { wrap } = m;
-    const reason = wrap.querySelector('#mcOverrideReason').value.trim();
-    const err = wrap.querySelector('[data-override-error]');
-    const btn = wrap.querySelector('[data-override-submit]');
-    const fail = text => { err.textContent = text; err.classList.remove('hidden'); btn.disabled = false; m.busy = false; };
-    if (!reason) return fail('Please explain why this booking is urgent.');
-    m.busy = true; btn.disabled = true; err.classList.add('hidden');
-
-    // Same body as POST api/reservations plus the reason — what booking.js sends for a single-slot request.
-    const body = Object.assign({}, lastConflict.payload, { reason, request_type: 'Specific Time', alt_start_time: null, alt_end_time: null });
-    let res, json = null;
-    try {
-      res = await fetch(opts.base + 'api/conflict-override-requests', {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-      });
-      if (res.status === 401) { window.location.href = 'index.html'; return; }
-      try { json = await res.json(); } catch (_) { /* HTML error page or empty body */ }
-    } catch (_) {
-      return fail('Could not reach the server. Check your connection and try again.');
-    }
-    if (!res.ok) return fail((json && json.error) || 'The server sent an unexpected response (HTTP ' + res.status + '). Please try again.');
-    if (json && json.success === false) return fail(json.error || 'Your override request could not be submitted.');
-
-    m.busy = false; m.close();
-    done = true; setBusy(true);
-    message('ok', '<b>Override request sent:</b> staff will review it and you can follow its status in My Reservations. Redirecting…');
-    if (opts.onBooked) opts.onBooked();
-    setTimeout(() => { window.location.href = 'my-reservations.html?filter=pending'; }, 1800);
   }
 
   // ---------- public ----------
@@ -695,7 +553,6 @@
     f.repeat = { mode: 'single', through: sel ? sel.date : '', activeDates: null };
     seriesState = { days: sel ? [sel.date] : [], blocked: [], valid: !!sel };
     problem = '';
-    lastConflict = null;                      // an override applies to the slot that was refused, not a new pick
     message('', '');
     refresh();
   }

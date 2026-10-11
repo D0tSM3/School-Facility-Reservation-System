@@ -11,21 +11,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
 
   if (summaryUpcoming && summaryPast && summaryPending) {
-    Promise.all([
-      fetch(BASE + 'api/reservations/mine').then(res => res.json()).catch(() => ({ success: false, data: [] })),
-      fetch(BASE + 'api/conflict-override-requests/mine').then(res => res.json()).catch(() => ({ success: false, data: [] }))
-    ])
-      .then(([resJson, ovJson]) => {
+    // Direct booking: reservations are confirmed immediately, so there is no
+    // "pending" count and no conflict-override requests to fetch.
+    fetch(BASE + 'api/reservations/mine').then(res => res.json()).catch(() => ({ success: false, data: [] }))
+      .then((resJson) => {
         let upcomingCount = 0;
         let pastCount = 0;
-        let pendingCount = 0;
+        let confirmedCount = 0;
 
         if (resJson && resJson.success && Array.isArray(resJson.data)) {
           const reservations = resJson.data;
           const now = new Date();
 
           reservations.forEach(r => {
-            if (r.status === 'Pending') pendingCount++;
+            if (r.status === 'Approved') confirmedCount++;
 
             // parseDate() (js/util.js): strict-spec browsers like Safari
             // won't parse the space-separated "YYYY-MM-DD HH:MM:SS" form
@@ -42,18 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
 
-        // Include pending conflict override requests (Request Slips)
-        if (ovJson && ovJson.success && Array.isArray(ovJson.data)) {
-          ovJson.data.forEach(o => {
-            if (o.status === 'Pending' || o.outcome === 'Awaiting move') {
-              pendingCount++;
-            }
-          });
-        }
-
         summaryUpcoming.textContent = upcomingCount;
         summaryPast.textContent = pastCount;
-        summaryPending.textContent = pendingCount;
+        summaryPending.textContent = confirmedCount;
       })
       .catch(err => console.error('Error fetching dashboard counts:', err));
   }

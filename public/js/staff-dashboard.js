@@ -1,14 +1,13 @@
 /**
- * CampusRoom — Staff Dispatch & Room Maintenance Queue
+ * CampusRoom — Staff Live Facility Operations & Room Maintenance
  *
- * Every control on this page is wired to the real API:
+ * Direct-booking: there is no approval / move / override queue. Every control
+ * on this page is wired to the real API:
  *   GET   api/auth/me                              → session / role guard
- *   GET   api/reservations                         → pending queue + KPIs
- *   PATCH api/reservations/{id}                    → approve / reject
+ *   GET   api/reservations                         → live reservations + KPIs
  *   GET   api/rooms                                → Rooms Directory
  *   PATCH api/rooms/{id}                           → maintenance toggle
- *   GET   api/reservations/move-requests           → move request queue
- *   PATCH api/reservations/move-requests/{id}      → approve / reject a move
+ *   GET   api/reservations/cancellations           → user cancellation log
  *   GET/POST/DELETE api/classes, api/holidays     → Class Schedules, Holidays & Closures
  *   GET   api/logs                                 → audit log archive (rendered by js/logArchive.js)
  *   GET   api/reservations/{id}/logs               → per-booking log timeline (rendered by js/logArchive.js)
