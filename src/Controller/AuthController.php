@@ -253,12 +253,14 @@ class AuthController
 
         if ($code !== $user['otp_code']) {
             RateLimiter::recordFailure('verify_otp', $email);
+            \CampusRoom\Core\SecurityLog::record('otp_failed', 'Wrong sign-in verification code', $user['user_id'], $email);
             Response::error('Invalid or expired verification code.', 422);
         }
 
         // Check expiry
         $expiresAt = strtotime($user['otp_expires_at'] ?? '1970-01-01');
         if (time() > $expiresAt) {
+            \CampusRoom\Core\SecurityLog::record('otp_failed', 'Wrong sign-in verification code', $user['user_id'], $email);
             Response::error('Invalid or expired verification code.', 422);
         }
 

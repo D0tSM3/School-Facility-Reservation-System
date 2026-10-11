@@ -69,12 +69,17 @@ final class ActivationController
         );
 
         if ($roster['eligible'] ?? false) {
+            \CampusRoom\Core\SecurityLog::record('activation_requested', 'Account activation requested', null, $schoolId);
             Mailer::sendOtp(
                 (string) $roster['email'],
                 (string) $roster['name'],
                 $otp,
                 self::activationTtlSeconds()
             );
+        } elseif (($roster['already_active'] ?? false) || ($roster['inactive'] ?? false) || (($roster['status'] ?? '') !== '')) {
+            \CampusRoom\Core\SecurityLog::record('activation_skipped', 'Account activation requested (already active or inactive)', null, $schoolId);
+        } else {
+            \CampusRoom\Core\SecurityLog::record('activation_no_match', 'Account activation requested (no roster match)', null, $schoolId);
         }
 
         Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
@@ -107,6 +112,7 @@ final class ActivationController
 
         if (!($result['verified'] ?? false)) {
             RateLimiter::recordFailure('activate_verify', $schoolId);
+            \CampusRoom\Core\SecurityLog::record('activation_verify_failed', 'Wrong activation code', null, $schoolId);
             Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
             Response::error('Invalid or expired activation code.', 422);
         }
@@ -213,6 +219,7 @@ final class ActivationController
         }
 
         RateLimiter::clear('activate_complete', $state['school_id']);
+        \CampusRoom\Core\SecurityLog::record('activation_completed', 'Account activated', $result['user']['user_id'] ?? null, $state['school_id']);
 
         Response::json($result['user'], 201);
     }
