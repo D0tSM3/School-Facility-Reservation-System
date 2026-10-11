@@ -44,15 +44,20 @@ class AuthController
         $userAgent = str_replace(["\r", "\n"], '', $userAgent);
         $userAgent = preg_replace('/[\x00-\x1F\x7F]+/', '', $userAgent) ?? '';
         $userAgent = mb_scrub($userAgent, 'UTF-8');
-        (new ReservationRepository())->insertLog(
-            $user['user_id'],
-            "{$user['role']} logged in",
-            null,
-            'login_success',
-            \CampusRoom\Core\RateLimiter::clientIp(),
-            $identifierHash,
-            mb_substr($userAgent, 0, 200)
-        );
+
+        try {
+            (new ReservationRepository())->insertLog(
+                $user['user_id'],
+                "{$user['role']} logged in",
+                null,
+                'login_success',
+                \CampusRoom\Core\RateLimiter::clientIp(),
+                $identifierHash,
+                mb_substr($userAgent, 0, 200)
+            );
+        } catch (\Throwable $e) {
+            error_log('AuthController::startSession audit log failed: ' . $e->getMessage());
+        }
     }
 
     /**
