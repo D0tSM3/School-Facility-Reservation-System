@@ -22,7 +22,7 @@ body{overscroll-behavior:none;}
 <header class="fixed top-0 left-0 w-full z-50 bg-surface-container-lowest border-b border-surface-variant shadow-[0_1px_3px_0_rgba(0,0,0,0.04)]">
 <div class="h-16 w-full max-w-[1400px] mx-auto px-margin flex items-center justify-between gap-space-md">
   <div class="flex items-center gap-space-md">
-    <a class="flex items-center gap-space-sm focus:outline-none" href="#">
+    <a class="flex items-center gap-space-sm focus:outline-none cursor-pointer" data-nav="home" href="#home">
       <div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center">
         <span class="material-symbols-outlined text-on-primary text-[18px]">apartment</span>
       </div>
@@ -33,23 +33,34 @@ body{overscroll-behavior:none;}
     </a>
   </div>
   <nav class="hidden lg:flex items-center gap-space-lg">
-    <a class="nav-link font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-colors px-space-sm py-1.5 rounded-lg" href="#home">Home</a>
-    <a class="nav-link font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-colors px-space-sm py-1.5 rounded-lg" href="#facilities">Facilities</a>
-    <a class="nav-link font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-colors px-space-sm py-1.5 rounded-lg" href="#schedule">Schedule</a>
-    <a class="nav-link font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-colors px-space-sm py-1.5 rounded-lg" href="#rules">Rules</a>
+    <button type="button" class="nav-link font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-colors px-space-sm py-1.5 rounded-lg cursor-pointer" data-nav="home">Home</button>
+    <button type="button" class="nav-link font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-colors px-space-sm py-1.5 rounded-lg cursor-pointer" data-nav="facilities">Facilities</button>
+    <button type="button" class="nav-link font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-colors px-space-sm py-1.5 rounded-lg cursor-pointer" data-nav="schedule">Schedule</button>
+    <button type="button" class="nav-link font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-colors px-space-sm py-1.5 rounded-lg cursor-pointer" data-nav="rules">Rules</button>
   </nav>
+  <div class="hidden lg:flex items-center">
+    <a href="index.html" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-container text-on-primary font-label-lg text-label-lg font-semibold hover:bg-primary-container/90 transition-colors shadow-sm">
+      <span class="material-symbols-outlined text-[18px]">login</span>
+      <span>Sign In</span>
+    </a>
+  </div>
   <!-- Mobile menu button -->
-  <button id="mobileMenuBtn" class="lg:hidden w-10 h-10 rounded-lg flex items-center justify-center hover:bg-surface-container-high transition-colors">
+  <button id="mobileMenuBtn" type="button" class="lg:hidden w-10 h-10 rounded-lg flex items-center justify-center hover:bg-surface-container-high transition-colors">
     <span class="material-symbols-outlined text-on-surface">menu</span>
   </button>
 </div>
 <!-- Mobile menu -->
 <div id="mobileMenu" class="hidden lg:hidden bg-surface-container-lowest border-t border-surface-variant px-margin py-space-md">
   <nav class="flex flex-col gap-space-sm">
-    <a class="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface py-2" href="#home" onclick="closeMobileMenu()">Home</a>
-    <a class="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface py-2" href="#facilities" onclick="closeMobileMenu()">Facilities</a>
-    <a class="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface py-2" href="#schedule" onclick="closeMobileMenu()">Schedule</a>
-    <a class="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface py-2" href="#rules" onclick="closeMobileMenu()">Rules</a>
+    <button type="button" class="nav-mobile-link font-label-lg text-label-lg text-left text-on-surface-variant hover:text-on-surface py-2 cursor-pointer" data-nav="home">Home</button>
+    <button type="button" class="nav-mobile-link font-label-lg text-label-lg text-left text-on-surface-variant hover:text-on-surface py-2 cursor-pointer" data-nav="facilities">Facilities</button>
+    <button type="button" class="nav-mobile-link font-label-lg text-label-lg text-left text-on-surface-variant hover:text-on-surface py-2 cursor-pointer" data-nav="schedule">Schedule</button>
+    <button type="button" class="nav-mobile-link font-label-lg text-label-lg text-left text-on-surface-variant hover:text-on-surface py-2 cursor-pointer" data-nav="rules">Rules</button>
+    <hr class="border-surface-variant my-1" />
+    <a href="index.html" class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary-container text-on-primary font-label-lg text-label-lg font-semibold">
+      <span class="material-symbols-outlined text-[18px]">login</span>
+      <span>Sign In</span>
+    </a>
   </nav>
 </div>
 </header>
@@ -57,6 +68,7 @@ body{overscroll-behavior:none;}
 <main class="w-full pt-16 bg-surface min-h-[calc(100vh-64px)]">
 <div class="flex flex-col w-full">
 
+<div id="view-home" class="view-panel">
 <!-- ═══════ SECTION 1: HERO ═══════ -->
 <div class="scroll-mt-20" id="home"></div>
 <section class="w-full max-w-[1400px] mx-auto px-margin py-space-xl lg:py-24">
@@ -77,10 +89,10 @@ body{overscroll-behavior:none;}
       CampusRoom eliminates administrative bottlenecks across BPU by uniting real-time room availability, verifiable booking approvals, and transparent conflict management under one institutional portal.
     </p>
     <div class="flex flex-wrap items-center gap-space-md pt-space-sm w-full sm:w-auto">
-      <a class="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-lg bg-surface-container-lowest hover:bg-surface-container-low text-on-surface border border-surface-variant font-label-lg text-label-lg shadow-sm transition-all" href="#facilities">
+      <button type="button" class="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-lg bg-primary-container hover:bg-primary-container/90 text-on-primary font-label-lg text-label-lg shadow-sm transition-all cursor-pointer" data-nav="facilities">
         Explore Facilities
-        <span class="material-symbols-outlined text-[18px]">arrow_downward</span>
-      </a>
+        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+      </button>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-md pt-space-lg w-full border-t border-surface-variant/70">
       <div class="flex items-center gap-space-xs text-on-surface-variant">
@@ -206,6 +218,9 @@ body{overscroll-behavior:none;}
 </div>
 </section>
 
+</div>
+
+<div id="view-facilities" class="view-panel hidden">
 <!-- ═══════ SECTION 3: FACILITIES & FLOOR PLANS ═══════ -->
 <section class="w-full max-w-[1400px] mx-auto px-margin py-space-xl lg:py-24 scroll-mt-16" id="facilities">
 <div class="flex flex-col gap-space-xl">
@@ -572,6 +587,9 @@ body{overscroll-behavior:none;}
 </div>
 </section>
 
+</div>
+
+<div id="view-schedule" class="view-panel hidden">
 <!-- ═══════ SECTION 4: SCHEDULE ═══════ -->
 <section class="w-full bg-surface-container py-space-xl lg:py-24 border-y border-surface-variant scroll-mt-16" id="schedule">
 <div class="max-w-[1400px] mx-auto px-margin flex flex-col gap-space-xl">
@@ -621,6 +639,9 @@ body{overscroll-behavior:none;}
 </div>
 </section>
 
+</div>
+
+<div id="view-rules" class="view-panel hidden">
 <!-- ═══════ SECTION 5: RESERVATION RULES ═══════ -->
 <section class="w-full max-w-[1400px] mx-auto px-margin py-space-xl lg:py-24 scroll-mt-16" id="rules">
 <div class="flex flex-col gap-space-xl">
@@ -688,19 +709,25 @@ body{overscroll-behavior:none;}
     </div>
   </div>
 </div>
-  <div class="p-space-lg rounded-xl bg-surface-container-low border border-surface-variant">
+  <div class="p-space-lg rounded-xl bg-surface-container-low border border-surface-variant flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
     <div class="flex items-center gap-space-md">
       <div class="w-12 h-12 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center shrink-0">
         <span class="material-symbols-outlined text-[24px]">gavel</span>
       </div>
       <div>
         <h4 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Full Policy Document</h4>
-        <p class="font-body-sm text-body-sm text-on-surface-variant">The complete Facility Use Handbook is available inside the CampusRoom system under Resources &gt; Policy Handbook after activation.</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">The complete 23-section University Administrative Order No. 2026-03 and Facility Use Handbook is available inside the CampusRoom system.</p>
       </div>
     </div>
+    <a href="index.html" class="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-lg bg-primary-container hover:bg-primary-container/90 text-on-primary font-label-lg text-label-lg font-semibold shrink-0 shadow-sm transition-all">
+      <span>Sign In for Full Handbook</span>
+      <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+    </a>
   </div>
 </div>
 </section>
+
+</div>
 
 <!-- ═══════ FOOTER ═══════ -->
 <div class="w-full bg-surface-container-lowest py-space-lg border-t border-surface-variant">
@@ -714,10 +741,10 @@ body{overscroll-behavior:none;}
     </a>
   </div>
   <div class="flex flex-wrap items-center gap-space-md font-label-sm text-label-sm text-on-surface-variant">
-    <a class="hover:text-primary transition-colors" href="#home">Back to Top</a>
-    <a class="hover:text-primary transition-colors" href="#facilities">Facilities</a>
-    <a class="hover:text-primary transition-colors" href="#schedule">Schedule</a>
-    <a class="hover:text-primary transition-colors" href="#rules">Rules</a>
+    <button type="button" class="hover:text-primary transition-colors cursor-pointer" data-nav="home">Home</button>
+    <button type="button" class="hover:text-primary transition-colors cursor-pointer" data-nav="facilities">Facilities</button>
+    <button type="button" class="hover:text-primary transition-colors cursor-pointer" data-nav="schedule">Schedule</button>
+    <button type="button" class="hover:text-primary transition-colors cursor-pointer" data-nav="rules">Rules</button>
   </div>
 </div>
 </div>
@@ -751,31 +778,79 @@ document.querySelectorAll('.floor-tab').forEach(tab => {
     tab.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
     tab.classList.add('bg-primary-container', 'text-on-primary');
     document.querySelectorAll('.floor-panel').forEach(p => p.classList.add('hidden'));
-    document.querySelector(`.floor-panel[data-floor="${tab.dataset.floor}"]`).classList.remove('hidden');
+    const targetFloor = document.querySelector(`.floor-panel[data-floor="${tab.dataset.floor}"]`);
+    if (targetFloor) targetFloor.classList.remove('hidden');
   });
 });
 
-// Active nav link highlighting
-const sections = ['home', 'facilities', 'schedule', 'rules'];
-const observer = new IntersectionObserver(entries => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      const id = entry.target.id;
-      document.querySelectorAll('.nav-link').forEach(link => {
-        link.classList.remove('bg-surface-container-high', 'text-primary', 'font-bold');
-        if (link.getAttribute('href') === '#' + id) {
-          link.classList.add('bg-surface-container-high', 'text-primary', 'font-bold');
-        }
-      });
+// Section view switching
+const views = ['home', 'facilities', 'schedule', 'rules'];
+
+function switchView(target) {
+  if (!views.includes(target)) target = 'home';
+
+  // Toggle views
+  views.forEach(v => {
+    const el = document.getElementById(`view-${v}`);
+    if (el) {
+      if (v === target) {
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
     }
   });
-}, { rootMargin: '-20% 0px -70% 0px' });
-sections.forEach(id => {
-  const el = document.getElementById(id);
-  if (el) observer.observe(el);
+
+  // Update navbar desktop buttons
+  document.querySelectorAll('.nav-link').forEach(btn => {
+    const isCurrent = btn.dataset.nav === target;
+    if (isCurrent) {
+      btn.classList.add('bg-surface-container-high', 'text-primary', 'font-bold');
+      btn.classList.remove('text-on-surface-variant');
+    } else {
+      btn.classList.remove('bg-surface-container-high', 'text-primary', 'font-bold');
+      btn.classList.add('text-on-surface-variant');
+    }
+  });
+
+  // Update mobile buttons
+  document.querySelectorAll('.nav-mobile-link').forEach(btn => {
+    const isCurrent = btn.dataset.nav === target;
+    if (isCurrent) {
+      btn.classList.add('text-primary', 'font-bold');
+      btn.classList.remove('text-on-surface-variant');
+    } else {
+      btn.classList.remove('text-primary', 'font-bold');
+      btn.classList.add('text-on-surface-variant');
+    }
+  });
+
+  // Sync hash
+  history.replaceState(null, null, `#${target}`);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Bind all data-nav triggers (header, mobile, hero, footer, logo)
+document.querySelectorAll('[data-nav]').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = el.dataset.nav;
+    switchView(target);
+    closeMobileMenu();
+  });
 });
 
-// Mobile menu
+// Initial view based on hash or default to home
+window.addEventListener('load', () => {
+  const hash = window.location.hash.replace('#', '');
+  switchView(hash || 'home');
+});
+window.addEventListener('hashchange', () => {
+  const hash = window.location.hash.replace('#', '');
+  switchView(hash || 'home');
+});
+
+// Mobile menu toggling
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const mobileMenu = document.getElementById('mobileMenu');
 if (mobileMenuBtn && mobileMenu) {
@@ -784,7 +859,8 @@ if (mobileMenuBtn && mobileMenu) {
   });
 }
 function closeMobileMenu() {
-  document.getElementById('mobileMenu').classList.add('hidden');
+  const m = document.getElementById('mobileMenu');
+  if (m) m.classList.add('hidden');
 }
 </script>
 
