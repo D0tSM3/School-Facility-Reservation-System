@@ -153,7 +153,7 @@ class CalendarController
 
     public function suggest(): never
     {
-        Auth::requireRole(['Customer']);
+        Auth::requireRole(['Customer', 'Staff', 'Admin']);
 
         $roomId = $_GET['room_id'] ?? '';
         $roomId = is_string($roomId) ? strtolower(trim($roomId)) : '';

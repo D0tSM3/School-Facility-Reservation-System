@@ -96,7 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
     currentMoveId: null,
     currentCancelId: null,
     loading: false,
-    searchQuery: ''
+    searchQuery: '',
+    currentUserId: null
   };
 
   // ---------------------------------------------------------------
@@ -688,6 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const role = String(me.data && me.data.role || '');
+    state.currentUserId = (me.data && me.data.user_id) || null;
     if (role !== 'Staff' && role !== 'Admin') {
       showAccessNotice(
         `You are signed in as ${role || 'Customer'}. Only Staff and Admin accounts can dispatch reservations.`
@@ -1605,6 +1607,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const pendingCount = state.reservations.filter((r) => r.status === 'Pending').length;
     const pendingTabBadge = el('subtab-pending-badge');
     if (pendingTabBadge) pendingTabBadge.textContent = String(pendingCount);
+    const isMine = (r) => !!state.currentUserId && r.customer_id === state.currentUserId;
+    const mineTabBadge = el('subtab-mine-badge');
+    if (mineTabBadge) mineTabBadge.textContent = String(state.reservations.filter(isMine).length);
 
     // Classification filter is built from the data actually present.
     const categorySelect = el('resCategoryFilter');
@@ -1628,7 +1633,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const category = categorySelect ? categorySelect.value : 'all';
 
     const rows = state.reservations.filter((r) => {
-      if (state.resSubtab !== 'all' && r.status !== state.resSubtab) return false;
+      if (state.resSubtab === 'mine') {
+        if (!isMine(r)) return false;
+      } else if (state.resSubtab !== 'all' && r.status !== state.resSubtab) return false;
       if (category !== 'all' && r.category !== category) return false;
       if (!search) return true;
       return [r.reservation_id, r.customer_name, r.customer_email, r.room_name, r.purpose]

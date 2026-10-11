@@ -770,10 +770,10 @@
           <!-- Calendar preview (full page: master-calendar.html) -->
           <section id="calendar" class="mt-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div><h2 class="text-lg font-bold text-gray-900">Calendar</h2><p class="text-sm text-gray-500 mt-1">Read-only view of room reservations, requester, purpose, category, and status.</p></div>
+              <div><h2 class="text-lg font-bold text-gray-900">Calendar</h2><p class="text-sm text-gray-500 mt-1">Browse room schedules, see who reserved what, and start a reservation.</p></div>
               <a href="master-calendar.html" class="inline-flex items-center gap-2 rounded-lg bg-[#7a1f2b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#5e1821]">Open full calendar <span aria-hidden="true">↗</span></a>
             </div>
-            <iframe title="Calendar" src="master-calendar.html?embed=1&amp;readonly=1&amp;view=week" loading="lazy" class="w-full rounded-xl border border-gray-200 bg-white" style="height:clamp(420px,70vh,760px)" referrerpolicy="same-origin"></iframe>
+            <iframe title="Calendar" src="master-calendar.html?embed=1&amp;view=week" loading="lazy" class="w-full rounded-xl border border-gray-200 bg-white" style="height:clamp(420px,70vh,760px)" referrerpolicy="same-origin"></iframe>
           </section>
         </section>
 
@@ -990,6 +990,16 @@
               class="res-subtab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 hover:bg-gray-100"
             >
               Completed
+            </button>
+            <span class="ml-auto shrink-0 h-6 w-px bg-gray-200" aria-hidden="true"></span>
+            <button
+              type="button"
+              data-res-subtab="mine"
+              class="res-subtab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all text-gray-600 hover:bg-gray-100 flex items-center gap-1.5 shrink-0"
+            >
+              <span class="material-symbols-outlined text-[16px]">person</span>
+              <span>My Reservations</span>
+              <span id="subtab-mine-badge" class="px-1.5 py-0.2 rounded-full bg-gray-200 text-gray-700 text-[10px]">0</span>
             </button>
           </div>
 

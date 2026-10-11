@@ -153,7 +153,8 @@ class ReservationController
 
     public function store(): never
     {
-        Auth::requireRole(['Customer']);
+        // Staff and Admin book rooms too (they are the approvers, so their own bookings are approved on the spot).
+        Auth::requireRole(['Customer', 'Staff', 'Admin']);
         $body = $this->jsonBody();
         [
             'room_id' => $roomId, 'purpose' => $purpose, 'category' => $category,
@@ -317,7 +318,8 @@ class ReservationController
      */
     private function conflictError(string $error, string $roomId, string $startTime, string $endTime, ?array $activeDates = null): never
     {
-        $c = $this->overridableConflict($roomId, $startTime, $endTime, $activeDates);
+        // Override requests are a customer-only flow: staff resolve a clash by moving or cancelling the other booking.
+        $c = Auth::role() === 'Customer' ? $this->overridableConflict($roomId, $startTime, $endTime, $activeDates) : null;
         $conflictInfo = null;
         if ($c !== null && $c['type'] === 'reservation') {
             $conflictInfo = ['start_time' => $c['reservation']['start_time'], 'end_time' => $c['reservation']['end_time']];
@@ -1686,6 +1688,11 @@ class ReservationController
      */
     private function approvalOutcome(string $roomId, int $dayCount): array
     {
+        // Staff / Admin are the people who approve bookings, so what they book is approved immediately.
+        if (in_array(Auth::role(), ['Staff', 'Admin'], true)) {
+            return ['Approved', 'auto'];
+        }
+
         try {
             if ((new RoomRepository())->requiresApproval($roomId)) {
                 return ['Pending', 'special'];

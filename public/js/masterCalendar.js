@@ -31,7 +31,11 @@
   // The cosmetic role hint only avoids a flash of the booking UI; the SERVER decides
   // the real mode via `viewer_role` on the first /api/calendar/master response.
   const hintRole = (function () { try { return String(localStorage.getItem('campus_role') || '').toLowerCase(); } catch (e) { return ''; } })();
-  let READONLY = query.get('readonly') === '1' || hintRole === 'staff' || hintRole === 'admin';
+  // READONLY = the dashboard preview (no booking). STAFF = Staff/Admin: they see full requester detail AND can book like anyone else.
+  // Staff/Admin can reserve like anyone else, so the old ?readonly=1 flag is ignored (a stale dashboard embed can't lock the calendar).
+  let READONLY = false;
+  let STAFF = hintRole === 'staff' || hintRole === 'admin';
+  const setStaff = on => { STAFF = !!on; };
   if (EMBED) document.documentElement.setAttribute('data-embed', '1');
   function setReadonly(on) {
     READONLY = !!on;
@@ -105,7 +109,11 @@
     const json = await res.json().catch(() => null);
     if (!res.ok || !json || !json.success) throw new Error((json && json.message) || 'Could not load the calendar.');
     const data = json.data;
-    if (data.viewer_role) setReadonly(String(data.viewer_role).toLowerCase() !== 'customer');
+    if (data.viewer_role) {
+      const vr = String(data.viewer_role).toLowerCase();
+      setStaff(vr !== 'customer');
+      if (vr === 'staff' || vr === 'admin') document.documentElement.setAttribute('data-role', vr);
+    }
     data.fetchedAt = Date.now();
     setClock(data.server_now);
     return data;
@@ -245,14 +253,14 @@
           cls += ' is-mine' + (r.category === 'Exam/Quiz' ? ' is-exam' : '');
           label = r.purpose;
           tip = r.purpose + ' · ' + r.category + ' · ' + r.status + ' · ' + range;
-        } else if (READONLY && r.requester_name) {
+        } else if (STAFF && r.requester_name) {
           label = r.purpose || 'Reserved';
           tip = label + ' · ' + r.requester_name + ' · ' + (r.category || 'Uncategorized') + ' · ' + r.status + ' · ' + range;
         } else {
           label = pending ? 'Reserved (pending)' : 'Reserved';
           tip = (pending ? 'Reserved · Pending approval' : 'Reserved') + ' · ' + range;
         }
-        const sub = READONLY && !r.is_mine && r.requester_name ? (r.requester_name + ' · ' + (r.category || 'Uncategorized') + ' · ' + r.status) : range;
+        const sub = STAFF && !r.is_mine && r.requester_name ? (r.requester_name + ' · ' + (r.category || 'Uncategorized') + ' · ' + r.status) : range;
         col.blocks.push({ startMin: G.toMin(s), endMin: G.toMin(e), cls, rt: rtCls(room), label, sub, tip });
       });
     }
@@ -281,9 +289,9 @@
           const start = S.hhmm(rv.start_time), end = S.hhmm(rv.end_time), range = S.fmt12(start)+' – '+S.fmt12(end);
           const pending = rv.status === 'Pending';
           const cls = (pending ? 'is-pending ' : '') + (rv.is_mine ? 'is-mine' + (rv.category === 'Exam/Quiz' ? ' is-exam' : '') : '');
-          const label = READONLY ? (rv.purpose || 'Reserved') : (rv.is_mine ? rv.purpose : (pending ? 'Reserved (pending)' : 'Reserved'));
-          const sub = READONLY ? ((rv.requester_name || 'Requester unavailable')+' · '+room.name+' · '+rv.status) : (room.name+' · '+range+' · '+rv.status);
-          const tip = READONLY ? (label+' · '+(rv.category || '')+' · '+sub+' · '+range) : (rv.is_mine ? label+' · '+(rv.category || '')+' · '+range : 'Reserved · '+range);
+          const label = STAFF ? (rv.purpose || 'Reserved') : (rv.is_mine ? rv.purpose : (pending ? 'Reserved (pending)' : 'Reserved'));
+          const sub = STAFF ? ((rv.requester_name || 'Requester unavailable')+' · '+room.name+' · '+rv.status) : (room.name+' · '+range+' · '+rv.status);
+          const tip = STAFF ? (label+' · '+(rv.category || '')+' · '+sub+' · '+range) : (rv.is_mine ? label+' · '+(rv.category || '')+' · '+range : 'Reserved · '+range);
           col.blocks.push({ startMin:G.toMin(start), endMin:G.toMin(end), cls, rt:rtCls(room), label, sub, tip });
         });
       });
@@ -319,8 +327,8 @@
         const items=[];
         entry.rooms.forEach(room=>room.reservations.filter(rv=>String(rv.start_time).slice(0,10)===state.date).forEach(rv=>{
           const start=S.hhmm(rv.start_time), end=S.hhmm(rv.end_time);
-          const title=READONLY ? (rv.purpose||'Reserved') : (rv.is_mine ? rv.purpose : 'Reserved');
-          const detail=[room.name,S.fmt12(start)+' – '+S.fmt12(end),rv.status,READONLY?rv.requester_name:''].filter(Boolean).join(' · ');
+          const title=STAFF ? (rv.purpose||'Reserved') : (rv.is_mine ? rv.purpose : 'Reserved');
+          const detail=[room.name,S.fmt12(start)+' – '+S.fmt12(end),rv.status,STAFF?rv.requester_name:''].filter(Boolean).join(' · ');
           items.push('<div class="mc-day-drawer-item"><b>'+esc(title)+'</b><span>'+esc(detail)+'</span></div>');
         }));
         list.innerHTML=items.length?items.join(''):'<p class="text-sm text-gray-500 mt-3">No bookings for this day.</p>';
@@ -335,8 +343,8 @@
       const date=addDays(start,i), items=[];
       entry.rooms.forEach(room=>room.reservations.filter(rv=>String(rv.start_time).slice(0,10)===date).forEach(rv=>{
         const st=S.hhmm(rv.start_time), en=S.hhmm(rv.end_time);
-        const title=READONLY?(rv.purpose||'Reserved'):(rv.is_mine?rv.purpose:'Reserved');
-        const detail=[room.name,S.fmt12(st)+'–'+S.fmt12(en),rv.status,READONLY?rv.requester_name:''].filter(Boolean).join(' · ');
+        const title=STAFF?(rv.purpose||'Reserved'):(rv.is_mine?rv.purpose:'Reserved');
+        const detail=[room.name,S.fmt12(st)+'–'+S.fmt12(en),rv.status,STAFF?rv.requester_name:''].filter(Boolean).join(' · ');
         items.push({title,detail,room:room.name,start:st,end:en});
       }));
       const shown=items.slice(0,3).map((it,j)=>'<div class="mc-mobile-booking"><b>'+esc(it.title)+'</b><span>'+esc(it.room+' · '+S.fmt12(it.start)+'–'+S.fmt12(it.end))+'</span></div>').join('');
@@ -347,8 +355,8 @@
     gridEl.querySelectorAll('[data-mobile-date]').forEach(btn=>btn.addEventListener('click',()=>{
       const date=btn.dataset.mobileDate, roomItems=[];
       entry.rooms.forEach(room=>room.reservations.filter(rv=>String(rv.start_time).slice(0,10)===date).forEach(rv=>{
-        const title=READONLY?(rv.purpose||'Reserved'):(rv.is_mine?rv.purpose:'Reserved');
-        roomItems.push({title,detail:room.name+' · '+S.fmt12(S.hhmm(rv.start_time))+'–'+S.fmt12(S.hhmm(rv.end_time))+' · '+rv.status+(READONLY&&rv.requester_name?' · '+rv.requester_name:'')});
+        const title=STAFF?(rv.purpose||'Reserved'):(rv.is_mine?rv.purpose:'Reserved');
+        roomItems.push({title,detail:room.name+' · '+S.fmt12(S.hhmm(rv.start_time))+'–'+S.fmt12(S.hhmm(rv.end_time))+' · '+rv.status+(STAFF&&rv.requester_name?' · '+rv.requester_name:'')});
       }));
       if(window.MCPopover) window.MCPopover.open(btn,roomItems);
     }));
@@ -513,8 +521,19 @@
     finishGantt(gantt, rows, n, keepL, keepT);
   }
 
+  /** Highlight the row of the room that is currently picked, so it is easy to find in a long list. */
+  function markChosenRoom() {
+    gridEl.querySelectorAll('.is-chosen-room').forEach(n => n.classList.remove('is-chosen-room'));
+    const s = state.sel;
+    if (!s) return;
+    const key = s.roomId + '|' + s.date;
+    gridEl.querySelectorAll('.mc-g-row[data-key]').forEach(r => { if (r.getAttribute('data-key') === key) r.classList.add('is-chosen-room'); });
+    gridEl.querySelectorAll('.mc-wk-row[data-room-id]').forEach(r => { if (r.getAttribute('data-room-id') === s.roomId) r.classList.add('is-chosen-room'); });
+  }
+
   /** After any Gantt paint: honour a requested scroll, else follow "now" on first paint, else keep the scroll position. */
   function finishGantt(gantt, rows, n, keepL, keepT) {
+    markChosenRoom();
     if (state.scrollTo != null) { gantt.scrollToMin(state.scrollTo); state.scrollTo = null; }
     else if (state.firstPaint) {
       state.firstPaint = false;
@@ -625,6 +644,7 @@
       onToggleGroup: key => { if (state.closedGroups.has(key)) state.closedGroups.delete(key); else state.closedGroups.add(key); draw(); }
     });
     gridEl.scrollLeft = keepL; gridEl.scrollTop = keepT;
+    markChosenRoom();
   }
 
   // ---------- agenda (list) view ----------
@@ -637,10 +657,10 @@
         items.push({ s: G.toMin(c.start_time), e: G.toMin(c.end_time), title: c.course_code + ' – Sec ' + c.section, sub: 'Class', room: room.name, rt: rtCls(room), kind: 'is-class', badge: '' });
       });
       room.reservations.filter(r => String(r.start_time).slice(0, 10) === date).forEach(r => {
-        const pending = r.status === 'Pending', detailed = READONLY || r.is_mine;
+        const pending = r.status === 'Pending', detailed = STAFF || r.is_mine;
         const title = detailed ? (r.purpose || 'Reserved') : (pending ? 'Reserved (pending)' : 'Reserved');
         const bits = [];
-        if (READONLY && r.requester_name) bits.push(r.requester_name);
+        if (STAFF && r.requester_name) bits.push(r.requester_name);
         if (detailed && r.category) bits.push(r.category);
         items.push({
           s: G.toMin(S.hhmm(r.start_time)), e: G.toMin(S.hhmm(r.end_time)), title, sub: bits.join(' · '), room: room.name, rt: rtCls(room),
@@ -687,6 +707,7 @@
     SG.clear();
     M.set(state.sel);
     paintSelBadge();
+    markChosenRoom();
     if (state.sel && !READONLY) { panels.summary.set(true, { persist: false }); if (window.innerWidth < 1500) panels.filters.set(false, { persist: false }); }
     if (state.current) checkSelection(state.current.entry);
   }
@@ -714,9 +735,6 @@
       if (clash.length) text = 'No longer free. ' + S.describe(clash, s.start, s.end);
     }
     M.setProblem(text);
-    // Taken or no longer free: don't just say so — offer other times and rooms (Phase 4).
-    if (text) SG.request(s, { origin: 'stale', reason: text });
-    else SG.clear('stale');
   }
 
   // ---------- smart suggestions (Phase 4) ----------
@@ -724,19 +742,7 @@
 
   /** A drag / Shift+extend ran into an occupied period: say so gently and offer the other options. */
   function onGridNotice(text, wanted) {
-    if (!wanted) { toast(text); return; }
-    toast(text, { label: 'See other options', run: () => showOptionsFor(wanted) });
-  }
-
-  function showOptionsFor(w) {
-    // Only while the shortened pick the drag left behind is still the current one.
-    const c = state.sel;
-    if (!c || c.roomId !== w.meta.roomId || c.date !== w.meta.date || c.start < w.start || c.end > w.end) return;
-    panels.summary.set(true, { persist: false });
-    SG.request({ roomId: w.meta.roomId, date: w.meta.date, start: w.start, end: w.end }, {
-      origin: 'drag',
-      reason: fmtRange(w.start, w.end) + ' runs into another booking or class in this room.'
-    });
+    toast(text);
   }
 
   /** The customer chose a suggested room/time: move the pick there (nothing is submitted). */
@@ -1090,6 +1096,7 @@
     M.init({
       base: BASE,
       getRoom: id => state.allRooms.find(r => r.room_id === id),
+      isStaff: () => STAFF,
       getRooms: () => state.allRooms.slice().sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true })),
       // Room / date / time typed into the summary: move the pick and the calendar there.
       onPickSlot: p => { pickSlot(p); },
@@ -1117,6 +1124,16 @@
         const n=now(); if(n && (date<n.ymd || (date===n.ymd && start<=n.min))) return 'Past';
         return '';
       },
+      // Is this time unavailable (booked, class, holiday or already past)? The summary's Start/End lists disable those times.
+      isTimeTaken: (roomId, date, start, end) => {
+        const covers = e => e && e.reqStart && date >= e.reqStart && date <= e.reqEnd && e.rooms.some(x => x.room_id === roomId);
+        const entry = [state.current && state.current.entry, state.seriesEntry].find(covers);
+        const room = entry && entry.rooms.find(x => x.room_id === roomId);
+        if (!entry || !room) return false;
+        const n = now();
+        if (n && (date < n.ymd || (date === n.ymd && G.toMin(start) <= n.min))) return true;
+        return S.findConflicts({ class_schedules: room.classes, reservations: room.reservations, holidays: entry.holidays }, date, start, end).length > 0;
+      },
       onClear: () => { state.sel = null; SG.clear(); M.set(null); paintSelBadge(); draw(); },
       onGoto: s => {
         if (state.sel && state.seriesDays.length > 1) { onSeriesChange(state.seriesDays); return; }
@@ -1124,7 +1141,6 @@
         if (state.view === 'month') setView('day'); else refresh();
       },
       onConflict: (json, text) => {
-        if (state.sel) SG.request(state.sel, { origin: 'conflict', reason: text });
         cache.clear(); refresh();
       },
       onBooked: () => { cache.clear(); }

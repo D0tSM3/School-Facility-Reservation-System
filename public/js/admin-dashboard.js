@@ -1340,6 +1340,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const pendingCount = state.reservations.filter(r => r.status === 'Pending').length;
     const elSubPending = document.getElementById('subtab-pending-badge');
     if (elSubPending) elSubPending.textContent = pendingCount;
+    const elSubMine = document.getElementById('subtab-mine-badge');
+    if (elSubMine) elSubMine.textContent = state.reservations.filter(isMine).length;
+  }
+
+  // "My Reservations" = bookings this admin/staff member made for themselves.
+  function isMine(res) {
+    return !!(state.currentUser && res.customer_id === state.currentUser.user_id);
   }
 
   function switchResSubtab(subtabName) {
@@ -1378,7 +1385,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const subtab = state.activeResSubtab;
 
     const filtered = state.reservations.filter(res => {
-      if (subtab !== 'all') {
+      if (subtab === 'mine') {
+        if (!isMine(res)) return false;
+      } else if (subtab !== 'all') {
         if (res.status !== subtab) return false;
       }
       if (cat !== 'all' && res.category !== cat) {

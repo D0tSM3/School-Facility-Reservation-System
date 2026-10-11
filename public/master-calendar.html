@@ -35,10 +35,21 @@
   <!-- FOUC Preventer -->
   <script>
     (function() {
-      const role = localStorage.getItem('campus_role');
-      if (role) {
-        document.documentElement.setAttribute('data-role', role.toLowerCase());
+      const root = document.documentElement;
+      let role = '';
+      try { role = localStorage.getItem('campus_role') || ''; } catch (e) {}
+      if (!role) { try { role = (JSON.parse(sessionStorage.getItem('campusroom:shellUser')) || {}).role || ''; } catch (e) {} }
+      if (role) root.setAttribute('data-role', String(role).toLowerCase());
+      // The server's answer (loaded by app.js) is the real role: it fixes the sidebar if the saved hint was missing or stale.
+      function applyRole(u) {
+        const r = u && u.role ? String(u.role).toLowerCase() : '';
+        if (r) root.setAttribute('data-role', r);
+        return !!r;
       }
+      document.addEventListener('campusroom:user', function (e) { applyRole(e && e.detail); });
+      // Safety net: if the event was missed, pick the user up from app.js a moment later.
+      let tries = 0;
+      const t = setInterval(function () { if (applyRole(window.currentUser) || ++tries > 40) clearInterval(t); }, 250);
     })();
   </script>
   <style>
@@ -61,6 +72,19 @@
       display: flex !important;
     }
 
+    /* Staff / Admin get the staff sidebar (same pages as the staff dashboard) instead of the customer one */
+    #mcStaffNav { display: none; }
+    html[data-role="staff"] #mcStaffNav, html[data-role="admin"] #mcStaffNav { display: block; }
+    html[data-role="staff"] #mcCustNav, html[data-role="admin"] #mcCustNav { display: none; }
+    html[data-role="staff"] #mcStaffNav .mc-admin-only { display: none; }
+    .mc-snav { display: flex; align-items: center; justify-content: flex-start; gap: 12px; padding: 8px 14px; border-radius: 12px; color: #d1d5db; font-size: 14px; font-weight: 500; transition: background .15s, color .15s; }
+    .mc-snav:hover { background: rgba(255,255,255,.05); color: #fff; }
+    .mc-snav .mc-count { margin-left: auto; }
+    .mc-snav .material-symbols-outlined { color: #9ca3af; }
+    .mc-snav:hover .material-symbols-outlined { color: #fff; }
+    .mc-snav.is-active { background: #7a1f2b; color: #fff; }
+    .mc-snav.is-active .material-symbols-outlined { color: #ffc641; }
+    html[data-embed="1"] #mcStaffNav { display: none !important; }
   </style>
 
  </head>
@@ -74,6 +98,7 @@
         </a>
       </div>
 
+      <div id="mcCustNav">
       <div class="px-5 pt-3 pb-2">
         <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">WORKSPACE</span>
       </div>
@@ -113,6 +138,39 @@
           <span>Policy Handbook</span>
         </a>
       </nav>
+
+      </div>
+
+      <!-- Staff / Admin sidebar: same pages as staff-dashboard.html (each item opens that section there) -->
+      <div id="mcStaffNav" class="flex-1 overflow-y-auto px-3 py-2 space-y-4">
+        <div class="space-y-1">
+          <div class="px-3.5 pt-1 pb-1"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">WORKSPACE</span></div>
+          <a href="staff-dashboard.html#dashboard" class="mc-snav"><span class="material-symbols-outlined text-[20px]">grid_view</span><span>Dashboard</span></a>
+          <a href="master-calendar.html" aria-current="page" class="mc-snav is-active"><span class="material-symbols-outlined text-[20px]">calendar_month</span><span>Calendar</span></a>
+        </div>
+        <div class="space-y-1">
+          <div class="px-3.5 pt-1 pb-1"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">RESERVATIONS &amp; QUEUES</span></div>
+          <a href="staff-dashboard.html#reservations" class="mc-snav"><span class="flex items-center gap-3"><span class="material-symbols-outlined text-[19px]">assignment</span><span>All Reservations</span></span><span id="mcb-res" class="mc-count text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-white">0</span></a>
+          <a href="staff-dashboard.html#pending-approvals" class="mc-snav"><span class="flex items-center gap-3"><span class="material-symbols-outlined text-[19px]">hourglass_top</span><span>Approval Queue</span></span><span id="mcb-pend" class="mc-count text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-white">0</span></a>
+          <a href="staff-dashboard.html#move-requests" class="mc-snav"><span class="flex items-center gap-3"><span class="material-symbols-outlined text-[19px]">edit_calendar</span><span>Move Requests</span></span><span id="mcb-move" class="mc-count text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500 text-white">0</span></a>
+          <a href="staff-dashboard.html#cancellations" class="mc-snav"><span class="flex items-center gap-3"><span class="material-symbols-outlined text-[19px]">event_busy</span><span>Cancellations</span></span><span id="mcb-cancel" class="mc-count text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-gray-300">0</span></a>
+          <a href="staff-dashboard.html#overrides" class="mc-snav"><span class="flex items-center gap-3"><span class="material-symbols-outlined text-[19px]">priority_high</span><span>Overrides</span></span><span id="mcb-over" class="mc-count text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-600 text-white">0</span></a>
+        </div>
+        <div class="space-y-1">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">FACILITY &amp; ACADEMIC</span></div>
+          <a href="staff-dashboard.html#rooms" class="mc-snav"><span class="flex items-center gap-3"><span class="material-symbols-outlined text-[19px]">meeting_room</span><span>Rooms Directory</span></span><span id="mcb-rooms" class="mc-count text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-gray-300">0</span></a>
+          <a href="staff-dashboard.html#classes" class="mc-snav"><span class="material-symbols-outlined text-[19px]">calendar_month</span><span>Class Schedules</span></a>
+          <a href="staff-dashboard.html#holidays" class="mc-snav"><span class="material-symbols-outlined text-[19px]">holiday_village</span><span>Holidays &amp; Closures</span></a>
+        </div>
+        <div class="space-y-1 pb-2 mc-admin-only">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">ADMINISTRATION</span></div>
+          <a href="admin-governance.html" class="mc-snav"><span class="material-symbols-outlined text-[19px]">admin_panel_settings</span><span>Admin Governance</span></a>
+        </div>
+        <div class="space-y-1 pb-2">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">RESOURCES</span></div>
+          <a href="handbook.html" target="_blank" class="mc-snav"><span class="material-symbols-outlined text-[19px]">menu_book</span><span>Policy Handbook</span></a>
+        </div>
+      </div>
 
       <div id="logout-banner" class="mt-auto p-4 border-t border-white/5">
         <button id="logoutBtn" class="flex items-center gap-2.5 text-sm text-gray-400 hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg" type="button">
@@ -333,6 +391,62 @@
       </main>
     </div>
 
+    <script>
+    /* Staff / Admin sidebar — decided here, straight from the signed-in user, so it does not depend on any other script. */
+    (function () {
+      function show(role) {
+        role = String(role || '').toLowerCase();
+        const staff = role === 'staff' || role === 'admin';
+        const cust = document.getElementById('mcCustNav'), nav = document.getElementById('mcStaffNav');
+        if (!cust || !nav) return;
+        cust.style.display = staff ? 'none' : '';
+        nav.style.display = staff ? 'block' : 'none';
+        const adm = nav.querySelector('.mc-admin-only');
+        if (adm) adm.style.display = role === 'admin' ? '' : 'none';
+        if (role) document.documentElement.setAttribute('data-role', role);
+      }
+      // Sidebar number badges — the same counts the staff dashboard shows. Retries if the first try fails, then refreshes every minute.
+      let countsTimer = 0, countsStarted = false;
+      function loadCounts(base) {
+        if (countsStarted) return;
+        countsStarted = true;
+        const get = function (u) {
+          return fetch(base + u, { credentials: 'same-origin' })
+            .then(function (r) { return r.json().then(function (j) { return { r: r, j: j }; }); })
+            .then(function (x) {
+              if (!x.r.ok || !x.j || x.j.success === false) { console.warn('[sidebar counts] ' + u + ' → HTTP ' + x.r.status); return null; }
+              return Array.isArray(x.j.data) ? x.j.data : (x.j.data && Array.isArray(x.j.data.items) ? x.j.data.items : []);
+            })
+            .catch(function (e) { console.warn('[sidebar counts] ' + u, e); return null; });
+        };
+        const put = function (id, list) { const n = document.getElementById(id); if (n && list) n.textContent = String(list.length); };
+        const run = function (attempt) {
+          return Promise.all([
+            get('api/reservations?status=Pending&limit=500'),
+            get('api/reservations/move-requests?status=Pending'),
+            get('api/reservations/cancellations'),
+            get('api/conflict-override-requests?status=Pending'),
+            get('api/rooms')
+          ]).then(function (r) {
+            const pending = r[0] ? r[0].filter(function (x) { return x.status === 'Pending'; }) : null;
+            put('mcb-res', pending); put('mcb-pend', pending);
+            put('mcb-move', r[1]); put('mcb-cancel', r[2]); put('mcb-over', r[3]); put('mcb-rooms', r[4]);
+            if (r.some(function (x) { return x === null; }) && attempt < 3) setTimeout(function () { run(attempt + 1); }, 3000 * (attempt + 1));
+          });
+        };
+        run(0);
+        countsTimer = setInterval(function () { if (!document.hidden) run(0); }, 60000);
+      }
+      let hint = '';
+      try { hint = localStorage.getItem('campus_role') || (JSON.parse(sessionStorage.getItem('campusroom:shellUser')) || {}).role || ''; } catch (e) {}
+      if (hint) { show(hint); if (/^(staff|admin)$/i.test(hint)) loadCounts(window.location.pathname.replace(/[^\/]*$/, '')); }
+      const base = window.location.pathname.replace(/[^\/]*$/, '');
+      fetch(base + 'api/auth/me', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { if (j && j.success && j.data) { show(j.data.role); const r = String(j.data.role || '').toLowerCase(); if (r === 'staff' || r === 'admin') loadCounts(base); } })
+        .catch(function () { /* the calendar itself handles a signed-out session */ });
+    })();
+    </script>
     <script src="js/util.js"></script>
     <script src="js/schedule.js"></script>
     <script src="js/app.js"></script>

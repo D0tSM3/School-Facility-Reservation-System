@@ -87,7 +87,7 @@
       }
       if (g.label == null || g.open) {
         g.rooms.forEach(room => {
-          h += '<div class="mc-wk-row" role="row"><div class="mc-wk-label' + (g.label != null ? ' is-nested' : '') + (room.rt ? ' has-rt ' + esc(room.rt) : '') + '" role="rowheader"><b>' + esc(room.name) + '</b>' +
+          h += '<div class="mc-wk-row" role="row" data-room-id="' + esc(room.roomId) + '"><div class="mc-wk-label' + (g.label != null ? ' is-nested' : '') + (room.rt ? ' has-rt ' + esc(room.rt) : '') + '" role="rowheader"><b>' + esc(room.name) + '</b>' +
             (room.badge ? '<span class="mc-badge">' + esc(room.badge) + '</span>' : '') + '<span>' + esc(room.sub) + '</span></div>' +
             room.cells.map((cell, c) => cellHtml(room, cell, model.days[c], r, c, openMin, closeMin)).join('') + '</div>';
           r++;

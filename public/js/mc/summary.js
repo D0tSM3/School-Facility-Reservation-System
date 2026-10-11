@@ -164,7 +164,7 @@
       if (t.id === 'mcSumRoomSel') { changeSlot({ roomId: t.value }); return; }
       if (t.id === 'mcSumDateIn') { changeSlot({ date: t.value }); return; }
       if (t.id === 'mcQStart' || t.id === 'mcQEnd') { quickTimes(t.id === 'mcQStart'); return; }
-      if (t.id === 'mcQRoom' || t.id === 'mcQDate') { quickMsg(''); return; }
+      if (t.id === 'mcQRoom' || t.id === 'mcQDate') { quickMsg(''); paintQuick(); return; }
       if (t.id === 'mcRepeatMode') { f.repeat.mode=t.value; f.repeat.activeDates=null; f.repeat.through=sel ? sel.date : ''; refresh(); return; }
       if (t.id === 'mcRepeatThrough') { f.repeat.through=t.value; f.repeat.activeDates=null; refresh(); return; }
       if (t.matches && t.matches('[data-repeat-date]')) { const boxes=Array.from(body.querySelectorAll('[data-repeat-date]')); f.repeat.activeDates=boxes.filter(b=>b.checked).map(b=>b.value); refresh(); return; }
@@ -237,7 +237,7 @@
     emitSeries(checked.length > 1 ? checked.map(d=>{const b=blocked.find(x=>x.date===d);return {date:d,blocked:!!b,reason:b?b.reason:''};}) : []);
     const status=checked.map(d=>{const b=blocked.find(x=>x.date===d);return '<div class="mc-repeat-result'+(b?' is-blocked':' is-free')+'"><span>'+(b?'✕':'✓')+'</span><span>'+esc(fmtDate(d))+(b?' — '+esc(b.reason):' — Available')+'</span></div>';}).join('');
     let skip=''; if (blocked.length && f.repeat.mode==='consecutive') skip='<button id="mcSkipBlocked" type="button" class="mc-repeat-skip">Skip blocked days</button>';
-    hint.innerHTML=(days.length>3?'More than 3 booked days: staff approval is required. ':'Minimum booking: 30 minutes. ')+status+skip;
+    hint.innerHTML=(days.length>3 && !isStaff()?'More than 3 booked days: staff approval is required. ':'Minimum booking: 30 minutes. ')+status+skip;
     const skipBtn=$('mcSkipBlocked'); if(skipBtn) skipBtn.addEventListener('click',()=>{f.repeat.mode='specific';f.repeat.activeDates=checked.filter(d=>!blocked.some(b=>b.date===d));refresh();});
   }
 
@@ -258,18 +258,26 @@
     if (sel) { set.add(mins(sel.start)); set.add(mins(sel.end)); }
     return Array.from(set).sort((a, b) => a - b);
   }
-  function fillSelect(el, values, current) {
-    const sig = values.join(',');
+  function fillSelect(el, values, current, isOff) {
+    const off = isOff || (() => false);
+    const sig = values.map(m => m + (off(m) ? 'x' : '')).join(',');
     if (el.dataset.sig !== sig) {
-      el.innerHTML = values.map(m => '<option value="' + hmOf(m) + '">' + esc(S.fmt12(hmOf(m))) + '</option>').join('');
+      el.innerHTML = values.map(m => '<option value="' + hmOf(m) + '"' + (off(m) ? ' disabled' : '') + '>' + esc(S.fmt12(hmOf(m))) + '</option>').join('');
       el.dataset.sig = sig;
     }
     el.value = current;
   }
   function paintTimes() {
     const all = boundaries(), st = mins(sel.start), en = mins(sel.end);
-    fillSelect($('mcSumStart'), all.filter(m => m < en || m === st), sel.start);
-    fillSelect($('mcSumEnd'), all.filter(m => m > st || m === en), sel.end);
+    // Times that would put the booking on top of another booking, a class or a holiday (or in the past) are disabled, not suggested around.
+    const taken = (a, b) => !!(opts.isTimeTaken && opts.isTimeTaken(sel.roomId, sel.date, hmOf(a), hmOf(b)));
+    const nextB = m => all.find(x => x > m), prevB = m => all.filter(x => x < m).pop();
+    const clean = !taken(st, en);      // if the current pick already clashes, judge each period on its own so it can still be shrunk
+    const startOff = m => clean ? taken(m, en) : (nextB(m) != null && taken(m, nextB(m)));
+    const endOff = m => clean ? taken(st, m) : (prevB(m) != null && taken(prevB(m), m));
+    // Unavailable times are left out of the lists entirely (the current pick always stays so the list is never empty).
+    fillSelect($('mcSumStart'), all.filter(m => (m < en || m === st) && (m === st || !startOff(m))), sel.start);
+    fillSelect($('mcSumEnd'), all.filter(m => (m > st || m === en) && (m === en || !endOff(m))), sel.end);
     $('mcSumDur').textContent = fmtDur(sel.start, sel.end);
   }
   /** The user changed a select: keep end > start, tell the page so the grid and the conflict check follow. */
@@ -287,6 +295,7 @@
   }
 
   // ---------- typed-in room / date / time (works with or without a slot picked on the grid) ----------
+  const isStaff = () => !!(opts.isStaff && opts.isStaff());
   const bookableRooms = () => (opts.getRooms ? opts.getRooms() : []).filter(r => r.status !== 'Maintenance');
   function fillRooms(el, current) {
     const list = bookableRooms();
@@ -313,19 +322,31 @@
     if (now) date.min = now.ymd;
     if (!date.value && now) date.value = now.ymd;
     const all = boundaries();
-    fillSelect(st, all.slice(0, -1), keep.start && all.includes(mins(keep.start)) ? keep.start : (all.length ? hmOf(all[0]) : ''));
+    // Times that are already booked, in a class, on a holiday or past are left out for the chosen room and date.
+    const taken = quickTaken(), nextB = m => all.find(x => x > m);
+    const starts = all.slice(0, -1).filter(m => !taken(m, nextB(m)));
+    fillSelect(st, starts, keep.start && starts.includes(mins(keep.start)) ? keep.start : (starts.length ? hmOf(starts[0]) : ''));
     const s0 = st.value ? mins(st.value) : 0;
-    const ends = all.filter(m => m > s0);
+    const ends = st.value ? all.filter(m => m > s0 && !taken(s0, m)) : [];
     const defEnd = ends.find(m => m - s0 >= 60) || ends[0];
     fillSelect(en, ends, keep.end && ends.includes(mins(keep.end)) ? keep.end : (defEnd == null ? '' : hmOf(defEnd)));
+    const NOFREE = 'No available times for this room on this date.';
+    if (room.value && /^\d{4}-\d{2}-\d{2}$/.test(date.value) && !starts.length) quickMsg(NOFREE);
+    else if ($('mcQMsg').textContent === NOFREE) quickMsg('');
+  }
+  /** (fromMin, toMin) → is that stretch unavailable for the room + date typed into the empty-state form? */
+  function quickTaken() {
+    const roomId = $('mcQRoom').value, d = $('mcQDate').value;
+    const ready = !!roomId && /^\d{4}-\d{2}-\d{2}$/.test(d) && !!opts.isTimeTaken;
+    return (a, b) => ready && b != null && !!opts.isTimeTaken(roomId, d, hmOf(a), hmOf(b));
   }
   /** Keep end after start in the empty-state form. */
   function quickTimes(startChanged) {
     quickMsg('');
     const st = $('mcQStart'), en = $('mcQEnd');
     if (!st.value) return;
-    const all = boundaries(), s0 = mins(st.value), prevEnd = en.value;
-    const ends = all.filter(m => m > s0);
+    const all = boundaries(), s0 = mins(st.value), prevEnd = en.value, taken = quickTaken();
+    const ends = all.filter(m => m > s0 && !taken(s0, m));
     const keep = prevEnd && ends.includes(mins(prevEnd)) ? prevEnd : (ends.length ? hmOf(ends[0]) : '');
     fillSelect(en, ends, keep);
   }
@@ -409,7 +430,7 @@
       row('Purpose', esc(f.purpose.trim())) +
       row('Equipment', esc(equipmentString()));
     const ap = wrap.querySelector('[data-confirm-approval]');
-    const needs = days.length > 3 || (room && requiresApproval(room.requires_approval));
+    const needs = !isStaff() && (days.length > 3 || (room && requiresApproval(room.requires_approval)));
     ap.className = 'mc-sum-approval ' + (needs ? 'is-wait' : 'is-auto');
     ap.innerHTML = needs
       ? '<span class="material-symbols-outlined" aria-hidden="true">hourglass_top</span>This request will wait in the staff approval queue.'
@@ -449,7 +470,7 @@
     paintRepeat();
 
     const ap = $('mcSumApproval');
-    if ((seriesState.days.length > 3) || (room && requiresApproval(room.requires_approval))) {
+    if (!isStaff() && ((seriesState.days.length > 3) || (room && requiresApproval(room.requires_approval)))) {
       ap.className = 'mc-sum-approval is-wait';
       ap.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">hourglass_top</span>This room needs staff approval — your request waits in the queue.';
     } else {
@@ -529,9 +550,9 @@
       const ref = d.reservation_id ? 'REQ-' + String(d.reservation_id).substring(0, 8).toUpperCase() : 'Your request';
       const auto = d.status === 'Approved';
       message('ok', '<b>' + (auto ? 'Reservation approved' : 'Reservation request created') + ':</b> ' + esc(ref) +
-        (auto ? ' is confirmed for ' : ' is now in the staff queue for ') + esc(room ? room.name : 'the room') + '. Redirecting to My Reservations…');
+        (auto ? ' is confirmed for ' : ' is now in the staff queue for ') + esc(room ? room.name : 'the room') + '. Redirecting to ' + (isStaff() ? 'All Reservations' : 'My Reservations') + '…');
       if (opts.onBooked) opts.onBooked();
-      setTimeout(() => { window.location.href = 'my-reservations.html'; }, 1500);
+      setTimeout(() => { window.location.href = isStaff() ? 'staff-dashboard.html#reservations' : 'my-reservations.html'; }, 1500);
       return;
     }
 
@@ -545,8 +566,8 @@
       if (opts.onConflict) opts.onConflict(json, text);
       message('error', '<b>Scheduling conflict.</b> ' + esc(text) + ' ' +
         (eligible
-          ? 'Pick one of the options below, or, if this is urgent, <button type="button" id="mcSumOverride" class="underline font-semibold">request an override</button>.'
-          : 'Pick one of the options below or another time on the calendar.'));
+          ? 'Pick another time on the calendar, or, if this is urgent, <button type="button" id="mcSumOverride" class="underline font-semibold">request an override</button>.'
+          : 'Pick another time on the calendar.'));
     } else {
       message('error', '<b>Could not submit.</b> ' + esc(text));
     }

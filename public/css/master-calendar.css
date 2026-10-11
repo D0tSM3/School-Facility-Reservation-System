@@ -359,7 +359,7 @@ html[data-embed="1"] body > aside, html[data-embed="1"] body > div > header { di
 html[data-embed="1"] body > div { padding-left:0!important; width:100%!important; min-height:0!important; }
 html[data-embed="1"] body main { margin:0!important; padding:8px!important; width:100%!important; max-width:none!important; }
 html[data-embed="1"] body main > .flex.flex-wrap.items-center.gap-3.mb-3 > h1 { display:none!important; }
-html[data-embed="1"] #mcSummaryBtn, html[data-readonly="1"] #mcSummaryBtn, html[data-readonly="1"] #mcSummary { display:none!important; }
+html[data-readonly="1"] #mcSummaryBtn, html[data-readonly="1"] #mcSummary { display:none!important; }
 html[data-embed="1"] .mc-scroll { max-height: clamp(360px, 70dvh, 760px); }
 @media (max-width: 767px) {
   .mc-scroll { max-height: 72dvh; min-height: 280px; }
@@ -1014,3 +1014,14 @@ html[data-embed="1"] #mcToolbar { margin-top: 0; }
 .mc-g-tl.is-minor { border-left-color: #aebcb3; }
 .mc-mcell, .mc-wk-cell { border-right-color: #b4bbc4; border-bottom-color: #b4bbc4; }
 .mc-mhead { border-right-color: #b4bbc4; }
+
+/* Staff / Admin (read-only) have no booking panel: let the calendar take its column instead of leaving it empty. */
+@media (min-width: 768px) { html[data-readonly="1"] .mc-layout { grid-template-columns: var(--mc-left) minmax(0, 1fr); } }
+/* Dashboard preview: the calendar fills the whole frame, not a 70%-height strip of it. */
+html[data-embed="1"] .mc-scroll { max-height: calc(100dvh - 130px); min-height: 300px; }
+
+/* The room that is currently picked: its whole row stands out so it is easy to find among many rooms. */
+.mc-gantt .mc-g-row.is-chosen-room .mc-g-label, .mc-wk-row.is-chosen-room .mc-wk-label { background: #fdf2f3; box-shadow: inset 4px 0 0 #7a1f2b, 3px 0 5px -3px rgba(17, 24, 39, .22); }
+.mc-g-row.is-chosen-room .mc-g-label b, .mc-wk-row.is-chosen-room .mc-wk-label b { color: #7a1f2b; }
+.mc-g-row.is-chosen-room .mc-g-lane::after { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none; background: rgba(122, 31, 43, .06); border-top: 2px solid rgba(122, 31, 43, .55); border-bottom: 2px solid rgba(122, 31, 43, .55); box-sizing: border-box; }
+.mc-wk-row.is-chosen-room .mc-wk-cell { background-color: #fdf2f3; box-shadow: inset 0 2px 0 rgba(122, 31, 43, .55), inset 0 -2px 0 rgba(122, 31, 43, .55); }

@@ -357,7 +357,7 @@
       if (g.label == null || g.open) {
         g.rows.forEach(c => {
           const ri = rowIdx.get(c);
-          h += '<div class="mc-g-row" style="height:' + ROW_H + 'px"><div class="mc-g-label' + (g.label != null ? ' is-nested' : '') + (c.head.today ? ' is-today' : '') + (c.head.weekend ? ' is-weekend' : '') + (c.head.rt ? ' has-rt ' + esc(c.head.rt) : '') + '">' +
+          h += '<div class="mc-g-row" data-key="' + esc(c.key) + '" style="height:' + ROW_H + 'px"><div class="mc-g-label' + (g.label != null ? ' is-nested' : '') + (c.head.today ? ' is-today' : '') + (c.head.weekend ? ' is-weekend' : '') + (c.head.rt ? ' has-rt ' + esc(c.head.rt) : '') + '">' +
             '<b>' + esc(c.head.title) + '</b>' + (c.head.badge ? '<span class="mc-badge">' + esc(c.head.badge) + '</span>' : '') +
             '<span>' + esc(c.head.sub) + '</span></div>' +
             '<div class="' + laneCls + (c.head.weekend ? ' is-weekend' : '') + '" data-ri="' + ri + '" style="' + laneStyle + '">' + laneHtml(c, ri, ctx, W) + '</div></div>';
