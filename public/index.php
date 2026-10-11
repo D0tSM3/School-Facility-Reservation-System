@@ -158,7 +158,6 @@ $routes = [
     // NOTE: the literal GET routes /mine and /move-requests MUST stay above GET /{id},
     // or the {id} pattern swallows them (this router is a linear first-match list).
     ['GET',   '#^/api/reservations/mine$#',          fn() => (new ReservationController())->mine()],
-    ['GET',   '#^/api/reservations/move-requests$#', fn() => (new ReservationController())->getMoveRequests()],
     ['GET',   '#^/api/reservations/cancel-requests$#', fn() => (new ReservationController())->getCancelRequests()],
     ['GET',   '#^/api/reservations/cancellations$#', fn() => (new ReservationController())->getUserCancellations()],
     ['GET',   '#^/api/reservations/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->show($id)],
@@ -169,12 +168,10 @@ $routes = [
     // Customer "Remove" — a soft hide, not a DELETE of the row.
     ['DELETE', '#^/api/reservations/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->remove($id)],
 
-    // Move Requests
+    // Self-service rebooking (direct booking — no move-request queue).
     ['POST',  '#^/api/reservations/(?P<id>[^/]+)/rebook$#', fn(string $id) => (new ReservationController())->rebook($id)],
     // Two path segments after /reservations/, so it cannot collide with the single-segment GET /{id} above.
     ['GET',   '#^/api/reservations/(?P<id>[^/]+)/logs$#', fn(string $id) => (new ReservationController())->logs($id)],
-    ['POST',  '#^/api/reservations/(?P<id>[^/]+)/move-request$#', fn(string $id) => (new ReservationController())->requestMove($id)],
-    ['PATCH', '#^/api/reservations/move-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->resolveMoveRequest($id)],
 
     // Cancellation Requests (approved bookings)
     // Customers no longer file cancellation requests: they cancel directly via PATCH /{id}/cancel.
@@ -195,13 +192,8 @@ $routes = [
     ['POST',   '#^/api/holidays$#',                  fn() => (new HolidayController())->store()],
     ['DELETE', '#^/api/holidays/(?P<id>[^/]+)$#',    fn(string $id) => (new HolidayController())->destroy($id)],
 
-    // Conflict override requests (Customer)
-    ['GET',    '#^/api/conflict-override-requests/mine$#', fn() => (new ReservationController())->myOverrides()],
-    ['POST',   '#^/api/conflict-override-requests$#',      fn() => (new ReservationController())->requestOverride()],
-    ['DELETE', '#^/api/conflict-override-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->cancelOverride($id)],
-    // Conflict override requests (Staff/Admin)
-    ['GET',    '#^/api/conflict-override-requests$#',      fn() => (new ReservationController())->overrideIndex()],
-    ['PATCH',  '#^/api/conflict-override-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->resolveOverride($id)],
+    // Conflict override requests were retired with the approval queue:
+    // a taken slot is simply unavailable (409), there is no override path.
 
     // System settings (Admin)
     ['GET',   '#^/api/settings$#',                   fn() => (new SettingsController())->show()],
