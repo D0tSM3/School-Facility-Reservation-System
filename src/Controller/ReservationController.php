@@ -375,8 +375,8 @@ class ReservationController
         string $startTime,
         string $endTime,
         ?array $activeDates = null,
-        string $status = 'Pending',
-        string $approvalType = 'manual'
+        string $status = 'Approved',
+        string $approvalType = 'auto'
     ): array {
         $startDate = substr($startTime, 0, 10);
         $endDate   = substr($endTime, 0, 10);
@@ -757,6 +757,8 @@ class ReservationController
         }
 
         try {
+            // Direct booking: a re-filed reservation is confirmed on the spot,
+            // just like a fresh one (it already cleared ReservationValidator).
             $reservation = $this->reservations->create(
                 $source['customer_id'],
                 $roomId,
@@ -764,7 +766,10 @@ class ReservationController
                 $startTime,
                 $endTime,
                 $equipmentNotes !== '' ? $equipmentNotes : null,
-                $category
+                $category,
+                null,
+                'Approved',
+                'auto'
             );
         } catch (PDOException $e) {
             if ($e->getCode() === '45000') {
@@ -782,6 +787,7 @@ class ReservationController
             "Reservation re-booked from {$sourceReservationId}",
             $reservation['reservation_id']
         );
+        $this->reservations->insertLog($userId, 'Auto-approved: no conflicts found', $reservation['reservation_id']);
 
         Response::json($reservation, 201);
     }

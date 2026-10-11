@@ -55,8 +55,8 @@ class ReservationRepository
         ?string $equipmentNotes = null,
         string $category = 'Academic Lecture',
         ?string $seriesId = null,
-        string $status = 'Pending',
-        string $approvalType = 'manual'
+        string $status = 'Approved',
+        string $approvalType = 'auto'
     ): array {
         $reservationId = self::uuidv4();
 

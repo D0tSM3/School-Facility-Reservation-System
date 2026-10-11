@@ -30,22 +30,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const el = (id) => document.getElementById(id);
 
-  const viewPending     = el('view-pending');
-  const viewMoves       = el('view-moves');
   const viewCancels     = el('view-cancels');
-  const viewOverrides   = el('view-overrides');
 
-  const pendingBadge     = el('pending-badge-count');
-  const moveBadge        = el('move-badge-count');
   const cancelReqBadge   = el('cancel-badge-count');
-  const overrideBadge    = el('override-badge-count');
   const reservationsBadge = el('reservations-badge-count');
   const facilitiesBadge    = el('facilities-badge-count');
   const queueToolbar     = el('queue-toolbar');
 
-  const batchApproveBtn   = el('btn-batch-approve');
   const searchInput       = el('searchInput');
-  const batchApproveLabel = el('batch-approve-label');
       const exportLogBtn      = el('btn-export-log');
 
   const toast       = el('action-toast');
@@ -57,14 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const accessNotice  = el('access-notice');
   const accessText    = el('access-notice-text');
-
-  // Move review modal
-  const moveOverlay    = el('moveReviewModalOverlay');
-  const moveSummary    = el('moveReviewSummary');
-  const moveComment    = el('moveReviewComment');
-  const moveError      = el('moveReviewErrorMsg');
-  const moveApproveBtn = el('moveReviewApproveBtn');
-  const moveRejectBtn  = el('moveReviewRejectBtn');
 
   // Detail modal
   const detailOverlay = el('detailModalOverlay');
@@ -86,14 +70,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const state = {
     reservations: [],
     rooms: [],
-    moveRequests: [],
     userCancellations: [],
-    overrideRequests: [],
     activeView: 'overview',
     resSubtab: 'all',
     classes: [],
     holidays: [],
-    currentMoveId: null,
     currentCancelId: null,
     loading: false,
     searchQuery: ''
@@ -251,11 +232,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------------------------------------------------------------
 
   const viewTitles = {
-    overview: 'Dashboard',
-    pending: 'Pending Approvals',
-    moves: 'Move Requests',
+    overview: 'Live Operations',
     cancels: 'User Cancellations',
-    overrides: 'Conflict Override Requests',
     reservations: 'All Reservations',
     facilities: 'Rooms Directory',
     classes: 'Class Schedules',
@@ -265,14 +243,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const hashToView = {
     '#dashboard': 'overview',
     '#overview': 'overview',
-    '#pending-approvals': 'pending',
-    '#staff-queue': 'pending',
-    '#approval-queue': 'pending',
-    '#move-requests': 'moves',
-    '#moves': 'moves',
+    '#operations': 'overview',
+    // Legacy approval-queue hashes now land on Live Operations.
+    '#pending-approvals': 'overview',
+    '#staff-queue': 'overview',
+    '#approval-queue': 'overview',
+    '#move-requests': 'overview',
+    '#overrides': 'overview',
     '#cancellations': 'cancels',
     '#cancels': 'cancels',
-    '#overrides': 'overrides',
     '#reservations': 'reservations',
     '#all-reservations': 'reservations',
     '#rooms': 'facilities',
@@ -284,10 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const viewToHash = {
     overview: '#dashboard',
-    pending: '#pending-approvals',
-    moves: '#move-requests',
     cancels: '#cancellations',
-    overrides: '#overrides',
     reservations: '#reservations',
     facilities: '#rooms',
     classes: '#classes',
@@ -317,15 +293,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const titleEl = el('viewport-title');
     if (titleEl) titleEl.textContent = viewTitles[viewName];
 
-    // Search box only makes sense on the request queues; "Approve Selected" only on Pending.
-    const isQueueView = ['pending', 'moves', 'cancels', 'overrides'].includes(viewName);
+    // Search box applies to the list views (reservations, cancellations).
+    const isSearchView = ['reservations', 'cancels'].includes(viewName);
     if (queueToolbar) {
-      queueToolbar.classList.toggle('hidden', !isQueueView);
-      queueToolbar.classList.toggle('flex', isQueueView);
-    }
-    if (batchApproveBtn) {
-      batchApproveBtn.classList.toggle('hidden', viewName !== 'pending');
-      batchApproveBtn.classList.toggle('flex', viewName === 'pending');
+      queueToolbar.classList.toggle('hidden', !isSearchView);
+      queueToolbar.classList.toggle('flex', isSearchView);
     }
 
     // Class / holiday lists are fetched on demand (not part of loadAll).
@@ -368,7 +340,6 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
             <div class="flex flex-col md:flex-row md:items-center gap-5 flex-1">
               <div class="flex-shrink-0 flex items-center gap-3">
-                  ${isPending ? `<input type="checkbox" value="${id}" class="batch-checkbox w-4 h-4 text-[#7a1f2b] bg-gray-50 border-gray-300 rounded focus:ring-[#7a1f2b] cursor-pointer" onchange="window.CampusRoomStaff.updateBatchButton()">` : ""}
                   <span class="px-2.5 py-1.5 rounded-lg bg-[#FDF2F4] text-[#7a1f2b] text-xs font-bold tracking-wide border border-[#FDF2F4]">
                     #${shortId(reservation.reservation_id)}
                   </span>
@@ -396,9 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             <div class="flex flex-wrap items-center gap-2 shrink-0 border-t xl:border-t-0 border-gray-100 pt-4 xl:pt-0">
               <button type="button" onclick="window.CampusRoomStaff.openDetailModal('${id}')" class="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">Details</button>
-              ${isPending ? `<button type="button" onclick="window.CampusRoomStaff.decide('${id}', 'Rejected', '${requester}', this)" class="px-4 py-2 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors shadow-sm">Reject</button>` : ''}
-              ${isPending ? `<button type="button" onclick="window.CampusRoomStaff.decide('${id}', 'Approved', '${requester}', this)" class="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm">Approve</button>` : ''}
-              ${!isPending && reservation.status === 'Approved' ? `<button type="button" onclick="window.CampusRoomStaff.openStaffCancelModal('${id}', ${escapeHtml(JSON.stringify(reservation))})" class="px-4 py-2 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors shadow-sm">Cancel Booking</button>` : ''}
+              ${reservation.status === 'Approved' ? `<button type="button" onclick="window.CampusRoomStaff.openStaffCancelModal('${id}', ${escapeHtml(JSON.stringify(reservation))})" class="px-4 py-2 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors shadow-sm">Cancel Booking</button>` : ''}
             </div>
           </div>
         </div>`;
@@ -423,63 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
       obj.cancellation_reason
     ];
     return fields.some(f => f && String(f).toLowerCase().includes(q));
-  }
-
-  function renderPending() {
-    if (!viewPending) return;
-
-    const pending = state.reservations.filter((r) => r.status === 'Pending' && matchSearch(r));
-
-    viewPending.innerHTML = pending.length
-      ? pending.map(reservationCard).join('')
-      : emptyState('No pending applications. The dispatch queue is clear.', 'task_alt');
-
-    
-  }
-
-  function moveCard(request) {
-      const id = escapeHtml(request.request_id);
-      const resId = escapeHtml(request.reservation_id);
-      return `
-        <div class="relative bg-white rounded-2xl border border-blue-200 shadow-sm overflow-hidden transition-all hover:shadow-md mb-4" data-move-id="${id}">
-          <div class="p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-3">
-                <span class="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-bold tracking-wide border border-blue-100">Move REQ #${shortId(id)}</span>
-                <span class="text-xs text-gray-500 font-semibold">Ref: <a href="#" onclick="window.CampusRoomStaff.openDetailModal('${resId}')" class="text-[#7a1f2b] hover:underline">#${shortId(resId)}</a></span>
-                ${request.reason ? '<span class="px-2 py-1 rounded bg-violet-50 text-violet-700 text-[10px] font-bold uppercase tracking-wide border border-violet-100">Staff-proposed · override</span>' : ''}
-              </div>
-              ${request.reason ? `<div class="text-xs text-gray-500">${escapeHtml(request.reason)} Approving it also books the override requester.</div>` : ''}
-              <div class="flex flex-col md:flex-row gap-4 text-sm mt-3 items-stretch">
-                 <div class="flex-1 p-4 bg-gray-50 rounded-xl border border-gray-100 relative">
-                    <div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Current Booking</div>
-                    <div class="font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
-                    <div class="text-xs text-gray-600 mt-1">${formatDateTime(request.original_start_time)} - ${formatTime(request.original_end_time)}</div>
-                 </div>
-                 <div class="flex-1 p-4 bg-blue-50 rounded-xl border border-blue-100 relative">
-                    <div class="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Requested Move</div>
-                    <div class="font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
-                    <div class="text-xs text-gray-600 mt-1">${formatDateTime(request.requested_start_time)} - ${formatTime(request.requested_end_time)}</div>
-                 </div>
-              </div>
-            </div>
-            
-            <div class="flex flex-wrap items-center gap-2 shrink-0 border-t xl:border-t-0 border-gray-100 pt-4 xl:pt-0">
-              <button type="button" onclick="window.CampusRoomStaff.openMoveModal('${id}')" class="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors shadow-sm">Review Move</button>
-            </div>
-          </div>
-        </div>`;
-    }
-
-  function renderMoves() {
-    if (!viewMoves) return;
-
-    const moves = state.moveRequests.filter(matchSearch);
-    viewMoves.innerHTML = moves.length
-      ? moves.map(moveCard).join('')
-      : emptyState('No pending move requests.', 'event_available');
-
-    if (moveBadge) moveBadge.textContent = `${state.moveRequests.length}`;
   }
 
   /**
@@ -520,102 +432,76 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cancelReqBadge) cancelReqBadge.textContent = `${state.userCancellations.length}`;
   }
 
-  /** "Mar 10, 2031 · 9:00 AM – 11:00 AM", or a range "Mar 10 – Mar 12, 2031 · 9:00 AM – 11:00 AM daily". */
-  function formatWindow(start, end) {
-    const sameDay = String(start).slice(0, 10) === String(end).slice(0, 10);
-    const times = `${formatTime(start)} – ${formatTime(end)}`;
-    if (sameDay) return `${formatDay(start)} · ${times}`;
-    const s = parseDate(start);
-    const from = s ? s.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—';
-    return `${from} – ${formatDay(end)} · ${times} daily`;
+  // ---------------------------------------------------------------
+  // Live Operations (the dashboard overview)
+  // ---------------------------------------------------------------
+
+  /** Reservations that count as live operations today (Approved only). */
+  function activeToday() {
+    const today = new Date().toISOString().slice(0, 10);
+    return state.reservations.filter(
+      (r) => r.status === 'Approved' && String(r.start_time).slice(0, 10) === today
+    );
   }
 
-  /**
-   * A conflict override request: a customer wants a slot that another
-   * customer's Approved booking holds. Staff see who is asking and why, and
-   * both time ranges side by side — but not who holds the slot; the
-   * requester was never told that either.
-   */
-  function overrideCard(request) {
-    const id = escapeHtml(request.request_id);
-    return `
-      <div class="relative bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden transition-all hover:shadow-md mb-4" data-override-id="${id}">
-        <div class="p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
-          <div class="flex-1 min-w-0">
-            <div class="flex flex-wrap items-center gap-2 mb-2">
-              <span class="px-2 py-1 rounded bg-violet-50 text-violet-700 text-xs font-bold tracking-wide border border-violet-100">Override REQ #${shortId(id)}</span>
-              <h3 class="text-base font-bold text-gray-900 truncate">${escapeHtml(request.requester_name || 'Requester')}</h3>
-              ${request.requester_email ? `<span class="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold uppercase truncate">${escapeHtml(request.requester_email)}</span>` : ''}
-              ${request.category ? `<span class="px-2 py-0.5 rounded border border-gray-200 text-gray-500 text-xs">${escapeHtml(request.category)}</span>` : ''}
-            </div>
-            <div class="text-sm text-gray-700 mt-2">
-              <span class="font-semibold text-violet-700">Urgency reason:</span> ${escapeHtml(request.reason)}
-            </div>
-            <div class="text-xs text-gray-500 mt-1">Purpose: ${escapeHtml(request.purpose)}</div>
-            <div class="flex flex-col md:flex-row gap-4 text-sm mt-4 items-stretch">
-              <div class="flex-1 p-4 bg-violet-50 rounded-xl border border-violet-100">
-                <div class="text-[10px] font-bold text-violet-600 uppercase tracking-wider mb-1">Requested slot</div>
-                <div class="font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
-                <div class="text-xs text-gray-600 mt-1">${escapeHtml(formatWindow(request.start_time, request.end_time))}</div>
-              </div>
-              <div class="flex-1 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Conflicting booking (${escapeHtml(request.conflict_status || 'Approved')})</div>
-                <div class="font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
-                <div class="text-xs text-gray-600 mt-1">${escapeHtml(formatWindow(request.conflict_start_time, request.conflict_end_time))}</div>
-              </div>
-            </div>
-            <div class="text-xs text-gray-400 mt-2">Requested on ${formatDateTime(request.created_at)}</div>
-          </div>
-          <div class="flex flex-wrap items-center gap-2 shrink-0 border-t xl:border-t-0 border-gray-100 pt-4 xl:pt-0">
-            <button type="button" onclick="window.CampusRoomStaff.openOverrideModal('${id}')" class="px-6 py-2.5 text-sm font-bold text-white bg-violet-600 rounded-xl hover:bg-violet-700 transition-colors shadow-sm">Review Override</button>
-          </div>
-        </div>
-      </div>`;
+  /** Approved bookings happening right now (start ≤ now ≤ end). */
+  function inUseNow() {
+    const now = Date.now();
+    return state.reservations.filter((r) => {
+      if (r.status !== 'Approved') return false;
+      const s = parseDate(r.start_time);
+      const e = parseDate(r.end_time);
+      return s && e && s.getTime() <= now && now <= e.getTime();
+    });
   }
 
-  function renderOverrides() {
-    if (!viewOverrides) return;
+  /** Rooms currently taken out of the booking inventory for maintenance. */
+  function offlineRooms() {
+    return state.rooms.filter((r) => r.status === 'Maintenance' && Number(r.is_active) !== 0);
+  }
 
-    const overrides = state.overrideRequests.filter(matchSearch);
-    viewOverrides.innerHTML = overrides.length
-      ? overrides.map(overrideCard).join('')
-      : emptyState('No pending override requests.', 'verified');
-
-    if (overrideBadge) overrideBadge.textContent = `${state.overrideRequests.length}`;
+  /** The live "in use now" card list on the overview. */
+  function renderLiveOps() {
+    const container = el('liveOpsNow');
+    if (!container) return;
+    const now = inUseNow().sort((a, b) => String(a.end_time).localeCompare(String(b.end_time)));
+    container.innerHTML = now.length
+      ? now.map((r) => `
+        <div class="flex items-center justify-between gap-4 p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+          <div class="min-w-0">
+            <div class="font-semibold text-gray-900 truncate">${escapeHtml(r.room_name || 'Room')}</div>
+            <div class="text-xs text-gray-500 truncate">${escapeHtml(r.customer_name || r.customer_email || 'Requester')} · ${escapeHtml(r.purpose || '')}</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-semibold text-emerald-700">In use</div>
+            <div class="text-xs text-gray-500">until ${formatTime(r.end_time)}</div>
+          </div>
+        </div>`).join('')
+      : emptyState('No rooms are in use right now.', 'meeting_room');
   }
 
   function renderKpis() {
-    const pending = state.reservations.filter((r) => r.status === 'Pending').length;
-    const moves = state.moveRequests.filter((r) => r.status === 'Pending').length;
-    const cancels = state.userCancellations.length;
-    const overrides = state.overrideRequests.filter((r) => r.status === 'Pending').length;
-    const offline = state.rooms.filter((r) => r.status === 'Maintenance' && Number(r.is_active) !== 0).length;
-
     const counts = {
-      'kpi-pending-count': pending,
-      'kpi-moves-count': moves,
-      'kpi-cancels-count': cancels,
-      'kpi-overrides-count': overrides,
-      'kpi-maintenance-count': offline,
+      'kpi-inuse-count': inUseNow().length,
+      'kpi-active-today-count': activeToday().length,
+      'kpi-cancels-count': state.userCancellations.length,
+      'kpi-maintenance-count': offlineRooms().length,
     };
     Object.entries(counts).forEach(([id, count]) => {
       const node = el(id);
       if (node) node.textContent = String(count);
     });
 
-    // Sidebar badges. Pending = every pending application (not narrowed by any search box).
-    if (pendingBadge) pendingBadge.textContent = String(pending);
-    if (reservationsBadge) reservationsBadge.textContent = String(pending);
+    // Sidebar badges (direct-booking: no approval backlog to surface).
+    if (reservationsBadge) reservationsBadge.textContent = String(state.reservations.length);
     if (facilitiesBadge) facilitiesBadge.textContent = String(state.rooms.length);
   }
 
   function renderAll() {
-    renderPending();
-    renderMoves();
     renderCancellations();
-    renderOverrides();
     renderReservations();
     renderRooms();
+    renderLiveOps();
     renderKpis();
     stampSync();
   }
@@ -632,42 +518,31 @@ document.addEventListener('DOMContentLoaded', () => {
     
     
 
-    const [reservations, pendingRes, rooms, moves, cancels, overrides] = await Promise.all([
+    // Direct-booking: no approval / move / override queues to fetch. The
+    // dashboard loads live reservations, the room inventory, and the read-only
+    // user-cancellation log.
+    const [reservations, rooms, cancels] = await Promise.all([
       api('api/reservations'),
-      // Dedicated Pending fetch: api/reservations only returns the newest 200
-      // rows of every status, so older Pending rows never reached the queue.
-      api('api/reservations?status=Pending&limit=500'),
       api('api/rooms'),
-      api('api/reservations/move-requests?status=Pending'),
-      api('api/reservations/cancellations'),
-      api('api/conflict-override-requests?status=Pending')
+      api('api/reservations/cancellations')
     ]);
 
     state.loading = false;
-    
 
-    const failed = [reservations, pendingRes, rooms, moves, cancels, overrides].find((r) => !r.ok);
+
+    const failed = [reservations, rooms, cancels].find((r) => !r.ok);
     if (failed && handleAuthFailure(failed)) return;
 
-    if (reservations.ok || pendingRes.ok) {
-      // Union of both lists, de-duplicated by id (Pending copy wins), so every
-      // existing status filter / lookup keeps working on one array.
-      const merged = new Map();
-      (reservations.ok ? reservations.data || [] : []).forEach((r) => merged.set(r.reservation_id, r));
-      (pendingRes.ok ? pendingRes.data || [] : []).forEach((r) => merged.set(r.reservation_id, r));
-      state.reservations = Array.from(merged.values());
-    }
+    if (reservations.ok) state.reservations = reservations.data || [];
     if (rooms.ok) state.rooms = rooms.data || [];
-    if (moves.ok) state.moveRequests = moves.data || [];
     if (cancels.ok) state.userCancellations = cancels.data || [];
-    if (overrides.ok) state.overrideRequests = overrides.data || [];
 
     renderAll();
 
     if (failed) {
       showToast(failed.error, 'error');
     } else if (options.notify) {
-      showToast('Dispatch queue refreshed.', 'success');
+      showToast('Operations view refreshed.', 'success');
     }
   }
 
@@ -702,55 +577,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function showAccessNotice(message) {
     if (accessNotice) accessNotice.classList.remove('hidden');
     if (accessText) accessText.textContent = message;
-    if (viewPending) viewPending.innerHTML = emptyState('Queue unavailable.', 'lock');
-    if (viewMoves) viewMoves.innerHTML = '';
     if (viewCancels) viewCancels.innerHTML = '';
-    if (viewOverrides) viewOverrides.innerHTML = '';
-    [batchApproveBtn, exportLogBtn].forEach((btn) => {
-      if (btn) btn.disabled = true;
-    });
+    if (exportLogBtn) exportLogBtn.disabled = true;
   }
 
   // ---------------------------------------------------------------
   // Actions: approve / reject / inspect  (event delegation, so the
   // handlers survive every re-render)
   // ---------------------------------------------------------------
-
-  async function decide(reservationId, status, requesterName, triggerBtn) {
-    const card = document.querySelector(`[data-card-id="${CSS.escape(reservationId)}"]`);
-    if (card) card.style.opacity = '0.4';
-    if (triggerBtn) triggerBtn.disabled = true;
-
-    const result = await api(`api/reservations/${encodeURIComponent(reservationId)}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status })
-    });
-
-    if (card) card.style.opacity = '1';
-    if (triggerBtn) triggerBtn.disabled = false;
-
-    if (!result.ok) {
-      if (handleAuthFailure(result)) return false;
-      showToast(`Could not ${status.toLowerCase()} #${shortId(reservationId)}: ${result.error}`, 'error');
-      return false;
-    }
-
-    const reservation = state.reservations.find((r) => r.reservation_id === reservationId);
-    if (reservation) {
-      reservation.status = status;
-      reservation.processed_at = (result.data && result.data.processed_at) || reservation.processed_at;
-    }
-
-    renderAll();
-
-    showToast(
-      status === 'Approved'
-        ? `Application #${shortId(reservationId)} (${requesterName}) approved.`
-        : `Application #${shortId(reservationId)} (${requesterName}) rejected.`,
-      'success'
-    );
-    return true;
-  }
 
   document.addEventListener('click', (event) => {
     // Any click outside the open action menu (and not on its own trigger,
@@ -762,21 +596,6 @@ document.addEventListener('DOMContentLoaded', () => {
       && !event.target.closest('.btn-actions-menu')
     ) {
       closeActionMenu();
-    }
-
-    const approveBtn = event.target.closest('.btn-approve-req');
-    if (approveBtn) {
-      decide(approveBtn.dataset.id, 'Approved', approveBtn.dataset.name || 'Requester', approveBtn);
-      return;
-    }
-
-    const rejectBtn = event.target.closest('.btn-reject-req');
-    if (rejectBtn) {
-      const name = rejectBtn.dataset.name || 'this requester';
-      if (window.confirm(`Reject the reservation from ${name}? The requester will be notified.`)) {
-        decide(rejectBtn.dataset.id, 'Rejected', name, rejectBtn);
-      }
-      return;
     }
 
     const menuTrigger = event.target.closest('.btn-actions-menu');
@@ -796,12 +615,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const id = menuItem.dataset.id;
       closeActionMenu();
       handleMenuAction(action, id);
-      return;
-    }
-
-    const reviewBtn = event.target.closest('.btn-review-move');
-    if (reviewBtn) {
-      openMoveModal(reviewBtn.dataset.id);
       return;
     }
 
@@ -1052,7 +865,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.CampusRoomRebook.openStaffModal(reservationId, {
           onSuccess: async (created) => {
             showToast(
-              `Re-booked as REQ-${shortId(created && created.reservation_id)} — filed as Pending.`,
+              `Re-booked as REQ-${shortId(created && created.reservation_id)} — confirmed.`,
               'success'
             );
             await loadAll();
@@ -1157,298 +970,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (staffCancelConfirmBtn) staffCancelConfirmBtn.addEventListener('click', submitStaffCancel);
 
-  // ---------------------------------------------------------------
-  // Move request review modal
-  // ---------------------------------------------------------------
-
-  function openMoveModal(requestId) {
-      const request = state.moveRequests.find((m) => m.request_id === requestId);
-      if (!request || !moveOverlay || !moveSummary) return;
-
-      state.currentMoveId = requestId;
-      
-      moveSummary.innerHTML = `
-        <div class="space-y-4">
-           <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-             <div class="text-[10px] font-bold text-blue-600 tracking-wider uppercase mb-1">Target Booking</div>
-             <div class="text-sm font-bold text-gray-900">${escapeHtml(request.room_name)}</div>
-             <div class="text-xs text-gray-600 mt-1">Ref #${shortId(request.reservation_id)}</div>
-           </div>
-           
-           <div class="grid grid-cols-2 gap-3">
-             <div class="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Current</div>
-                <div class="text-xs text-gray-900 font-semibold">${formatDateTime(request.original_start_time)}</div>
-             </div>
-             <div class="p-3 bg-white rounded-xl border border-blue-200 ring-1 ring-blue-50">
-                <div class="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Requested</div>
-                <div class="text-xs text-blue-700 font-bold">${formatDateTime(request.requested_start_time)}</div>
-             </div>
-           </div>
-        </div>
-      `;
-
-      if (moveComment) moveComment.value = '';
-      if (moveError) moveError.classList.add('hidden');
-      if (moveApproveBtn) moveApproveBtn.disabled = false;
-      if (moveRejectBtn) moveRejectBtn.disabled = false;
-
-      moveOverlay.classList.remove('opacity-0', 'pointer-events-none');
-      moveOverlay.setAttribute('aria-hidden', 'false');
-    }
-
-  function closeMoveModal() {
-    state.currentMoveId = null;
-    if (moveOverlay) {
-      moveOverlay.classList.add('opacity-0', 'pointer-events-none');
-      moveOverlay.setAttribute('aria-hidden', 'true');
-    }
-  }
-
-  const moveCloseIcon = el('moveReviewCloseIcon');
-  const moveCancelBtn = el('moveReviewCancelBtn');
-  if (moveCloseIcon) moveCloseIcon.addEventListener('click', closeMoveModal);
-  if (moveCancelBtn) moveCancelBtn.addEventListener('click', closeMoveModal);
-  if (moveOverlay) {
-    if (moveOverlay) moveOverlay.addEventListener('click', (event) => {
-      if (event.target === moveOverlay) closeMoveModal();
-    });
-  }
-
-  async function submitMoveReview(status) {
-    if (!state.currentMoveId) return;
-
-    const comment = moveComment ? moveComment.value.trim() : '';
-
-    if (status === 'Rejected' && !comment) {
-      if (moveError) {
-        moveError.textContent = 'A comment is required for rejection.';
-        moveError.classList.remove('hidden');
-      }
-      return;
-    }
-
-    if (moveApproveBtn) moveApproveBtn.disabled = true;
-    if (moveRejectBtn) moveRejectBtn.disabled = true;
-
-    const result = await api(
-      `api/reservations/move-requests/${encodeURIComponent(state.currentMoveId)}`,
-      {
-        method: 'PATCH',
-        body: JSON.stringify({ status, staff_comment: comment })
-      }
-    );
-
-    if (moveApproveBtn) moveApproveBtn.disabled = false;
-    if (moveRejectBtn) moveRejectBtn.disabled = false;
-
-    if (!result.ok) {
-      if (handleAuthFailure(result)) return;
-      if (moveError) {
-        moveError.textContent = result.error;
-        moveError.classList.remove('hidden');
-      }
-      return;
-    }
-
-    closeMoveModal();
-    // A move proposed for a conflict override also books (or doesn't) the requester; say which.
-    const overrideNote = result.data && result.data.override_note;
-    showToast(`Move request ${status.toLowerCase()}.` + (overrideNote ? ` ${overrideNote}` : ''), 'success');
-    await loadAll();
-  }
-
-  if (moveApproveBtn) moveApproveBtn.addEventListener('click', () => submitMoveReview('Approved'));
-  if (moveRejectBtn) moveRejectBtn.addEventListener('click', () => submitMoveReview('Rejected'));
-
-  // ---------------------------------------------------------------
-  // Conflict override review modal
-  //
-  // Approve = propose moving the conflicting booking to a new time (a
-  // regular move request, reviewed later in Move Requests). When that move
-  // is approved, the requester's booking is created as Pending. Reject =
-  // optional comment the requester sees in My Reservations.
-  // ---------------------------------------------------------------
-
-  let overrideModal = null;
-
-  function buildOverrideModal() {
-    const wrap = document.createElement('div');
-    wrap.className = 'fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4';
-    wrap.setAttribute('role', 'dialog');
-    wrap.setAttribute('aria-modal', 'true');
-    wrap.setAttribute('aria-labelledby', 'overrideReviewTitle');
-    wrap.innerHTML = `
-      <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-        <div class="flex items-start justify-between gap-3">
-          <h2 id="overrideReviewTitle" class="text-lg font-bold text-gray-900">Review override request</h2>
-          <button type="button" data-ov-close class="text-gray-400 hover:text-gray-600" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
-        </div>
-        <div data-ov-summary class="text-sm text-gray-700 space-y-1"></div>
-        <fieldset class="p-4 rounded-xl border border-violet-100 bg-violet-50/50 space-y-3">
-          <legend class="px-1 text-[11px] font-bold uppercase tracking-wider text-violet-700">If approving: move the conflicting booking to</legend>
-          <div class="grid grid-cols-3 gap-2">
-            <label class="flex flex-col gap-1 text-xs font-semibold text-gray-600 col-span-3 sm:col-span-1">Date
-              <input type="date" data-ov-date class="p-2 border border-gray-200 rounded-lg text-sm bg-white">
-            </label>
-            <label class="flex flex-col gap-1 text-xs font-semibold text-gray-600">Start
-              <input type="time" step="1800" data-ov-start class="p-2 border border-gray-200 rounded-lg text-sm bg-white">
-            </label>
-            <label class="flex flex-col gap-1 text-xs font-semibold text-gray-600">End
-              <input type="time" step="1800" data-ov-end class="p-2 border border-gray-200 rounded-lg text-sm bg-white">
-            </label>
-          </div>
-          <p data-ov-hint class="text-xs text-gray-500"></p>
-        </fieldset>
-        <label class="block text-sm font-semibold text-gray-800">Comment <span class="font-normal text-gray-400">(optional; the requester sees it)</span>
-          <textarea data-ov-comment rows="3" maxlength="500" class="mt-1 w-full p-3 border border-gray-200 rounded-xl text-sm"></textarea>
-        </label>
-        <p data-ov-error class="hidden text-sm font-semibold text-red-600" role="alert"></p>
-        <div class="flex flex-col sm:flex-row gap-2 sm:justify-end">
-          <button type="button" data-ov-close class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancel</button>
-          <button type="button" data-ov-reject class="px-4 py-2 rounded-xl border border-red-200 text-sm font-semibold text-red-600 hover:bg-red-50">Reject</button>
-          <button type="button" data-ov-approve class="px-5 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700">Approve &amp; propose move</button>
-        </div>
-      </div>`;
-    document.body.appendChild(wrap);
-
-    const q = (sel) => wrap.querySelector(sel);
-    wrap.querySelectorAll('[data-ov-close]').forEach((b) => b.addEventListener('click', closeOverrideModal));
-    wrap.addEventListener('click', (e) => { if (e.target === wrap) closeOverrideModal(); });
-    q('[data-ov-approve]').addEventListener('click', () => submitOverrideReview('Approved'));
-    q('[data-ov-reject]').addEventListener('click', () => submitOverrideReview('Rejected'));
-    return { wrap, q, requestId: null };
-  }
-
-  function openOverrideModal(requestId) {
-    const request = state.overrideRequests.find((r) => r.request_id === requestId);
-    if (!request) return;
-    if (!overrideModal) overrideModal = buildOverrideModal();
-    const { wrap, q } = overrideModal;
-    overrideModal.requestId = requestId;
-
-    q('[data-ov-summary]').innerHTML = `
-      <div><span class="font-semibold text-gray-900">Requester:</span> ${escapeHtml(request.requester_name || '—')}</div>
-      <div><span class="font-semibold text-gray-900">Room:</span> ${escapeHtml(request.room_name || '—')}</div>
-      <div><span class="font-semibold text-gray-900">Requested:</span> ${escapeHtml(formatWindow(request.start_time, request.end_time))}</div>
-      <div><span class="font-semibold text-gray-900">Conflicting booking:</span> ${escapeHtml(formatWindow(request.conflict_start_time, request.conflict_end_time))}</div>
-      <div><span class="font-semibold text-violet-700">Urgency reason:</span> ${escapeHtml(request.reason || '—')}</div>`;
-    q('[data-ov-comment]').value = '';
-    q('[data-ov-error]').classList.add('hidden');
-    q('[data-ov-approve]').disabled = false;
-    q('[data-ov-reject]').disabled = false;
-    ['[data-ov-date]', '[data-ov-start]', '[data-ov-end]'].forEach((sel) => { q(sel).value = ''; });
-    q('[data-ov-hint]').textContent = 'Looking for the first free slot of the same length…';
-
-    wrap.classList.remove('hidden');
-    wrap.classList.add('flex');
-
-    suggestMoveSlot(request).then((slot) => {
-      if (overrideModal.requestId !== requestId) return;       // another card was opened meanwhile
-      if (!slot) {
-        q('[data-ov-hint]').textContent = 'No free slot of the same length in the next 14 days. Enter a time manually.';
-        return;
-      }
-      q('[data-ov-date]').value = slot.date;
-      q('[data-ov-start]').value = slot.start;
-      q('[data-ov-end]').value = slot.end;
-      q('[data-ov-hint]').textContent = 'Suggested: the first free slot of the same length in this room. You can change it; the server re-checks it.';
-    });
-  }
-
-  /**
-   * The first free window, the same length as the conflicting booking, in the
-   * same room: from its own day onward (up to 14 days), within business
-   * hours, skipping closed days and holidays, not inside the requested slot,
-   * and not in the past. null if none. Staff can always type another time.
-   */
-  async function suggestMoveSlot(request) {
-    const S = window.CampusSchedule;
-    if (!S) return null;
-    const rules = await S.loadRules(BASE);
-    const toMin = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
-    const toHHMM = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-
-    const firstDay = String(request.conflict_start_time).slice(0, 10);
-    const length = toMin(S.hhmm(request.conflict_end_time)) - toMin(S.hhmm(request.conflict_start_time));
-    const last = new Date(firstDay + 'T00:00:00');
-    last.setDate(last.getDate() + 13);
-    const lastDay = last.getFullYear() + '-' + String(last.getMonth() + 1).padStart(2, '0') + '-' + String(last.getDate()).padStart(2, '0');
-
-    const data = await S.fetchRange(BASE, request.room_id, firstDay, lastDay);
-    if (!data || length <= 0) return null;
-
-    const requestedDays = S.datesBetween(String(request.start_time).slice(0, 10), String(request.end_time).slice(0, 10));
-    const reqStart = S.hhmm(request.start_time), reqEnd = S.hhmm(request.end_time);
-    const now = new Date();
-
-    for (const date of S.datesBetween(firstDay, lastDay)) {
-      if (S.isClosedDay(date, rules.closedDays)) continue;
-      for (let m = Math.ceil(toMin(rules.open) / 30) * 30; m + length <= toMin(rules.close); m += 30) {
-        const start = toHHMM(m), end = toHHMM(m + length);
-        if (new Date(`${date}T${start}:00`) <= now) continue;
-        if (requestedDays.includes(date) && start < reqEnd && end > reqStart) continue;
-        if (S.findConflicts(data, date, start, end, { excludeReservationId: request.conflicting_reservation_id }).length) continue;
-        return { date, start, end };
-      }
-    }
-    return null;
-  }
-
-  function closeOverrideModal() {
-    if (!overrideModal) return;
-    overrideModal.requestId = null;
-    overrideModal.wrap.classList.add('hidden');
-    overrideModal.wrap.classList.remove('flex');
-  }
-
-  async function submitOverrideReview(status) {
-    if (!overrideModal || !overrideModal.requestId) return;
-    const { q, requestId } = overrideModal;
-    const errorEl = q('[data-ov-error]');
-    const fail = (msg) => { errorEl.textContent = msg; errorEl.classList.remove('hidden'); };
-
-    const body = { status, staff_comment: q('[data-ov-comment]').value.trim() };
-    if (status === 'Approved') {
-      const date = q('[data-ov-date]').value, start = q('[data-ov-start]').value, end = q('[data-ov-end]').value;
-      if (!date || !start || !end) return fail('Choose the date and times to move the conflicting booking to.');
-      if (end <= start) return fail('The end time must be after the start time.');
-      body.move_start_time = `${date} ${start}:00`;
-      body.move_end_time = `${date} ${end}:00`;
-    }
-
-    q('[data-ov-approve]').disabled = true;
-    q('[data-ov-reject]').disabled = true;
-    errorEl.classList.add('hidden');
-
-    const result = await api(`api/conflict-override-requests/${encodeURIComponent(requestId)}`, {
-      method: 'PATCH',
-      body: JSON.stringify(body)
-    });
-
-    q('[data-ov-approve]').disabled = false;
-    q('[data-ov-reject]').disabled = false;
-
-    if (!result.ok) {
-      if (handleAuthFailure(result)) return;
-      return fail(result.error);
-    }
-
-    closeOverrideModal();
-    showToast(
-      result.message || (status === 'Approved'
-        ? 'Override approved. A move request is now in Move Requests; approving it approves the requester.'
-        : 'Override rejected. The requester will see your comment.'),
-      'success'
-    );
-    await loadAll();
-  }
-
   // Escape closes whichever modal (or the action menu) is open.
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
-    closeMoveModal();
-    closeOverrideModal();
     closeDetailModal();
     closeActionMenu();
     closeStaffCancelModal();
@@ -1456,57 +980,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   
-  // ---------------------------------------------------------------
-  // Batch approve
-  // ---------------------------------------------------------------
-  function updateBatchButton() {
-    if (!batchApproveBtn || !batchApproveLabel) return;
-    const checkedCount = document.querySelectorAll('.batch-checkbox:checked').length;
-    if (checkedCount > 0) {
-      batchApproveBtn.disabled = false;
-      batchApproveLabel.textContent = `Approve Selected (${checkedCount})`;
-    } else {
-      batchApproveBtn.disabled = true;
-      batchApproveLabel.textContent = 'Approve Selected';
-    }
-  }
-
-  if (batchApproveBtn) {
-    batchApproveBtn.addEventListener('click', async () => {
-      const checked = Array.from(document.querySelectorAll('.batch-checkbox:checked')).map(cb => cb.value);
-      if (checked.length === 0) return;
-
-      if (!window.confirm(`Approve the ${checked.length} selected reservation(s)?`)) return;
-
-      batchApproveBtn.disabled = true;
-      batchApproveLabel.textContent = 'Processing...';
-
-      let successCount = 0;
-      let failCount = 0;
-      for (const id of checked) {
-        try {
-          const res = await api(`api/reservations/${encodeURIComponent(id)}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status: 'Approved', staff_comment: 'Batch approved' })
-          });
-          if (res.ok) successCount++;
-          else failCount++;
-        } catch (e) {
-          failCount++;
-        }
-      }
-
-      if (successCount > 0) {
-        showToast(`Successfully approved ${successCount} reservations.`, 'success');
-      }
-      if (failCount > 0) {
-        showToast(`Failed to approve ${failCount} reservations.`, 'error');
-      }
-      
-      batchApproveLabel.textContent = 'Approve Selected';
-      await loadAll();
-    });
-  }
 
   // ---------------------------------------------------------------
   // Overlay helpers (Add Class / Declare Holiday)
@@ -1601,10 +1074,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderReservations() {
     const tbody = el('reservationsTableBody');
     if (!tbody) return;
-
-    const pendingCount = state.reservations.filter((r) => r.status === 'Pending').length;
-    const pendingTabBadge = el('subtab-pending-badge');
-    if (pendingTabBadge) pendingTabBadge.textContent = String(pendingCount);
 
     // Classification filter is built from the data actually present.
     const categorySelect = el('resCategoryFilter');
@@ -1960,13 +1429,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Export Global API for inline HTML onclick handlers
   // ---------------------------------------------------------------
   window.CampusRoomStaff = {
-    decide,
     openDetailModal,
     openStaffCancelModal,
-    openMoveModal,
-    openOverrideModal,
-    toggleFacility,
-    updateBatchButton
+    toggleFacility
   };
 
   // ---------------------------------------------------------------
