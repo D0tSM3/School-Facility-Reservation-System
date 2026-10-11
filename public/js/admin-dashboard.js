@@ -431,10 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
     overview: 'Overview & KPIs',
     facilities: 'Facilities & Rooms Directory',
     reservations: 'Reservations Master Management',
-    'approval-queue': 'Pending Approvals Queue',
-    moves: 'Reservation Move Requests',
     cancels: 'User Cancellations',
-    overrides: 'Conflict Override Requests Queue',
     users: 'Institutional User Directory',
     classes: 'Recurring Academic Class Schedules',
     holidays: 'University Holidays & Campus Closures',
@@ -447,13 +444,13 @@ document.addEventListener('DOMContentLoaded', () => {
     '#overview': 'overview',
     '#dashboard': 'overview',
     '#reservations': 'reservations',
-    '#staff-queue': 'approval-queue',
-    '#approval-queue': 'approval-queue',
-    '#move-requests': 'moves',
-    '#moves': 'moves',
+    // Legacy approval-queue hashes now land on the overview.
+    '#staff-queue': 'overview',
+    '#approval-queue': 'overview',
+    '#move-requests': 'overview',
+    '#overrides': 'overview',
     '#cancellations': 'cancels',
     '#cancels': 'cancels',
-    '#overrides': 'overrides',
     '#rooms': 'facilities',
     '#facilities': 'facilities',
     '#classes': 'classes',
@@ -468,10 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
     overview: '#overview',
     facilities: '#rooms',
     reservations: '#reservations',
-    'approval-queue': '#staff-queue',
-    moves: '#move-requests',
     cancels: '#cancellations',
-    overrides: '#overrides',
     users: '#users',
     classes: '#classes',
     holidays: '#holidays',
@@ -483,9 +477,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function switchView(viewName) {
     if (!viewTitles[viewName]) return;
     // Staff may not open administration views even via a direct hash — send
-    // them to the approval queue instead.
+    // them to the overview instead.
     if (state.isStaffOnly && ADMIN_ONLY_VIEWS.indexOf(viewName) !== -1) {
-      viewName = 'approval-queue';
+      viewName = 'overview';
     }
     state.activeView = viewName;
 
@@ -522,10 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewName === 'overview') renderOverview();
     if (viewName === 'facilities') renderFacilities();
     if (viewName === 'reservations') renderReservations();
-    if (viewName === 'approval-queue') renderApprovalQueue();
-    if (viewName === 'moves') renderMovesTable();
     if (viewName === 'cancels') renderCancelsTable();
-    if (viewName === 'overrides') renderOverridesTable();
     if (viewName === 'users') renderUsers();
     if (viewName === 'classes') loadClasses();
     if (viewName === 'holidays') loadHolidays();
@@ -599,103 +590,37 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateAllCounters() {
-    const pendingCount = state.reservations.filter(r => r.status === 'Pending').length;
-    const movesCount = state.moveRequests.filter(m => m.status === 'Pending').length;
     const cancelsCount = state.userCancellations.length;
-    const overridesCount = state.overrideRequests.filter(o => o.status === 'Pending').length;
 
-    // Sidebar badge counters
+    // Sidebar badge counters (direct-booking: no approval/move/override queues).
     const facBadge = document.getElementById('badge-facilities-count');
     if (facBadge) facBadge.textContent = state.rooms.length;
 
     const userBadge = document.getElementById('badge-users-count');
     if (userBadge) userBadge.textContent = state.users.length;
 
-    const approvalQueueBadge = document.getElementById('badge-approval-queue-count');
-    if (approvalQueueBadge) {
-      if (pendingCount > 0) {
-        approvalQueueBadge.textContent = pendingCount;
-        approvalQueueBadge.classList.remove('hidden');
-      } else {
-        approvalQueueBadge.classList.add('hidden');
-      }
-    }
-
-    const pendingBadge = document.getElementById('badge-pending-count');
-    if (pendingBadge) {
-      if (pendingCount > 0) {
-        pendingBadge.textContent = pendingCount;
-        pendingBadge.classList.remove('hidden');
-      } else {
-        pendingBadge.classList.add('hidden');
-      }
-    }
-
-    const movesBadge = document.getElementById('badge-moves-count');
-    if (movesBadge) {
-      if (movesCount > 0) {
-        movesBadge.textContent = movesCount;
-        movesBadge.classList.remove('hidden');
-      } else {
-        movesBadge.classList.add('hidden');
-      }
-    }
-
     const cancelsBadge = document.getElementById('badge-cancels-count');
     // A plain count of logged cancellations, not an alert: nothing to action.
     if (cancelsBadge) cancelsBadge.textContent = cancelsCount;
-
-    const overridesBadge = document.getElementById('badge-overrides-count');
-    if (overridesBadge) {
-      if (overridesCount > 0) {
-        overridesBadge.textContent = overridesCount;
-        overridesBadge.classList.remove('hidden');
-      } else {
-        overridesBadge.classList.add('hidden');
-      }
-    }
 
     const archivesBadge = document.getElementById('badge-archives-count');
     if (archivesBadge) {
       const archivesTotal = state.archiveStats?.total ?? state.archives.length ?? 0;
       archivesBadge.textContent = archivesTotal;
     }
-
-    // View badges
-    const headerQueueBadge = document.getElementById('approvalQueueHeaderBadge');
-    if (headerQueueBadge) {
-      headerQueueBadge.textContent = `${pendingCount} Pending`;
-    }
-
-    const kpiPending = document.getElementById('kpi-pending-total');
-    if (kpiPending) kpiPending.textContent = pendingCount;
   }
 
   // =========================================================================
   // 4. DATA LOADER CONTROLLER
   // =========================================================================
 
-  // Union of the general reservation list and the dedicated Pending list,
-  // de-duplicated by reservation_id (the Pending copy wins; it is the fresher read).
-  function mergePendingReservations(all, pending) {
-    const merged = new Map();
-    (Array.isArray(all) ? all : []).forEach((r) => merged.set(r.reservation_id, r));
-    (Array.isArray(pending) ? pending : []).forEach((r) => merged.set(r.reservation_id, r));
-    return Array.from(merged.values());
-  }
-
   async function loadAllData() {
     try {
+      // Direct-booking: no approval / move / override queues to load.
       const promises = [
         apiFetch('api/rooms').catch(() => []),
         apiFetch('api/reservations').catch(() => []),
-        // Dedicated Pending fetch: api/reservations returns only the newest 200
-        // rows of every status, so older Pending rows silently fell off the
-        // queue and the badge. Pending alone is fetched at the 500 maximum.
-        apiFetch('api/reservations?status=Pending&limit=500').catch(() => []),
-        apiFetch('api/reservations/move-requests').catch(() => []),
-        apiFetch('api/reservations/cancellations').catch(() => []),
-        apiFetch('api/conflict-override-requests').catch(() => [])
+        apiFetch('api/reservations/cancellations').catch(() => [])
       ];
 
       if (!state.isStaffOnly) {
@@ -708,13 +633,13 @@ document.addEventListener('DOMContentLoaded', () => {
         promises.push(Promise.resolve([]), Promise.resolve(null), Promise.resolve(null));
       }
 
-      const [rooms, reservations, pendingRes, moveReqs, cancelReqs, overrideReqs, users, settings, archivesRes] = await Promise.all(promises);
+      const [rooms, reservations, cancelReqs, users, settings, archivesRes] = await Promise.all(promises);
 
       state.rooms = Array.isArray(rooms) ? rooms : [];
-      state.reservations = mergePendingReservations(reservations, pendingRes);
-      state.moveRequests = Array.isArray(moveReqs) ? moveReqs : [];
+      state.reservations = Array.isArray(reservations) ? reservations : [];
+      state.moveRequests = [];
       state.userCancellations = Array.isArray(cancelReqs) ? cancelReqs : [];
-      state.overrideRequests = Array.isArray(overrideReqs) ? overrideReqs : [];
+      state.overrideRequests = [];
       state.users = Array.isArray(users) ? users : [];
       state.settings = settings;
 
@@ -738,25 +663,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================================
 
   function renderOverview() {
-    // 1. Calculate KPI Metrics
-    const pendingTotal = state.reservations.filter(r => r.status === 'Pending').length;
-    const pendingMoves = state.moveRequests.filter(m => m.status === 'Pending').length;
+    // 1. Calculate KPI Metrics (direct-booking: no approval/move/override queues)
     const pendingCancels = state.userCancellations.length;
-    const pendingOverrides = state.overrideRequests.filter(o => o.status === 'Pending').length;
     const activeRooms = state.rooms.filter(r => r.is_active && r.status === 'Available').length;
     const maintenanceRooms = state.rooms.filter(r => r.status === 'Maintenance').length;
 
-    const elKpiPending = document.getElementById('kpi-pending-total');
-    if (elKpiPending) elKpiPending.textContent = pendingTotal;
-
-    const elKpiMoves = document.getElementById('kpi-moves-total');
-    if (elKpiMoves) elKpiMoves.textContent = pendingMoves;
-
     const elKpiCancels = document.getElementById('kpi-cancels-total');
     if (elKpiCancels) elKpiCancels.textContent = pendingCancels;
-
-    const elKpiOverrides = document.getElementById('kpi-overrides-total');
-    if (elKpiOverrides) elKpiOverrides.textContent = pendingOverrides;
 
     const elKpiRooms = document.getElementById('kpi-rooms-total');
     if (elKpiRooms) elKpiRooms.textContent = activeRooms;
@@ -1631,561 +1544,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // =========================================================================
-  // 7b. MODULE: NATIVE APPROVAL QUEUE (Staff & Admin Approvals)
-  // =========================================================================
-
-  function renderApprovalQueue() {
-    const tbody = document.getElementById('approvalQueueTableBody');
-    if (!tbody) return;
-
-    const searchInput = document.getElementById('approvalQueueSearchInput');
-    const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
-    const cat = document.getElementById('approvalQueueCategoryFilter')?.value || 'all';
-
-    const pendingList = state.reservations.filter(res => {
-      if (res.status !== 'Pending') return false;
-      if (cat !== 'all' && res.category !== cat) return false;
-      if (search) {
-        const matchesName = (res.customer_name || res.user_name || '').toLowerCase().includes(search);
-        const matchesEmail = (res.customer_email || res.user_email || '').toLowerCase().includes(search);
-        const matchesRoom = (res.room_name || '').toLowerCase().includes(search);
-        const matchesPurpose = (res.purpose || '').toLowerCase().includes(search);
-        const matchesId = (res.reservation_id || '').toLowerCase().includes(search);
-        if (!matchesName && !matchesEmail && !matchesRoom && !matchesPurpose && !matchesId) {
-          return false;
-        }
-      }
-      return true;
-    });
-
-    updateAllCounters();
-
-    if (pendingList.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="6" class="p-12 text-center">
-            <div class="flex flex-col items-center justify-center text-gray-400">
-              <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
-                <span class="material-symbols-outlined text-[28px]">task_alt</span>
-              </div>
-              <p class="text-sm font-bold text-gray-800">The Approval Queue is completely clear</p>
-              <p class="text-xs text-gray-500 mt-1">There are no pending booking applications requiring administrative review.</p>
-            </div>
-          </td>
-        </tr>
-      `;
-      return;
-    }
-
-    tbody.innerHTML = pendingList.map(r => {
-      const requester = escapeHtml(r.customer_name || r.user_name || 'Requester');
-      const email = escapeHtml(r.customer_email || r.user_email || '—');
-      const room = escapeHtml(r.room_name || 'Facility');
-      const purpose = escapeHtml(r.purpose || 'No purpose stated');
-      const category = escapeHtml(r.category || 'Standard');
-      const timeWindow = formatRange(r.start_time, r.end_time);
-      const shortRef = shortId(r.reservation_id);
-      const notes = r.equipment_notes ? `<div class="text-[11px] text-gray-500 mt-0.5"><span class="font-semibold text-gray-600">Notes:</span> ${escapeHtml(r.equipment_notes)}</div>` : '';
-
-      return `
-        <tr class="hover:bg-gray-50/80 transition-colors" data-res-id="${r.reservation_id}">
-          <td class="py-4 px-6 align-middle">
-            <span class="font-mono font-bold text-[#7a1f2b] text-xs">#${shortRef}</span>
-            ${r.is_recurring ? `<span class="block text-[10px] text-blue-600 font-semibold mt-0.5">Recurring</span>` : ''}
-          </td>
-          <td class="py-4 px-6 align-middle">
-            <div class="font-bold text-gray-900 text-xs">${requester}</div>
-            <div class="text-[11px] text-gray-400 truncate max-w-[180px]">${email}</div>
-          </td>
-          <td class="py-4 px-6 align-middle">
-            <div class="font-bold text-gray-800 text-xs">${room}</div>
-          </td>
-          <td class="py-4 px-6 align-middle whitespace-nowrap text-xs text-gray-700">
-            <div class="font-medium">${timeWindow}</div>
-          </td>
-          <td class="py-4 px-6 align-middle">
-            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-700 mb-1">${category}</span>
-            <div class="text-xs text-gray-700 line-clamp-1 max-w-[220px]" title="${purpose}">${purpose}</div>
-            ${notes}
-          </td>
-          <td class="py-4 px-6 align-middle text-right">
-            <div class="flex items-center justify-end gap-2">
-              <button type="button" class="btn-approval-details px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all shadow-sm" data-id="${r.reservation_id}">
-                Details
-              </button>
-              <button type="button" class="btn-approval-reject px-3 py-1.5 text-xs font-semibold text-red-600 bg-white border border-red-200 hover:bg-red-50 rounded-xl transition-all shadow-sm flex items-center gap-1" data-id="${r.reservation_id}" data-name="${requester}">
-                <span class="material-symbols-outlined text-[15px]">close</span>
-                <span>Reject</span>
-              </button>
-              <button type="button" class="btn-approval-approve px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-sm flex items-center gap-1" data-id="${r.reservation_id}" data-name="${requester}">
-                <span class="material-symbols-outlined text-[15px]">check</span>
-                <span>Approve</span>
-              </button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    // Attach event listeners for Approval Queue table buttons
-    tbody.querySelectorAll('.btn-approval-details').forEach(btn => {
-      btn.addEventListener('click', () => {
-        showReservationDetails(btn.getAttribute('data-id'));
-      });
-    });
-
-    tbody.querySelectorAll('.btn-approval-approve').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-id');
-        const name = btn.getAttribute('data-name');
-        const ok = await confirmAction({
-          title: 'Approve Reservation',
-          message: `Are you sure you want to approve reservation #${shortId(id)} for ${name}? The facility will be reserved exclusively.`,
-          proceedText: 'Approve Booking',
-          icon: 'check_circle',
-          isDestructive: false,
-        });
-        if (!ok) return;
-
-        try {
-          await apiFetch(`api/reservations/${id}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status: 'Approved' }),
-          });
-          showToast(`Reservation #${shortId(id)} approved successfully!`, 'success');
-          const item = state.reservations.find(r => r.reservation_id === id);
-          if (item) item.status = 'Approved';
-          updateAllCounters();
-          renderApprovalQueue();
-          if (state.activeView === 'overview') renderOverview();
-          if (state.activeView === 'reservations') renderReservations();
-        } catch (err) {
-          showToast(err.message, 'error');
-        }
-      });
-    });
-
-    tbody.querySelectorAll('.btn-approval-reject').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-id');
-        const name = btn.getAttribute('data-name');
-        const ok = await confirmAction({
-          title: 'Reject Reservation',
-          message: `Are you sure you want to decline reservation request #${shortId(id)} for ${name}?`,
-          proceedText: 'Reject Booking',
-          icon: 'cancel',
-          isDestructive: true,
-        });
-        if (!ok) return;
-
-        try {
-          await apiFetch(`api/reservations/${id}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status: 'Rejected' }),
-          });
-          showToast(`Reservation #${shortId(id)} rejected.`, 'info');
-          const item = state.reservations.find(r => r.reservation_id === id);
-          if (item) item.status = 'Rejected';
-          updateAllCounters();
-          renderApprovalQueue();
-          if (state.activeView === 'overview') renderOverview();
-          if (state.activeView === 'reservations') renderReservations();
-        } catch (err) {
-          showToast(err.message, 'error');
-        }
-      });
-    });
-  }
-
-  // Bind Approval Queue search and filter controls
-  const approvalQueueSearchInput = document.getElementById('approvalQueueSearchInput');
-  if (approvalQueueSearchInput) {
-    approvalQueueSearchInput.addEventListener('input', renderApprovalQueue);
-  }
-
-  const approvalQueueCategoryFilter = document.getElementById('approvalQueueCategoryFilter');
-  if (approvalQueueCategoryFilter) {
-    approvalQueueCategoryFilter.addEventListener('change', renderApprovalQueue);
-  }
-
-  const btnRefreshApprovalQueue = document.getElementById('btnRefreshApprovalQueue');
-  if (btnRefreshApprovalQueue) {
-    btnRefreshApprovalQueue.addEventListener('click', async () => {
-      showToast('Refreshing approval queue...', 'info');
-      await loadAllData();
-      showToast('Approval queue synchronized.', 'success');
-    });
-  }
-
-  // Render Move Requests Table
-  function renderMovesTable() {
-    const tbody = document.getElementById('movesTableBody');
-    if (!tbody) return;
-    if (state.moveRequests.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400 text-xs">No move requests awaiting review.</td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = state.moveRequests.map(m => {
-      const isPending = m.status === 'Pending';
-      return `
-        <tr class="hover:bg-gray-50/80 transition-colors">
-          <td class="py-4 px-6 text-xs">
-            <div class="font-bold text-gray-900">${escapeHtml(m.customer_name || 'Requester')}</div>
-            <div class="text-[11px] text-gray-400">${escapeHtml(m.customer_email || '—')}</div>
-          </td>
-          <td class="py-4 px-6 text-xs font-semibold text-gray-800">${escapeHtml(m.room_name || 'Facility')}</td>
-          <td class="py-4 px-6 text-xs text-gray-500">${formatRange(m.current_start_time, m.current_end_time)}</td>
-          <td class="py-4 px-6 text-xs font-semibold text-blue-700 bg-blue-50/40 rounded">${formatRange(m.requested_start_time, m.requested_end_time)}${m.new_room_id ? `<div class="mt-0.5 inline-flex items-center gap-1 text-[11px] font-bold text-violet-700"><span class="material-symbols-outlined text-[13px]">move_up</span>Relocate to ${escapeHtml(roomNameById(m.new_room_id))}</div>` : ''}</td>
-          <td class="py-4 px-6 text-xs">
-            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${isPending ? 'bg-amber-100 text-amber-800' : (m.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800')}">
-              ${m.status}
-            </span>
-          </td>
-          <td class="py-4 px-6 text-right">
-            ${isPending ? `
-              <button type="button" class="btn-review-move px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm transition-all" data-id="${m.request_id}">
-                Review Move
-              </button>
-            ` : `<span class="text-xs text-gray-400">—</span>`}
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    document.querySelectorAll('.btn-review-move').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        const req = state.moveRequests.find(m => m.request_id === id);
-        if (!req) return;
-
-        document.getElementById('moveRequestId').value = req.request_id;
-        document.getElementById('moveStaffComment').value = '';
-        const summary = document.getElementById('moveReviewSummary');
-        if (summary) {
-          summary.innerHTML = `
-            <div class="p-3 bg-gray-50 rounded-xl space-y-1">
-              <p><strong>Requester:</strong> ${escapeHtml(req.customer_name)} (${escapeHtml(req.customer_email)})<br><span class="text-xs text-gray-500">Account Type: ${escapeHtml(req.customer_account_type || 'Student')}</span></p>
-              <p><strong>Facility:</strong> ${escapeHtml(req.room_name)}</p>
-              <p><strong>Current:</strong> ${formatRange(req.current_start_time, req.current_end_time)}</p>
-              <p class="text-blue-700 font-bold"><strong>Requested:</strong> ${formatRange(req.requested_start_time, req.requested_end_time)}</p>
-              ${req.new_room_id ? `<p class="text-violet-700 font-bold"><strong>Relocate to:</strong> ${escapeHtml(roomNameById(req.new_room_id))}</p>` : ''}
-            </div>
-          `;
-        }
-
-        openModal('moveReviewModal');
-      });
-    });
-  }
-
-  // Resolve Move Request Buttons
-  const btnApproveMove = document.getElementById('btn-approve-move');
-  if (btnApproveMove) {
-    btnApproveMove.addEventListener('click', async () => {
-      const id = document.getElementById('moveRequestId').value;
-      const comment = document.getElementById('moveStaffComment').value.trim();
-
-      try {
-        await apiFetch(`api/reservations/move-requests/${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'Approved', staff_comment: comment }),
-        });
-        showToast('Move request approved! Booking schedule updated.', 'success');
-        closeModal('moveReviewModal');
-        await loadAllData();
-        switchResSubtab('moves');
-      } catch (err) {
-        showToast(err.message, 'error');
-      }
-    });
-  }
-
-  const btnRejectMove = document.getElementById('btn-reject-move');
-  if (btnRejectMove) {
-    btnRejectMove.addEventListener('click', async () => {
-      const id = document.getElementById('moveRequestId').value;
-      const comment = document.getElementById('moveStaffComment').value.trim();
-
-      if (!comment) {
-        showToast('A comment is required when rejecting a move request.', 'error');
-        return;
-      }
-
-      try {
-        await apiFetch(`api/reservations/move-requests/${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'Rejected', staff_comment: comment }),
-        });
-        showToast('Move request rejected.', 'info');
-        closeModal('moveReviewModal');
-        await loadAllData();
-        switchResSubtab('moves');
-      } catch (err) {
-        showToast(err.message, 'error');
-      }
-    });
-  }
-
-  // Render User Cancellations log (read-only). Lists bookings the requester
-  // cancelled themselves; Staff/Admin cancellations ("Revoke") are not shown.
-  function renderCancelsTable() {
-    const tbody = document.getElementById('cancelsTableBody');
-    if (!tbody) return;
-
-    const searchInput = document.getElementById('cancelsSearchInput');
-    const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
-    const rows = state.userCancellations.filter(c => {
-      if (!search) return true;
-      return [
-        c.customer_name,
-        c.customer_email,
-        c.room_name,
-        c.purpose,
-        c.reservation_id,
-        c.cancellation_reason,
-      ].some(f => f && String(f).toLowerCase().includes(search));
-    });
-
-    if (rows.length === 0) {
-      const msg = state.userCancellations.length === 0
-        ? 'No user cancellations recorded.'
-        : 'No cancellations match your search.';
-      tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400 text-xs">${msg}</td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = rows.map(c => `
-      <tr class="hover:bg-gray-50/80 transition-colors">
-        <td class="py-4 px-6 text-xs">
-          <div class="font-bold text-gray-900">${escapeHtml(c.customer_name || 'Requester')}</div>
-          <div class="text-[11px] text-gray-400">${escapeHtml(c.customer_email || '—')}</div>
-        </td>
-        <td class="py-4 px-6 text-xs font-semibold text-gray-800">${escapeHtml(c.room_name || 'Facility')}</td>
-        <td class="py-4 px-6 text-xs text-gray-500">${formatRange(c.start_time, c.end_time)}</td>
-        <td class="py-4 px-6 text-xs text-gray-500">${formatDateTime(c.cancelled_at)}</td>
-        <td class="py-4 px-6 text-xs text-gray-700 italic max-w-xs truncate" title="${escapeHtml(c.cancellation_reason || '')}">
-          ${escapeHtml(c.cancellation_reason || 'No reason given')}
-        </td>
-        <td class="py-4 px-6 text-right">
-          <button type="button" class="btn-cancel-log px-3 py-1 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 font-semibold text-xs rounded-lg shadow-sm transition-all" data-id="${escapeHtml(c.reservation_id)}">
-            View Log
-          </button>
-        </td>
-      </tr>`).join('');
-  }
-
-  // Search box and View Log button (delegated, so they survive every re-render).
-  const cancelsSearchInput = document.getElementById('cancelsSearchInput');
-  if (cancelsSearchInput) cancelsSearchInput.addEventListener('input', renderCancelsTable);
-
-  const cancelsTableBodyEl = document.getElementById('cancelsTableBody');
-  if (cancelsTableBodyEl) {
-    cancelsTableBodyEl.addEventListener('click', (event) => {
-      const btn = event.target.closest('.btn-cancel-log');
-      if (!btn) return;
-      if (window.CampusRoomLogArchive) window.CampusRoomLogArchive.open(btn.dataset.id);
-      else showToast('The log viewer could not be loaded. Refresh the page.', 'error');
-    });
-  }
-
-  // ── Conflict Override Requests ──────────────────────────────────────────
-
-  function renderOverridesTable() {
-    const tbody = document.getElementById('overridesTableBody');
-    if (!tbody) return;
-    if (state.overrideRequests.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-400 text-xs">No conflict override requests found.</td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = state.overrideRequests.map(ov => {
-      const isPending = ov.status === 'Pending';
-      return `
-        <tr class="hover:bg-gray-50/80 transition-colors">
-          <td class="py-4 px-6 text-xs">
-            <div class="font-bold text-gray-900">${escapeHtml(ov.requester_name || 'Requester')}</div>
-            <div class="text-[11px] text-gray-400">${escapeHtml(ov.requester_email || '—')}</div>
-          </td>
-          <td class="py-4 px-6 text-xs font-semibold text-gray-800">${escapeHtml(ov.room_name || 'Facility')}</td>
-          <td class="py-4 px-6 text-xs font-semibold text-violet-700 bg-violet-50/40 rounded">${formatRange(ov.start_time, ov.end_time)}</td>
-          <td class="py-4 px-6 text-xs text-gray-500">${formatRange(ov.conflict_start_time, ov.conflict_end_time)}</td>
-          <td class="py-4 px-6 text-xs text-gray-700 italic max-w-xs truncate" title="${escapeHtml(ov.reason)}">
-            "${escapeHtml(ov.reason || '—')}"
-          </td>
-          <td class="py-4 px-6 text-xs">
-            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${isPending ? 'bg-amber-100 text-amber-800' : (ov.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800')}">
-              ${ov.status}
-            </span>
-          </td>
-          <td class="py-4 px-6 text-right">
-            ${isPending ? `
-              <button type="button" class="btn-review-override px-3 py-1 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-lg shadow-sm transition-all" data-id="${ov.request_id}">
-                Review Override
-              </button>
-            ` : `<span class="text-xs text-gray-400">—</span>`}
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    document.querySelectorAll('.btn-review-override').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        const req = state.overrideRequests.find(o => o.request_id === id);
-        if (!req) return;
-
-        document.getElementById('overrideRequestId').value = req.request_id;
-        document.getElementById('overrideStaffComment').value = '';
-        const errorEl = document.getElementById('overrideErrorMsg');
-        if (errorEl) errorEl.classList.add('hidden');
-
-        const dateEl = document.getElementById('overrideMoveDate');
-        const startEl = document.getElementById('overrideMoveStart');
-        const endEl = document.getElementById('overrideMoveEnd');
-        const hintEl = document.getElementById('overrideMoveHint');
-        if (dateEl) dateEl.value = '';
-        if (startEl) startEl.value = '';
-        if (endEl) endEl.value = '';
-
-        const summary = document.getElementById('overrideReviewSummary');
-        if (summary) {
-          summary.innerHTML = `
-            <div><span class="font-semibold text-gray-900">Requester:</span> ${escapeHtml(req.requester_name || 'Requester')} (${escapeHtml(req.requester_email || '—')})</div>
-            <div><span class="font-semibold text-gray-900">Facility:</span> ${escapeHtml(req.room_name || 'Facility')}</div>
-            <div><span class="font-semibold text-gray-900">Requested:</span> ${formatRange(req.start_time, req.end_time)}</div>
-            <div><span class="font-semibold text-gray-900">Conflicting booking:</span> ${formatRange(req.conflict_start_time, req.conflict_end_time)}</div>
-            <div><span class="font-semibold text-violet-700">Urgency reason:</span> "${escapeHtml(req.reason || 'None')}"</div>
-          `;
-        }
-
-        openModal('conflictOverrideModal');
-
-        // Suggest move slot
-        if (hintEl) hintEl.textContent = 'Analyzing schedule for a recommended free slot...';
-        suggestMoveSlot(req).then((slot) => {
-          if (!slot) {
-            if (hintEl) hintEl.textContent = 'No free slot found in next 14 days. Enter a custom date and time.';
-            return;
-          }
-          if (dateEl) dateEl.value = slot.date;
-          if (startEl) startEl.value = slot.start;
-          if (endEl) endEl.value = slot.end;
-          if (hintEl) hintEl.textContent = 'Suggested: the first free slot of the same length in this room.';
-        });
-      });
-    });
-  }
-
-  async function suggestMoveSlot(request) {
-    const S = window.CampusSchedule;
-    if (!S) return null;
-    try {
-      const rules = await S.loadRules(BASE);
-      const toMin = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
-      const toHHMM = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-
-      const firstDay = String(request.conflict_start_time).slice(0, 10);
-      const length = toMin(S.hhmm(request.conflict_end_time)) - toMin(S.hhmm(request.conflict_start_time));
-      const last = new Date(firstDay + 'T00:00:00');
-      last.setDate(last.getDate() + 13);
-      const lastDay = last.getFullYear() + '-' + String(last.getMonth() + 1).padStart(2, '0') + '-' + String(last.getDate()).padStart(2, '0');
-
-      const data = await S.fetchRange(BASE, request.room_id, firstDay, lastDay);
-      if (!data || length <= 0) return null;
-
-      const requestedDays = S.datesBetween(String(request.start_time).slice(0, 10), String(request.end_time).slice(0, 10));
-      const reqStart = S.hhmm(request.start_time), reqEnd = S.hhmm(request.end_time);
-      const now = new Date();
-
-      for (const date of S.datesBetween(firstDay, lastDay)) {
-        if (S.isClosedDay(date, rules.closedDays)) continue;
-        for (let m = Math.ceil(toMin(rules.open) / 30) * 30; m + length <= toMin(rules.close); m += 30) {
-          const start = toHHMM(m), end = toHHMM(m + length);
-          if (new Date(`${date}T${start}:00`) <= now) continue;
-          if (requestedDays.includes(date) && start < reqEnd && end > reqStart) continue;
-          if (S.findConflicts(data, date, start, end, { excludeReservationId: request.conflicting_reservation_id }).length) continue;
-          return { date, start, end };
-        }
-      }
-    } catch (e) {
-      console.warn('Could not auto-suggest slot:', e);
-    }
-    return null;
-  }
-
-  const btnRejectOverride = document.getElementById('btn-reject-override');
-  if (btnRejectOverride) {
-    btnRejectOverride.addEventListener('click', async () => {
-      const id = document.getElementById('overrideRequestId')?.value;
-      const comment = (document.getElementById('overrideStaffComment')?.value || '').trim();
-      const errorEl = document.getElementById('overrideErrorMsg');
-
-      if (!comment) {
-        if (errorEl) {
-          errorEl.textContent = 'A comment is required explaining why the override was rejected.';
-          errorEl.classList.remove('hidden');
-        }
-        return;
-      }
-
-      try {
-        await apiFetch(`api/conflict-override-requests/${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'Rejected', staff_comment: comment }),
-        });
-        showToast('Conflict override request rejected.', 'info');
-        closeModal('conflictOverrideModal');
-        await loadAllData();
-        renderOverridesTable();
-      } catch (err) {
-        if (errorEl) {
-          errorEl.textContent = err.message;
-          errorEl.classList.remove('hidden');
-        }
-      }
-    });
-  }
-
-  const btnApproveOverride = document.getElementById('btn-approve-override');
-  if (btnApproveOverride) {
-    btnApproveOverride.addEventListener('click', async () => {
-      const id = document.getElementById('overrideRequestId')?.value;
-      const comment = (document.getElementById('overrideStaffComment')?.value || '').trim();
-      const errorEl = document.getElementById('overrideErrorMsg');
-      const showErr = (msg) => { if (errorEl) { errorEl.textContent = msg; errorEl.classList.remove('hidden'); } };
-
-      const date = document.getElementById('overrideMoveDate').value;
-      const start = document.getElementById('overrideMoveStart').value;
-      const end = document.getElementById('overrideMoveEnd').value;
-
-      if (!date || !start || !end) {
-        return showErr('Please choose the date and times to move the conflicting booking to.');
-      }
-      if (end <= start) {
-        return showErr('The end time must be after the start time.');
-      }
-
-      try {
-        const res = await apiFetch(`api/conflict-override-requests/${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({
-            status: 'Approved',
-            staff_comment: comment,
-            move_start_time: `${date} ${start}:00`,
-            move_end_time: `${date} ${end}:00`,
-          }),
-        });
-        showToast((res && res.message) || 'Conflict override approved! Conflicting booking move request filed.', 'success');
-        closeModal('conflictOverrideModal');
-        await loadAllData();
-        renderOverridesTable();
-      } catch (err) {
-        showErr(err.message);
-      }
-    });
-  }
 
   // =========================================================================
   // 8. MODULE 4: USER DIRECTORY
