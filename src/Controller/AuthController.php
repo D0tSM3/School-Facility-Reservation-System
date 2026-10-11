@@ -139,7 +139,11 @@ class AuthController
             Response::error('Invalid email or password.', 401);
         }
         if (strlen($password) > 256) {
-            RateLimiter::recordFailure('login', $rateId, 5, 300);
+            $failure = RateLimiter::recordFailure('login', $rateId, 5, 300);
+            \CampusRoom\Core\SecurityLog::record('login_failed', 'Failed sign-in attempt', null, $email);
+            if ($failure['is_locked']) {
+                \CampusRoom\Core\SecurityLog::record('login_locked', 'Sign-in locked after repeated failures', null, $email);
+            }
             Timing::pad($startedAt, 1500);
             Response::error('Invalid email or password.', 401);
         }
@@ -153,7 +157,12 @@ class AuthController
             $passwordValid = password_verify($passwordToRehash, $hash);
         }
         if ($user === null || !$passwordValid || empty($user['is_active'])) {
-            RateLimiter::recordFailure('login', $rateId, 5, 300);
+            $userId = $user['user_id'] ?? null;
+            $failure = RateLimiter::recordFailure('login', $rateId, 5, 300);
+            \CampusRoom\Core\SecurityLog::record('login_failed', 'Failed sign-in attempt', $userId, $email);
+            if ($failure['is_locked']) {
+                \CampusRoom\Core\SecurityLog::record('login_locked', 'Sign-in locked after repeated failures', $userId, $email);
+            }
             Timing::pad($startedAt, 1500);
             Response::error('Invalid email or password.', 401);
         }
@@ -169,6 +178,7 @@ class AuthController
             );
         }
         RateLimiter::clear('login', $rateId);
+        \CampusRoom\Core\SecurityLog::record('login_success', 'Sign-in successful', $user['user_id'] ?? null, $email);
 
         // Two-factor authentication: every active account receives a fresh
         // one-time code, and a session is created only after it is confirmed.
