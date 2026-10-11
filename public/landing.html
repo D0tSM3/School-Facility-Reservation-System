@@ -582,31 +582,61 @@ body{overscroll-behavior:none;}
 
   <!-- Location Card -->
   <div class="mt-space-md p-space-lg rounded-xl bg-white border border-neutral-200 shadow-xl text-neutral-900">
-    <div class="flex items-center gap-space-md mb-space-md">
-      <div class="w-10 h-10 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center">
-        <span class="material-symbols-outlined text-[24px]">location_on</span>
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-md">
+      <div class="flex items-start gap-space-md">
+        <div class="w-11 h-11 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+          <span class="material-symbols-outlined text-[24px]">location_on</span>
+        </div>
+        <div>
+          <span class="font-label-sm text-[11px] font-bold uppercase tracking-wider text-orange-600">Campus Facility</span>
+          <h3 class="font-headline-sm text-lg sm:text-xl text-neutral-900 font-bold">Makati Admissions Office</h3>
+          <p class="font-body-sm text-sm text-neutral-600 mt-0.5">1191 Pablo Ocampo Sr. Extension, Brgy. Sta. Cruz, Makati City, Philippines</p>
+        </div>
       </div>
-      <div>
-        <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Campus Location</h3>
-        <p class="font-body-sm text-body-sm text-on-surface-variant">Buenavista Polytechnic University, Buenavista, Bohol, Philippines</p>
+      <a href="https://www.google.com/maps/search/?api=1&query=1191+Pablo+Ocampo+Sr.+Extension,+Brgy.+Sta.+Cruz,+Makati+City,+Philippines" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white font-label-sm text-xs font-semibold shrink-0 shadow-sm transition-colors">
+        <span class="material-symbols-outlined text-[16px]">map</span>
+        <span>Open in Google Maps</span>
+        <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+      </a>
+    </div>
+
+    <!-- Contact Info Chips -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-space-md pt-2 border-t border-neutral-100">
+      <div class="flex items-center gap-2 p-2.5 rounded-lg bg-neutral-50 border border-neutral-200/70">
+        <span class="material-symbols-outlined text-orange-500 text-[18px]">phone</span>
+        <div class="flex flex-col min-w-0">
+          <span class="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider">Direct Line</span>
+          <span class="text-xs font-mono font-medium text-neutral-900 truncate">+63 2 8999 1234</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 p-2.5 rounded-lg bg-neutral-50 border border-neutral-200/70">
+        <span class="material-symbols-outlined text-orange-500 text-[18px]">contact_phone</span>
+        <div class="flex flex-col min-w-0">
+          <span class="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider">Trunk Line</span>
+          <span class="text-xs font-mono font-medium text-neutral-900 truncate">+63 2 8888 5000 loc. 71220</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 p-2.5 rounded-lg bg-neutral-50 border border-neutral-200/70">
+        <span class="material-symbols-outlined text-orange-500 text-[18px]">mail</span>
+        <div class="flex flex-col min-w-0">
+          <span class="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider">Official E-mail</span>
+          <a href="mailto:campusroomadmin@gmail.com" class="text-xs font-mono font-medium text-orange-600 hover:underline truncate">campusroomadmin@gmail.com</a>
+        </div>
       </div>
     </div>
-    <div class="w-full h-48 rounded-lg bg-surface-container-low border border-surface-variant flex items-center justify-center overflow-hidden relative">
-      <svg viewBox="0 0 600 200" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-        <rect fill="#eae7e7" width="600" height="200"/>
-        <line x1="0" y1="80" x2="600" y2="80" stroke="#dac1bf" stroke-width="2"/>
-        <line x1="0" y1="120" x2="600" y2="120" stroke="#dac1bf" stroke-width="2"/>
-        <line x1="200" y1="0" x2="200" y2="200" stroke="#dac1bf" stroke-width="2"/>
-        <line x1="400" y1="0" x2="400" y2="200" stroke="#dac1bf" stroke-width="2"/>
-        <line x1="100" y1="0" x2="100" y2="200" stroke="#dac1bf" stroke-width="1" stroke-dasharray="4"/>
-        <line x1="300" y1="0" x2="300" y2="200" stroke="#dac1bf" stroke-width="1" stroke-dasharray="4"/>
-        <line x1="500" y1="0" x2="500" y2="200" stroke="#dac1bf" stroke-width="1" stroke-dasharray="4"/>
-        <circle cx="300" cy="100" r="12" fill="#4a0e0e"/>
-        <circle cx="300" cy="100" r="5" fill="#ffffff"/>
-        <path d="M300 88 C300 78, 312 78, 312 88 C312 95, 300 104, 300 104 C300 104, 288 95, 288 88" fill="#4a0e0e"/>
-        <text x="300" y="130" text-anchor="middle" fill="#544341" font-family="Inter" font-size="11" font-weight="600">Building #1545 — CIF</text>
-        <text x="300" y="145" text-anchor="middle" fill="#877270" font-family="Inter" font-size="10">Buenavista, Bohol</text>
-      </svg>
+
+    <!-- Google Maps Interactive Embed -->
+    <div class="w-full h-80 rounded-xl border border-neutral-300 overflow-hidden shadow-inner relative bg-neutral-100">
+      <iframe
+        title="Campus Location Map - Makati Admissions Office"
+        src="https://maps.google.com/maps?q=1191+Pablo+Ocampo+Sr.+Extension,+Brgy.+Sta.+Cruz,+Makati+City,+Philippines&t=&z=16&ie=UTF8&iwloc=&output=embed"
+        width="100%"
+        height="100%"
+        style="border:0;"
+        allowfullscreen=""
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade">
+      </iframe>
     </div>
   </div>
 </div>
@@ -758,18 +788,79 @@ body{overscroll-behavior:none;}
 </div>
 </main>
 
-<footer class="relative z-10 w-full bg-black border-t border-neutral-800">
-<div class="max-w-[1400px] mx-auto px-margin py-space-xl flex flex-col md:flex-row items-center justify-between gap-space-md">
-  <div class="flex items-center gap-space-sm">
-    <div class="w-6 h-6 rounded bg-orange-500 flex items-center justify-center">
-      <span class="material-symbols-outlined text-white text-[14px]">apartment</span>
+<footer class="relative z-10 w-full bg-black border-t border-neutral-800 text-neutral-400">
+<div class="max-w-[1400px] mx-auto px-margin py-12">
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 pb-10 border-b border-neutral-800/80">
+    <!-- Brand Info (5 cols) -->
+    <div class="md:col-span-5 flex flex-col items-start gap-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center shadow-sm">
+          <span class="material-symbols-outlined text-white text-[18px]">apartment</span>
+        </div>
+        <div class="flex flex-col">
+          <span class="font-headline-sm text-base text-white font-bold leading-none">CampusRoom</span>
+          <span class="font-label-sm text-[10px] text-neutral-400 uppercase tracking-wider leading-none mt-1">Buenavista Polytechnic University</span>
+        </div>
+      </div>
+      <p class="text-xs text-neutral-400 leading-relaxed max-w-sm mt-1">
+        Centralized academic facility reservation portal. Streamlined room scheduling, collision prevention, and audited administrative approvals.
+      </p>
+      <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-[11px] text-neutral-300 mt-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>System Operational · 24/7 Portal</span>
+      </div>
     </div>
-    <div class="flex flex-col">
-      <span class="font-label-lg text-label-lg text-white font-bold leading-none">CampusRoom</span>
-      <span class="font-body-sm text-body-sm text-neutral-400">Buenavista Polytechnic University Academic Space System</span>
+
+    <!-- Office & Address (4 cols) -->
+    <div class="md:col-span-4 flex flex-col gap-2.5">
+      <h4 class="text-xs font-bold text-white uppercase tracking-wider">Campus Admissions Office</h4>
+      <div class="flex items-start gap-2 text-xs text-neutral-300 leading-relaxed">
+        <span class="material-symbols-outlined text-orange-400 text-[16px] shrink-0 mt-0.5">place</span>
+        <div>
+          <p class="font-semibold text-white">Makati Admissions Office</p>
+          <p class="text-neutral-400 mt-0.5">1191 Pablo Ocampo Sr. Extension, Brgy. Sta. Cruz, Makati City, Philippines</p>
+          <a href="https://www.google.com/maps/search/?api=1&query=1191+Pablo+Ocampo+Sr.+Extension,+Brgy.+Sta.+Cruz,+Makati+City,+Philippines" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-orange-400 hover:text-orange-300 mt-1.5 text-[11px] font-medium transition-colors">
+            <span>View on Google Maps</span>
+            <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Details (3 cols) -->
+    <div class="md:col-span-3 flex flex-col gap-2.5">
+      <h4 class="text-xs font-bold text-white uppercase tracking-wider">Contact Channels</h4>
+      <ul class="flex flex-col gap-2.5 text-xs text-neutral-300">
+        <li class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-orange-400 text-[16px] shrink-0">phone</span>
+          <div>
+            <span class="text-neutral-500 text-[10px] block leading-none">Direct Line</span>
+            <span class="font-mono text-neutral-200">+63 2 8999 1234</span>
+          </div>
+        </li>
+        <li class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-orange-400 text-[16px] shrink-0">contact_phone</span>
+          <div>
+            <span class="text-neutral-500 text-[10px] block leading-none">Trunk Line</span>
+            <span class="font-mono text-neutral-200">+63 2 8888 5000 loc. 71220</span>
+          </div>
+        </li>
+        <li class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-orange-400 text-[16px] shrink-0">mail</span>
+          <div>
+            <span class="text-neutral-500 text-[10px] block leading-none">Official E-mail</span>
+            <a href="mailto:campusroomadmin@gmail.com" class="font-mono text-orange-400 hover:text-orange-300 transition-colors">campusroomadmin@gmail.com</a>
+          </div>
+        </li>
+      </ul>
     </div>
   </div>
-  <div class="font-body-sm text-body-sm text-neutral-400">&copy; 2025 Buenavista Polytechnic University. All rights reserved.</div>
+
+  <!-- Bottom Copyright Row -->
+  <div class="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-500">
+    <p>&copy; 2025 Buenavista Polytechnic University. All rights reserved.</p>
+    <p class="text-[11px]">CampusRoom Academic Space System · Version 2.0</p>
+  </div>
 </div>
 </footer>
 
