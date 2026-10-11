@@ -749,17 +749,6 @@ body{overscroll-behavior:none;}
 
 </div>
 
-<!-- ═══════ FOOTER ═══════ -->
-<div class="w-full bg-surface-container-lowest py-space-lg border-t border-surface-variant">
-<div class="max-w-[1400px] mx-auto px-margin flex items-center justify-center">
-  <div class="flex flex-wrap items-center justify-center gap-space-md font-label-sm text-label-sm text-on-surface-variant">
-    <button type="button" class="hover:text-primary transition-colors cursor-pointer" data-nav="home">Home</button>
-    <button type="button" class="hover:text-primary transition-colors cursor-pointer" data-nav="facilities">Facilities</button>
-    <button type="button" class="hover:text-primary transition-colors cursor-pointer" data-nav="schedule">Schedule</button>
-    <button type="button" class="hover:text-primary transition-colors cursor-pointer" data-nav="rules">Rules</button>
-  </div>
-</div>
-</div>
 
 </div>
 </main>
@@ -876,7 +865,7 @@ function closeMobileMenu() {
 }
 
 // ═══════ ZOOM LIGHTBOX MODAL SCRIPT ═══════
-(function () {
+function initZoomLightbox() {
   const modal = document.getElementById('zoomModal');
   const zoomImg = document.getElementById('zoomImage');
   const zoomTitle = document.getElementById('zoomTitle');
@@ -1049,7 +1038,14 @@ function closeMobileMenu() {
     if (e.key === '-' || e.key === '_') zoomOut();
     if (e.key === '0') resetZoom();
   });
-})();
+}
+
+// Run after the modal markup exists in the DOM (the modal is defined later in the body)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initZoomLightbox);
+} else {
+  initZoomLightbox();
+}
 </script>
 
 <!-- ═══════ ZOOM LIGHTBOX MODAL ═══════ -->
