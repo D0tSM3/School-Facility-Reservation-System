@@ -217,11 +217,16 @@
     </style>
   </head>
   <body
-    class="bg-background font-body-md text-on-surface antialiased min-h-screen flex justify-center items-start p-space-md py-10 overflow-y-auto"
+    class="bg-[#8b1524] font-body-md text-on-surface antialiased min-h-screen flex justify-center items-center p-space-md py-10 overflow-y-auto relative"
   >
-    <main class="w-full max-w-[950px] my-auto">
+    <!-- FIXED BACKGROUND IMAGE (25% OPACITY) -->
+    <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      <div class="w-full h-full bg-cover bg-center bg-fixed bg-no-repeat opacity-25" style="background-image: url('assets/campus-bg.jpg');"></div>
+    </div>
+
+    <main class="relative z-10 w-full max-w-[950px] my-auto">
       <div
-        class="flex flex-col w-full shadow-2xl rounded-2xl overflow-hidden bg-white"
+        class="flex flex-col w-full shadow-2xl rounded-2xl overflow-hidden bg-white border border-white/20"
       >
         <div class="flex flex-col md:flex-row min-h-[600px]">
           <!-- Left side -->
@@ -230,13 +235,19 @@
           >
             <div class="relative z-10 flex flex-col h-full">
               <!-- Top Left Header -->
-              <div class="mb-auto">
-                <img
-                  alt="CampusRoom Logo"
-                  class="h-12 w-auto object-contain"
-                  src="assets/logo.svg"
-                />
-                </div>
+              <div class="mb-auto flex items-center justify-between">
+                <a href="landing.html" title="CampusRoom Overview" class="inline-flex items-center">
+                  <img
+                    alt="CampusRoom Logo"
+                    class="h-10 w-auto object-contain hover:opacity-90 transition-opacity"
+                    src="assets/logo.svg"
+                  />
+                </a>
+                <a href="landing.html" class="text-xs text-neutral-400 hover:text-white inline-flex items-center gap-1 transition-colors">
+                  <span class="material-symbols-outlined text-[15px]">arrow_back</span>
+                  <span>Brochure</span>
+                </a>
+              </div>
 
               <!-- Center Text -->
               <div class="my-auto py-8">
