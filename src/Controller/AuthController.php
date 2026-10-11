@@ -31,11 +31,28 @@ class AuthController
         $this->users = new UserRepository();
     }
 
-    /** Start the session and record the login in the audit log. */
+    /** Start the session and record the sign-in in the audit log. */
     private function startSession(array $user): void
     {
         Auth::login($user['user_id'], $user['role']);
-        (new ReservationRepository())->insertLog($user['user_id'], "{$user['role']} logged in");
+        $normalizedIdentifier = strtolower(trim((string) ($user['email'] ?? '')));
+        $secret = defined('APP_SECRET') ? (string) APP_SECRET : (string) ($_ENV['APP_SECRET'] ?? getenv('APP_SECRET') ?? '');
+        $identifierHash = $normalizedIdentifier !== '' && $secret !== ''
+            ? substr(hash_hmac('sha256', $normalizedIdentifier, $secret), 0, 16)
+            : null;
+        $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $userAgent = str_replace(["\r", "\n"], '', $userAgent);
+        $userAgent = preg_replace('/[\x00-\x1F\x7F]+/', '', $userAgent) ?? '';
+        $userAgent = mb_scrub($userAgent, 'UTF-8');
+        (new ReservationRepository())->insertLog(
+            $user['user_id'],
+            "{$user['role']} logged in",
+            null,
+            'login_success',
+            \CampusRoom\Core\RateLimiter::clientIp(),
+            $identifierHash,
+            mb_substr($userAgent, 0, 200)
+        );
     }
 
     /**
@@ -178,7 +195,6 @@ class AuthController
             );
         }
         RateLimiter::clear('login', $rateId);
-        \CampusRoom\Core\SecurityLog::record('login_success', 'Sign-in successful', $user['user_id'] ?? null, $email);
 
         // Two-factor authentication: every active account receives a fresh
         // one-time code, and a session is created only after it is confirmed.
