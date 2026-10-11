@@ -140,7 +140,7 @@ final class RateLimiter
         $stmt->execute([':key' => self::makeKey($action, $identifier)]);
     }
 
-    private static function clientIp(): string
+    public static function clientIp(): string
     {
         if (($_ENV['VERCEL'] ?? getenv('VERCEL') ?: '') === '1') {
             $forwarded = (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '');

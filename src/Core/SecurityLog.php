@@ -16,24 +16,29 @@ final class SecurityLog
     public static function record(string $event, string $message, ?string $userId = null, ?string $identifier = null): void
     {
         try {
-            $ip = self::clientIp();
+            $ip = RateLimiter::clientIp();
             $userAgent = self::cleanUserAgent((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
             $normalizedIdentifier = self::normalizedIdentifier($identifier);
-            $identifierHash = $normalizedIdentifier === null
-                ? null
-                : substr(hash_hmac('sha256', $normalizedIdentifier, self::appSecret()), 0, 16);
+            $secret = self::appSecret();
+            $identifierHash = $normalizedIdentifier !== null && $secret !== ''
+                ? substr(hash_hmac('sha256', $normalizedIdentifier, $secret), 0, 16)
+                : null;
 
             if (self::shouldSkipByRowCap($event, $ip)) {
                 return;
             }
 
             if (random_int(1, 100) === 1) {
-                $pdo = Database::getInstance()->getPdo();
-                $pdo->prepare(
-                    "DELETE FROM \"System_Logs\"
-                      WHERE event_type IS NOT NULL
-                        AND timestamp < CURRENT_TIMESTAMP - INTERVAL '90 days'"
-                )->execute();
+                try {
+                    $pdo = Database::getInstance()->getPdo();
+                    $pdo->prepare(
+                        "DELETE FROM System_Logs
+                          WHERE event_type IS NOT NULL
+                            AND \"timestamp\" < CURRENT_TIMESTAMP - INTERVAL '90 days'"
+                    )->execute();
+                } catch (\Throwable $e) {
+                    error_log('SecurityLog retention purge failed: ' . $e->getMessage());
+                }
             }
 
             $repository = new ReservationRepository();
@@ -74,6 +79,7 @@ final class SecurityLog
     {
         $cleaned = str_replace(["\r", "\n"], '', $userAgent);
         $cleaned = preg_replace('/[\x00-\x1F\x7F]+/', '', $cleaned) ?? '';
+        $cleaned = mb_scrub($cleaned, 'UTF-8');
         return mb_substr($cleaned, 0, 200);
     }
 
@@ -97,10 +103,10 @@ final class SecurityLog
         $pdo = Database::getInstance()->getPdo();
         $stmt = $pdo->prepare(
             "SELECT COUNT(*) AS total
-               FROM \"System_Logs\"
+               FROM System_Logs
               WHERE ip_address = :ip
                 AND event_type = :event
-                AND timestamp >= CURRENT_TIMESTAMP - INTERVAL '15 minutes'"
+                AND \"timestamp\" >= CURRENT_TIMESTAMP - INTERVAL '15 minutes'"
         );
         $stmt->execute([
             ':ip'    => $ip,
@@ -111,11 +117,4 @@ final class SecurityLog
         return (int) ($row['total'] ?? 0) >= $limit;
     }
 
-    private static function clientIp(): ?string
-    {
-        $method = new \ReflectionMethod(RateLimiter::class, 'clientIp');
-        $method->setAccessible(true);
-        $ip = $method->invoke(null);
-        return is_string($ip) && $ip !== '' ? $ip : null;
-    }
 }
