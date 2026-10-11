@@ -56,8 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
       section.hidden = Number(key) !== number;
     });
     activationFooter.hidden = number === 4;
-    if (number === 1) mountCaptcha('activationRecaptcha');
-    if (number === 2) mountCaptcha('resendRecaptcha');
   }
 
   function resetToInitialStage() {
@@ -118,63 +116,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadCaptchaConfig() {
-    const { response, json } = await getEnvelope('api/config');
-    if (!response.ok || !json.success) return;
-    const config = json.data || {};
-    captchaEnabled = config.recaptcha_enabled === true && Boolean(config.recaptcha_site_key);
-    if (!captchaEnabled) return;
-    window.activationRecaptchaSiteKey = config.recaptcha_site_key;
-
-    await new Promise((resolve, reject) => {
-      window.onActivationCaptchaLoad = () => {
-        captchaScriptLoaded = true;
-        mountCaptcha('activationRecaptcha');
-        mountCaptcha('resendRecaptcha');
-        resolve();
-      };
-      const script = document.createElement('script');
-      script.src = 'https://www.google.com/recaptcha/api.js?onload=onActivationCaptchaLoad&render=explicit';
-      script.async = true;
-      script.defer = true;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
+    captchaEnabled = false;
   }
 
-  function mountCaptcha(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container || !captchaEnabled || !captchaScriptLoaded || !window.grecaptcha
-      || typeof window.activationRecaptchaSiteKey !== 'string'
-      || container.closest('section')?.hidden
-      || captchaWidgets[containerId] !== undefined) return;
-    captchaWidgets[containerId] = window.grecaptcha.render(containerId, {
-      sitekey: window.activationRecaptchaSiteKey,
-    });
-  }
+  function mountCaptcha(containerId) {}
 
   function captchaToken(containerId) {
-    if (!captchaEnabled || !captchaScriptLoaded || !window.grecaptcha) return '';
-    const widgetId = captchaWidgets[containerId];
-    return widgetId === undefined ? '' : (window.grecaptcha.getResponse(widgetId) || '');
+    return '';
   }
 
-  function resetCaptcha(containerId) {
-    const widgetId = captchaWidgets[containerId];
-    if (widgetId !== undefined && window.grecaptcha) window.grecaptcha.reset(widgetId);
-  }
+  function resetCaptcha(containerId) {}
 
-  async function activationRequest(captchaContainerId) {
-    await captchaConfigPromise;
-    const token = captchaToken(captchaContainerId);
+  async function activationRequest() {
     try {
       await postJson('api/auth/activate/request', {
         student_id: studentIdInput.value.trim(),
-        recaptcha_token: token,
       });
     } catch {
       // Keep eligibility and delivery details indistinguishable in the UI.
-    } finally {
-      resetCaptcha(captchaContainerId);
     }
     showMessage(requestMessage, requestGeneric);
     stage2Message.textContent = requestGeneric;
@@ -373,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (busy) return;
     setBusy(true);
     try {
-      await activationRequest('activationRecaptcha');
+      await activationRequest();
     } finally {
       setBusy(false);
     }
@@ -421,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (busy || resendRemaining > 0) return;
     setBusy(true);
     try {
-      await activationRequest('resendRecaptcha');
+      await activationRequest();
       showStage(2);
     } finally {
       setBusy(false);

@@ -43,7 +43,6 @@
           <input id="student-id" name="student_id" autocomplete="username" required
             class="w-full rounded-lg border border-gray-300 px-3.5 py-3 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition-all placeholder:text-gray-400"
             placeholder="e.g. 20269999" />
-          <div id="activationRecaptcha" class="min-h-0"></div>
           <p id="requestMessage" class="hidden rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-900" role="status"></p>
           <button id="requestButton" class="w-full rounded-lg bg-orange-500 hover:bg-orange-600 px-4 py-3 font-semibold text-white transition-colors shadow-sm disabled:opacity-60 cursor-pointer" type="submit">Continue</button>
         </form>
@@ -57,7 +56,6 @@
           <input id="activation-code" name="otp" inputmode="numeric" autocomplete="one-time-code"
             pattern="[0-9]{6}" maxlength="6" required
             class="w-full rounded-lg border border-gray-300 px-3.5 py-3 tracking-[0.3em] font-mono text-center text-lg focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition-all" />
-          <div id="resendRecaptcha" class="min-h-0"></div>
           <p id="verifyMessage" class="hidden rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-900" role="alert"></p>
           <button id="verifyButton" class="w-full rounded-lg bg-orange-500 hover:bg-orange-600 px-4 py-3 font-semibold text-white transition-colors shadow-sm disabled:opacity-60 cursor-pointer" type="submit">Verify</button>
         </form>
