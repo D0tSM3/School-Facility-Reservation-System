@@ -461,8 +461,15 @@ class ReservationRepository
      * when identical actions land in the same second (batch approve), and
      * nothing used the return value anyway.
      */
-    public function insertLog(string $userId, string $actionType, ?string $reservationId = null): void
-    {
+    public function insertLog(
+        ?string $userId,
+        string $actionType,
+        ?string $reservationId = null,
+        ?string $eventType = null,
+        ?string $ip = null,
+        ?string $identifierHash = null,
+        ?string $userAgent = null
+    ): void {
         // action_type is VARCHAR(255). Some messages carry user-supplied text
         // (a cancellation reason), so trim to fit rather than let an
         // over-long value turn an already-committed action into a 500.
@@ -470,14 +477,42 @@ class ReservationRepository
             $actionType = mb_substr($actionType, 0, 252) . '...';
         }
 
+        $columns = ['user_id', 'reservation_id', 'action_type'];
+        $placeholders = [':user_id', ':reservation_id', ':action_type'];
+        $params = [
+            ':user_id'        => $userId,
+            ':reservation_id' => $reservationId,
+            ':action_type'    => $actionType,
+        ];
+
+        if ($eventType !== null && $eventType !== '') {
+            $columns[] = 'event_type';
+            $placeholders[] = ':event_type';
+            $params[':event_type'] = $eventType;
+        }
+
+        if ($ip !== null && $ip !== '') {
+            $columns[] = 'ip_address';
+            $placeholders[] = ':ip_address';
+            $params[':ip_address'] = $ip;
+        }
+
+        if ($identifierHash !== null && $identifierHash !== '') {
+            $columns[] = 'identifier_hash';
+            $placeholders[] = ':identifier_hash';
+            $params[':identifier_hash'] = $identifierHash;
+        }
+
+        if ($userAgent !== null && $userAgent !== '') {
+            $columns[] = 'user_agent';
+            $placeholders[] = ':user_agent';
+            $params[':user_agent'] = $userAgent;
+        }
+
         $this->db->query(
-            'INSERT INTO System_Logs (user_id, reservation_id, action_type)
-             VALUES (:user_id, :reservation_id, :action_type)',
-            [
-                ':user_id'        => $userId,
-                ':reservation_id' => $reservationId,
-                ':action_type'    => $actionType,
-            ]
+            'INSERT INTO System_Logs (' . implode(', ', $columns) . ')
+             VALUES (' . implode(', ', $placeholders) . ')',
+            $params
         );
     }
 
