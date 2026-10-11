@@ -272,12 +272,20 @@ class AuthController
         // Clear rate limit on successful verification
         RateLimiter::clear('verify_otp', $email);
 
-        // Mark verified, clear OTP, and log in
-        $this->users->markVerified($user['user_id']);
-
-        $this->startSession($user);
+        // Mark verified, clear OTP, and log in. The audit insert is allowed to
+        // fail without aborting the user flow: the login itself is the success.
+        try {
+            $this->users->markVerified($user['user_id']);
+            $this->startSession($user);
+        } catch (\Throwable $e) {
+            error_log('AuthController::verifyOtp failed: ' . $e->getMessage());
+            Response::error('Invalid or expired verification code.', 422);
+        }
 
         $fresh = $this->users->findById($user['user_id']);
+        if ($fresh === null) {
+            Response::error('Invalid or expired verification code.', 422);
+        }
         unset($fresh['password_hash'], $fresh['otp_code'], $fresh['otp_expires_at']);
         Response::json($fresh);
     }
