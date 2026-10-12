@@ -2,6 +2,8 @@
 /.env
 /composer.phar
 *.zip
+*.cookies
+/tmp.cookies
 
 # Runtime logs and local scratch databases
 *.log
