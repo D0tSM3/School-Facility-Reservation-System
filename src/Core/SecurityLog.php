@@ -9,6 +9,17 @@ use PDO;
 
 final class SecurityLog
 {
+    private const DEFAULT_ROW_CAP = 30;
+    private const LOGIN_FAILED_ROW_CAP = 20;
+    private const ACTIVATION_NO_MATCH_ROW_CAP = 30;
+    private const ROW_CAP_WINDOW_MINUTES = 15;
+    private const UNCAPPED_EVENTS = [
+        'login_success',
+        'activation_completed',
+        'login_locked',
+        'visit_burst',
+    ];
+
     /**
      * Record a security event without exposing the raw identifier or breaking
      * sign-in/activation flows. The app keeps working even if the log fails.
@@ -125,15 +136,15 @@ final class SecurityLog
             return false;
         }
 
-        $limit = null;
-        if ($event === 'login_failed') {
-            $limit = 20;
-        } elseif ($event === 'activation_no_match') {
-            $limit = 30;
+        if (in_array($event, self::UNCAPPED_EVENTS, true)) {
+            return false;
         }
 
-        if ($limit === null) {
-            return false;
+        $limit = self::DEFAULT_ROW_CAP;
+        if ($event === 'login_failed') {
+            $limit = self::LOGIN_FAILED_ROW_CAP;
+        } elseif ($event === 'activation_no_match') {
+            $limit = self::ACTIVATION_NO_MATCH_ROW_CAP;
         }
 
         $pdo = Database::getInstance()->getPdo();
@@ -142,7 +153,7 @@ final class SecurityLog
                FROM System_Logs
               WHERE ip_address = :ip
                 AND event_type = :event
-                AND \"timestamp\" >= CURRENT_TIMESTAMP - INTERVAL '15 minutes'"
+                AND \"timestamp\" >= CURRENT_TIMESTAMP - INTERVAL '" . self::ROW_CAP_WINDOW_MINUTES . " minutes'"
         );
         $stmt->execute([
             ':ip'    => $ip,
