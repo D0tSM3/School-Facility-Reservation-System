@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     logsLimit: 25,
     logsOffset: 0,
     logScope: 'activity',
+    logFilter: null,
     securityAlerts: [],
   };
 
@@ -2807,6 +2808,70 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function renderLogFilterChip() {
+    const container = document.getElementById('logFilterChipContainer');
+    const chip = document.getElementById('logFilterChip');
+    if (!container || !chip) return;
+
+    if (!state.logFilter) {
+      container.classList.add('hidden');
+      chip.replaceChildren();
+      return;
+    }
+
+    container.classList.remove('hidden');
+    chip.innerHTML = `
+      <span class="inline-flex max-w-full items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700">
+        <span class="min-w-0 break-all">Filtered: ${escapeHtml(state.logFilter.label)}</span>
+        <button
+          type="button"
+          id="btn-clear-log-filter"
+          class="shrink-0 rounded-full px-1 font-bold hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1f2b]"
+          aria-label="Remove active audit log filter"
+        >×</button>
+      </span>
+    `;
+    document.getElementById('btn-clear-log-filter')?.addEventListener('click', () => {
+      state.logFilter = null;
+      state.logsOffset = 0;
+      renderLogFilterChip();
+      loadAuditLogs();
+    });
+  }
+
+  document.getElementById('logAlertsList')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-log-alert-index]');
+    if (!button) return;
+    const alert = state.securityAlerts[Number(button.dataset.logAlertIndex)];
+    if (!alert) return;
+
+    let filter = null;
+    if (alert.subject_type === 'ip') {
+      const ip = alert.ip || alert.filter_value;
+      if (typeof ip === 'string' && ip) {
+        filter = { key: 'ip', value: ip, label: ip };
+      }
+    } else if (alert.subject_type === 'account') {
+      const userId = alert.user_id || alert.filter_value || alert.filter?.user_id;
+      if (typeof userId === 'string' && userId) {
+        filter = {
+          key: 'user_id',
+          value: userId,
+          label: alert.subject || userId,
+        };
+      }
+    }
+
+    if (!filter) return;
+    state.logFilter = filter;
+    state.logScope = 'security';
+    state.logsOffset = 0;
+    const scopeSelect = document.getElementById('logScopeSelect');
+    if (scopeSelect) scopeSelect.value = state.logScope;
+    renderLogFilterChip();
+    loadAuditLogs();
+  });
+
   async function loadAuditLogs() {
     if (state.isStaffOnly) return;
     const tbody = document.getElementById('logsTableBody');
@@ -2821,6 +2886,7 @@ document.addEventListener('DOMContentLoaded', () => {
       scope: state.logScope,
     });
     if (q) query.set('q', q);
+    if (state.logFilter) query.set(state.logFilter.key, state.logFilter.value);
 
     try {
       const data = await apiFetch(`api/logs?${query.toString()}`);
