@@ -35,17 +35,18 @@ class AuthController
     private function startSession(array $user): void
     {
         Auth::login($user['user_id'], $user['role']);
-        $normalizedIdentifier = strtolower(trim((string) ($user['email'] ?? '')));
-        $secret = defined('APP_SECRET') ? (string) APP_SECRET : (string) ($_ENV['APP_SECRET'] ?? getenv('APP_SECRET') ?? '');
-        $identifierHash = $normalizedIdentifier !== '' && $secret !== ''
-            ? substr(hash_hmac('sha256', $normalizedIdentifier, $secret), 0, 16)
-            : null;
-        $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
-        $userAgent = str_replace(["\r", "\n"], '', $userAgent);
-        $userAgent = preg_replace('/[\x00-\x1F\x7F]+/', '', $userAgent) ?? '';
-        $userAgent = mb_scrub($userAgent, 'UTF-8');
 
         try {
+            $normalizedIdentifier = strtolower(trim((string) ($user['email'] ?? '')));
+            $secret = defined('APP_SECRET') ? (string) APP_SECRET : (string) ($_ENV['APP_SECRET'] ?? getenv('APP_SECRET') ?? '');
+            $identifierHash = $normalizedIdentifier !== '' && $secret !== ''
+                ? substr(hash_hmac('sha256', $normalizedIdentifier, $secret), 0, 16)
+                : null;
+            $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+            $userAgent = str_replace(["\r", "\n"], '', $userAgent);
+            $userAgent = preg_replace('/[\x00-\x1F\x7F]+/', '', $userAgent) ?? '';
+            $userAgent = mb_scrub($userAgent, 'UTF-8');
+
             (new ReservationRepository())->insertLog(
                 $user['user_id'],
                 "{$user['role']} logged in",
@@ -279,7 +280,7 @@ class AuthController
             $this->startSession($user);
         } catch (\Throwable $e) {
             error_log('AuthController::verifyOtp failed: ' . $e->getMessage());
-            Response::error('Invalid or expired verification code.', 422);
+            Response::error('An unexpected error occurred.', 500);
         }
 
         $fresh = $this->users->findById($user['user_id']);

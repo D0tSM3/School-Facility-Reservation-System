@@ -61,13 +61,9 @@ class UserRepository
             'SELECT EXISTS (
                 SELECT 1
                   FROM public.users
-                 WHERE user_id = :user_id
-                   AND role = :role
-                   AND is_active IS TRUE
-                   AND (
-                       role <> \'Customer\'
-                       OR (school_id IS NOT NULL AND activated_at IS NOT NULL)
-                   )
+                  WHERE user_id = :user_id
+                    AND role = :role
+                    AND is_active IS TRUE
             )',
             [':user_id' => $userId, ':role' => $role]
         );
