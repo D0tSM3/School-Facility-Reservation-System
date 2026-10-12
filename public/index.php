@@ -44,6 +44,8 @@ use Dotenv\Dotenv;
 use CampusRoom\Core\Response;
 use CampusRoom\Core\Auth;
 use CampusRoom\Core\RequestSecurity;
+use CampusRoom\Core\RateLimiter;
+use CampusRoom\Core\SecurityLog;
 use CampusRoom\Core\Settings;
 use CampusRoom\Controller\ActivationController;
 use CampusRoom\Controller\AuthController;
@@ -78,9 +80,6 @@ try {
 // One timezone for PHP date()/strtotime(), the MySQL session and the Manila-formatted UI.
 date_default_timezone_set($_ENV['APP_TIMEZONE'] ?? 'Asia/Manila');
 
-// Start session once here so every controller can rely on it.
-Auth::startSession();
-
 // CORS / common headers (adjust origins for production).
 header('Content-Type: application/json; charset=utf-8');
 
@@ -113,6 +112,12 @@ if (in_array($uri, ['/index.php', '/public/index.php', '/public'], true)) {
 }
 
 $uri = rtrim($uri, '/') ?: '/';
+
+// The CSRF endpoint must count and block abusive requests before creating or
+// writing a session. Every other route retains the normal front-controller startup.
+if (!($method === 'GET' && $uri === '/api/auth/csrf')) {
+    Auth::startSession();
+}
 
 if (str_starts_with($uri, '/api/auth/')) {
     header('Cache-Control: no-store, private');
@@ -154,7 +159,27 @@ $routes = [
     }],
 
     // Auth — login, recovery, and roster-based activation
-    ['GET',  '#^/api/auth/csrf$#', fn() => Response::json(['token' => RequestSecurity::csrfToken()])],
+    ['GET',  '#^/api/auth/csrf$#', function () {
+        $count = RateLimiter::incrementIpWindow(
+            'csrf',
+            RateLimiter::clientIp(),
+            RateLimiter::CSRF_WINDOW_SECONDS
+        );
+
+        if ($count === RateLimiter::CSRF_FLAG_AT) {
+            SecurityLog::record(
+                'visit_burst',
+                'Unusually many page loads from one address'
+            );
+        }
+
+        if ($count >= RateLimiter::CSRF_BLOCK_AT) {
+            Response::error('Too many requests. Please try again later.', 429);
+            return;
+        }
+
+        Response::json(['token' => RequestSecurity::csrfToken()]);
+    }],
     ['POST', '#^/api/auth/activate/request$#',  fn() => (new ActivationController())->request()],
     ['POST', '#^/api/auth/activate/verify$#',   fn() => (new ActivationController())->verify()],
     ['GET',  '#^/api/auth/activate/context$#',  fn() => (new ActivationController())->context()],

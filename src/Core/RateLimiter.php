@@ -11,6 +11,9 @@ final class RateLimiter
     public const MAX_ATTEMPTS = 5;
     public const DEFAULT_LOCKOUT_SECONDS = 300;
     public const ATTEMPT_WINDOW_SECONDS = 900;
+    public const CSRF_WINDOW_SECONDS = 60;
+    public const CSRF_FLAG_AT = 120;
+    public const CSRF_BLOCK_AT = 600;
 
     public static function resolveIdentifier(?string $identifier = null): string
     {
@@ -138,6 +141,52 @@ final class RateLimiter
             'DELETE FROM auth_rate_limits WHERE rate_key = :key'
         );
         $stmt->execute([':key' => self::makeKey($action, $identifier)]);
+    }
+
+    /**
+     * Increment a fixed-window counter keyed only by a hashed client IP.
+     *
+     * @return int The request count in the current window.
+     */
+    public static function incrementIpWindow(string $action, string $ip, int $windowSeconds): int
+    {
+        $action = strtolower(trim($action));
+        $ipHash = hash('sha256', $ip);
+        $rateKey = $action . ':ip:' . $ipHash;
+        $pdo = Database::getInstance()->getPdo();
+        $stmt = $pdo->prepare(
+            "INSERT INTO auth_rate_limits
+                (rate_key, action, identifier, failed_attempts, locked_until, updated_at)
+             VALUES
+                (:key, :action, :identifier, 1,
+                 CURRENT_TIMESTAMP + (CAST(:insert_window AS integer) * INTERVAL '1 second'),
+                 CURRENT_TIMESTAMP)
+             ON CONFLICT (rate_key) DO UPDATE
+               SET failed_attempts = CASE
+                     WHEN auth_rate_limits.locked_until <= CURRENT_TIMESTAMP THEN 1
+                     ELSE auth_rate_limits.failed_attempts + 1
+                   END,
+                   locked_until = CASE
+                     WHEN auth_rate_limits.locked_until <= CURRENT_TIMESTAMP
+                       THEN CURRENT_TIMESTAMP + (CAST(:reset_window AS integer) * INTERVAL '1 second')
+                     ELSE auth_rate_limits.locked_until
+                   END,
+                   updated_at = CURRENT_TIMESTAMP
+             RETURNING failed_attempts"
+        );
+        $stmt->execute([
+            ':key' => $rateKey,
+            ':action' => $action,
+            ':identifier' => $rateKey,
+            ':insert_window' => $windowSeconds,
+            ':reset_window' => $windowSeconds,
+        ]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row === false) {
+            throw new \RuntimeException('Could not increment the IP request counter.');
+        }
+
+        return (int) $row['failed_attempts'];
     }
 
     public static function clientIp(): string
