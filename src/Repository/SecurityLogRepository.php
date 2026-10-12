@@ -26,6 +26,8 @@ final class SecurityLogRepository
     private const R7_WINDOW_MINUTES = 15;
     private const R8_THRESHOLD = 3;
     private const R8_WINDOW_MINUTES = 15;
+    private const R9_THRESHOLD = 1;
+    private const R9_WINDOW_MINUTES = 60;
 
     private Database $db;
 
@@ -194,6 +196,18 @@ final class SecurityLogRepository
                    )
               GROUP BY e.ip_address
                 HAVING COUNT(*) >= " . self::R8_THRESHOLD . "
+
+                UNION ALL
+
+                SELECT 'R9', 'Many page loads from one address', 'Low', 'ip',
+                       e.ip_address::text, COUNT(*)::int, NULL::int,
+                       MIN(e.\"timestamp\"), MAX(e.\"timestamp\"), e.ip_address::text, NULL::text
+                  FROM security_events e
+                 WHERE e.event_type = 'visit_burst'
+                   AND e.ip_address IS NOT NULL
+                   AND e.\"timestamp\" >= CURRENT_TIMESTAMP - INTERVAL '" . self::R9_WINDOW_MINUTES . " minutes'
+              GROUP BY e.ip_address
+                HAVING COUNT(*) >= " . self::R9_THRESHOLD . "
             )
             SELECT rule, title, severity, subject_type, subject, count,
                    distinct_count, first_seen, last_seen, ip, user_id
