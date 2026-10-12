@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     logsTotal: 0,
     logsLimit: 25,
     logsOffset: 0,
+    securityAlerts: [],
   };
 
   // =========================================================================
@@ -560,7 +561,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewName === 'holidays') loadHolidays();
     if (viewName === 'archives') loadArchives();
     if (viewName === 'config') renderSystemSettings();
-    if (viewName === 'logs') loadAuditLogs();
+    if (viewName === 'logs') {
+      loadAuditLogs();
+      loadSecurityAlerts();
+    }
   }
 
   // Handle URL hash changes (back/forward navigation)
@@ -2742,6 +2746,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Audit Logs ────────────────────────────────────────────────────────────
 
+  const alertWindows = {
+    R1: 'Past 15 minutes',
+    R2: 'Past 15 minutes',
+    R3: 'Past 60 minutes',
+    R4: '15 minutes before sign-in',
+    R5: 'Past 60 minutes',
+    R6: 'Past 15 minutes',
+    R7: 'Past 15 minutes',
+    R8: 'Past 15 minutes',
+  };
+
+  async function loadSecurityAlerts() {
+    const status = document.getElementById('logAlertsStatus');
+    const list = document.getElementById('logAlertsList');
+    if (!status || !list || state.isStaffOnly) return;
+
+    status.textContent = 'Loading alerts...';
+    list.replaceChildren();
+
+    try {
+      const data = await apiFetch('api/logs/alerts');
+      state.securityAlerts = Array.isArray(data?.items) ? data.items : [];
+
+      if (state.securityAlerts.length === 0) {
+        status.textContent = 'No suspicious activity in the last 24 hours.';
+        return;
+      }
+
+      status.textContent = `${state.securityAlerts.length} security alert${state.securityAlerts.length === 1 ? '' : 's'}.`;
+      list.innerHTML = state.securityAlerts.map((alert, index) => {
+        const severity = String(alert.severity || 'Unknown');
+        const icon = severity === 'High' ? 'warning' : severity === 'Medium' ? 'report' : 'info';
+        const count = Number(alert.count) || 0;
+        const lastSeen = formatDateTime(alert.last_seen);
+        const subject = alert.subject ? `<p class="mt-2 text-xs text-gray-600 break-words">${escapeHtml(alert.subject)}</p>` : '';
+        return `
+          <article class="min-w-0 rounded-xl border border-gray-200 p-4">
+            <h3 class="text-sm font-bold text-gray-900 break-words">${escapeHtml(alert.title || alert.rule || 'Security alert')}</h3>
+            <p class="mt-2 flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+              <span class="material-symbols-outlined text-[17px]" aria-hidden="true">${icon}</span>
+              <span>${escapeHtml(severity)} severity</span>
+            </p>
+            ${subject}
+            <p class="mt-2 text-xs text-gray-700">${escapeHtml(count)} event${count === 1 ? '' : 's'} · ${escapeHtml(alertWindows[alert.rule] || 'Recent activity')}</p>
+            <p class="mt-1 text-xs text-gray-500">Last seen: ${escapeHtml(lastSeen)}</p>
+            <button
+              type="button"
+              class="mt-3 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1f2b]"
+              data-log-alert-index="${index}"
+            >View events</button>
+          </article>
+        `;
+      }).join('');
+    } catch (err) {
+      state.securityAlerts = [];
+      status.textContent = 'Could not load alerts';
+      list.replaceChildren();
+    }
+  }
+
   async function loadAuditLogs() {
     if (state.isStaffOnly) return;
     const tbody = document.getElementById('logsTableBody');
@@ -2767,6 +2831,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const pageInd = document.getElementById('logPageIndicator');
       if (pageInd) {
         pageInd.textContent = `Page ${currentPage} of ${totalPages} (${state.logsTotal} total events)`;
+      }
+
+      const btnRefreshLogs = document.getElementById('btn-refresh-logs');
+      if (btnRefreshLogs) {
+        btnRefreshLogs.addEventListener('click', () => {
+          state.logsOffset = 0;
+          loadSecurityAlerts();
+          loadAuditLogs();
+        });
       }
 
       const btnPrev = document.getElementById('btn-log-prev');

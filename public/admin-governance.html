@@ -1913,6 +1913,32 @@
         <!-- VIEW 11: SYSTEM AUDIT LOGS (Dedicated Sidebar View)                   -->
         <!-- ===================================================================== -->
         <section id="view-logs" class="dashboard-view hidden space-y-6">
+          <section
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5"
+            aria-labelledby="logAlertsHeading"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h2 id="logAlertsHeading" class="text-sm font-bold text-gray-900">
+                Security alerts
+              </h2>
+              <button
+                type="button"
+                id="btn-refresh-logs"
+                class="px-4 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1f2b]"
+              >
+                <span class="material-symbols-outlined text-[16px] align-middle" aria-hidden="true">refresh</span>
+                <span>Refresh</span>
+              </button>
+            </div>
+            <div
+              id="logAlertsStatus"
+              class="mb-3 text-xs text-gray-500"
+              role="status"
+              aria-live="polite"
+            >Loading alerts...</div>
+            <div id="logAlertsList" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+          </section>
+
           <!-- Search Control Card -->
           <div
             class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
