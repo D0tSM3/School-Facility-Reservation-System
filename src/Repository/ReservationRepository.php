@@ -585,6 +585,41 @@ class ReservationRepository
             $params[':q'] = '%' . str_replace(['|', '%', '_'], ['||', '|%', '|_'], (string) $filters['q']) . '%';
         }
 
+        if (array_key_exists('scope', $filters)) {
+            $scope = in_array($filters['scope'], ['activity', 'security', 'all'], true)
+                ? $filters['scope']
+                : 'activity';
+            if ($scope === 'activity') {
+                $where[] = "(sl.event_type IS NULL OR sl.event_type IN ('login_success', 'activation_completed'))";
+            } elseif ($scope === 'security') {
+                $where[] = 'sl.event_type IS NOT NULL';
+            }
+        }
+
+        $eventTypes = [
+            'login_failed',
+            'login_locked',
+            'login_success',
+            'otp_failed',
+            'activation_requested',
+            'activation_no_match',
+            'activation_skipped',
+            'activation_verify_failed',
+            'activation_completed',
+        ];
+        if (isset($filters['event_type'])
+            && in_array($filters['event_type'], $eventTypes, true)) {
+            $where[] = 'sl.event_type = :event_type';
+            $params[':event_type'] = $filters['event_type'];
+        }
+
+        if (isset($filters['ip'])
+            && is_string($filters['ip'])
+            && filter_var($filters['ip'], FILTER_VALIDATE_IP) !== false) {
+            $where[] = 'sl.ip_address = :ip';
+            $params[':ip'] = $filters['ip'];
+        }
+
         return [$where ? 'WHERE ' . implode(' AND ', $where) : '', $params];
     }
 
@@ -617,7 +652,11 @@ class ReservationRepository
                     rm.name         AS room_name,
                     res.purpose     AS purpose,
                     sl.action_type,
-                    sl.timestamp
+                    sl.timestamp,
+                    sl.event_type,
+                    sl.ip_address,
+                    sl.identifier_hash,
+                    sl.user_agent
                FROM System_Logs sl
           LEFT JOIN Users        u   ON u.user_id         = sl.user_id
           LEFT JOIN Reservations res ON res.reservation_id = sl.reservation_id
