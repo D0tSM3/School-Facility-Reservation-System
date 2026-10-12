@@ -2759,6 +2759,41 @@ document.addEventListener('DOMContentLoaded', () => {
     R8: 'Past 15 minutes',
   };
 
+  const eventLabels = {
+    login_failed: 'Failed sign-in',
+    login_locked: 'Locked out',
+    login_success: 'Signed in',
+    otp_failed: 'Wrong sign-in code',
+    activation_requested: 'Activation requested',
+    activation_no_match: 'Activation: no match',
+    activation_skipped: 'Activation skipped',
+    activation_verify_failed: 'Wrong activation code',
+    activation_completed: 'Account activated',
+    visit_burst: 'Many page loads',
+  };
+
+  function isSecurityLogScope() {
+    return state.logScope === 'security' || state.logScope === 'all';
+  }
+
+  function updateLogTableHeaders() {
+    const headerRow = document.getElementById('logsTableHeaderRow');
+    if (!headerRow) return;
+    headerRow.innerHTML = isSecurityLogScope()
+      ? `
+        <th class="py-3.5 px-6">Timestamp (Manila)</th>
+        <th class="py-3.5 px-6">Account</th>
+        <th class="py-3.5 px-6">Event</th>
+        <th class="py-3.5 px-6">Address</th>
+        <th class="py-3.5 px-6">Audit Description</th>
+      `
+      : `
+        <th class="py-3.5 px-6">Timestamp (Manila)</th>
+        <th class="py-3.5 px-6">User / Actor ID</th>
+        <th class="py-3.5 px-6">Audit Description</th>
+      `;
+  }
+
   async function loadSecurityAlerts() {
     const status = document.getElementById('logAlertsStatus');
     const list = document.getElementById('logAlertsList');
@@ -2876,7 +2911,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.isStaffOnly) return;
     const tbody = document.getElementById('logsTableBody');
     if (!tbody) return;
-    tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-gray-400 text-xs">Loading audit logs...</td></tr>`;
+    updateLogTableHeaders();
+    const columnCount = isSecurityLogScope() ? 5 : 3;
+    tbody.innerHTML = `<tr><td colspan="${columnCount}" class="p-8 text-center text-gray-400 text-xs">Loading audit logs...</td></tr>`;
 
     const searchEl = document.getElementById('logSearchInput');
     const q = searchEl ? searchEl.value.trim() : '';
@@ -2901,40 +2938,57 @@ document.addEventListener('DOMContentLoaded', () => {
         pageInd.textContent = `Page ${currentPage} of ${totalPages} (${state.logsTotal} total events)`;
       }
 
-      const btnRefreshLogs = document.getElementById('btn-refresh-logs');
-      if (btnRefreshLogs) {
-        btnRefreshLogs.addEventListener('click', () => {
-          state.logsOffset = 0;
-          loadSecurityAlerts();
-          loadAuditLogs();
-        });
-      }
-
       const btnPrev = document.getElementById('btn-log-prev');
       const btnNext = document.getElementById('btn-log-next');
       if (btnPrev) btnPrev.disabled = state.logsOffset <= 0;
       if (btnNext) btnNext.disabled = state.logsOffset + state.logsLimit >= state.logsTotal;
 
       if (state.logs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-gray-400 text-xs">No audit events match your search query.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${columnCount}" class="p-8 text-center text-gray-400 text-xs">No audit events match your search query.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = state.logs.map(l => `
-        <tr class="hover:bg-gray-50/80 transition-colors">
-          <td class="py-3 px-6 text-xs text-gray-500 whitespace-nowrap">${formatDateTime(l.timestamp)}</td>
-          <td class="py-3 px-6 text-xs font-mono font-semibold text-gray-700" title="${escapeHtml(l.user_id || '')}">
-            ${escapeHtml(l.actor_name || (l.user_id ? l.user_id.substring(0, 8) : 'System'))}
-          </td>
-          <td class="py-3 px-6 text-xs text-gray-800 leading-normal">
-            ${escapeHtml(l.action_type)}
-            ${l.reservation_id ? `<span class="ml-2 text-[10px] font-mono text-gray-400">(Ref: ${escapeHtml(l.reservation_id.substring(0,8))})</span>` : ''}
-          </td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = state.logs.map((l) => {
+        const securityScope = isSecurityLogScope();
+        const identifierHash = typeof l.identifier_hash === 'string' ? l.identifier_hash : '';
+        const account = securityScope
+          ? (l.actor_name || `Unknown account${identifierHash ? ` ${identifierHash.substring(0, 8)}` : ''}`)
+          : (l.actor_name || (l.user_id ? String(l.user_id).substring(0, 8) : 'System'));
+        const action = `
+          ${escapeHtml(l.action_type)}
+          ${l.reservation_id ? `<span class="ml-2 text-[10px] font-mono text-gray-400">(Ref: ${escapeHtml(String(l.reservation_id).substring(0, 8))})</span>` : ''}
+        `;
+        const eventType = typeof l.event_type === 'string' ? l.event_type : '';
+        const eventLabel = Object.prototype.hasOwnProperty.call(eventLabels, eventType)
+          ? eventLabels[eventType]
+          : eventType;
+        const securityCells = securityScope
+          ? `
+            <td class="py-3 px-6 text-xs text-gray-700" title="${escapeHtml(l.user_agent || '')}">${escapeHtml(account)}</td>
+            <td class="py-3 px-6 text-xs text-gray-700">${escapeHtml(eventLabel)}</td>
+            <td class="py-3 px-6 text-xs font-mono text-gray-700 whitespace-nowrap">${escapeHtml(l.ip_address || '')}</td>
+          `
+          : `<td class="py-3 px-6 text-xs font-mono font-semibold text-gray-700" title="${escapeHtml(l.user_id || '')}">${escapeHtml(account)}</td>`;
+        return `
+            <tr class="hover:bg-gray-50/80 transition-colors">
+              <td class="py-3 px-6 text-xs text-gray-500 whitespace-nowrap">${formatDateTime(l.timestamp)}</td>
+              ${securityCells}
+              <td class="py-3 px-6 text-xs text-gray-800 leading-normal">${action}</td>
+            </tr>
+          `;
+      }).join('');
     } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-red-500 text-xs">Failed to load audit logs: ${escapeHtml(err.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${columnCount}" class="p-8 text-center text-red-500 text-xs">Failed to load audit logs: ${escapeHtml(err.message)}</td></tr>`;
     }
+  }
+
+  const btnRefreshLogs = document.getElementById('btn-refresh-logs');
+  if (btnRefreshLogs) {
+    btnRefreshLogs.addEventListener('click', () => {
+      state.logsOffset = 0;
+      loadSecurityAlerts();
+      loadAuditLogs();
+    });
   }
 
   const btnSearchLogs = document.getElementById('btn-search-logs');
