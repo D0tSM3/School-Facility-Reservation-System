@@ -61,9 +61,10 @@ final class ActivationController
         }
 
         $otp = self::newOtp();
+        $key = self::activationOtpKey();
         $roster = $this->activation->requestOtp(
             $schoolId,
-            hash('sha256', $otp),
+            hash_hmac('sha256', $schoolId . '|' . $otp, $key),
             self::activationTtlSeconds(),
             $allowedDomain
         );
@@ -106,7 +107,7 @@ final class ActivationController
 
         $result = $this->activation->verifyOtp(
             $schoolId,
-            $code,
+            hash_hmac('sha256', $schoolId . '|' . $code, self::activationOtpKey()),
             self::activationOtpMaxAttempts()
         );
 
@@ -270,6 +271,18 @@ final class ActivationController
             throw new \RuntimeException('ACTIVATION_OTP_MAX_ATTEMPTS must be from 1 to 10.');
         }
         return $attempts;
+    }
+
+    private static function activationOtpKey(): string
+    {
+        $secret = defined('APP_SECRET')
+            ? (string) APP_SECRET
+            : (string) ($_ENV['APP_SECRET'] ?? getenv('APP_SECRET') ?: '');
+        if ($secret === '') {
+            throw new \RuntimeException('APP_SECRET must be configured to secure activation codes.');
+        }
+
+        return hash_hmac('sha256', 'activation-otp-v1', $secret);
     }
 
     private static function newOtp(): string

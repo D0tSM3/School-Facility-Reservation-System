@@ -94,7 +94,7 @@ final class ActivationRepository
      *
      * @return array{verified: bool, exhausted?: bool, roster?: array}
      */
-    public function verifyOtp(string $schoolId, string $code, int $maxAttempts): array
+    public function verifyOtp(string $schoolId, string $codeHash, int $maxAttempts): array
     {
         $pdo = $this->db->getPdo();
         $pdo->beginTransaction();
@@ -135,7 +135,7 @@ final class ActivationRepository
                 return ['verified' => false];
             }
 
-            if (!hash_equals((string) $otp['code_hash'], hash('sha256', $code))) {
+            if (!hash_equals((string) $otp['code_hash'], $codeHash)) {
                 $attempts = (int) $otp['attempts'] + 1;
                 $attemptQuery = $pdo->prepare(
                     'UPDATE public.activation_otps
