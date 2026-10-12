@@ -85,6 +85,7 @@ class UserController
     // ---------------------------------------------------------------
     // Admin: GET /api/logs
     //   ?reservation_id= &user_id= &from=YYYY-MM-DD &to=YYYY-MM-DD &q=
+    //   ?scope=activity|security|all &event_type= &ip=
     //   ?limit= (1..500, default 100) &offset= (>= 0)
     // Returns { items, total, limit, offset }.
     // ---------------------------------------------------------------
@@ -100,6 +101,16 @@ class UserController
         $limit  = max(1, min(500, $limit));
 
         $filters = [];
+
+        $scope = self::queryString('scope');
+        $filters['scope'] = $scope !== '' ? $scope : 'activity';
+
+        foreach (['event_type', 'ip'] as $key) {
+            $value = self::queryString($key);
+            if ($value !== '') {
+                $filters[$key] = $value;
+            }
+        }
 
         foreach (['reservation_id', 'user_id'] as $key) {
             $value = self::queryString($key);
