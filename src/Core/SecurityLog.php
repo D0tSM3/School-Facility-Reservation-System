@@ -77,10 +77,46 @@ final class SecurityLog
 
     private static function cleanUserAgent(string $userAgent): string
     {
-        $cleaned = str_replace(["\r", "\n"], '', $userAgent);
-        $cleaned = preg_replace('/[\x00-\x1F\x7F]+/', '', $cleaned) ?? '';
-        $cleaned = mb_scrub($cleaned, 'UTF-8');
-        return mb_substr($cleaned, 0, 200);
+        if (preg_match('//u', $userAgent) !== 1) {
+            $userAgent = self::replaceInvalidUtf8($userAgent);
+        }
+
+        $cleaned = preg_replace('/[\x00-\x1F\x7F]+/', '', $userAgent) ?? '';
+        preg_match('/^.{0,200}/us', $cleaned, $match);
+        return $match[0] ?? '';
+    }
+
+    private static function replaceInvalidUtf8(string $value): string
+    {
+        $validSequence = '/\G(?:[\xC2-\xDF][\x80-\xBF]'
+            . '|\xE0[\xA0-\xBF][\x80-\xBF]'
+            . '|[\xE1-\xEC\xEE-\xEF][\x80-\xBF]{2}'
+            . '|\xED[\x80-\x9F][\x80-\xBF]'
+            . '|\xF0[\x90-\xBF][\x80-\xBF]{2}'
+            . '|[\xF1-\xF3][\x80-\xBF]{3}'
+            . '|\xF4[\x80-\x8F][\x80-\xBF]{2})/';
+        $cleaned = '';
+        $length = strlen($value);
+
+        for ($offset = 0; $offset < $length;) {
+            $byte = ord($value[$offset]);
+            if ($byte < 0x80) {
+                $cleaned .= $byte < 0x20 || $byte === 0x7F ? '?' : $value[$offset];
+                $offset++;
+                continue;
+            }
+
+            if (preg_match($validSequence, $value, $match, 0, $offset) === 1) {
+                $cleaned .= $match[0];
+                $offset += strlen($match[0]);
+                continue;
+            }
+
+            $cleaned .= '?';
+            $offset++;
+        }
+
+        return $cleaned;
     }
 
     private static function shouldSkipByRowCap(string $event, ?string $ip): bool
