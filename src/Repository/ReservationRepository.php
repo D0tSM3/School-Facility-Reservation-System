@@ -536,7 +536,8 @@ class ReservationRepository
      * name or SQL fragment.
      *
      * Supported: reservation_id, user_id, from (Y-m-d, inclusive),
-     * to (Y-m-d, inclusive of that whole day), q (substring of action_type).
+     * to (Y-m-d, inclusive of that whole day), q (substring of action_type),
+     * scope, event_type, and ip.
      *
      * @param  array<string, mixed> $filters
      * @return array{0: string, 1: array<string, string>}  [where_sql, params]

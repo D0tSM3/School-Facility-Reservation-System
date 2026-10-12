@@ -8,6 +8,7 @@ use CampusRoom\Core\Auth;
 use CampusRoom\Core\Response;
 use CampusRoom\Repository\UserRepository;
 use CampusRoom\Repository\ReservationRepository;
+use CampusRoom\Repository\SecurityLogRepository;
 
 /**
  * UserController — Admin-only user management endpoints.
@@ -149,6 +150,12 @@ class UserController
             'limit'  => $limit,
             'offset' => $offset,
         ]);
+    }
+
+    public function logAlerts(): never
+    {
+        Auth::requireRole(['Admin']);
+        Response::json(['items' => (new SecurityLogRepository())->findAlerts()]);
     }
 
     // ---------------------------------------------------------------
