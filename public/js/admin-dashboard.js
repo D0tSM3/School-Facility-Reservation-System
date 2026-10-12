@@ -1541,16 +1541,17 @@ document.addEventListener('DOMContentLoaded', () => {
     openModal('resDetailsModal');
 
     try {
-      const logs = await apiFetch(`api/reservations/${id}/logs`);
+      const response = await apiFetch(`api/reservations/${id}/logs`);
+      const logs = Array.isArray(response?.items) ? response.items : [];
       if (auditList) {
-        if (!Array.isArray(logs) || logs.length === 0) {
+        if (logs.length === 0) {
           auditList.innerHTML = `<p class="text-xs text-gray-400 italic">No specific audit history logged for this reservation.</p>`;
         } else {
           auditList.innerHTML = logs.map(l => `
             <div class="p-3 bg-white border border-gray-100 rounded-xl flex items-center justify-between text-xs">
               <div>
                 <span class="font-bold text-gray-800">${escapeHtml(l.action_type)}</span>
-                <span class="text-gray-400 ml-1">by ${escapeHtml(l.user_name || 'System')}</span>
+                <span class="text-gray-400 ml-1">by ${escapeHtml(l.actor_name || l.user_name || 'System')}</span>
               </div>
               <span class="text-gray-400">${formatDateTime(l.timestamp)}</span>
             </div>
@@ -2782,7 +2783,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <tr class="hover:bg-gray-50/80 transition-colors">
           <td class="py-3 px-6 text-xs text-gray-500 whitespace-nowrap">${formatDateTime(l.timestamp)}</td>
           <td class="py-3 px-6 text-xs font-mono font-semibold text-gray-700" title="${escapeHtml(l.user_id || '')}">
-            ${escapeHtml(l.user_name || (l.user_id ? l.user_id.substring(0, 8) : 'System'))}
+            ${escapeHtml(l.actor_name || (l.user_id ? l.user_id.substring(0, 8) : 'System'))}
           </td>
           <td class="py-3 px-6 text-xs text-gray-800 leading-normal">
             ${escapeHtml(l.action_type)}
