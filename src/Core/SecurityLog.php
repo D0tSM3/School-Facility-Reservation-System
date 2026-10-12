@@ -13,6 +13,8 @@ final class SecurityLog
     private const LOGIN_FAILED_ROW_CAP = 20;
     private const ACTIVATION_NO_MATCH_ROW_CAP = 30;
     private const ROW_CAP_WINDOW_MINUTES = 15;
+    private const RETENTION_DAYS = 90;
+    private const RETENTION_SAMPLE_RATE = 100;
     private const UNCAPPED_EVENTS = [
         'login_success',
         'activation_completed',
@@ -39,16 +41,31 @@ final class SecurityLog
                 return;
             }
 
-            if (random_int(1, 100) === 1) {
+            if (random_int(1, self::RETENTION_SAMPLE_RATE) === 1) {
                 try {
                     $pdo = Database::getInstance()->getPdo();
                     $pdo->prepare(
                         "DELETE FROM System_Logs
                           WHERE event_type IS NOT NULL
-                            AND \"timestamp\" < CURRENT_TIMESTAMP - INTERVAL '90 days'"
+                            AND event_type NOT IN ('login_success', 'activation_completed')
+                            AND \"timestamp\" < CURRENT_TIMESTAMP - INTERVAL '" . self::RETENTION_DAYS . " days'"
                     )->execute();
                 } catch (\Throwable $e) {
-                    error_log('SecurityLog retention purge failed: ' . $e->getMessage());
+                    error_log('SecurityLog retention delete failed: ' . $e->getMessage());
+                }
+
+                try {
+                    $pdo = Database::getInstance()->getPdo();
+                    $pdo->prepare(
+                        "UPDATE System_Logs
+                            SET ip_address = NULL,
+                                user_agent = NULL,
+                                identifier_hash = NULL
+                          WHERE event_type IN ('login_success', 'activation_completed')
+                            AND \"timestamp\" < CURRENT_TIMESTAMP - INTERVAL '" . self::RETENTION_DAYS . " days'"
+                    )->execute();
+                } catch (\Throwable $e) {
+                    error_log('SecurityLog retention anonymization failed: ' . $e->getMessage());
                 }
             }
 
