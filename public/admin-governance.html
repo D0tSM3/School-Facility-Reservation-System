@@ -1973,9 +1973,9 @@
             <button
               type="button"
               id="btn-search-logs"
-              class="px-5 py-2.5 bg-gray-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 self-start md:self-auto"
+              class="px-5 py-2.5 bg-gray-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 self-start md:self-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1f2b] focus-visible:ring-offset-2"
             >
-              <span class="material-symbols-outlined text-[17px]"
+              <span class="material-symbols-outlined text-[17px]" aria-hidden="true"
                 >filter_alt</span
               >
               <span>Search Logs</span>
@@ -1991,7 +1991,7 @@
             class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
           >
             <div class="overflow-x-auto">
-              <table class="w-full text-left text-sm text-gray-700">
+              <table class="w-full text-left text-sm text-gray-700" aria-label="Audit log events">
                 <thead
                   class="bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100"
                 >
@@ -2020,19 +2020,21 @@
             <div
               class="p-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500"
             >
-              <span id="logPageIndicator">Page 1</span>
+              <span id="logPageIndicator" aria-live="polite">Page 1</span>
               <div class="flex items-center gap-2">
                 <button
                   type="button"
                   id="btn-log-prev"
-                  class="px-3.5 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Previous audit log page"
+                  class="px-3.5 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 font-semibold disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1f2b]"
                 >
                   Previous
                 </button>
                 <button
                   type="button"
                   id="btn-log-next"
-                  class="px-3.5 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Next audit log page"
+                  class="px-3.5 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 font-semibold disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1f2b]"
                 >
                   Next
                 </button>
