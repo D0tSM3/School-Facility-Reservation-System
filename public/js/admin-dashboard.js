@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     logsTotal: 0,
     logsLimit: 25,
     logsOffset: 0,
+    logScope: 'activity',
     securityAlerts: [],
   };
 
@@ -2817,6 +2818,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const query = new URLSearchParams({
       limit: String(state.logsLimit),
       offset: String(state.logsOffset),
+      scope: state.logScope,
     });
     if (q) query.set('q', q);
 
@@ -2884,6 +2886,17 @@ document.addEventListener('DOMContentLoaded', () => {
         state.logsOffset = 0;
         loadAuditLogs();
       }
+    });
+  }
+
+  const logScopeSelect = document.getElementById('logScopeSelect');
+  if (logScopeSelect) {
+    logScopeSelect.addEventListener('change', () => {
+      state.logScope = ['activity', 'security', 'all'].includes(logScopeSelect.value)
+        ? logScopeSelect.value
+        : 'activity';
+      state.logsOffset = 0;
+      loadAuditLogs();
     });
   }
 
