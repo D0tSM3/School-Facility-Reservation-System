@@ -229,6 +229,7 @@ $routes = [
     ['PATCH', '#^/api/settings$#',                   fn() => (new SettingsController())->update()],
 
     // Logs (Admin)
+    ['GET',   '#^/api/logs/alerts$#',              fn() => (new UserController())->logAlerts()],
     ['GET',   '#^/api/logs$#',                       fn() => (new UserController())->logs()],
 
     // Data Archives (Admin - 30-day retention governance)
