@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CampusRoom — Centralized Space Reservation System | BPU</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={darkMode:"class",theme:{extend:{colors:{"primary-fixed-dim":"#ffb3ad","on-tertiary":"#ffffff","surface":"#fcf9f8","on-tertiary-fixed-variant":"#5c4300","on-error":"#ffffff","inverse-on-surface":"#f3f0ef","surface-container-low":"#f6f3f2","error-container":"#ffdad6","secondary-fixed":"#ffdad7","on-secondary-fixed":"#410005","surface-variant":"#e4e2e1","surface-container-highest":"#e4e2e1","on-primary-container":"#cc726d","outline":"#877270","tertiary-container":"#312200","surface-container-high":"#eae7e7","surface-container":"#f0eded","on-secondary":"#ffffff","error":"#ba1a1a","on-surface-variant":"#544341","secondary-container":"#fe8e88","on-surface":"#1b1c1c","on-primary-fixed":"#3d0506","outline-variant":"#dac1bf","tertiary-fixed-dim":"#ecc165","background":"#fcf9f8","secondary":"#9c413f","primary-container":"#4a0e0e","on-secondary-container":"#762524","on-tertiary-container":"#ab8631","inverse-primary":"#ffb3ad","primary":"#2a0002","on-tertiary-fixed":"#261a00","secondary-fixed-dim":"#ffb3ae","surface-container-lowest":"#ffffff","on-primary-fixed-variant":"#77302d","surface-tint":"#954742","surface-bright":"#fcf9f8","tertiary-fixed":"#ffdfa0","primary-fixed":"#ffdad7","on-secondary-fixed-variant":"#7d2b29","surface-dim":"#dcd9d9","on-primary":"#ffffff","inverse-surface":"#303030","on-background":"#1b1c1c","tertiary":"#160e00","on-error-container":"#93000a"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"space-xs":"0.25rem","space-lg":"1.5rem",margin:"2rem","space-xl":"2.25rem","space-md":"1rem","space-sm":"0.5rem","gutter-mobile":"0.75rem",gutter:"1.25rem","margin-mobile":"1rem"},fontFamily:{"label-md":["Inter"],"label-sm":["Inter"],"body-sm":["Inter"],"body-lg":["Inter"],"body-md":["Inter"],"headline-md":["Inter"],"headline-lg-mobile":["Inter"],"label-lg":["Inter"],"headline-lg":["Inter"],"headline-sm":["Inter"]},fontSize:{"label-md":["12px",{lineHeight:"16px",letterSpacing:"0.02em",fontWeight:"600"}],"label-sm":["11px",{lineHeight:"14px",letterSpacing:"0.04em",fontWeight:"700"}],"body-sm":["12px",{lineHeight:"16px",letterSpacing:"0",fontWeight:"400"}],"body-lg":["16px",{lineHeight:"24px",letterSpacing:"0",fontWeight:"400"}],"body-md":["14px",{lineHeight:"20px",letterSpacing:"0",fontWeight:"400"}],"headline-md":["22px",{lineHeight:"28px",letterSpacing:"-0.01em",fontWeight:"600"}],"headline-lg-mobile":["24px",{lineHeight:"32px",letterSpacing:"-0.01em",fontWeight:"700"}],"label-lg":["14px",{lineHeight:"20px",letterSpacing:"0.01em",fontWeight:"600"}],"headline-lg":["30px",{lineHeight:"38px",letterSpacing:"-0.02em",fontWeight:"700"}],"headline-sm":["18px",{lineHeight:"24px",letterSpacing:"0",fontWeight:"600"}]}}}};
+</script>
+<style>
+::-webkit-scrollbar{display:none;}
+html,body{margin:0;padding:0;scroll-behavior:smooth;}
+body{overscroll-behavior:none;}
+</style>
+</head>
+<body class="bg-[#8b1524] font-body-md text-white antialiased min-h-screen relative">
+
+<!-- FIXED BACKGROUND IMAGE (25% OPACITY) -->
+<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+  <div class="w-full h-full bg-cover bg-center bg-fixed bg-no-repeat opacity-25" style="background-image: url('assets/campus-bg.jpg');"></div>
+</div>
+
+<!-- HEADER / NAV -->
+<header class="fixed top-0 left-0 w-full z-50 bg-black border-b border-neutral-800 shadow-[0_2px_12px_0_rgba(0,0,0,0.45)]">
+<div class="h-16 w-full max-w-[1400px] mx-auto px-margin flex items-center justify-between gap-space-md">
+  <div class="flex items-center gap-space-md">
+    <a class="flex items-center gap-space-sm focus:outline-none cursor-pointer" data-nav="home" href="#home">
+      <img src="assets/campusroom-logo.png" alt="CampusRoom — Buenavista Polytechnic University" class="h-9 sm:h-10 w-auto object-contain" />
+    </a>
+  </div>
+  <nav class="hidden lg:flex items-center gap-2">
+    <button type="button" class="nav-link font-label-lg text-label-lg text-white hover:bg-orange-500 hover:text-white transition-all px-4 py-2 rounded-lg cursor-pointer" data-nav="home">Home</button>
+    <button type="button" class="nav-link font-label-lg text-label-lg text-white hover:bg-orange-500 hover:text-white transition-all px-4 py-2 rounded-lg cursor-pointer" data-nav="facilities">Facilities</button>
+    <button type="button" class="nav-link font-label-lg text-label-lg text-white hover:bg-orange-500 hover:text-white transition-all px-4 py-2 rounded-lg cursor-pointer" data-nav="schedule">Schedule</button>
+    <button type="button" class="nav-link font-label-lg text-label-lg text-white hover:bg-orange-500 hover:text-white transition-all px-4 py-2 rounded-lg cursor-pointer" data-nav="rules">Rules</button>
+  </nav>
+  <div class="hidden lg:flex items-center">
+    <a href="index.html" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-label-lg text-label-lg font-semibold transition-colors shadow-sm">
+      <span class="material-symbols-outlined text-[18px]">login</span>
+      <span>Sign In</span>
+    </a>
+  </div>
+  <!-- Mobile menu button -->
+  <button id="mobileMenuBtn" type="button" class="lg:hidden w-10 h-10 rounded-lg flex items-center justify-center text-white hover:bg-neutral-800 transition-colors">
+    <span class="material-symbols-outlined text-white">menu</span>
+  </button>
+</div>
+<!-- Mobile menu -->
+<div id="mobileMenu" class="hidden lg:hidden bg-black border-t border-neutral-800 px-margin py-space-md shadow-xl">
+  <nav class="flex flex-col gap-2">
+    <button type="button" class="nav-mobile-link font-label-lg text-label-lg text-left text-white hover:bg-orange-500 hover:text-white px-3.5 py-2.5 rounded-lg transition-colors cursor-pointer" data-nav="home">Home</button>
+    <button type="button" class="nav-mobile-link font-label-lg text-label-lg text-left text-white hover:bg-orange-500 hover:text-white px-3.5 py-2.5 rounded-lg transition-colors cursor-pointer" data-nav="facilities">Facilities</button>
+    <button type="button" class="nav-mobile-link font-label-lg text-label-lg text-left text-white hover:bg-orange-500 hover:text-white px-3.5 py-2.5 rounded-lg transition-colors cursor-pointer" data-nav="schedule">Schedule</button>
+    <button type="button" class="nav-mobile-link font-label-lg text-label-lg text-left text-white hover:bg-orange-500 hover:text-white px-3.5 py-2.5 rounded-lg transition-colors cursor-pointer" data-nav="rules">Rules</button>
+    <hr class="border-neutral-800 my-1" />
+    <a href="index.html" class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-label-lg text-label-lg font-semibold transition-colors shadow-sm">
+      <span class="material-symbols-outlined text-[18px]">login</span>
+      <span>Sign In</span>
+    </a>
+  </nav>
+</div>
+</header>
+
+<main class="relative z-10 w-full pt-16 min-h-[calc(100vh-64px)]">
+<div class="flex flex-col w-full">
+
+<div id="view-home" class="view-panel">
+<!-- ═══════ SECTION 1: HERO ═══════ -->
+<div class="scroll-mt-20" id="home"></div>
+<section class="w-full max-w-[1400px] mx-auto px-margin py-space-xl lg:py-24">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-center">
+  <!-- Left Column -->
+  <div class="lg:col-span-6 flex flex-col items-start gap-space-md">
+    <div class="inline-flex items-center gap-space-xs px-3 py-1 rounded-full bg-black/30 text-white border border-white/20">
+      <span class="material-symbols-outlined text-[15px] text-orange-400">account_balance</span>
+      <span class="font-label-sm text-label-sm tracking-wider uppercase font-semibold">Buenavista Polytechnic University</span>
+    </div>
+    <h1 class="font-headline-lg text-4xl lg:text-5xl text-white font-bold tracking-tight leading-[1.15]">
+      Campus Spaces, <br/><span class="text-orange-400">Organized.</span>
+    </h1>
+    <p class="font-headline-sm text-headline-sm text-white/95 font-medium leading-relaxed">
+      Centralized Space Reservation System replacing paper logbooks with streamlined, audited academic facility scheduling.
+    </p>
+    <p class="font-body-lg text-body-lg text-white/80">
+      CampusRoom eliminates administrative bottlenecks across BPU by uniting real-time room availability, verifiable booking approvals, and transparent conflict management under one institutional portal.
+    </p>
+    <div class="flex flex-wrap items-center gap-space-md pt-space-sm w-full sm:w-auto">
+      <button type="button" class="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-label-lg text-label-lg font-semibold shadow-lg transition-all cursor-pointer" data-nav="facilities">
+        Explore Facilities
+        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+      </button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-md pt-space-lg w-full border-t border-white/20">
+      <div class="flex items-center gap-space-xs text-white">
+        <span class="material-symbols-outlined text-white text-[20px]">verified_user</span>
+        <span class="font-label-sm text-label-sm font-medium text-white">Pre-provisioned Accounts</span>
+      </div>
+      <div class="flex items-center gap-space-xs text-white">
+        <span class="material-symbols-outlined text-white text-[20px]">rule_folder</span>
+        <span class="font-label-sm text-label-sm font-medium text-white">Zero Double-Booking</span>
+      </div>
+      <div class="flex items-center gap-space-xs text-white">
+        <span class="material-symbols-outlined text-white text-[20px]">history_edu</span>
+        <span class="font-label-sm text-label-sm font-medium text-white">Immutable Audit Trail</span>
+      </div>
+    </div>
+  </div>
+  <!-- Right Column: Building Info Card -->
+  <div class="lg:col-span-6 relative">
+    <div class="w-full bg-white rounded-xl shadow-2xl border border-white/20 overflow-hidden text-neutral-900">
+      <div class="bg-neutral-900 px-space-md py-3 flex items-center justify-between border-b border-neutral-800 text-white">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-orange-400 text-[20px]">apartment</span>
+          <span class="font-label-sm text-label-sm text-white font-semibold">Building #1545 — Campus Instructional Facility</span>
+        </div>
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-orange-500 text-white">5 Floors</span>
+      </div>
+      <div class="p-space-lg flex flex-col gap-space-md bg-neutral-50 text-neutral-900">
+        <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-container-low border border-surface-variant">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary-container text-[20px]">check_circle</span>
+            <span class="font-label-md text-label-md text-on-surface">Collision Prevention Engine: <strong>Active</strong></span>
+          </div>
+          <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">~20 rooms</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
+          <div class="p-3.5 rounded-lg bg-surface-container-lowest border-l-4 border-l-primary-container border border-surface-variant shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 0027/1025</span>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+            </div>
+            <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Auditorium</h4>
+            <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+              <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 483 seats</span>
+              <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> Basement</span>
+            </div>
+          </div>
+          <div class="p-3.5 rounded-lg bg-surface-container-lowest border-l-4 border-l-primary-container border border-surface-variant shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 3039</span>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+            </div>
+            <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Assembly Hall</h4>
+            <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+              <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 300 seats</span>
+              <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 3rd Floor</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-space-md rounded-lg bg-surface-container-low border border-surface-variant">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-label-md text-label-md font-semibold text-on-surface">Reservation Classifications</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-surface-container-lowest border border-surface-variant text-on-surface">Academic Lecture</span>
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-surface-container-lowest border border-surface-variant text-on-surface">Faculty Defense</span>
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-surface-container-lowest border border-surface-variant text-on-surface">Student Org Meeting</span>
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-surface-container-lowest border border-surface-variant text-on-surface">Dept Workshop</span>
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-surface-container-lowest border border-surface-variant text-on-surface">Exam/Quiz</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════ SECTION 2: THE PROBLEM AND THE SOLUTION ═══════ -->
+<section class="w-full bg-black/25 py-space-xl lg:py-24 border-y border-white/10">
+<div class="max-w-[1400px] mx-auto px-margin flex flex-col gap-space-xl">
+  <div class="text-center max-w-3xl mx-auto flex flex-col gap-2">
+    <span class="font-label-sm text-label-sm uppercase tracking-wider text-orange-400 font-bold">Institutional Transition</span>
+    <h2 class="font-headline-lg text-3xl lg:text-4xl text-white font-bold tracking-tight">Modernizing Campus Facility Management</h2>
+    <p class="font-body-lg text-body-lg text-white/80">Replacing vulnerable manual logbooks with an accountable, automated digital reservation infrastructure engineered specifically for Buenavista Polytechnic University.</p>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-space-lg items-stretch">
+    <div class="p-space-lg lg:p-8 rounded-xl bg-white border border-neutral-200 flex flex-col justify-between shadow-lg relative overflow-hidden text-neutral-900">
+      <div class="absolute top-0 left-0 right-0 h-1 bg-outline-variant"></div>
+      <div>
+        <div class="flex items-center justify-between mb-space-md">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm font-semibold uppercase tracking-wider">
+            <span class="material-symbols-outlined text-[16px]">menu_book</span> The Traditional Logbook
+          </div>
+          <span class="material-symbols-outlined text-outline text-[24px]">warning</span>
+        </div>
+        <h3 class="font-headline-md text-headline-md text-on-surface font-bold mb-space-md">Unverifiable, Manual Bottlenecks</h3>
+        <ul class="flex flex-col gap-space-md font-body-md text-body-md text-on-surface-variant">
+          <li class="flex items-start gap-space-sm"><span class="material-symbols-outlined text-outline shrink-0 mt-0.5 text-[18px]">close</span><span><strong>Physical paper binders:</strong> Prone to misplacement, water damage, and unverified handwriting alterations.</span></li>
+          <li class="flex items-start gap-space-sm"><span class="material-symbols-outlined text-outline shrink-0 mt-0.5 text-[18px]">close</span><span><strong>Zero real-time visibility:</strong> Requires physically trekking across buildings to check if a hall is vacant.</span></li>
+          <li class="flex items-start gap-space-sm"><span class="material-symbols-outlined text-outline shrink-0 mt-0.5 text-[18px]">close</span><span><strong>Frequent double-bookings:</strong> No automated checks lead to high-friction schedule overlaps during exams and events.</span></li>
+          <li class="flex items-start gap-space-sm"><span class="material-symbols-outlined text-outline shrink-0 mt-0.5 text-[18px]">close</span><span><strong>Opaque decisions:</strong> Rejections or cancellations occur without formal explanation, creating disputes.</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="p-space-lg lg:p-8 rounded-xl bg-white border-2 border-orange-500/50 flex flex-col justify-between shadow-xl relative overflow-hidden text-neutral-900">
+      <div class="absolute top-0 left-0 right-0 h-1.5 bg-orange-500"></div>
+      <div>
+        <div class="flex items-center justify-between mb-space-md">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded bg-orange-100 text-orange-800 font-label-sm text-label-sm font-semibold uppercase tracking-wider">
+            <span class="material-symbols-outlined text-[16px]">verified</span> The CampusRoom Standard
+          </div>
+          <span class="material-symbols-outlined text-orange-500 text-[24px]">verified</span>
+        </div>
+        <h3 class="font-headline-md text-headline-md text-on-surface font-bold mb-space-md">Algorithmic Reliability & Audit Records</h3>
+        <ul class="flex flex-col gap-space-md font-body-md text-body-md text-on-surface">
+          <li class="flex items-start gap-space-sm"><span class="material-symbols-outlined text-orange-600 shrink-0 mt-0.5 text-[18px]">check_circle</span><span><strong>Centralized live repository:</strong> Query all BPU rooms with live status flags from any device.</span></li>
+          <li class="flex items-start gap-space-sm"><span class="material-symbols-outlined text-orange-600 shrink-0 mt-0.5 text-[18px]">check_circle</span><span><strong>30-minute time blocks:</strong> Granular allocation with automatic collision prevention at submission.</span></li>
+          <li class="flex items-start gap-space-sm"><span class="material-symbols-outlined text-orange-600 shrink-0 mt-0.5 text-[18px]">check_circle</span><span><strong>Mandatory audit remarks:</strong> Approving authorities must provide logged reasoning for every decision.</span></li>
+          <li class="flex items-start gap-space-sm"><span class="material-symbols-outlined text-orange-600 shrink-0 mt-0.5 text-[18px]">check_circle</span><span><strong>Pre-provisioned accounts:</strong> University-registered credentials only — no public sign-ups.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+</div>
+
+<div id="view-facilities" class="view-panel hidden">
+<!-- ═══════ SECTION 3: FACILITIES & FLOOR PLANS ═══════ -->
+<section class="w-full max-w-[1400px] mx-auto px-margin py-space-xl lg:py-24 scroll-mt-16" id="facilities">
+<div class="flex flex-col gap-space-xl">
+  <div class="flex flex-col gap-2 max-w-2xl">
+    <span class="font-label-sm text-label-sm uppercase tracking-wider text-orange-400 font-bold">Building #1545</span>
+    <h2 class="font-headline-lg text-3xl lg:text-4xl text-white font-bold tracking-tight">Campus Instructional Facility</h2>
+    <p class="font-body-lg text-body-lg text-white/80">Five floors of bookable academic spaces — from 24-seat conference rooms to the 483-seat main auditorium. Select a floor to view its layout and available rooms.</p>
+  </div>
+  <!-- Floor Tabs -->
+  <div class="flex flex-wrap gap-space-sm">
+    <button class="floor-tab px-4 py-2 rounded-lg font-label-lg text-label-lg font-semibold transition-all bg-orange-500 text-white shadow-md cursor-pointer" data-floor="1">Basement</button>
+<button class="floor-tab px-4 py-2 rounded-lg font-label-lg text-label-lg font-semibold transition-all bg-black/40 text-white/90 hover:bg-black/60 border border-white/15 cursor-pointer" data-floor="2">1st Floor</button>
+<button class="floor-tab px-4 py-2 rounded-lg font-label-lg text-label-lg font-semibold transition-all bg-black/40 text-white/90 hover:bg-black/60 border border-white/15 cursor-pointer" data-floor="3">2nd Floor</button>
+<button class="floor-tab px-4 py-2 rounded-lg font-label-lg text-label-lg font-semibold transition-all bg-black/40 text-white/90 hover:bg-black/60 border border-white/15 cursor-pointer" data-floor="4">3rd Floor</button>
+<button class="floor-tab px-4 py-2 rounded-lg font-label-lg text-label-lg font-semibold transition-all bg-black/40 text-white/90 hover:bg-black/60 border border-white/15 cursor-pointer" data-floor="5">4th Floor</button>
+
+  </div>
+  <!-- Floor Panels -->
+  
+    <div class="floor-panel " data-floor="1">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg items-start">
+        <div class="floor-img-wrapper relative group cursor-zoom-in rounded-xl overflow-hidden border border-surface-variant bg-white shadow-sm" data-floor-title="Building #1545 — Basement Floor Plan" data-floor-src="assets/floor-plan-basement.jpg">
+          <img src="assets/floor-plan-basement.jpg" alt="Building 1545 Basement Floor Plan" class="w-full h-auto transition-transform duration-300 group-hover:scale-[1.01]" />
+          <div class="absolute bottom-3 right-3 bg-surface-container-lowest/90 backdrop-blur-sm border border-surface-variant px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold text-on-surface shadow-sm opacity-90 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <span class="material-symbols-outlined text-[16px] text-primary-container">zoom_in</span>
+            <span>Click to Zoom</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
+          
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 0027/1025</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Auditorium</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 483 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> Basement</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 0035</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Lecture Hall</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 232 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> Basement</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 0018</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Seminar Room</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 36 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> Basement</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 0036</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Conference Room</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 24 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> Basement</span>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+    <div class="floor-panel hidden" data-floor="2">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg items-start">
+        <div class="floor-img-wrapper relative group cursor-zoom-in rounded-xl overflow-hidden border border-surface-variant bg-white shadow-sm" data-floor-title="Building #1545 — 1st Floor Plan" data-floor-src="assets/floor-plan-1.jpg">
+          <img src="assets/floor-plan-1.jpg" alt="Building 1545 1st Floor Floor Plan" class="w-full h-auto transition-transform duration-300 group-hover:scale-[1.01]" />
+          <div class="absolute bottom-3 right-3 bg-surface-container-lowest/90 backdrop-blur-sm border border-surface-variant px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold text-on-surface shadow-sm opacity-90 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <span class="material-symbols-outlined text-[16px] text-primary-container">zoom_in</span>
+            <span>Click to Zoom</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
+          
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 0027/1025</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Auditorium (Upper)</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 483 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 1st Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 1035</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Lecture Room</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 56 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 1st Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-surface-container-lowest border-l-outline border-l-4 border border-surface-variant shadow-sm">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 1038</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-surface-container-high text-outline">Not Reservable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Faculty Room</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 40 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 1st Floor</span>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+    <div class="floor-panel hidden" data-floor="3">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg items-start">
+        <div class="floor-img-wrapper relative group cursor-zoom-in rounded-xl overflow-hidden border border-surface-variant bg-white shadow-sm" data-floor-title="Building #1545 — 2nd Floor Plan" data-floor-src="assets/floor-plan-2.jpg">
+          <img src="assets/floor-plan-2.jpg" alt="Building 1545 2nd Floor Floor Plan" class="w-full h-auto transition-transform duration-300 group-hover:scale-[1.01]" />
+          <div class="absolute bottom-3 right-3 bg-surface-container-lowest/90 backdrop-blur-sm border border-surface-variant px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold text-on-surface shadow-sm opacity-90 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <span class="material-symbols-outlined text-[16px] text-primary-container">zoom_in</span>
+            <span>Click to Zoom</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
+          
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 2025</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Seminar Room</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 24 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 2nd Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 2035</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Lecture Hall</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 187 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 2nd Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 2039</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Computer Lab</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 72 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 2nd Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 2018</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Classroom</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 44 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 2nd Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 2036</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Classroom</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 40 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 2nd Floor</span>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+    <div class="floor-panel hidden" data-floor="4">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg items-start">
+        <div class="floor-img-wrapper relative group cursor-zoom-in rounded-xl overflow-hidden border border-surface-variant bg-white shadow-sm" data-floor-title="Building #1545 — 3rd Floor Plan" data-floor-src="assets/floor-plan-3.jpg">
+          <img src="assets/floor-plan-3.jpg" alt="Building 1545 3rd Floor Floor Plan" class="w-full h-auto transition-transform duration-300 group-hover:scale-[1.01]" />
+          <div class="absolute bottom-3 right-3 bg-surface-container-lowest/90 backdrop-blur-sm border border-surface-variant px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold text-on-surface shadow-sm opacity-90 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <span class="material-symbols-outlined text-[16px] text-primary-container">zoom_in</span>
+            <span>Click to Zoom</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
+          
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 3025</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Lecture Room</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 80 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 3rd Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 3031</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Lecture Hall</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 174 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 3rd Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 3039</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Assembly Hall</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 300 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 3rd Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 3018</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Classroom</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 44 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 3rd Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 3038</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Classroom</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 40 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 3rd Floor</span>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+    <div class="floor-panel hidden" data-floor="5">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg items-start">
+        <div class="floor-img-wrapper relative group cursor-zoom-in rounded-xl overflow-hidden border border-surface-variant bg-white shadow-sm" data-floor-title="Building #1545 — 4th Floor Plan" data-floor-src="assets/floor-plan-4.jpg">
+          <img src="assets/floor-plan-4.jpg" alt="Building 1545 4th Floor Floor Plan" class="w-full h-auto transition-transform duration-300 group-hover:scale-[1.01]" />
+          <div class="absolute bottom-3 right-3 bg-surface-container-lowest/90 backdrop-blur-sm border border-surface-variant px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold text-on-surface shadow-sm opacity-90 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <span class="material-symbols-outlined text-[16px] text-primary-container">zoom_in</span>
+            <span>Click to Zoom</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
+          
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 4025</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Classroom</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 112 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 4th Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 4029</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Lecture Hall</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 144 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 4th Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 4031</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Lecture Room</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 90 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 4th Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 4035</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Classroom</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 54 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 4th Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 4039</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Classroom</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 64 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 4th Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 4018</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Seminar Room</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 36 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 4th Floor</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-lg bg-white border-l-orange-500 border-l-4 border border-neutral-200 shadow-md text-neutral-900">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-label-sm text-label-sm font-mono text-on-surface-variant">Room 4036</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700">Bookable</span>
+          </div>
+          <h4 class="font-headline-sm text-[15px] font-semibold text-on-surface">Conference Room</h4>
+          <div class="mt-2 flex items-center gap-3 text-on-surface-variant font-label-sm text-label-sm">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">group</span> 36 seats</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">stairs</span> 4th Floor</span>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Location Card -->
+  <div class="mt-space-md p-space-lg rounded-xl bg-white border border-neutral-200 shadow-xl text-neutral-900">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-md">
+      <div class="flex items-start gap-space-md">
+        <div class="w-11 h-11 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+          <span class="material-symbols-outlined text-[24px]">location_on</span>
+        </div>
+        <div>
+          <span class="font-label-sm text-[11px] font-bold uppercase tracking-wider text-orange-600">Campus Facility</span>
+          <h3 class="font-headline-sm text-lg sm:text-xl text-neutral-900 font-bold">BPU Admissions Office</h3>
+          <p class="font-body-sm text-sm text-neutral-600 mt-0.5">1191 Pablo Ocampo Sr. Extension, Brgy. Sta. Cruz, Makati City, Philippines</p>
+        </div>
+      </div>
+      <a href="https://www.google.com/maps/search/?api=1&query=1191+Pablo+Ocampo+Sr.+Extension,+Brgy.+Sta.+Cruz,+Makati+City,+Philippines" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white font-label-sm text-xs font-semibold shrink-0 shadow-sm transition-colors">
+        <span class="material-symbols-outlined text-[16px]">map</span>
+        <span>Open in Google Maps</span>
+        <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+      </a>
+    </div>
+
+    <!-- Contact Info Chips -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-space-md pt-2 border-t border-neutral-100">
+      <div class="flex items-center gap-2 p-2.5 rounded-lg bg-neutral-50 border border-neutral-200/70">
+        <span class="material-symbols-outlined text-orange-500 text-[18px]">phone</span>
+        <div class="flex flex-col min-w-0">
+          <span class="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider">Direct Line</span>
+          <span class="text-xs font-mono font-medium text-neutral-900 truncate">+63 2 8999 1234</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 p-2.5 rounded-lg bg-neutral-50 border border-neutral-200/70">
+        <span class="material-symbols-outlined text-orange-500 text-[18px]">contact_phone</span>
+        <div class="flex flex-col min-w-0">
+          <span class="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider">Trunk Line</span>
+          <span class="text-xs font-mono font-medium text-neutral-900 truncate">+63 2 8888 5000 loc. 71220</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 p-2.5 rounded-lg bg-neutral-50 border border-neutral-200/70">
+        <span class="material-symbols-outlined text-orange-500 text-[18px]">mail</span>
+        <div class="flex flex-col min-w-0">
+          <span class="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider">Official E-mail</span>
+          <a href="mailto:campusroomadmin@gmail.com" class="text-xs font-mono font-medium text-orange-600 hover:underline truncate">campusroomadmin@gmail.com</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Google Maps Interactive Embed -->
+    <div class="w-full h-80 rounded-xl border border-neutral-300 overflow-hidden shadow-inner relative bg-neutral-100">
+      <iframe
+        title="Campus Location Map - BPU Admissions Office"
+        src="https://maps.google.com/maps?q=1191+Pablo+Ocampo+Sr.+Extension,+Brgy.+Sta.+Cruz,+Makati+City,+Philippines&t=&z=16&ie=UTF8&iwloc=&output=embed"
+        width="100%"
+        height="100%"
+        style="border:0;"
+        allowfullscreen=""
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade">
+      </iframe>
+    </div>
+  </div>
+</div>
+</section>
+
+</div>
+
+<div id="view-schedule" class="view-panel hidden">
+<!-- ═══════ SECTION 4: SCHEDULE ═══════ -->
+<section class="w-full bg-black/20 py-space-xl lg:py-24 border-y border-white/10 scroll-mt-16" id="schedule">
+<div class="max-w-[1400px] mx-auto px-margin flex flex-col gap-space-xl">
+  <div class="text-center max-w-2xl mx-auto flex flex-col gap-2">
+    <span class="font-label-sm text-label-sm uppercase tracking-wider text-orange-400 font-bold">Operating Schedule</span>
+    <h2 class="font-headline-lg text-3xl lg:text-4xl text-white font-bold tracking-tight">When Reservations Are Open</h2>
+    <p class="font-body-lg text-body-lg text-white/80">CampusRoom accepts reservation requests Monday through Saturday within configured system hours. All holidays are excluded automatically.</p>
+  </div>
+  
+<div class="overflow-x-auto rounded-xl border border-neutral-200 shadow-xl bg-white text-neutral-900">
+  <table class="w-full text-left border-collapse">
+    <thead>
+      <tr class="bg-neutral-100 text-neutral-900">
+        <th class="px-4 py-3 font-label-lg text-label-lg text-on-surface border-b border-surface-variant">Day</th>
+        <th class="px-4 py-3 font-label-lg text-label-lg text-on-surface border-b border-surface-variant">Availability</th>
+        <th class="px-4 py-3 font-label-lg text-label-lg text-on-surface border-b border-surface-variant">Hours</th>
+      </tr>
+    </thead>
+    <tbody class="font-body-md text-body-md">
+      <tr class="border-b border-surface-variant"><td class="px-4 py-3 font-semibold text-on-surface">Monday</td><td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-primary-container font-semibold"><span class="material-symbols-outlined text-[16px]">check_circle</span> Open</span></td><td class="px-4 py-3 text-on-surface-variant font-mono text-label-sm">Per System Settings</td></tr>
+      <tr class="border-b border-surface-variant bg-surface-container-low/50"><td class="px-4 py-3 font-semibold text-on-surface">Tuesday</td><td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-primary-container font-semibold"><span class="material-symbols-outlined text-[16px]">check_circle</span> Open</span></td><td class="px-4 py-3 text-on-surface-variant font-mono text-label-sm">Per System Settings</td></tr>
+      <tr class="border-b border-surface-variant"><td class="px-4 py-3 font-semibold text-on-surface">Wednesday</td><td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-primary-container font-semibold"><span class="material-symbols-outlined text-[16px]">check_circle</span> Open</span></td><td class="px-4 py-3 text-on-surface-variant font-mono text-label-sm">Per System Settings</td></tr>
+      <tr class="border-b border-surface-variant bg-surface-container-low/50"><td class="px-4 py-3 font-semibold text-on-surface">Thursday</td><td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-primary-container font-semibold"><span class="material-symbols-outlined text-[16px]">check_circle</span> Open</span></td><td class="px-4 py-3 text-on-surface-variant font-mono text-label-sm">Per System Settings</td></tr>
+      <tr class="border-b border-surface-variant"><td class="px-4 py-3 font-semibold text-on-surface">Friday</td><td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-primary-container font-semibold"><span class="material-symbols-outlined text-[16px]">check_circle</span> Open</span></td><td class="px-4 py-3 text-on-surface-variant font-mono text-label-sm">Per System Settings</td></tr>
+      <tr class="border-b border-surface-variant bg-surface-container-low/50"><td class="px-4 py-3 font-semibold text-on-surface">Saturday</td><td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-primary-container font-semibold"><span class="material-symbols-outlined text-[16px]">check_circle</span> Open</span></td><td class="px-4 py-3 text-on-surface-variant font-mono text-label-sm">Per System Settings</td></tr>
+      <tr><td class="px-4 py-3 font-semibold text-on-surface">Sunday</td><td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-outline font-semibold"><span class="material-symbols-outlined text-[16px]">block</span> Closed</span></td><td class="px-4 py-3 text-on-surface-variant">—</td></tr>
+    </tbody>
+  </table>
+</div>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-md">
+    <div class="p-space-md rounded-lg bg-white border border-neutral-200 text-center shadow-lg text-neutral-900">
+      <span class="material-symbols-outlined text-orange-500 text-[28px] mb-2">timer</span>
+      <h4 class="font-headline-sm text-[16px] font-semibold text-on-surface">30-Minute Blocks</h4>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">All reservations use granular 30-minute time slots for maximum facility utilization.</p>
+    </div>
+    <div class="p-space-md rounded-lg bg-white border border-neutral-200 text-center shadow-lg text-neutral-900">
+      <span class="material-symbols-outlined text-orange-500 text-[28px] mb-2">event_busy</span>
+      <h4 class="font-headline-sm text-[16px] font-semibold text-on-surface">Holiday Exclusion</h4>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Dates entered in the Holidays table are automatically blocked from all reservations.</p>
+    </div>
+    <div class="p-space-md rounded-lg bg-white border border-neutral-200 text-center shadow-lg text-neutral-900">
+      <span class="material-symbols-outlined text-orange-500 text-[28px] mb-2">school</span>
+      <h4 class="font-headline-sm text-[16px] font-semibold text-on-surface">Class Priority</h4>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Academic class schedules take absolute priority and cannot be overridden by any reservation.</p>
+    </div>
+  </div>
+</div>
+</section>
+
+</div>
+
+<div id="view-rules" class="view-panel hidden">
+<!-- ═══════ SECTION 5: RESERVATION RULES ═══════ -->
+<section class="w-full max-w-[1400px] mx-auto px-margin py-space-xl lg:py-24 scroll-mt-16" id="rules">
+<div class="flex flex-col gap-space-xl">
+  <div class="flex flex-col gap-2 max-w-2xl">
+    <span class="font-label-sm text-label-sm uppercase tracking-wider text-orange-400 font-bold">Student & Faculty Guidelines</span>
+    <h2 class="font-headline-lg text-3xl lg:text-4xl text-white font-bold tracking-tight">Reservation Rules & Procedures</h2>
+    <p class="font-body-lg text-body-lg text-white/80">Key guidelines on how students and faculty request spaces, select event categories, manage bookings, and access facilities.</p>
+  </div>
+  
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+  <div class="p-space-md rounded-lg bg-white border border-neutral-200 shadow-md flex items-start gap-space-md text-neutral-900">
+    <div class="w-8 h-8 rounded-full bg-orange-500 text-white font-label-lg font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-sm">1</div>
+    <div>
+      <h4 class="font-headline-sm text-[16px] font-semibold text-on-surface">Browse & Check Live Availability</h4>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Students and faculty can query real-time room schedules, seat capacities, and facility features across Building #1545 before filing a request.</p>
+    </div>
+  </div>
+  <div class="p-space-md rounded-lg bg-white border border-neutral-200 shadow-md flex items-start gap-space-md text-neutral-900">
+    <div class="w-8 h-8 rounded-full bg-orange-500 text-white font-label-lg font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-sm">2</div>
+    <div>
+      <h4 class="font-headline-sm text-[16px] font-semibold text-on-surface">Select an Event Classification</h4>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Every booking must fall under an approved academic category: Academic Lecture, Faculty Defense, Student Org Meeting, Dept Workshop, or Exam/Quiz.</p>
+    </div>
+  </div>
+  <div class="p-space-md rounded-lg bg-white border border-neutral-200 shadow-md flex items-start gap-space-md text-neutral-900">
+    <div class="w-8 h-8 rounded-full bg-orange-500 text-white font-label-lg font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-sm">3</div>
+    <div>
+      <h4 class="font-headline-sm text-[16px] font-semibold text-on-surface">Reserve in 30-Minute Blocks</h4>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Choose granular 30-minute time intervals within operating hours (Monday–Saturday, 6:00 AM – 9:00 PM). Single-day and multi-day reservations are supported.</p>
+    </div>
+  </div>
+  <div class="p-space-md rounded-lg bg-white border border-neutral-200 shadow-md flex items-start gap-space-md text-neutral-900">
+    <div class="w-8 h-8 rounded-full bg-orange-500 text-white font-label-lg font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-sm">4</div>
+    <div>
+      <h4 class="font-headline-sm text-[16px] font-semibold text-on-surface">Specify Equipment & Setup Notes</h4>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Request needed equipment (projectors, sound systems, whiteboards, or microphone units) directly in your reservation submission notes.</p>
+    </div>
+  </div>
+  <div class="p-space-md rounded-lg bg-white border border-neutral-200 shadow-md flex items-start gap-space-md text-neutral-900">
+    <div class="w-8 h-8 rounded-full bg-orange-500 text-white font-label-lg font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-sm">5</div>
+    <div>
+      <h4 class="font-headline-sm text-[16px] font-semibold text-on-surface">Track Status & Review Remarks</h4>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Monitor the live progress of submitted requests from your personal dashboard, including review remarks and official approval notices.</p>
+    </div>
+  </div>
+  <div class="p-space-md rounded-lg bg-white border border-neutral-200 shadow-md flex items-start gap-space-md text-neutral-900">
+    <div class="w-8 h-8 rounded-full bg-orange-500 text-white font-label-lg font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-sm">6</div>
+    <div>
+      <h4 class="font-headline-sm text-[16px] font-semibold text-on-surface">Request to Reschedule (Move Requests)</h4>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">If your schedule or room needs change, submit a Move Request to transfer an approved booking to another available room or date.</p>
+    </div>
+  </div>
+  <div class="p-space-md rounded-lg bg-white border border-neutral-200 shadow-md flex items-start gap-space-md text-neutral-900">
+    <div class="w-8 h-8 rounded-full bg-orange-500 text-white font-label-lg font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-sm">7</div>
+    <div>
+      <h4 class="font-headline-sm text-[16px] font-semibold text-on-surface">Cancel or Release Bookings</h4>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Easily cancel pending submissions, or request cancellation for approved reservations if an event is called off so the space becomes free for others.</p>
+    </div>
+  </div>
+  <div class="p-space-md rounded-lg bg-white border border-neutral-200 shadow-md flex items-start gap-space-md text-neutral-900">
+    <div class="w-8 h-8 rounded-full bg-orange-500 text-white font-label-lg font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-sm">8</div>
+    <div>
+      <h4 class="font-headline-sm text-[16px] font-semibold text-on-surface">Download Official Confirmation Slips</h4>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Access verified, printable confirmation slips for all approved reservations to present to building custodians and campus security upon arrival.</p>
+    </div>
+  </div>
+</div>
+  <div class="p-space-lg rounded-xl bg-white border border-neutral-200 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-space-md text-neutral-900">
+    <div class="flex items-center gap-space-md">
+      <div class="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-[24px]">gavel</span>
+      </div>
+      <div>
+        <h4 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Full Policy Document</h4>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">The complete 23-section University Administrative Order No. 2026-03 and Facility Use Handbook is available inside the CampusRoom system.</p>
+      </div>
+    </div>
+    <a href="index.html" class="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-label-lg text-label-lg font-semibold shrink-0 shadow-md transition-all">
+      <span>Sign In for Full Handbook</span>
+      <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+    </a>
+  </div>
+</div>
+</section>
+
+</div>
+
+
+</div>
+</main>
+
+<footer class="relative z-10 w-full bg-black border-t border-neutral-800 text-neutral-400">
+<div class="max-w-[1400px] mx-auto px-margin py-12">
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 pb-10 border-b border-neutral-800/80">
+    <!-- Brand Info (5 cols) -->
+    <div class="md:col-span-5 flex flex-col items-start gap-3">
+      <a class="flex items-center gap-space-sm focus:outline-none cursor-pointer" data-nav="home" href="#home">
+        <img src="assets/campusroom-logo.png" alt="CampusRoom — Buenavista Polytechnic University" class="h-9 w-auto object-contain" />
+      </a>
+      <p class="text-xs text-neutral-400 leading-relaxed max-w-sm mt-1">
+        Centralized academic facility reservation portal. Streamlined room scheduling, collision prevention, and audited administrative approvals.
+      </p>
+    </div>
+
+    <!-- Office & Address (4 cols) -->
+    <div class="md:col-span-4 flex flex-col gap-2.5">
+      <h4 class="text-xs font-bold text-white uppercase tracking-wider">Campus Admissions Office</h4>
+      <div class="flex items-start gap-2 text-xs text-neutral-300 leading-relaxed">
+        <span class="material-symbols-outlined text-orange-400 text-[16px] shrink-0 mt-0.5">place</span>
+        <div>
+          <p class="font-semibold text-white">BPU Admissions Office</p>
+          <p class="text-neutral-400 mt-0.5">1191 Pablo Ocampo Sr. Extension, Brgy. Sta. Cruz, Makati City, Philippines</p>
+          <a href="https://www.google.com/maps/search/?api=1&query=1191+Pablo+Ocampo+Sr.+Extension,+Brgy.+Sta.+Cruz,+Makati+City,+Philippines" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-orange-400 hover:text-orange-300 mt-1.5 text-[11px] font-medium transition-colors">
+            <span>View on Google Maps</span>
+            <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Details (3 cols) -->
+    <div class="md:col-span-3 flex flex-col gap-2.5">
+      <h4 class="text-xs font-bold text-white uppercase tracking-wider">Contact Channels</h4>
+      <ul class="flex flex-col gap-2.5 text-xs text-neutral-300">
+        <li class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-orange-400 text-[16px] shrink-0">phone</span>
+          <div>
+            <span class="text-neutral-500 text-[10px] block leading-none">Direct Line</span>
+            <span class="font-mono text-neutral-200">+63 2 8999 1234</span>
+          </div>
+        </li>
+        <li class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-orange-400 text-[16px] shrink-0">contact_phone</span>
+          <div>
+            <span class="text-neutral-500 text-[10px] block leading-none">Trunk Line</span>
+            <span class="font-mono text-neutral-200">+63 2 8888 5000 loc. 71220</span>
+          </div>
+        </li>
+        <li class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-orange-400 text-[16px] shrink-0">mail</span>
+          <div>
+            <span class="text-neutral-500 text-[10px] block leading-none">Official E-mail</span>
+            <a href="mailto:campusroomadmin@gmail.com" class="font-mono text-orange-400 hover:text-orange-300 transition-colors">campusroomadmin@gmail.com</a>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Bottom Copyright Row -->
+  <div class="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-500">
+    <p>&copy; 2024 Buenavista Polytechnic University.<br />All rights reserved.</p>
+    <p class="text-[11px]">CampusRoom Academic Space System · Version 2.0</p>
+  </div>
+</div>
+</footer>
+
+<script>
+// Floor tab switching
+document.querySelectorAll('.floor-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.floor-tab').forEach(t => {
+      t.classList.remove('bg-orange-500', 'text-white', 'shadow-md');
+      t.classList.add('bg-black/40', 'text-white/90', 'hover:bg-black/60', 'border', 'border-white/15');
+    });
+    tab.classList.remove('bg-black/40', 'text-white/90', 'hover:bg-black/60', 'border', 'border-white/15');
+    tab.classList.add('bg-orange-500', 'text-white', 'shadow-md');
+    document.querySelectorAll('.floor-panel').forEach(p => p.classList.add('hidden'));
+    const targetFloor = document.querySelector(`.floor-panel[data-floor="${tab.dataset.floor}"]`);
+    if (targetFloor) targetFloor.classList.remove('hidden');
+  });
+});
+
+// Section view switching
+const views = ['home', 'facilities', 'schedule', 'rules'];
+
+function switchView(target) {
+  if (!views.includes(target)) target = 'home';
+
+  // Toggle views
+  views.forEach(v => {
+    const el = document.getElementById(`view-${v}`);
+    if (el) {
+      if (v === target) {
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    }
+  });
+
+  // Update navbar desktop buttons
+  document.querySelectorAll('.nav-link').forEach(btn => {
+    const isCurrent = btn.dataset.nav === target;
+    if (isCurrent) {
+      btn.classList.add('bg-orange-500', 'text-white', 'font-semibold', 'shadow-sm');
+      btn.classList.remove('hover:bg-orange-500');
+    } else {
+      btn.classList.remove('bg-orange-500', 'font-semibold', 'shadow-sm');
+      btn.classList.add('text-white', 'hover:bg-orange-500');
+    }
+  });
+
+  // Update mobile buttons
+  document.querySelectorAll('.nav-mobile-link').forEach(btn => {
+    const isCurrent = btn.dataset.nav === target;
+    if (isCurrent) {
+      btn.classList.add('bg-orange-500', 'text-white', 'font-semibold');
+      btn.classList.remove('hover:bg-orange-500');
+    } else {
+      btn.classList.remove('bg-orange-500', 'font-semibold');
+      btn.classList.add('text-white', 'hover:bg-orange-500');
+    }
+  });
+
+  // Sync hash
+  history.replaceState(null, null, `#${target}`);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Bind all data-nav triggers (header, mobile, hero, footer, logo)
+document.querySelectorAll('[data-nav]').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = el.dataset.nav;
+    switchView(target);
+    closeMobileMenu();
+  });
+});
+
+// Initial view based on hash or default to home
+window.addEventListener('load', () => {
+  const hash = window.location.hash.replace('#', '');
+  switchView(hash || 'home');
+});
+window.addEventListener('hashchange', () => {
+  const hash = window.location.hash.replace('#', '');
+  switchView(hash || 'home');
+});
+
+// Mobile menu toggling
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+if (mobileMenuBtn && mobileMenu) {
+  mobileMenuBtn.addEventListener('click', () => {
+    mobileMenu.classList.toggle('hidden');
+  });
+}
+function closeMobileMenu() {
+  const m = document.getElementById('mobileMenu');
+  if (m) m.classList.add('hidden');
+}
+
+// ═══════ ZOOM LIGHTBOX MODAL SCRIPT ═══════
+function initZoomLightbox() {
+  const modal = document.getElementById('zoomModal');
+  const zoomImg = document.getElementById('zoomImage');
+  const zoomTitle = document.getElementById('zoomTitle');
+  const zoomLevelText = document.getElementById('zoomLevelText');
+  const zoomInBtn = document.getElementById('zoomInBtn');
+  const zoomOutBtn = document.getElementById('zoomOutBtn');
+  const zoomResetBtn = document.getElementById('zoomResetBtn');
+  const zoomCloseBtn = document.getElementById('zoomCloseBtn');
+  const zoomViewport = document.getElementById('zoomViewport');
+
+  if (!modal || !zoomImg) return;
+
+  let scale = 1;
+  let translateX = 0;
+  let translateY = 0;
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+
+  function updateTransform() {
+    zoomImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    if (zoomLevelText) {
+      zoomLevelText.textContent = `${Math.round(scale * 100)}%`;
+    }
+  }
+
+  function resetZoom() {
+    scale = 1;
+    translateX = 0;
+    translateY = 0;
+    updateTransform();
+  }
+
+  function openZoom(src, title) {
+    zoomImg.src = src;
+    if (zoomTitle) zoomTitle.textContent = title || 'Floor Plan';
+    resetZoom();
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeZoom() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+
+  function zoomIn() {
+    scale = Math.min(scale + 0.35, 4.5);
+    updateTransform();
+  }
+
+  function zoomOut() {
+    scale = Math.max(scale - 0.35, 0.6);
+    updateTransform();
+  }
+
+  // Attach click listener to all floor plan wrappers
+  document.querySelectorAll('.floor-img-wrapper').forEach(wrapper => {
+    wrapper.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const src = wrapper.dataset.floorSrc || wrapper.querySelector('img')?.src;
+      const title = wrapper.dataset.floorTitle || 'Floor Plan';
+      if (src) openZoom(src, title);
+    });
+  });
+
+  if (zoomInBtn) zoomInBtn.addEventListener('click', (e) => { e.stopPropagation(); zoomIn(); });
+  if (zoomOutBtn) zoomOutBtn.addEventListener('click', (e) => { e.stopPropagation(); zoomOut(); });
+  if (zoomResetBtn) zoomResetBtn.addEventListener('click', (e) => { e.stopPropagation(); resetZoom(); });
+  if (zoomCloseBtn) zoomCloseBtn.addEventListener('click', (e) => { e.stopPropagation(); closeZoom(); });
+
+  // Close when clicking outside of image/controls
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal || e.target === zoomViewport) {
+      closeZoom();
+    }
+  });
+
+  // Wheel zoom
+  zoomViewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      scale = Math.min(scale + 0.2, 4.5);
+    } else {
+      scale = Math.max(scale - 0.2, 0.6);
+    }
+    updateTransform();
+  }, { passive: false });
+
+  // Mouse Drag / Pan
+  zoomViewport.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    isDragging = true;
+    startX = e.clientX - translateX;
+    startY = e.clientY - translateY;
+    zoomViewport.style.cursor = 'grabbing';
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    translateX = e.clientX - startX;
+    translateY = e.clientY - startY;
+    updateTransform();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      zoomViewport.style.cursor = 'grab';
+    }
+  });
+
+  // Touch Drag & Pinch Zoom
+  let initialTouchDist = null;
+  let initialScale = 1;
+
+  zoomViewport.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      isDragging = true;
+      startX = e.touches[0].clientX - translateX;
+      startY = e.touches[0].clientY - translateY;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      initialTouchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      initialScale = scale;
+    }
+  }, { passive: true });
+
+  zoomViewport.addEventListener('touchmove', (e) => {
+    if (isDragging && e.touches.length === 1) {
+      translateX = e.touches[0].clientX - startX;
+      translateY = e.touches[0].clientY - startY;
+      updateTransform();
+    } else if (e.touches.length === 2 && initialTouchDist) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      scale = Math.min(Math.max((dist / initialTouchDist) * initialScale, 0.6), 4.5);
+      updateTransform();
+    }
+  }, { passive: true });
+
+  zoomViewport.addEventListener('touchend', () => {
+    isDragging = false;
+    initialTouchDist = null;
+  });
+
+  // Double click to toggle 2x zoom
+  zoomViewport.addEventListener('dblclick', (e) => {
+    if (e.target.closest('button')) return;
+    if (scale > 1.2) {
+      resetZoom();
+    } else {
+      scale = 2;
+      updateTransform();
+    }
+  });
+
+  // Keyboard navigation
+  window.addEventListener('keydown', (e) => {
+    if (modal.classList.contains('hidden')) return;
+    if (e.key === 'Escape') closeZoom();
+    if (e.key === '+' || e.key === '=') zoomIn();
+    if (e.key === '-' || e.key === '_') zoomOut();
+    if (e.key === '0') resetZoom();
+  });
+}
+
+// Run after the modal markup exists in the DOM (the modal is defined later in the body)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initZoomLightbox);
+} else {
+  initZoomLightbox();
+}
+</script>
+
+<!-- ═══════ ZOOM LIGHTBOX MODAL ═══════ -->
+<div id="zoomModal" class="fixed inset-0 z-[100] hidden bg-black/90 backdrop-blur-md flex-col items-center justify-between p-3 sm:p-5 select-none">
+  <!-- Top Bar -->
+  <div class="w-full max-w-[1400px] flex items-center justify-between text-white py-2 px-3 sm:px-4 border-b border-white/10">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center">
+        <span class="material-symbols-outlined text-[20px] text-on-primary">apartment</span>
+      </div>
+      <div>
+        <h3 id="zoomTitle" class="text-sm sm:text-base font-semibold tracking-tight text-white leading-tight">Floor Plan</h3>
+        <p class="text-[11px] text-gray-400 hidden sm:block">Scroll wheel or buttons to zoom · Drag to pan · Double-click to toggle 2x</p>
+      </div>
+    </div>
+    
+    <!-- Controls -->
+    <div class="flex items-center gap-1.5 sm:gap-2">
+      <button id="zoomOutBtn" type="button" class="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-white cursor-pointer" title="Zoom Out (-)">
+        <span class="material-symbols-outlined text-[20px]">remove</span>
+      </button>
+      <span id="zoomLevelText" class="text-xs font-mono w-12 sm:w-14 text-center text-gray-300">100%</span>
+      <button id="zoomInBtn" type="button" class="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-white cursor-pointer" title="Zoom In (+)">
+        <span class="material-symbols-outlined text-[20px]">add</span>
+      </button>
+      <button id="zoomResetBtn" type="button" class="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-white cursor-pointer" title="Reset Zoom (0)">
+        <span class="material-symbols-outlined text-[20px]">restart_alt</span>
+      </button>
+      <div class="h-6 w-px bg-white/20 mx-1"></div>
+      <button id="zoomCloseBtn" type="button" class="w-9 h-9 rounded-lg bg-white/15 hover:bg-red-600/90 flex items-center justify-center transition-colors text-white cursor-pointer" title="Close (Esc)">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Interactive Image Viewport -->
+  <div id="zoomViewport" class="flex-1 w-full overflow-hidden flex items-center justify-center relative cursor-grab active:cursor-grabbing">
+    <img id="zoomImage" src="" alt="Zoomed Floor Plan" class="max-w-[90vw] max-h-[75vh] object-contain transition-transform duration-75 origin-center will-change-transform shadow-2xl rounded bg-white" draggable="false" />
+  </div>
+
+  <!-- Bottom Tip -->
+  <div class="text-[11px] text-gray-400 py-1 text-center">
+    Press <kbd class="px-1.5 py-0.5 rounded bg-white/10 font-mono text-[10px] text-gray-200">ESC</kbd> or click outside to close · Drag to pan freely
+  </div>
+</div>
+
+</body>
+</html>

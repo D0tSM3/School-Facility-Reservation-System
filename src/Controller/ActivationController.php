@@ -7,7 +7,6 @@ namespace CampusRoom\Controller;
 use CampusRoom\Core\Mailer;
 use CampusRoom\Core\PasswordPolicy;
 use CampusRoom\Core\RateLimiter;
-use CampusRoom\Core\Recaptcha;
 use CampusRoom\Core\RequestSecurity;
 use CampusRoom\Core\Response;
 use CampusRoom\Core\Timing;
@@ -34,15 +33,7 @@ final class ActivationController
         RequestSecurity::requireProtectedJsonPost();
         $body = $this->jsonBody();
 
-        $captchaError = Recaptcha::check(
-            isset($body['recaptcha_token']) ? (string) $body['recaptcha_token'] : null,
-            self::clientIp()
-        );
-        if ($captchaError !== null) {
-            Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
-            Response::error('Unable to process the activation request.', 400);
-        }
-
+        // No reCAPTCHA on activation by product decision: relies on rate limiting and school roster verification.
         $schoolId = strtoupper(trim((string) ($body['student_id'] ?? '')));
         if (!self::validStudentId($schoolId)) {
             Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
