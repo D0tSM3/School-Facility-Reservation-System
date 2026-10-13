@@ -579,11 +579,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Fill the Add-Class room dropdown from the loaded room directory. If the
+  // rooms haven't been fetched yet (e.g. the modal is opened from a quick
+  // action before the Rooms view has rendered), load them first so the select
+  // is never empty.
+  async function openAddClassModal() {
+    const select = document.getElementById('classRoomSelect');
+    if (select && (!Array.isArray(state.rooms) || state.rooms.length === 0)) {
+      try {
+        const rooms = await apiFetch('api/rooms');
+        state.rooms = Array.isArray(rooms) ? rooms : [];
+      } catch (_) { /* fall through; the placeholder stays if the fetch fails */ }
+    }
+    if (select) {
+      select.innerHTML = '<option value="">Select a room...</option>' +
+        (state.rooms || []).map(r => `<option value="${r.room_id}">${escapeHtml(r.name)} (${escapeHtml(r.room_type || 'Facility')})</option>`).join('');
+    }
+    const form = document.getElementById('addClassForm');
+    if (form) form.reset();
+    openModal('addClassModal');
+  }
+
   const quickAddClassBtn = document.getElementById('quickAddClassBtn');
   if (quickAddClassBtn) {
-    quickAddClassBtn.addEventListener('click', () => {
-      openModal('addClassModal');
-    });
+    quickAddClassBtn.addEventListener('click', openAddClassModal);
   }
 
   // Global Sync / Refresh Button
@@ -1870,17 +1889,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const openAddClassModalBtn = document.getElementById('openAddClassModalBtn');
   if (openAddClassModalBtn) {
-    openAddClassModalBtn.addEventListener('click', () => {
-      const select = document.getElementById('classRoomSelect');
-      if (select) {
-        select.innerHTML = '<option value="">Select a room...</option>' +
-          state.rooms.map(r => `<option value="${r.room_id}">${escapeHtml(r.name)} (${escapeHtml(r.room_type || 'Facility')})</option>`).join('');
-      }
-
-      const form = document.getElementById('addClassForm');
-      if (form) form.reset();
-      openModal('addClassModal');
-    });
+    openAddClassModalBtn.addEventListener('click', openAddClassModal);
   }
 
   const addClassForm = document.getElementById('addClassForm');
