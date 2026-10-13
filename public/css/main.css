@@ -69,3 +69,21 @@
 .animate-toast-in {
   animation: slideDownToast 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Keep role-specific portal links hidden until a role hint is available. */
+aside nav a[data-path="customer-dashboard"],
+aside nav a[data-path="rooms"],
+aside nav a[data-path="my-reservations"],
+aside nav a[data-path="staff-dashboard"],
+aside nav a[data-path="admin-governance"] {
+  display: none !important;
+}
+
+html[data-role="customer"] aside nav a[data-path="customer-dashboard"],
+html[data-role="customer"] aside nav a[data-path="rooms"],
+html[data-role="customer"] aside nav a[data-path="my-reservations"],
+html[data-role="staff"] aside nav a[data-path="staff-dashboard"],
+html[data-role="admin"] aside nav a[data-path="staff-dashboard"],
+html[data-role="admin"] aside nav a[data-path="admin-governance"] {
+  display: flex !important;
+}

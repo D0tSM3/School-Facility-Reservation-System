@@ -3,6 +3,16 @@
  * Handles session info, active links, header profiles, and logout with subfolder relative paths.
  */
 
+window.CampusRoomSession = (function () {
+  var base = window.location.pathname.replace(/[^\/]*$/, '');
+  var request = fetch(base + 'api/auth/me', { credentials: 'include' })
+    .then(async function (response) {
+      return { status: response.status, json: await response.json() };
+    });
+  request.catch(function (err) { console.error('Failed to fetch user session', err); });
+  return request;
+})();
+
 // -----------------------------------------------------------------------
 // 0. Guard against the back-forward cache (bfcache).
 //    After Sign Out redirects to index.html, hitting the browser's Back
@@ -21,6 +31,33 @@ document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
+  const sessionRequest = window.CampusRoomSession;
+
+  function saveRoleHint(role) {
+    try {
+      sessionStorage.setItem('campus_role', String(role || ''));
+    } catch (err) {
+      console.warn('Unable to save the session role hint', err);
+    }
+    try {
+      localStorage.setItem('campus_role', String(role || ''));
+    } catch (err) {
+      console.warn('Unable to save the persistent role hint', err);
+    }
+  }
+
+  function clearRoleHint() {
+    try {
+      sessionStorage.removeItem('campus_role');
+    } catch (err) {
+      console.warn('Unable to clear the session role hint', err);
+    }
+    try {
+      localStorage.removeItem('campus_role');
+    } catch (err) {
+      console.warn('Unable to clear the legacy role hint', err);
+    }
+  }
 
   // -----------------------------------------------------------------------
   // 0b. Page ownership (one source of truth): the customer-only pages belong
@@ -47,12 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // -----------------------------------------------------------------------
   // 1. Fetch real session info
   // -----------------------------------------------------------------------
-  fetch(BASE + 'api/auth/me', { credentials: 'include' })
-    .then(res => res.json())
-    .then(json => {
+  sessionRequest
+    .then(({ json }) => {
       const currentUser = json.success ? json.data : null;
       if (!currentUser) {
-        localStorage.removeItem('campus_role');
+        clearRoleHint();
         if (window.CampusRoomShell && window.CampusRoomShell.clearUser) {
           window.CampusRoomShell.clearUser();
         }
@@ -60,6 +96,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'index.html';
         return;
       }
+
+      saveRoleHint(currentUser.role);
+      document.documentElement.setAttribute('data-role', String(currentUser.role || '').toLowerCase());
 
       if (window.CampusRoomShell && window.CampusRoomShell.saveUser) {
         window.CampusRoomShell.saveUser(currentUser);
@@ -201,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.CampusRoomShell && window.CampusRoomShell.clearUser) {
         window.CampusRoomShell.clearUser();
       }
-      localStorage.removeItem('campus_role');
+      clearRoleHint();
       fetch(BASE + 'api/auth/logout', { method: 'POST', credentials: 'include' })
         .then(() => { window.location.href = 'index.html'; })
         .catch(err => {

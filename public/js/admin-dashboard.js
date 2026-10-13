@@ -293,6 +293,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const response = await fetch(BASE + endpoint, config);
       if (response.status === 401) {
         // Unauthenticated session -> return to login
+        try {
+          sessionStorage.removeItem('campus_role');
+        } catch (err) {
+          console.warn('Unable to clear the session role hint', err);
+        }
+        try {
+          localStorage.removeItem('campus_role');
+        } catch (err) {
+          console.warn('Unable to clear the legacy role hint', err);
+        }
         window.location.href = 'index.html';
         return null;
       }
@@ -344,6 +354,16 @@ document.addEventListener('DOMContentLoaded', () => {
       state.currentUser = user;
       state.isStaffOnly = false;
       document.documentElement.setAttribute('data-role', String(user.role || '').toLowerCase());
+      try {
+        sessionStorage.setItem('campus_role', user.role);
+      } catch (err) {
+        console.warn('Unable to save the session role hint', err);
+      }
+      try {
+        localStorage.setItem('campus_role', user.role);
+      } catch (err) {
+        console.warn('Unable to save the persistent role hint', err);
+      }
 
       // Update sidebar & header profile pills
       const initials = getInitials(user.name);
@@ -389,7 +409,16 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.warn('Logout error ignored:', err);
     } finally {
-      localStorage.removeItem('campus_role');
+      try {
+        sessionStorage.removeItem('campus_role');
+      } catch (err) {
+        console.warn('Unable to clear the session role hint', err);
+      }
+      try {
+        localStorage.removeItem('campus_role');
+      } catch (err) {
+        console.warn('Unable to clear the legacy role hint', err);
+      }
       window.location.href = 'index.html';
     }
   }

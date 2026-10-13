@@ -6,140 +6,71 @@ namespace CampusRoom\Core;
 
 use PDO;
 
-/**
- * RateLimiter — manages cooldown timeouts and failed attempt thresholds
- * for sensitive authentication flows (login, registration OTP verification,
- * and forgot-password OTP reset).
- *
- * Scoped to the visitor's existing session by default (session_id()) rather than
- * per user account. This prevents denial-of-service / account-lockout attacks
- * while still enforcing the 3-attempt limit and 30-second cooldown on the client session.
- */
-class RateLimiter
+final class RateLimiter
 {
-    /** Total attempts allowed before cooldown lockout */
-    public const MAX_ATTEMPTS = 3;
-
-    /** Default lockout cooldown in seconds once attempts are exhausted */
-    public const DEFAULT_LOCKOUT_SECONDS = 30;
-
-    /** Inactivity window in seconds before attempt counter resets (15 minutes) */
+    public const MAX_ATTEMPTS = 5;
+    public const DEFAULT_LOCKOUT_SECONDS = 300;
     public const ATTEMPT_WINDOW_SECONDS = 900;
 
-    /**
-     * Resolve the rate limiting identifier.
-     * When $identifier is omitted or null, defaults to the current visitor's
-     * session ID ('sess_' . session_id()).
-     *
-     * @param string|null $identifier Explicit identifier override (e.g. for testing)
-     */
     public static function resolveIdentifier(?string $identifier = null): string
     {
-        if ($identifier !== null && trim($identifier) !== '') {
-            return trim($identifier);
-        }
-
-        if (session_status() === PHP_SESSION_NONE) {
-            Auth::startSession();
-        }
-
-        $sid = session_id();
-        if ($sid !== '' && $sid !== false) {
-            return 'sess_' . $sid;
-        }
-
-        // Fallback to client IP if session ID is empty (e.g. CLI or non-cookie client)
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-        return 'ip_' . $ip;
+        $ip = self::clientIp();
+        $normalizedIdentifier = strtolower(trim((string) $identifier));
+        $identifierHash = $normalizedIdentifier === ''
+            ? 'none'
+            : hash('sha256', $normalizedIdentifier);
+        return 'ip:' . $ip . ':id:' . $identifierHash;
     }
 
-    /**
-     * Generate a canonical, normalized cache key for action + identifier.
-     */
     public static function makeKey(string $action, ?string $identifier = null): string
     {
-        $id = self::resolveIdentifier($identifier);
-        return strtolower(trim($action)) . ':' . strtolower(trim($id));
+        return strtolower(trim($action)) . ':' . hash('sha256', self::resolveIdentifier($identifier));
     }
 
-    /**
-     * Check if an action is currently locked out for the session (or specified identifier).
-     */
     public static function isLocked(string $action, ?string $identifier = null): bool
     {
         return self::getRemainingSeconds($action, $identifier) > 0;
     }
 
-    /**
-     * Get remaining lockout seconds for an action.
-     * Returns 0 if not locked.
-     */
     public static function getRemainingSeconds(string $action, ?string $identifier = null): int
     {
-        $key = self::makeKey($action, $identifier);
-        $pdo = Database::getInstance()->getPdo();
-
-        $stmt = $pdo->prepare(
-            'SELECT CEIL(EXTRACT(EPOCH FROM (locked_until - CURRENT_TIMESTAMP)))::int AS remaining
-             FROM auth_rate_limits
-             WHERE rate_key = :key AND locked_until > CURRENT_TIMESTAMP'
+        $stmt = Database::getInstance()->getPdo()->prepare(
+            'SELECT GREATEST(0, CEIL(EXTRACT(EPOCH FROM (locked_until - CURRENT_TIMESTAMP))))::int AS remaining
+               FROM auth_rate_limits
+              WHERE rate_key = :key
+                AND locked_until > CURRENT_TIMESTAMP'
         );
-        $stmt->execute([':key' => $key]);
+        $stmt->execute([':key' => self::makeKey($action, $identifier)]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $row !== false ? max(0, (int) $row['remaining']) : 0;
+        return $row ? max(0, (int) $row['remaining']) : 0;
     }
 
-    /**
-     * Get total recorded failed attempt count for an action.
-     * Returns 0 if no record exists or if lockout/window has expired.
-     */
     public static function getAttempts(string $action, ?string $identifier = null): int
     {
-        $key = self::makeKey($action, $identifier);
-        $pdo = Database::getInstance()->getPdo();
-
-        $stmt = $pdo->prepare('SELECT failed_attempts, locked_until, updated_at FROM auth_rate_limits WHERE rate_key = :key');
-        $stmt->execute([':key' => $key]);
+        $stmt = Database::getInstance()->getPdo()->prepare(
+            "SELECT CASE
+                     WHEN updated_at < CURRENT_TIMESTAMP - INTERVAL '15 minutes' THEN 0
+                     WHEN locked_until <= CURRENT_TIMESTAMP AND locked_until > updated_at THEN 0
+                     ELSE failed_attempts
+                   END AS attempts
+               FROM auth_rate_limits
+              WHERE rate_key = :key"
+        );
+        $stmt->execute([':key' => self::makeKey($action, $identifier)]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($row === false) {
-            return 0;
-        }
-
-        $now = time();
-        $lockedUntil = strtotime($row['locked_until']);
-        $updatedAt = strtotime($row['updated_at']);
-
-        // If previously locked out and lockout expired, or inactivity > 15m, attempts are reset
-        if (($lockedUntil > $updatedAt && $now >= $lockedUntil) || ($now - $updatedAt > self::ATTEMPT_WINDOW_SECONDS)) {
-            return 0;
-        }
-
-        return max(0, (int) $row['failed_attempts']);
+        return $row ? max(0, (int) $row['attempts']) : 0;
     }
 
-    /**
-     * Get remaining attempts before lockout for an action.
-     * Returns MAX_ATTEMPTS (3) if no failures recorded.
-     */
     public static function getRemainingAttempts(string $action, ?string $identifier = null): int
     {
-        $used = self::getAttempts($action, $identifier);
-        return max(0, self::MAX_ATTEMPTS - $used);
+        return max(0, self::MAX_ATTEMPTS - self::getAttempts($action, $identifier));
     }
 
     /**
-     * Record a failed attempt.
-     * - Attempt 1 -> 2 remaining, no timer.
-     * - Attempt 2 -> 1 remaining, no timer.
-     * - Attempt 3 -> 0 remaining, 30s cooldown timer begins.
+     * Rate-limit keys combine the client IP with a SHA-256 identifier hash;
+     * neither session IDs nor raw account identifiers are persisted.
      *
-     * @param string      $action         Action name (e.g. 'login', 'verify_otp', 'reset_otp')
-     * @param string|null $identifier     Optional identifier override; defaults to visitor's session
-     * @param int         $maxAttempts    Maximum attempts allowed (default 3)
-     * @param int         $lockoutSeconds Cooldown duration once exhausted (default 30)
-     * @return array Status array with attempts, remaining_attempts, is_locked, and retry_after
+     * @return array{attempts: int, remaining_attempts: int, is_locked: bool, remaining: int, retry_after: int, max_attempts: int}
      */
     public static function recordFailure(
         string $action,
@@ -147,89 +78,79 @@ class RateLimiter
         int $maxAttempts = self::MAX_ATTEMPTS,
         int $lockoutSeconds = self::DEFAULT_LOCKOUT_SECONDS
     ): array {
-        $id = self::resolveIdentifier($identifier);
-        $key = self::makeKey($action, $id);
+        $rateKey = self::makeKey($action, $identifier);
+        $storedIdentifier = self::resolveIdentifier($identifier);
         $pdo = Database::getInstance()->getPdo();
-
-        $stmt = $pdo->prepare('SELECT failed_attempts, locked_until, updated_at FROM auth_rate_limits WHERE rate_key = :key');
-        $stmt->execute([':key' => $key]);
-        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        $now = time();
-        $attempts = 1;
-
-        if ($existing !== false) {
-            $lockedUntil = strtotime($existing['locked_until']);
-            $updatedAt = strtotime($existing['updated_at']);
-            $wasLocked = $lockedUntil > $updatedAt;
-
-            // If user previously completed a lockout period, or was inactive for > 15 mins,
-            // this new failure begins a brand new attempt cycle.
-            if (($wasLocked && $now >= $lockedUntil) || ($now - $updatedAt > self::ATTEMPT_WINDOW_SECONDS)) {
-                $attempts = 1;
-            } else {
-                $attempts = (int) $existing['failed_attempts'] + 1;
-            }
-        }
-
-        $isLocked = ($attempts >= $maxAttempts);
-        $remainingAttempts = max(0, $maxAttempts - $attempts);
-
-        if ($isLocked) {
-            $sql = "INSERT INTO auth_rate_limits (rate_key, action, identifier, failed_attempts, locked_until, updated_at)
-                    VALUES (:key, :action, :identifier, :attempts, CURRENT_TIMESTAMP + (:seconds * INTERVAL '1 second'), CURRENT_TIMESTAMP)
-                    ON CONFLICT (rate_key) DO UPDATE
-                    SET failed_attempts = :attempts,
-                        locked_until = CURRENT_TIMESTAMP + (:seconds * INTERVAL '1 second'),
-                        updated_at = CURRENT_TIMESTAMP
-                    RETURNING CEIL(EXTRACT(EPOCH FROM (locked_until - CURRENT_TIMESTAMP)))::int AS remaining";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                ':key'        => $key,
-                ':action'     => $action,
-                ':identifier' => $id,
-                ':attempts'   => $attempts,
-                ':seconds'    => $lockoutSeconds,
-            ]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            $remainingCooldown = $row !== false ? max(1, (int) $row['remaining']) : $lockoutSeconds;
-        } else {
-            $sql = "INSERT INTO auth_rate_limits (rate_key, action, identifier, failed_attempts, locked_until, updated_at)
-                    VALUES (:key, :action, :identifier, :attempts, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    ON CONFLICT (rate_key) DO UPDATE
-                    SET failed_attempts = :attempts,
-                        locked_until = CURRENT_TIMESTAMP,
-                        updated_at = CURRENT_TIMESTAMP";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                ':key'        => $key,
-                ':action'     => $action,
-                ':identifier' => $id,
-                ':attempts'   => $attempts,
-            ]);
-            $remainingCooldown = 0;
-        }
+        $stmt = $pdo->prepare(
+            "INSERT INTO auth_rate_limits
+                (rate_key, action, identifier, failed_attempts, locked_until, updated_at)
+             VALUES
+                (:key, :action, :identifier, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+             ON CONFLICT (rate_key) DO UPDATE
+               SET failed_attempts = CASE
+                     WHEN auth_rate_limits.updated_at < CURRENT_TIMESTAMP - INTERVAL '15 minutes'
+                       OR (auth_rate_limits.locked_until <= CURRENT_TIMESTAMP
+                           AND auth_rate_limits.locked_until > auth_rate_limits.updated_at)
+                     THEN 1
+                     ELSE auth_rate_limits.failed_attempts + 1
+                   END,
+                   locked_until = CASE
+                     WHEN CASE
+                       WHEN auth_rate_limits.updated_at < CURRENT_TIMESTAMP - INTERVAL '15 minutes'
+                         OR (auth_rate_limits.locked_until <= CURRENT_TIMESTAMP
+                             AND auth_rate_limits.locked_until > auth_rate_limits.updated_at)
+                       THEN 1
+                       ELSE auth_rate_limits.failed_attempts + 1
+                     END >= :max_attempts
+                     THEN CURRENT_TIMESTAMP + (CAST(:lockout_seconds AS integer) * INTERVAL '1 second')
+                     ELSE CURRENT_TIMESTAMP
+                   END,
+                   updated_at = CURRENT_TIMESTAMP
+             RETURNING failed_attempts,
+                       GREATEST(0, CEIL(EXTRACT(EPOCH FROM
+                         (locked_until - CURRENT_TIMESTAMP))))::int AS remaining"
+        );
+        $stmt->execute([
+            ':key' => $rateKey,
+            ':action' => $action,
+            ':identifier' => $storedIdentifier,
+            ':max_attempts' => $maxAttempts,
+            ':lockout_seconds' => $lockoutSeconds,
+        ]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $attempts = (int) ($row['failed_attempts'] ?? 1);
+        $remaining = max(0, (int) ($row['remaining'] ?? 0));
+        $isLocked = $attempts >= $maxAttempts && $remaining > 0;
 
         return [
-            'attempts'           => $attempts,
-            'remaining_attempts' => $remainingAttempts,
-            'is_locked'          => $isLocked,
-            'remaining'          => $remainingCooldown,
-            'retry_after'        => $remainingCooldown,
-            'max_attempts'       => $maxAttempts,
+            'attempts' => $attempts,
+            'remaining_attempts' => max(0, $maxAttempts - $attempts),
+            'is_locked' => $isLocked,
+            'remaining' => $remaining,
+            'retry_after' => $remaining,
+            'max_attempts' => $maxAttempts,
         ];
     }
 
-    /**
-     * Clear all recorded failed attempts and lockouts for an action + identifier
-     * (called upon successful authentication or OTP verification).
-     */
     public static function clear(string $action, ?string $identifier = null): void
     {
-        $key = self::makeKey($action, $identifier);
-        $pdo = Database::getInstance()->getPdo();
+        $stmt = Database::getInstance()->getPdo()->prepare(
+            'DELETE FROM auth_rate_limits WHERE rate_key = :key'
+        );
+        $stmt->execute([':key' => self::makeKey($action, $identifier)]);
+    }
 
-        $stmt = $pdo->prepare('DELETE FROM auth_rate_limits WHERE rate_key = :key');
-        $stmt->execute([':key' => $key]);
+    private static function clientIp(): string
+    {
+        if (($_ENV['VERCEL'] ?? getenv('VERCEL') ?: '') === '1') {
+            $forwarded = (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '');
+            $candidate = trim(explode(',', $forwarded)[0] ?? '');
+            if (filter_var($candidate, FILTER_VALIDATE_IP)) {
+                return $candidate;
+            }
+        }
+
+        $remote = (string) ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
+        return filter_var($remote, FILTER_VALIDATE_IP) ? $remote : '127.0.0.1';
     }
 }

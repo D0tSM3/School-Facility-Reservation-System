@@ -1,12 +1,28 @@
 /**
- * CampusRoom — Authentication & Account Registration Logic
- * Handles user sign in, registration validation, and password strength checks.
+ * CampusRoom — Sign-in Logic
+ * Handles sign-in and reCAPTCHA bootstrap for the login page.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
   const BASE_URI = window.location.pathname.replace(/[^\/]*$/, '');
+  let csrfToken = '';
+  const csrfReady = fetch(BASE_URI + 'api/auth/csrf', { credentials: 'same-origin' })
+    .then(response => response.json())
+    .then(json => {
+      csrfToken = json && json.success && json.data && typeof json.data.token === 'string'
+        ? json.data.token
+        : '';
+    });
+  if (new URLSearchParams(window.location.search).get('activated') === '1') {
+    const successBanner = document.getElementById('activationSuccessBanner');
+    if (successBanner) {
+      successBanner.textContent = "Your account is active. Sign in with your school email or student number and the password you just created. After you enter your password, we'll email you a code to finish signing in.";
+      successBanner.hidden = false;
+      successBanner.classList.remove('hidden');
+    }
+  }
 
   // ==========================================
   // 0. reCAPTCHA bootstrap
@@ -150,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
-  initCaptcha(['loginRecaptcha', 'registerRecaptcha']);
+  initCaptcha(['loginRecaptcha']);
 
   // ==========================================
   // 1. Sign In Page Logic
@@ -217,11 +233,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const BASE = window.location.pathname.replace(/[^\/]*$/, '');
-      fetch(BASE + 'api/auth/login', {
+      csrfReady.then(() => {
+        if (!csrfToken) throw new Error('CSRF token unavailable.');
+        return fetch(BASE + 'api/auth/login', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({ email, password, recaptcha_token: captchaToken('loginRecaptcha') })
+        });
       })
       .then(res => res.json().then(json => ({ status: res.status, json })))
       .then(({ status, json }) => {
@@ -230,12 +249,17 @@ document.addEventListener('DOMContentLoaded', () => {
           hideLoginError();
 
           
-          localStorage.setItem('campus_role', payload.role);
-            // Role ownership: Admin owns Admin Governance (superset incl. the
-            // operational views); Staff own the Staff Hub; everyone else the
-            // customer dashboard. Each role lands on its own page — no shared
-            // page with tabs hidden by role.
-            if (payload.role === 'Admin') {
+          try {
+            sessionStorage.setItem('campus_role', payload.role);
+            localStorage.setItem('campus_role', payload.role);
+          } catch (err) {
+            console.warn('Unable to save the session role hint', err);
+          }
+          // Role ownership: Admin owns Admin Governance (superset incl. the
+          // operational views); Staff own the Staff Hub; everyone else the
+          // customer dashboard. Each role lands on its own page — no shared
+          // page with tabs hidden by role.
+          if (payload.role === 'Admin') {
             window.location.href = 'admin-governance.html';
           } else if (payload.role === 'Staff') {
             window.location.href = 'staff-dashboard.html';
@@ -244,7 +268,6 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         } else if (status === 403 && payload.requires_verification) {
           sessionStorage.setItem('otp_email', payload.email);
-          if (payload.dev_otp) sessionStorage.setItem('dev_otp', payload.dev_otp);
           window.location.href = 'verify.html';
         } else {
           // Single-use token: clear it so a retry starts from a fresh tick.
@@ -327,163 +350,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
   }
 
-  // ==========================================
-  // 2. Registration Page Logic
-  // ==========================================
-  const registerForm = document.getElementById('registerForm');
-  if (registerForm && document.getElementById('fullName')) {
-    const fullNameInput = document.getElementById('fullName');
-    const emailInput = document.getElementById('univEmail');
-    const departmentSelect = document.getElementById('department');
-    const idNumberInput = document.getElementById('idNumber');
-    const passwordInput = document.getElementById('password');
-    const confirmPasswordInput = document.getElementById('confirmPassword');
-    const togglePasswordBtn = document.getElementById('togglePasswordBtn');
-    const passwordBars = document.querySelectorAll('.pwd-strength-bar');
-    const passwordScoreLabel = document.getElementById('passwordStrengthLabel');
-    const passwordMatchBadge = document.getElementById('passwordMatchBadge');
-    const registerAlert = document.getElementById('registerAlert');
-    const registerAlertText = document.getElementById('registerAlertText');
-
-    // Toggle Password Visibility
-    if (togglePasswordBtn && passwordInput) {
-      togglePasswordBtn.addEventListener('click', () => {
-        const isPassword = passwordInput.type === 'password';
-        passwordInput.type = isPassword ? 'text' : 'password';
-        const icon = togglePasswordBtn.querySelector('.material-symbols-outlined');
-        if (icon) {
-          icon.textContent = isPassword ? 'visibility_off' : 'visibility';
-        }
-      });
-    }
-
-    // Password Strength Meter
-    if (passwordInput) {
-      passwordInput.addEventListener('input', () => {
-        const val = passwordInput.value;
-        let score = 0;
-        if (val.length >= 8) score++;
-        if (val.length >= 12) score++;
-        if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
-        if (/[0-9]/.test(val) && /[^A-Za-z0-9]/.test(val)) score++;
-
-        if (passwordBars.length === 4) {
-          passwordBars.forEach((bar, i) => {
-            if (i < score) {
-              bar.className = 'h-1.5 rounded-full bg-secondary-container pwd-strength-bar';
-            } else {
-              bar.className = 'h-1.5 rounded-full bg-surface-container-high pwd-strength-bar';
-            }
-          });
-        }
-
-        if (passwordScoreLabel) {
-          const labels = ['Weak (1/4)', 'Fair (2/4)', 'Good (3/4)', 'Strong (4/4)'];
-          passwordScoreLabel.textContent = score > 0 ? labels[score - 1] : 'Too Weak (0/4)';
-        }
-
-        checkPasswordMatch();
-      });
-    }
-
-    // Confirm Password Match Check
-    function checkPasswordMatch() {
-      if (!confirmPasswordInput || !passwordInput || !passwordMatchBadge) return;
-      const match = passwordInput.value.length > 0 && passwordInput.value === confirmPasswordInput.value;
-      if (match) {
-        passwordMatchBadge.innerHTML = '<span class="material-symbols-outlined text-[13px] text-secondary">check_circle</span> Passwords match';
-        passwordMatchBadge.classList.remove('bg-error-container', 'text-error');
-        passwordMatchBadge.classList.add('bg-secondary-fixed/30', 'text-secondary');
-      } else if (confirmPasswordInput.value.length > 0) {
-        passwordMatchBadge.innerHTML = '<span class="material-symbols-outlined text-[13px] text-error">cancel</span> Do not match';
-        passwordMatchBadge.classList.remove('bg-secondary-fixed/30', 'text-secondary');
-        passwordMatchBadge.classList.add('bg-error-container', 'text-error');
-      }
-    }
-
-    if (confirmPasswordInput) {
-      confirmPasswordInput.addEventListener('input', checkPasswordMatch);
-    }
-
-    // Form Submission
-    let registerSubmitting = false;
-    registerForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (registerSubmitting) return;
-
-      const submitBtn = registerForm.querySelector('button[type="submit"]');
-      const fullName = fullNameInput ? fullNameInput.value.trim() : '';
-      const email = emailInput ? emailInput.value.trim() : '';
-      const password = passwordInput ? passwordInput.value : '';
-      const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
-
-      if (password !== confirmPassword) {
-        showRegisterError('Password and confirmation password do not match.');
-        return;
-      }
-
-      if (captcha.enabled && captcha.ready && !captchaToken('registerRecaptcha')) {
-        showRegisterError('Please confirm you are not a robot.');
-        return;
-      }
-
-      registerSubmitting = true;
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.classList.add('opacity-60', 'cursor-not-allowed');
-        submitBtn.dataset.originalHtml = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">sync</span> Registering...';
-      }
-
-      const BASE = window.location.pathname.replace(/[^\/]*$/, '');
-      fetch(BASE + 'api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: fullName, email, password,
-          recaptcha_token: captchaToken('registerRecaptcha')
-        })
-      })
-      .then(res => res.json().then(json => ({ status: res.status, json })))
-      .then(({ status, json }) => {
-        // Response::json() nests the payload under `data`; errors are top-level.
-        const payload = json.data || {};
-        if (status === 201) {
-          sessionStorage.setItem('otp_email', payload.email || email);
-          if (payload.dev_otp) {
-            sessionStorage.setItem('dev_otp', payload.dev_otp);
-          }
-          window.location.href = 'verify.html';
-        } else {
-          registerSubmitting = false;
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
-            if (submitBtn.dataset.originalHtml) submitBtn.innerHTML = submitBtn.dataset.originalHtml;
-          }
-          captchaReset('registerRecaptcha');
-          showRegisterError(json.error || 'An error occurred during account registration.');
-        }
-      })
-      .catch(err => {
-        registerSubmitting = false;
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
-          if (submitBtn.dataset.originalHtml) submitBtn.innerHTML = submitBtn.dataset.originalHtml;
-        }
-        showRegisterError('Network error. Please try again later.');
-      });
-    });
-
-    function showRegisterError(msg) {
-      if (registerAlert) {
-        if (registerAlertText) registerAlertText.textContent = msg;
-        registerAlert.classList.remove('hidden');
-        registerAlert.classList.add('flex');
-      } else {
-        alert(msg);
-      }
-    }
-  }
 });

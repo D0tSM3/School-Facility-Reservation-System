@@ -19,7 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Page ownership (Customer-only) is enforced centrally in app.js
   // (bounceWrongRole), which routes Staff/Admin to their own home — instantly
-  // from the client hint and again after the server confirms the session.
+  // from the client hint and again after the server confirms the session
+  // (now via the shared window.CampusRoomSession promise from feature/visitlogs).
 
   const urlParams = new URLSearchParams(window.location.search);
   let activeFilter = urlParams.get('filter') || 'all';
@@ -945,8 +946,6 @@ function renderReservations() {
 
   fetchReservations();
 });
-
-
 
 
 

@@ -38,8 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const resendBtn = document.getElementById('btn-resend-code');
   const resendCountdown = document.getElementById('resendCountdown');
   const sendAnotherBtn = document.getElementById('btn-send-another');
-  const devBanner = document.getElementById('forgotDevBanner');
-  const devOtpDisplay = document.getElementById('forgotDevOtpDisplay');
   const otpInputs = document.querySelectorAll('.otp-digit');
   const critLength = document.getElementById('crit-length');
   const critUpper = document.getElementById('crit-upper');
@@ -292,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function showConfirmationState(submittedEmail, devOtp) {
+  function showConfirmationState(submittedEmail) {
     setLoadingState(false);
     hideError();
     hideResetError();
@@ -301,13 +299,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (confirmedEmailText) {
       confirmedEmailText.textContent = submittedEmail;
-    }
-
-    if (devOtp && devBanner && devOtpDisplay) {
-      devOtpDisplay.textContent = devOtp;
-      devBanner.classList.remove('hidden');
-    } else if (devBanner) {
-      devBanner.classList.add('hidden');
     }
 
     if (form) form.classList.add('hidden');
@@ -344,7 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function resetToFormView() {
     sessionStorage.removeItem('otp_email');
-    sessionStorage.removeItem('dev_otp');
 
     if (confirmationCard) {
       confirmationCard.classList.add('hidden');
@@ -550,13 +540,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await response.json().catch(() => ({}));
 
         if (response.ok) {
-          const payload = data.data || data;
           sessionStorage.setItem('otp_email', email);
-          if (payload.dev_otp) {
-            sessionStorage.setItem('dev_otp', payload.dev_otp);
-            console.info('[CampusRoom/Auth] Dev Mode OTP:', payload.dev_otp);
-          }
-          showConfirmationState(email, payload.dev_otp);
+          showConfirmationState(email);
         } else {
           resetCaptcha();
           setLoadingState(false);
@@ -623,7 +608,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (response.ok) {
           sessionStorage.removeItem('otp_email');
-          sessionStorage.removeItem('dev_otp');
           showSuccessState();
         } else {
           setResetLoadingState(false);
@@ -693,12 +677,6 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify({ email: currentEmail })
         });
         const data = await response.json().catch(() => ({}));
-        const payload = data.data || data;
-        if (payload.dev_otp && devBanner && devOtpDisplay) {
-          devOtpDisplay.textContent = payload.dev_otp;
-          devBanner.classList.remove('hidden');
-        }
-
         // 30-second countdown
         let count = 30;
         resendCountdown.textContent = `(${count}s)`;
@@ -730,8 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Restore active recovery session or evaluate autofilled password
   const savedOtpEmail = sessionStorage.getItem('otp_email');
   if (savedOtpEmail) {
-    const savedDevOtp = sessionStorage.getItem('dev_otp');
-    showConfirmationState(savedOtpEmail, savedDevOtp);
+    showConfirmationState(savedOtpEmail);
   } else {
     checkPasswordCriteria(newPasswordInput ? newPasswordInput.value : '');
   }

@@ -550,7 +550,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------------------------------------------------------------
 
   async function start() {
-    const me = await api('api/auth/me');
+    const sessionRequest = window.CampusRoomSession;
+    const me = sessionRequest
+      ? await sessionRequest.then(({ status, json }) => ({
+          ok: status < 400 && json.success !== false,
+          status,
+          data: json.data,
+          error: json.error || `Request failed (HTTP ${status}).`
+        }))
+      : await api('api/auth/me');
 
     if (!me.ok) {
       if (me.status === 401) {
@@ -1435,4 +1443,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
   start();
 });
-

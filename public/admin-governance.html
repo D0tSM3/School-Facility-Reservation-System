@@ -65,18 +65,37 @@
       .active-nav-link .nav-icon {
         color: #ffc641 !important;
       }
-      /* Admin Governance is Admin-only: a Staff account is redirected to the
-         Staff Hub (staff-dashboard.html) by checkAdminAuth(), so this page has
-         no per-tab role hiding. The server verifies the role via /api/auth/me. */
+      /* Admin Governance is Admin-only: checkAdminAuth() bounces a Staff account
+         to the Staff Hub. These rules are defence-in-depth — the admin-only tabs
+         stay hidden unless data-role=admin, so they can never flash for another
+         role before the bounce. The server still verifies via /api/auth/me. */
+      [data-nav="holidays"],
+      [data-nav="users"],
+      [data-nav="archives"],
+      [data-nav="config"],
+      [data-nav="logs"],
+      [data-admin-label] {
+        display: none !important;
+      }
+      html[data-role="admin"] [data-nav="holidays"],
+      html[data-role="admin"] [data-nav="users"],
+      html[data-role="admin"] [data-nav="archives"],
+      html[data-role="admin"] [data-nav="config"],
+      html[data-role="admin"] [data-nav="logs"] {
+        display: flex !important;
+      }
+      html[data-role="admin"] [data-admin-label] {
+        display: block !important;
+      }
     </style>
     <script>
       // Cosmetic pre-paint hint only (never authorization): mark the role so
       // the shell paints correctly before /api/auth/me confirms it.
       (function () {
         try {
-          var r = localStorage.getItem('campus_role');
+          var r = sessionStorage.getItem('campus_role') || localStorage.getItem('campus_role');
           if (r) document.documentElement.setAttribute('data-role', r.toLowerCase());
-        } catch (e) { /* ignore */ }
+        } catch (e) { console.warn('Unable to read the session role hint', e); }
       })();
     </script>
   </head>
@@ -2569,6 +2588,7 @@
     <script src="js/util.js"></script>
     <script src="js/schedule.js"></script>
     <script src="js/logArchive.js"></script>
+    <script src="js/inactivity.js"></script>
     <script src="js/admin-dashboard.js?v=20261013_semester"></script>
   </body>
 </html>

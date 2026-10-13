@@ -171,7 +171,12 @@
     <!-- FOUC Preventer -->
     <script>
       (function () {
-        const role = localStorage.getItem("campus_role");
+        let role = null;
+        try {
+          role = sessionStorage.getItem("campus_role") || localStorage.getItem("campus_role");
+        } catch (err) {
+          console.warn("Unable to read the session role hint", err);
+        }
         if (role) {
           document.documentElement.setAttribute(
             "data-role",
@@ -231,7 +236,7 @@
                   class="h-12 w-auto object-contain"
                   src="assets/logo.svg"
                 />
-              </div>
+                </div>
 
               <!-- Center Text -->
               <div class="my-auto py-8">
@@ -346,6 +351,15 @@
               </div>
 
               <div
+                id="activationSuccessBanner"
+                class="mb-4 hidden rounded-lg bg-green-50 p-3 text-left text-sm font-medium text-green-900"
+                role="status"
+                hidden
+              >
+                Your account is active. Sign in with your school email or student number and the password you just created. After you enter your password, we'll email you a code to finish signing in.
+              </div>
+
+              <div
                 id="authErrorAlert"
                 class="bg-[#ffdad6] text-[#93000a] rounded-lg p-3 items-start gap-2 text-left hidden"
               >
@@ -382,9 +396,9 @@
               <p class="text-[14px] text-gray-600 font-medium">
                 Don't have an account?
                 <a
-                  href="register.html"
+                  href="activate.html"
                   class="text-[#7a1f2b] font-bold hover:underline ml-1"
-                  >Register</a
+                  >Activate your account</a
                 >
               </p>
             </div>

@@ -96,7 +96,12 @@
     <!-- FOUC Preventer -->
     <script>
       (function () {
-        const role = localStorage.getItem("campus_role");
+        let role = null;
+        try {
+          role = sessionStorage.getItem("campus_role") || localStorage.getItem("campus_role");
+        } catch (err) {
+          console.warn("Unable to read the session role hint", err);
+        }
         if (role) {
           document.documentElement.setAttribute(
             "data-role",
@@ -173,26 +178,6 @@
         </p>
 
         <!-- Dev mode banner: shows OTP in-page when SMTP not configured -->
-        <div
-          id="devBanner"
-          class="hidden mb-4 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-4 py-3 flex items-start gap-2"
-        >
-          <span
-            class="material-symbols-outlined text-amber-600 text-[18px] shrink-0 mt-0.5"
-            >construction</span
-          >
-          <div>
-            <p class="text-xs font-semibold">Dev Mode — SMTP not configured</p>
-            <p class="text-xs mt-0.5">
-              Your code is:
-              <strong
-                id="devOtpDisplay"
-                class="font-mono text-base tracking-widest text-primary"
-              ></strong>
-            </p>
-          </div>
-        </div>
-
         <!-- Error banner -->
         <div
           id="errorBanner"
@@ -298,7 +283,18 @@
       (function () {
         var BASE = window.location.pathname.replace(/[^\/]*$/, "");
         var email = sessionStorage.getItem("otp_email") || "";
-        var devOtp = sessionStorage.getItem("dev_otp") || "";
+        var csrfToken = "";
+        var csrfReady = fetch(BASE + "api/auth/csrf", {
+          credentials: "same-origin",
+        })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (json) {
+            csrfToken = json && json.success && json.data && json.data.token
+              ? json.data.token
+              : "";
+          });
 
         // If arrived without an email, redirect back to login
         if (!email) {
@@ -312,12 +308,6 @@
         var parts = email.split("@");
         var masked = (parts[0] || "").slice(0, 2) + "***@" + (parts[1] || "");
         document.getElementById("emailHint").textContent = "Sent to " + masked;
-
-        // Dev mode: show OTP in-page banner
-        if (devOtp) {
-          document.getElementById("devOtpDisplay").textContent = devOtp;
-          document.getElementById("devBanner").classList.remove("hidden");
-        }
 
         // OTP digit input wiring (auto-advance + backspace)
         var inputs = document.querySelectorAll(".otp-digit");
@@ -379,11 +369,17 @@
             btn.disabled = true;
             btn.textContent = "Verifying\u2026";
 
-            fetch(BASE + "api/auth/verify-otp", {
+            csrfReady.then(function () {
+              if (!csrfToken) throw new Error("CSRF token unavailable.");
+              return fetch(BASE + "api/auth/verify-otp", {
               method: "POST",
               credentials: "same-origin",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-Token": csrfToken,
+              },
               body: JSON.stringify({ email: email, otp: otp }),
+              });
             })
               .then(function (res) {
                 return res.json().then(function (d) {
@@ -394,7 +390,6 @@
                 var payload = r.json.data || {};
                 if (r.status === 200 && payload.user_id) {
                   sessionStorage.removeItem("otp_email");
-                  sessionStorage.removeItem("dev_otp");
                   var role = payload.role;
                   // Persist the client role hint so the landing page (and every
                   // page after) paints the right sidebar pre-paint, no waiting.
@@ -498,11 +493,17 @@
         // No reCAPTCHA on this screen: the user already passed the challenge on
         // the sign-in page, and the 30-second cooldown below throttles Resend.
         resendBtn.addEventListener("click", function () {
-          fetch(BASE + "api/auth/resend-otp", {
+          csrfReady.then(function () {
+            if (!csrfToken) throw new Error("CSRF token unavailable.");
+            return fetch(BASE + "api/auth/resend-otp", {
             method: "POST",
             credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": csrfToken,
+            },
             body: JSON.stringify({ email: email }),
+            });
           })
             .then(function (res) {
               return res.json().then(function (d) {
@@ -518,12 +519,6 @@
                 return;
               }
               var payload = r.data.data || {};
-              if (payload.dev_otp) {
-                sessionStorage.setItem("dev_otp", payload.dev_otp);
-                document.getElementById("devOtpDisplay").textContent =
-                  payload.dev_otp;
-                document.getElementById("devBanner").classList.remove("hidden");
-              }
               startCooldown();
             })
             .catch(function () {
