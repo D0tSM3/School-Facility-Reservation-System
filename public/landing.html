@@ -1172,5 +1172,23 @@ if (document.readyState === 'loading') {
   </div>
 </div>
 
+<!-- ═══════ VISITOR LOG BEACON ═══════ -->
+<!-- Records one landing-page visit in the audit log. Fire-and-forget:
+     anonymous, no personal data, and never blocks or disrupts the page. -->
+<script>
+(function () {
+  var BASE = window.location.pathname.replace(/[^\/]*$/, '');
+  var url = BASE + 'api/visit';
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(url);
+    } else {
+      fetch(url, { method: 'POST', credentials: 'same-origin', keepalive: true })
+        .catch(function () { /* beacon is best-effort; ignore failures */ });
+    }
+  } catch (e) { /* never let logging break the landing page */ }
+})();
+</script>
+
 </body>
 </html>

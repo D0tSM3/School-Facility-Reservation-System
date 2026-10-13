@@ -12,6 +12,7 @@ final class SecurityLog
     private const DEFAULT_ROW_CAP = 30;
     private const LOGIN_FAILED_ROW_CAP = 20;
     private const ACTIVATION_NO_MATCH_ROW_CAP = 30;
+    private const PAGE_VISIT_ROW_CAP = 30;
     private const ROW_CAP_WINDOW_MINUTES = 15;
     private const RETENTION_DAYS = 90;
     private const RETENTION_SAMPLE_RATE = 100;
@@ -162,6 +163,10 @@ final class SecurityLog
             $limit = self::LOGIN_FAILED_ROW_CAP;
         } elseif ($event === 'activation_no_match') {
             $limit = self::ACTIVATION_NO_MATCH_ROW_CAP;
+        } elseif ($event === 'page_visit') {
+            // Landing-page visits are public and high-volume; cap rows per IP
+            // so a single visitor refreshing can't flood the audit log.
+            $limit = self::PAGE_VISIT_ROW_CAP;
         }
 
         $pdo = Database::getInstance()->getPdo();

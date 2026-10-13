@@ -565,6 +565,7 @@ class ReservationRepository
             'activation_skipped',
             'activation_verify_failed',
             'activation_completed',
+            'page_visit',
         ];
         if (isset($filters['event_type'])
             && in_array($filters['event_type'], $eventTypes, true)) {

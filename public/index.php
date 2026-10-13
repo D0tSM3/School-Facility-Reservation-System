@@ -115,8 +115,11 @@ if (in_array($uri, ['/index.php', '/public/index.php', '/public'], true)) {
 $uri = rtrim($uri, '/') ?: '/';
 
 // The CSRF endpoint must count and block abusive requests before creating or
-// writing a session. Every other route retains the normal front-controller startup.
-if (!($method === 'GET' && $uri === '/api/auth/csrf')) {
+// writing a session. The public visitor beacon is anonymous and must not spawn
+// a DB session per visitor. Every other route retains the normal startup.
+$skipsSession = ($method === 'GET' && $uri === '/api/auth/csrf')
+    || ($method === 'POST' && $uri === '/api/visit');
+if (!$skipsSession) {
     Auth::startSession();
 }
 
@@ -180,6 +183,24 @@ $routes = [
         }
 
         Response::json(['token' => RequestSecurity::csrfToken()]);
+    }],
+    // Public visitor beacon — the landing page posts here on load so visits are
+    // recorded in the audit log. No session/CSRF (the brochure has neither); an
+    // IP window guard plus the per-IP row cap in SecurityLog stop flooding.
+    ['POST', '#^/api/visit$#', function () {
+        $count = RateLimiter::incrementIpWindow(
+            'visit',
+            RateLimiter::clientIp(),
+            RateLimiter::CSRF_WINDOW_SECONDS
+        );
+
+        if ($count <= RateLimiter::CSRF_BLOCK_AT) {
+            SecurityLog::record('page_visit', 'Visitor opened the landing page');
+        }
+
+        // Always 204 regardless of logging outcome: the beacon must never
+        // surface errors or counts to an anonymous visitor.
+        http_response_code(204);
     }],
     ['POST', '#^/api/auth/activate/request$#',  fn() => (new ActivationController())->request()],
     ['POST', '#^/api/auth/activate/verify$#',   fn() => (new ActivationController())->verify()],

@@ -2314,6 +2314,7 @@ document.addEventListener('DOMContentLoaded', () => {
     activation_verify_failed: 'Wrong activation code',
     activation_completed: 'Account activated',
     visit_burst: 'Many page loads',
+    page_visit: 'Landing visit',
   };
 
   function isSecurityLogScope() {
