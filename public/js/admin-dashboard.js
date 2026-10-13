@@ -16,15 +16,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Global State
   const state = {
     currentUser: null,
+    isStaffOnly: false, // Admin Governance is Admin-only; Staff are redirected to their hub.
     activeView: 'overview',
     activeResSubtab: 'all',
     activeSysSubtab: 'classes',
     facilityViewMode: 'table', // 'table' | 'grid'
     rooms: [],
     reservations: [],
-    moveRequests: [],
     userCancellations: [],
-    overrideRequests: [],
     settings: null,
     users: [],
     classes: [],
@@ -54,10 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/'/g, '&#039;');
   }
 
-  // Short, upper-cased reference shown in the Approval Queue / detail modal.
-  // renderApprovalQueue(), the approve/reject confirmations and the reservation
-  // detail view all call this; it was never defined here, so the first Pending
-  // row threw a ReferenceError and the queue stayed on its empty state.
+  // Short, upper-cased reference shown in the reservations table and detail modal.
   function shortId(value) {
     return String(value ?? '').substring(0, 8).toUpperCase();
   }
@@ -322,51 +318,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // 2. AUTHENTICATION & SUPERUSER SESSION GUARD
   // =========================================================================
 
-  // Views/sidebar links only an Admin may use. Staff get the same reservation
-  // queues (overview, reservations, approval-queue, moves, cancels, overrides,
-  // facilities/Rooms) but NOT these administration tools.
-  // Class Schedules is shared Staff + Admin: staff need it to relocate classes
-  // out of a room a customer booking needs, so it is NOT in this list.
-  const ADMIN_ONLY_VIEWS = ['holidays', 'users', 'archives', 'config', 'logs'];
-
-  function applyStaffVisibility() {
-    document.documentElement.setAttribute('data-role', 'staff');
-    // Hide each admin-only sidebar link.
-    ADMIN_ONLY_VIEWS.forEach((v) => {
-      document.querySelectorAll('[data-nav="' + v + '"]').forEach((el) => {
-        const row = el.closest('button, a, li') || el;
-        row.style.display = 'none';
-      });
-    });
-    // Hide the now-empty "ADMINISTRATION" section label.
-    document.querySelectorAll('span').forEach((el) => {
-      if (el.textContent.trim() === 'ADMINISTRATION') {
-        const grp = el.closest('div');
-        if (grp) grp.style.display = 'none';
-      }
-    });
-  }
+  // Admin Governance is Admin-only: every view here belongs to Admin. Staff
+  // are redirected to their own hub (staff-dashboard.html) by checkAdminAuth(),
+  // so there is no per-tab role hiding on this page.
 
   async function checkAdminAuth() {
     try {
       const user = await apiFetch('api/auth/me');
       if (!user) return false;
 
-      // Staff share this dashboard with Admins — same reservation queues — but
-      // NOT the administration tools (users, classes, holidays, archives,
-      // config, audit logs). Only a Customer is turned away.
-      if (user.role !== 'Admin' && user.role !== 'Staff') {
-        alert('Access Restricted: This dashboard requires Staff or Administrator privileges.');
+      // Admin Governance is Admin-only. Staff have their own hub
+      // (staff-dashboard.html) with the operational views; they are sent there
+      // rather than shown this page with admin tools hidden. Customers are
+      // turned away entirely. The server (/api/auth/me) is the authority.
+      if (user.role === 'Staff') {
+        window.location.replace('staff-dashboard.html');
+        return false;
+      }
+      if (user.role !== 'Admin') {
+        alert('Access Restricted: This dashboard requires Administrator privileges.');
         window.location.href = 'dashboard.html';
         return false;
       }
 
       state.currentUser = user;
-      state.isStaffOnly = (user.role === 'Staff');
-      // Authoritative role from the server corrects any stale pre-paint hint,
-      // so the data-role CSS shows/hides exactly the right tabs.
+      state.isStaffOnly = false;
       document.documentElement.setAttribute('data-role', String(user.role || '').toLowerCase());
-      if (state.isStaffOnly) applyStaffVisibility();
 
       // Update sidebar & header profile pills
       const initials = getInitials(user.name);
@@ -476,11 +453,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function switchView(viewName) {
     if (!viewTitles[viewName]) return;
-    // Staff may not open administration views even via a direct hash — send
-    // them to the overview instead.
-    if (state.isStaffOnly && ADMIN_ONLY_VIEWS.indexOf(viewName) !== -1) {
-      viewName = 'overview';
-    }
     state.activeView = viewName;
 
     // Synchronize URL hash seamlessly without page reload
@@ -637,9 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       state.rooms = Array.isArray(rooms) ? rooms : [];
       state.reservations = Array.isArray(reservations) ? reservations : [];
-      state.moveRequests = [];
       state.userCancellations = Array.isArray(cancelReqs) ? cancelReqs : [];
-      state.overrideRequests = [];
       state.users = Array.isArray(users) ? users : [];
       state.settings = settings;
 
@@ -1162,8 +1132,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const capacity = parseInt(document.getElementById('newRoomCapacity').value, 10);
       const status = document.getElementById('newRoomStatus').value;
 
-      if (isNaN(floor) || floor < 1 || floor > 15) {
-        showToast('Floor number must be between 1 and 15.', 'error');
+      if (isNaN(floor) || floor < 0 || floor > 4) {
+        showToast('Floor number must be between 0 (ground) and 4.', 'error');
         return;
       }
       if (isNaN(capacity) || capacity < 1 || capacity > MAX_ROOM_CAPACITY) {
@@ -1199,8 +1169,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const status = document.getElementById('editRoomStatus').value;
       const is_active = document.getElementById('editRoomIsActive').value === 'true';
 
-      if (isNaN(floor) || floor < 1 || floor > 15) {
-        showToast('Floor number must be between 1 and 15.', 'error');
+      if (isNaN(floor) || floor < 0 || floor > 4) {
+        showToast('Floor number must be between 0 (ground) and 4.', 'error');
         return;
       }
       if (isNaN(capacity) || capacity < 1 || capacity > MAX_ROOM_CAPACITY) {
@@ -2008,6 +1978,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (startEl && s.business_hours_start) startEl.value = s.business_hours_start;
       if (endEl && s.business_hours_end) endEl.value = s.business_hours_end;
 
+      const semStartEl = document.getElementById('configSemesterStart');
+      const semEndEl = document.getElementById('configSemesterEnd');
+      if (semStartEl) semStartEl.value = s.semester_start || '';
+      if (semEndEl) semEndEl.value = s.semester_end || '';
+
       const closedDays = Array.isArray(s.closed_days) ? s.closed_days : [];
       const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       days.forEach(day => {
@@ -2041,12 +2016,29 @@ document.addEventListener('DOMContentLoaded', () => {
         closedDays.push(cb.value);
       });
 
+      // Current semester: set both dates together, or leave both blank to keep
+      // the existing semester unchanged.
+      const semStart = (document.getElementById('configSemesterStart') || {}).value || '';
+      const semEnd = (document.getElementById('configSemesterEnd') || {}).value || '';
+      if ((semStart && !semEnd) || (!semStart && semEnd)) {
+        showToast('Set both the semester start and end dates, or leave both blank.', 'error');
+        return;
+      }
+      if (semStart && semEnd && semEnd <= semStart) {
+        showToast('The semester must end after it starts.', 'error');
+        return;
+      }
+
       try {
         const payload = {
           business_hours_start: start,
           business_hours_end: end,
           closed_days: closedDays,
         };
+        if (semStart && semEnd) {
+          payload.semester_start = semStart;
+          payload.semester_end = semEnd;
+        }
         const updated = await apiFetch('api/settings', {
           method: 'PATCH',
           body: JSON.stringify(payload),

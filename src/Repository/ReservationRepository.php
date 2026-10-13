@@ -89,19 +89,9 @@ class ReservationRepository
     }
 
     /**
-     * The "latest move request per reservation" derived table, shared by
-     * findByCustomer() and findAll() so there is exactly one idiom in this file.
-     */
-    private const LATEST_MOVE_JOIN = '
-               LEFT JOIN (
-                   SELECT m1.* FROM ReservationMoveRequests m1
-                    WHERE m1.created_at = (SELECT MAX(created_at) FROM ReservationMoveRequests m2 WHERE m2.reservation_id = m1.reservation_id)
-               ) mr ON mr.reservation_id = res.reservation_id';
-
-    /**
-     * The same idiom for cancellation requests: the newest one per reservation.
-     * Drives the customer's "Cancellation request pending review" badge and
-     * stops the UI offering a second request while one is still open.
+     * The newest cancellation request per reservation. Drives the customer's
+     * "Cancellation request pending review" badge and stops the UI offering a
+     * second request while one is still open.
      */
     private const LATEST_CANCEL_JOIN = '
                LEFT JOIN (
@@ -131,18 +121,12 @@ class ReservationRepository
                     res.processed_by,
                     p.name          AS processed_by_name,
                     res.created_at,
-                    mr.status AS move_status,
-                    mr.staff_comment AS move_comment,
-                    mr.reason AS move_reason,
-                    mr.requested_start_time AS move_requested_start_time,
-                    mr.requested_end_time AS move_requested_end_time,
                     cr.status AS cancel_status,
                     cr.staff_comment AS cancel_comment,
                     cr.reason AS cancel_reason
                FROM Reservations res
                JOIN Rooms r ON r.room_id = res.room_id
           LEFT JOIN Users p ON p.user_id = res.processed_by'
-               . self::LATEST_MOVE_JOIN
                . self::LATEST_CANCEL_JOIN . '
               WHERE res.customer_id = :customer_id
                 AND res.customer_hidden = false
@@ -209,15 +193,11 @@ class ReservationRepository
                     res.processed_at,
                     p.name          AS processed_by_name,
                     res.created_at,
-                    mr.status       AS move_status,
-                    mr.requested_start_time,
-                    mr.requested_end_time,
                     cr.status       AS cancel_status
                FROM Reservations res
                JOIN Users u ON u.user_id = res.customer_id
                JOIN Rooms r ON r.room_id = res.room_id
           LEFT JOIN Users p ON p.user_id = res.processed_by"
-               . self::LATEST_MOVE_JOIN
                . self::LATEST_CANCEL_JOIN . "
                $where
            ORDER BY res.created_at DESC, res.reservation_id DESC
@@ -229,8 +209,7 @@ class ReservationRepository
 
     /**
      * One reservation with every joined field the confirmation slip needs
-     * (same column set as findAll()), plus its full move-request history
-     * (newest first) under `move_requests`.
+     * (same column set as findAll()).
      */
     public function findByIdDetailed(string $reservationId): ?array
     {
@@ -256,15 +235,11 @@ class ReservationRepository
                     p.name          AS processed_by_name,
                     res.cancellation_reason,
                     res.cancelled_by,
-                    res.created_at,
-                    mr.status       AS move_status,
-                    mr.requested_start_time,
-                    mr.requested_end_time
+                    res.created_at
                FROM Reservations res
                JOIN Users u ON u.user_id = res.customer_id
                JOIN Rooms r ON r.room_id = res.room_id
-          LEFT JOIN Users p ON p.user_id = res.processed_by'
-               . self::LATEST_MOVE_JOIN . '
+          LEFT JOIN Users p ON p.user_id = res.processed_by
               WHERE res.reservation_id = :reservation_id
               LIMIT 1',
             [':reservation_id' => $reservationId]
@@ -273,23 +248,6 @@ class ReservationRepository
         if (!$row) {
             return null;
         }
-
-        $moves = $this->db->query(
-            'SELECT m.request_id,
-                    m.requested_start_time,
-                    m.requested_end_time,
-                    m.status,
-                    m.staff_comment,
-                    m.processed_by,
-                    p.name AS processed_by_name,
-                    m.created_at
-               FROM ReservationMoveRequests m
-          LEFT JOIN Users p ON p.user_id = m.processed_by
-              WHERE m.reservation_id = :reservation_id
-           ORDER BY m.created_at DESC, m.request_id DESC',
-            [':reservation_id' => $reservationId]
-        );
-        $row['move_requests'] = $moves->fetchAll();
 
         return $row;
     }
@@ -610,109 +568,6 @@ class ReservationRepository
     }
 
     // ---------------------------------------------------------------
-    // Move Requests
-    // ---------------------------------------------------------------
-
-    /** $reason: why the move was proposed, when it wasn't the holder's own idea. */
-    public function createMoveRequest(string $reservationId, string $requestedStart, string $requestedEnd, ?string $reason = null): array
-    {
-        $requestId = self::uuidv4();
-        $this->db->query(
-            'INSERT INTO ReservationMoveRequests (request_id, reservation_id, requested_start_time, requested_end_time, reason)
-             VALUES (:request_id, :reservation_id, :requested_start_time, :requested_end_time, :reason)',
-            [
-                ':request_id'           => $requestId,
-                ':reservation_id'       => $reservationId,
-                ':requested_start_time' => $requestedStart,
-                ':requested_end_time'   => $requestedEnd,
-                ':reason'               => $reason,
-            ]
-        );
-
-        $stmt = $this->db->query(
-            'SELECT * FROM ReservationMoveRequests WHERE request_id = :request_id LIMIT 1',
-            [':request_id' => $requestId]
-        );
-        return $stmt->fetch() ?: [];
-    }
-
-    /**
-     * True while this booking has a move request still awaiting staff.
-     *
-     * Business rule: a reservation may have at most one open Move Request.
-     * The customer's card hides the button, but that is a courtesy — a stale
-     * tab or a direct API call would otherwise stack duplicates, leaving staff
-     * with two competing proposals for the same booking.
-     */
-    public function hasPendingMoveRequest(string $reservationId): bool
-    {
-        $stmt = $this->db->query(
-            "SELECT 1 FROM ReservationMoveRequests
-              WHERE reservation_id = :reservation_id AND status = 'Pending'
-              LIMIT 1",
-            [':reservation_id' => $reservationId]
-        );
-        return (bool) $stmt->fetchColumn();
-    }
-
-    public function findMoveRequests(?string $status = null): array
-    {
-        $sql = "
-            SELECT mr.*, 
-                   r.customer_id, r.room_id, r.start_time AS original_start_time, r.end_time AS original_end_time,
-                   rm.name AS room_name,
-                   c.name AS customer_name, c.email AS customer_email, c.account_type AS customer_account_type
-              FROM ReservationMoveRequests mr
-              JOIN Reservations r ON r.reservation_id = mr.reservation_id
-              JOIN Rooms rm ON rm.room_id = r.room_id
-              JOIN Users c ON c.user_id = r.customer_id
-        ";
-        
-        $params = [];
-        if ($status !== null) {
-            $sql .= " WHERE mr.status = :status";
-            $params[':status'] = $status;
-        }
-        
-        $sql .= " ORDER BY mr.created_at ASC";
-        
-        $stmt = $this->db->query($sql, $params);
-        return $stmt->fetchAll();
-    }
-
-    public function findMoveRequestById(string $requestId): ?array
-    {
-        $stmt = $this->db->query(
-            "SELECT mr.*, r.room_id, r.customer_id
-               FROM ReservationMoveRequests mr
-               JOIN Reservations r ON r.reservation_id = mr.reservation_id
-              WHERE mr.request_id = :request_id
-              LIMIT 1",
-            [':request_id' => $requestId]
-        );
-        $row = $stmt->fetch();
-        return $row ?: null;
-    }
-
-    public function updateMoveRequestStatus(string $requestId, string $status, string $processedBy, ?string $staffComment): ?array
-    {
-        $this->db->query(
-            'UPDATE ReservationMoveRequests
-                SET status = :status,
-                    processed_by = :processed_by,
-                    staff_comment = :staff_comment
-              WHERE request_id = :request_id',
-            [
-                ':status'        => $status,
-                ':processed_by'  => $processedBy,
-                ':staff_comment' => $staffComment,
-                ':request_id'    => $requestId,
-            ]
-        );
-        return $this->findMoveRequestById($requestId);
-    }
-    
-    // ---------------------------------------------------------------
     // Cancellation Requests
     //
     // An Approved booking is not cancelled by its customer directly. They file
@@ -752,7 +607,7 @@ class ReservationRepository
         return (bool) $stmt->fetchColumn();
     }
 
-    /** The staff queue's cancellation tab. Oldest first, like findMoveRequests(). */
+    /** The staff queue's cancellation tab. Oldest first. */
     public function findCancelRequests(?string $status = null): array
     {
         $sql = "
@@ -859,81 +714,4 @@ class ReservationRepository
         return $this->findCancelRequestById($requestId);
     }
 
-    public function updateTimes(string $reservationId, string $startTime, string $endTime): void
-    {
-        $this->db->query(
-            'UPDATE Reservations
-                SET start_time = :start_time,
-                    end_time = :end_time
-              WHERE reservation_id = :reservation_id',
-            [
-                ':start_time'     => $startTime,
-                ':end_time'       => $endTime,
-                ':reservation_id' => $reservationId,
-            ]
-        );
-    }
-
-    /** Move a reservation to a new room and time window at once (staff relocate). */
-    public function updateRoomAndTimes(string $reservationId, string $roomId, string $startTime, string $endTime): void
-    {
-        $this->db->query(
-            'UPDATE Reservations
-                SET room_id = :room_id,
-                    start_time = :start_time,
-                    end_time = :end_time
-              WHERE reservation_id = :reservation_id',
-            [
-                ':room_id'        => $roomId,
-                ':start_time'     => $startTime,
-                ':end_time'       => $endTime,
-                ':reservation_id' => $reservationId,
-            ]
-        );
-    }
-
-    /**
-     * Reschedules an existing reservation immediately with auto-approval.
-     * Updates Reservations table times, records an Approved MoveRequest,
-     * and logs the event in System_Logs.
-     */
-    public function createApprovedMove(
-        string $reservationId,
-        string $requestedStart,
-        string $requestedEnd,
-        string $userId,
-        ?string $comment = 'Auto-approved (No scheduling conflict)'
-    ): array {
-        return $this->transaction(function () use ($reservationId, $requestedStart, $requestedEnd, $userId, $comment) {
-            $this->updateTimes($reservationId, $requestedStart, $requestedEnd);
-
-            $requestId = self::uuidv4();
-            $this->db->query(
-                'INSERT INTO ReservationMoveRequests (request_id, reservation_id, requested_start_time, requested_end_time, status, processed_by, staff_comment, reason)
-                 VALUES (:request_id, :reservation_id, :requested_start_time, :requested_end_time, :status, :processed_by, :staff_comment, :reason)',
-                [
-                    ':request_id'           => $requestId,
-                    ':reservation_id'       => $reservationId,
-                    ':requested_start_time' => $requestedStart,
-                    ':requested_end_time'   => $requestedEnd,
-                    ':status'               => 'Approved',
-                    ':processed_by'         => $userId,
-                    ':staff_comment'        => $comment,
-                    ':reason'               => 'Customer requested reschedule',
-                ]
-            );
-
-            $this->insertLog(
-                $userId,
-                "Reservation rescheduled to {$requestedStart} - {$requestedEnd} (Auto-approved)",
-                $reservationId
-            );
-
-            $stmt = $this->db->query(
-                'SELECT * FROM ReservationMoveRequests WHERE request_id = :request_id LIMIT 1',
-                [':request_id' => $requestId]
-            );
-            return $stmt->fetch() ?: [];
-        });
-    }
 }

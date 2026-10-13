@@ -36,12 +36,19 @@ class ClassScheduleRepository
         );
     }
 
+    /**
+     * Active class schedules: those for the current or a future semester
+     * (semester_end today or later). Expired classes stay in the table for
+     * history but are no longer treated as active schedules. A NULL semester_end
+     * (legacy row) is treated as always-active.
+     */
     public function findAll(): array
     {
         $stmt = $this->db->query(
             "SELECT cs.*, r.name AS room_name
                FROM ClassSchedules cs
                JOIN Rooms r ON cs.room_id = r.room_id
+              WHERE COALESCE(cs.semester_end, DATE '9999-12-31') >= CURRENT_DATE
               ORDER BY cs.day_of_week, cs.start_time"
         );
         return $stmt->fetchAll();
@@ -64,7 +71,8 @@ class ClassScheduleRepository
                  WHERE room_id = :room_id
                    AND day_of_week = :day
                    AND :start < end_time
-                   AND :end   > start_time";
+                   AND :end   > start_time
+                   AND COALESCE(semester_end, DATE '9999-12-31') >= CURRENT_DATE";
         $params = [
             ':room_id' => $roomId,
             ':day'     => $day,
@@ -88,10 +96,12 @@ class ClassScheduleRepository
      * into each of these. Past bookings are ignored: they can't be disturbed.
      * (Reservations never span midnight, so comparing time-of-day is enough.)
      */
-    public function findOverlappingReservations(string $roomId, string $day, string $start, string $end): array
+    public function findOverlappingReservations(string $roomId, string $day, string $start, string $end, ?string $semesterStart = null, ?string $semesterEnd = null): array
     {
         // PostgreSQL: trim(to_char(ts,'Day')) gives the weekday name ('Friday')
         // and ::time the time-of-day. (DAYNAME()/TIME() are MySQL-only.)
+        // A class only runs during its semester, so only reservations whose DATE
+        // falls inside [semester_start, semester_end] can collide with it.
         $stmt = $this->db->query(
             "SELECT reservation_id, status, start_time, end_time
                FROM Reservations
@@ -101,32 +111,38 @@ class ClassScheduleRepository
                 AND trim(to_char(start_time, 'Day')) = :day
                 AND start_time::time < :end
                 AND end_time::time   > :start
+                AND start_time::date >= COALESCE(:sem_start::date, DATE '0001-01-01')
+                AND start_time::date <= COALESCE(:sem_end::date,   DATE '9999-12-31')
            ORDER BY start_time",
             [
-                ':room_id' => $roomId,
-                ':day'     => $day,
-                ':start'   => $start,
-                ':end'     => $end,
+                ':room_id'   => $roomId,
+                ':day'       => $day,
+                ':start'     => $start,
+                ':end'       => $end,
+                ':sem_start' => $semesterStart,
+                ':sem_end'   => $semesterEnd,
             ]
         );
         return $stmt->fetchAll();
     }
 
     /** @return string the new schedule_id */
-    public function create(string $roomId, string $courseCode, string $section, string $dayOfWeek, string $startTime, string $endTime): string
+    public function create(string $roomId, string $courseCode, string $section, string $dayOfWeek, string $startTime, string $endTime, ?string $semesterStart = null, ?string $semesterEnd = null): string
     {
         $scheduleId = self::uuidv4();
         $this->db->query(
-            "INSERT INTO ClassSchedules (schedule_id, room_id, course_code, section, day_of_week, start_time, end_time)
-             VALUES (:schedule_id, :room_id, :course_code, :section, :day_of_week, :start_time, :end_time)",
+            "INSERT INTO ClassSchedules (schedule_id, room_id, course_code, section, day_of_week, start_time, end_time, semester_start, semester_end)
+             VALUES (:schedule_id, :room_id, :course_code, :section, :day_of_week, :start_time, :end_time, :semester_start, :semester_end)",
             [
-                ':schedule_id' => $scheduleId,
-                ':room_id'     => $roomId,
-                ':course_code' => $courseCode,
-                ':section'     => $section,
-                ':day_of_week' => $dayOfWeek,
-                ':start_time'  => $startTime,
-                ':end_time'    => $endTime
+                ':schedule_id'    => $scheduleId,
+                ':room_id'        => $roomId,
+                ':course_code'    => $courseCode,
+                ':section'        => $section,
+                ':day_of_week'    => $dayOfWeek,
+                ':start_time'     => $startTime,
+                ':end_time'       => $endTime,
+                ':semester_start' => $semesterStart,
+                ':semester_end'   => $semesterEnd,
             ]
         );
         return $scheduleId;

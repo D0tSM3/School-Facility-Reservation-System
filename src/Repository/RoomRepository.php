@@ -245,9 +245,13 @@ class RoomRepository
                      ORDER BY r.start_time
                 ) r) AS reservations,
                 (SELECT COALESCE(json_agg(row_to_json(c)), '[]') FROM (
-                    SELECT schedule_id, course_code, section, day_of_week, start_time, end_time
+                    SELECT schedule_id, course_code, section, day_of_week, start_time, end_time,
+                           semester_start, semester_end
                       FROM ClassSchedules
                      WHERE room_id = :room_id
+                       -- Only classes whose semester overlaps the requested window.
+                       AND COALESCE(semester_end,   DATE '9999-12-31') >= :start_date_date
+                       AND COALESCE(semester_start, DATE '0001-01-01') <= :end_date_date
                 ) c) AS class_schedules,
                 (SELECT COALESCE(json_agg(row_to_json(h)), '[]') FROM (
                     SELECT holiday_date, name, type

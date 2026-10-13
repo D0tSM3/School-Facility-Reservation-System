@@ -17,22 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn('[My Reservations] window.CampusRoomUtil.parseDate missing - using local fallback. util.js may be stale/cached.');
   }
 
-  // Staff and Admin are not allowed on this page (Customer-only reservation history).
-  // Nav-hiding in app.js isn't enough on its own since a Staff/Admin user can still
-  // type this URL directly, so bounce them to the Staff Queue instead.
-  (function guardStaffAccess() {
-    const BASE = window.location.pathname.replace(/[^\/]*$/, '');
-    fetch(BASE + 'api/auth/me', { credentials: 'include' })
-      .then(res => res.json())
-      .then(json => {
-        const currentUser = json.success ? json.data : null;
-        const role = String(currentUser && currentUser.role || '').toLowerCase();
-        if (role === 'staff' || role === 'admin') {
-          window.location.replace(BASE + 'staff-dashboard.html');
-        }
-      })
-      .catch(err => console.error('Error checking session role:', err));
-  })();
+  // Page ownership (Customer-only) is enforced centrally in app.js
+  // (bounceWrongRole), which routes Staff/Admin to their own home — instantly
+  // from the client hint and again after the server confirms the session.
 
   const urlParams = new URLSearchParams(window.location.search);
   let activeFilter = urlParams.get('filter') || 'all';
@@ -382,24 +369,12 @@ function renderReservations() {
       else if (reservation.status === 'Pending') statusColor = 'bg-yellow-100 text-yellow-700';
       else if (reservation.status === 'Cancelled' || reservation.status === 'Rejected') statusColor = 'bg-red-100 text-red-700';
 
-      let moveStatusBadge = '';
-      if (reservation.move_status === 'Pending' && reservation.move_reason) {
-        // Staff proposed this move (an urgent override request needs the slot);
-        // the holder didn't ask for it, so say what and why.
-        const to = reservation.move_requested_start_time
-          ? ` to ${formatDate(reservation.move_requested_start_time).month} ${formatDate(reservation.move_requested_start_time).day}, ${formatTime(reservation.move_requested_start_time)} – ${formatTime(reservation.move_requested_end_time)}`
-          : '';
-        moveStatusBadge = `<div class="mt-2 text-xs font-medium text-violet-800 bg-violet-50 px-2.5 py-1.5 rounded-lg border border-violet-200/60">Staff have proposed moving this booking${escapeHtml(to)}: ${escapeHtml(reservation.move_reason)} Your booking stays as it is until staff confirm the move.</div>`;
-      } else if (reservation.move_status === 'Pending') {
-        moveStatusBadge = `<div class="mt-2 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200/60">Move Request Pending review.</div>`;
-      } else if (reservation.move_status === 'Rejected' && reservation.move_comment) {
-        moveStatusBadge = `<div class="mt-2 text-xs font-medium text-red-700 bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-200/60">Move Request Rejected: ${escapeHtml(reservation.move_comment)}</div>`;
-      }
-
+      // Cancellation-request notices (the move/override workflow is retired).
+      let noticeBadge = '';
       if (reservation.cancel_status === 'Pending') {
-        moveStatusBadge += `<div class="mt-2 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200/60">Cancellation Request pending review. Your booking stands until decided.</div>`;
+        noticeBadge += `<div class="mt-2 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200/60">Cancellation Request pending review. Your booking stands until decided.</div>`;
       } else if (reservation.cancel_status === 'Rejected' && reservation.cancel_comment) {
-        moveStatusBadge += `<div class="mt-2 text-xs font-medium text-red-700 bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-200/60">Cancellation Request Rejected: ${escapeHtml(reservation.cancel_comment)}</div>`;
+        noticeBadge += `<div class="mt-2 text-xs font-medium text-red-700 bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-200/60">Cancellation Request Rejected: ${escapeHtml(reservation.cancel_comment)}</div>`;
       }
 
       const action = buildActions(reservation);
@@ -546,7 +521,7 @@ function renderReservations() {
                 ${extraInfoHtml}
             </div>
 
-            ${moveStatusBadge}
+            ${noticeBadge}
           </div>
 
           <!-- Action buttons -->

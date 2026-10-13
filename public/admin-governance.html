@@ -65,21 +65,13 @@
       .active-nav-link .nav-icon {
         color: #ffc641 !important;
       }
-      /* Pre-paint role gating: a Staff user must never see the admin-only
-         tools, not even for a frame. data-role is set synchronously below from
-         the last login; the server still verifies via /api/auth/me. */
-      html[data-role="staff"] [data-nav="holidays"],
-      html[data-role="staff"] [data-nav="users"],
-      html[data-role="staff"] [data-nav="archives"],
-      html[data-role="staff"] [data-nav="config"],
-      html[data-role="staff"] [data-nav="logs"],
-      html[data-role="staff"] [data-admin-label] {
-        display: none !important;
-      }
+      /* Admin Governance is Admin-only: a Staff account is redirected to the
+         Staff Hub (staff-dashboard.html) by checkAdminAuth(), so this page has
+         no per-tab role hiding. The server verifies the role via /api/auth/me. */
     </style>
     <script>
-      // Hint the role before first paint so the rules above apply immediately
-      // (no flash of admin tabs for Staff). Cosmetic only — never authorization.
+      // Cosmetic pre-paint hint only (never authorization): mark the role so
+      // the shell paints correctly before /api/auth/me confirms it.
       (function () {
         try {
           var r = localStorage.getItem('campus_role');
@@ -97,7 +89,7 @@
     >
       <!-- Upper Logo -->
       <div class="h-16 px-6 flex items-center shrink-0">
-        <a href="admin-dashboard.html" class="flex items-center">
+        <a href="admin-governance.html" class="flex items-center">
           <img
             alt="CampusRoom Logo"
             class="h-7 w-auto object-contain"
@@ -1255,6 +1247,58 @@
                   </div>
                 </div>
 
+                <!-- Current Academic Semester Card -->
+                <div
+                  class="bg-gray-50/70 p-6 rounded-2xl border border-gray-100 space-y-4"
+                >
+                  <h3
+                    class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2"
+                  >
+                    <span
+                      class="material-symbols-outlined text-[18px] text-[#7a1f2b]"
+                      >calendar_month</span
+                    >
+                    <span>Current Academic Semester</span>
+                  </h3>
+                  <p class="text-xs text-gray-500">
+                    Class schedules are bound to this term. A class runs from the
+                    start date to the end date and automatically expires when the
+                    semester ends — it never carries into the next semester. Set
+                    the new term's dates here before adding next semester's classes.
+                  </p>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                      <label
+                        class="block text-xs font-semibold text-gray-700 mb-1"
+                        for="configSemesterStart"
+                        >Semester Start Date</label
+                      >
+                      <input
+                        type="date"
+                        id="configSemesterStart"
+                        class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        class="block text-xs font-semibold text-gray-700 mb-1"
+                        for="configSemesterEnd"
+                        >Semester End Date</label
+                      >
+                      <input
+                        type="date"
+                        id="configSemesterEnd"
+                        class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
+                      />
+                    </div>
+                  </div>
+                  <p id="configSemesterHint" class="text-[11px] text-gray-400 mt-1">
+                    Set both dates together. Until a term is configured, no
+                    classes can be scheduled. Leaving both blank keeps the current
+                    semester unchanged.
+                  </p>
+                </div>
+
                 <!-- Closed Days of Week Card -->
                 <div
                   class="bg-gray-50/70 p-6 rounded-2xl border border-gray-100 space-y-4"
@@ -1689,8 +1733,8 @@
                 type="number"
                 id="newRoomFloor"
                 required
-                min="1"
-                max="15"
+                min="0"
+                max="4"
                 value="1"
                 class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
               />
@@ -1819,8 +1863,8 @@
                 type="number"
                 id="editRoomFloor"
                 required
-                min="1"
-                max="15"
+                min="0"
+                max="4"
                 class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b]"
               />
             </div>
@@ -2082,300 +2126,6 @@
       </div>
     </div>
 
-    <!-- Modal 6: Move Request Review Modal -->
-    <div
-      id="moveReviewModal"
-      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
-    >
-      <div
-        class="bg-white w-[92%] max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-      >
-        <div
-          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-blue-50/50"
-        >
-          <h3 class="text-base font-bold text-blue-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-blue-600"
-              >edit_calendar</span
-            >
-            <span>Review Move Request</span>
-          </h3>
-          <button
-            type="button"
-            data-modal-close="moveReviewModal"
-            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
-          >
-            <span class="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
-        <div class="p-6 space-y-4">
-          <input type="hidden" id="moveRequestId" />
-          <div
-            id="moveReviewSummary"
-            class="text-xs text-gray-600 space-y-2"
-          ></div>
-          <div>
-            <label
-              class="block text-xs font-bold text-gray-700 mb-1"
-              for="moveStaffComment"
-              >Staff Comment (Mandatory on Rejection)</label
-            >
-            <textarea
-              id="moveStaffComment"
-              rows="2"
-              placeholder="Provide note or justification..."
-              class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7a1f2b] resize-none"
-            ></textarea>
-          </div>
-          <div class="pt-3 border-t border-gray-100 flex justify-end gap-2.5">
-            <button
-              type="button"
-              id="btn-reject-move"
-              class="px-4 py-2.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all"
-            >
-              Reject Move
-            </button>
-            <button
-              type="button"
-              id="btn-approve-move"
-              class="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
-            >
-              <span class="material-symbols-outlined text-[17px]">check</span>
-              <span>Approve Move</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal 8: Conflict Override Request Review Modal -->
-    <div
-      id="conflictOverrideModal"
-      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-all duration-200"
-    >
-      <div
-        class="bg-white w-[92%] max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-      >
-        <div
-          class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-violet-50/50"
-        >
-          <h3
-            class="text-base font-bold text-violet-900 flex items-center gap-2"
-          >
-            <span class="material-symbols-outlined text-violet-600"
-              >priority_high</span
-            >
-            <span>Review Conflict Override Request</span>
-          </h3>
-          <button
-            type="button"
-            data-modal-close="conflictOverrideModal"
-            class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full"
-          >
-            <span class="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
-        <div class="p-6 space-y-4 overflow-y-auto">
-          <input type="hidden" id="overrideRequestId" />
-          <div
-            id="overrideReviewSummary"
-            class="text-xs text-gray-700 space-y-2 p-3 bg-gray-50 rounded-xl"
-          ></div>
-          <!-- Reservation conflict: relocate and/or reschedule the other booking -->
-          <fieldset
-            id="overrideResolveReservation"
-            class="p-4 rounded-xl border border-violet-100 bg-violet-50/50 space-y-3"
-          >
-            <legend
-              class="px-1 text-[11px] font-bold uppercase tracking-wider text-violet-700"
-            >
-              If Approving: Move The Conflicting Booking
-            </legend>
-            <div>
-              <label
-                class="block text-xs font-semibold text-gray-700 mb-1"
-                for="overrideMoveRoom"
-                >Move To Room (optional)</label
-              >
-              <select
-                id="overrideMoveRoom"
-                class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-violet-600"
-              >
-                <option value="">Keep the same room</option>
-              </select>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label
-                  class="block text-xs font-semibold text-gray-700 mb-1"
-                  for="overrideMoveDate"
-                  >Move Date</label
-                >
-                <input
-                  type="date"
-                  id="overrideMoveDate"
-                  class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-violet-600"
-                />
-              </div>
-              <div>
-                <label
-                  class="block text-xs font-semibold text-gray-700 mb-1"
-                  for="overrideMoveStart"
-                  >Start Time</label
-                >
-                <input
-                  type="time"
-                  step="1800"
-                  id="overrideMoveStart"
-                  class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-violet-600"
-                />
-              </div>
-              <div>
-                <label
-                  class="block text-xs font-semibold text-gray-700 mb-1"
-                  for="overrideMoveEnd"
-                  >End Time</label
-                >
-                <input
-                  type="time"
-                  step="1800"
-                  id="overrideMoveEnd"
-                  class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-violet-600"
-                />
-              </div>
-            </div>
-            <p
-              id="overrideMoveHint"
-              class="text-[11px] text-gray-500 italic"
-            ></p>
-          </fieldset>
-
-          <!-- Class conflict: relocate and/or reschedule the class -->
-          <fieldset
-            id="overrideResolveClass"
-            class="hidden p-4 rounded-xl border border-amber-100 bg-amber-50/50 space-y-3"
-          >
-            <legend
-              class="px-1 text-[11px] font-bold uppercase tracking-wider text-amber-700"
-            >
-              If Approving: Relocate / Reschedule The Class
-            </legend>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label
-                  class="block text-xs font-semibold text-gray-700 mb-1"
-                  for="overrideClassRoom"
-                  >Move To Room</label
-                >
-                <select
-                  id="overrideClassRoom"
-                  class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-amber-600"
-                >
-                  <option value="">Keep the same room</option>
-                </select>
-              </div>
-              <div>
-                <label
-                  class="block text-xs font-semibold text-gray-700 mb-1"
-                  for="overrideClassDay"
-                  >Weekday</label
-                >
-                <select
-                  id="overrideClassDay"
-                  class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-amber-600"
-                >
-                  <option value="">Keep the same day</option>
-                  <option value="Monday">Monday</option>
-                  <option value="Tuesday">Tuesday</option>
-                  <option value="Wednesday">Wednesday</option>
-                  <option value="Thursday">Thursday</option>
-                  <option value="Friday">Friday</option>
-                  <option value="Saturday">Saturday</option>
-                </select>
-              </div>
-              <div>
-                <label
-                  class="block text-xs font-semibold text-gray-700 mb-1"
-                  for="overrideClassStart"
-                  >Start Time</label
-                >
-                <input
-                  type="time"
-                  step="1800"
-                  id="overrideClassStart"
-                  class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-amber-600"
-                />
-              </div>
-              <div>
-                <label
-                  class="block text-xs font-semibold text-gray-700 mb-1"
-                  for="overrideClassEnd"
-                  >End Time</label
-                >
-                <input
-                  type="time"
-                  step="1800"
-                  id="overrideClassEnd"
-                  class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-amber-600"
-                />
-              </div>
-            </div>
-            <p
-              id="overrideClassHint"
-              class="text-[11px] text-gray-500 italic"
-            >
-              Leave a field on "keep" to keep it. Moving the class to another
-              room frees this one; changing the weekday/time moves its weekly
-              slot. The destination must be free.
-            </p>
-          </fieldset>
-          <div>
-            <label
-              class="block text-xs font-bold text-gray-700 mb-1"
-              for="overrideStaffComment"
-              >Staff Comment
-              <span class="font-normal text-gray-400"
-                >(Mandatory on rejection)</span
-              ></label
-            >
-            <textarea
-              id="overrideStaffComment"
-              rows="2"
-              maxlength="500"
-              placeholder="Provide note or justification..."
-              class="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-violet-600 resize-none"
-            ></textarea>
-          </div>
-          <div
-            id="overrideErrorMsg"
-            class="hidden text-xs text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-100 font-medium"
-          ></div>
-          <div class="pt-3 border-t border-gray-100 flex justify-end gap-2.5">
-            <button
-              type="button"
-              data-modal-close="conflictOverrideModal"
-              class="px-4 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              id="btn-reject-override"
-              class="px-4 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all"
-            >
-              Reject Override
-            </button>
-            <button
-              type="button"
-              id="btn-approve-override"
-              class="px-5 py-2 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
-            >
-              <span class="material-symbols-outlined text-[17px]">done</span>
-              <span>Approve &amp; Propose Move</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Modal 9: Change User Role Modal -->
     <div
@@ -2819,6 +2569,6 @@
     <script src="js/util.js"></script>
     <script src="js/schedule.js"></script>
     <script src="js/logArchive.js"></script>
-    <script src="js/admin-dashboard.js?v=20261005_override_fix"></script>
+    <script src="js/admin-dashboard.js?v=20261013_semester"></script>
   </body>
 </html>

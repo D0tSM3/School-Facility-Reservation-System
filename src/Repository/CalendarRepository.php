@@ -67,9 +67,14 @@ class CalendarRepository
                     SELECT cs.room_id, cs.course_code, cs.section,
                            cs.day_of_week::text AS day_of_week,
                            to_char(cs.start_time, 'HH24:MI') AS start_time,
-                           to_char(cs.end_time,   'HH24:MI') AS end_time
+                           to_char(cs.end_time,   'HH24:MI') AS end_time,
+                           to_char(cs.semester_start, 'YYYY-MM-DD') AS semester_start,
+                           to_char(cs.semester_end,   'YYYY-MM-DD') AS semester_end
                       FROM ClassSchedules cs
                       JOIN sel ON sel.room_id = cs.room_id
+                     -- Only classes whose semester overlaps the visible window.
+                     WHERE COALESCE(cs.semester_end,   DATE '9999-12-31') >= :start_d
+                       AND COALESCE(cs.semester_start, DATE '0001-01-01') <= :end_d
                      ORDER BY cs.day_of_week, cs.start_time
                 ) c) AS classes,
                 (SELECT COALESCE(json_agg(row_to_json(h)), '[]') FROM (
@@ -140,8 +145,12 @@ class CalendarRepository
                     SELECT cs.room_id, cs.course_code, cs.section,
                            cs.day_of_week::text AS day_of_week,
                            to_char(cs.start_time, 'HH24:MI') AS start_time,
-                           to_char(cs.end_time, 'HH24:MI') AS end_time
+                           to_char(cs.end_time, 'HH24:MI') AS end_time,
+                           to_char(cs.semester_start, 'YYYY-MM-DD') AS semester_start,
+                           to_char(cs.semester_end,   'YYYY-MM-DD') AS semester_end
                       FROM ClassSchedules cs JOIN sel ON sel.room_id = cs.room_id
+                     WHERE COALESCE(cs.semester_end,   DATE '9999-12-31') >= :start_d
+                       AND COALESCE(cs.semester_start, DATE '0001-01-01') <= :end_d
                      ORDER BY cs.day_of_week, cs.start_time
                 ) c) AS classes,
                 (SELECT COALESCE(json_agg(row_to_json(h)), '[]') FROM (

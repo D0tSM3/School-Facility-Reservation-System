@@ -396,8 +396,15 @@
                   sessionStorage.removeItem("otp_email");
                   sessionStorage.removeItem("dev_otp");
                   var role = payload.role;
-                  if (role === "Admin" || role === "Staff") {
+                  // Persist the client role hint so the landing page (and every
+                  // page after) paints the right sidebar pre-paint, no waiting.
+                  try { if (role) localStorage.setItem("campus_role", role); } catch (e) {}
+                  // Each role lands on its own page (Admin → governance,
+                  // Staff → staff hub, everyone else → customer dashboard).
+                  if (role === "Admin") {
                     window.location.replace(BASE + "admin-governance.html");
+                  } else if (role === "Staff") {
+                    window.location.replace(BASE + "staff-dashboard.html");
                   } else {
                     window.location.replace(BASE + "dashboard.html");
                   }

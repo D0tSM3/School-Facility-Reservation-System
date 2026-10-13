@@ -23,6 +23,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
 
   // -----------------------------------------------------------------------
+  // 0b. Page ownership (one source of truth): the customer-only pages belong
+  //     to Customers; a Staff/Admin account is routed to its own home. The
+  //     server (/api/auth/me) stays the authority — this is only UX routing,
+  //     done first from the instant client hint, then re-confirmed below.
+  // -----------------------------------------------------------------------
+  const CUSTOMER_ONLY_PAGES = ['dashboard.html', 'rooms.html', 'book-room.html', 'my-reservations.html'];
+  const currentPage = window.location.pathname.split('/').pop() || 'dashboard.html';
+  const homeForRole = (role) =>
+    role === 'admin' ? 'admin-governance.html' : role === 'staff' ? 'staff-dashboard.html' : 'dashboard.html';
+  function bounceWrongRole(role) {
+    role = String(role || '').toLowerCase();
+    if ((role === 'staff' || role === 'admin') && CUSTOMER_ONLY_PAGES.includes(currentPage)) {
+      window.location.replace(BASE + homeForRole(role));
+      return true;
+    }
+    return false;
+  }
+  try {
+    if (bounceWrongRole(localStorage.getItem('campus_role'))) return;
+  } catch (e) { /* ignore */ }
+
+  // -----------------------------------------------------------------------
   // 1. Fetch real session info
   // -----------------------------------------------------------------------
   fetch(BASE + 'api/auth/me', { credentials: 'include' })
@@ -48,6 +70,18 @@ document.addEventListener('DOMContentLoaded', () => {
       document.dispatchEvent(new CustomEvent('campusroom:user', { detail: currentUser }));
 
       const role = String(currentUser.role || '').toLowerCase();
+
+      // Authoritative role → drives role-gated sidebar blocks (CSS on
+      // html[data-role]). Corrects a missing/stale pre-paint hint, and keeps
+      // the client hint fresh so the NEXT page paints the right sidebar
+      // instantly (pre-paint) without waiting for this fetch.
+      if (role) {
+        document.documentElement.setAttribute('data-role', role);
+        try { localStorage.setItem('campus_role', currentUser.role); } catch (e) { /* ignore */ }
+      }
+
+      // Authoritative page-ownership check (server role corrects a stale hint).
+      if (bounceWrongRole(role)) return;
 
       // -----------------------------------------------------------------------
       // 2. Show / hide role-restricted sidebar links
@@ -143,7 +177,13 @@ document.addEventListener('DOMContentLoaded', () => {
       isActive = targets.some(t => currentPath.includes(t));
     }
 
-    if (isActive) {
+    // Dashboard-style links (.nav-item) keep their own classes; we only toggle
+    // the shared active marker. Shell-style links get the full className swap.
+    if (link.classList.contains('nav-item')) {
+      link.classList.toggle('active-nav-link', isActive);
+      if (isActive) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    } else if (isActive) {
       link.setAttribute('aria-current', 'page');
       link.className = 'flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors bg-[#7a1f2b] text-white font-medium text-sm';
     } else {

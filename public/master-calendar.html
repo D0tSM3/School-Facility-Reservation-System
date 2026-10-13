@@ -42,25 +42,18 @@
     })();
   </script>
   <style>
-    /* Prevent sidebar flash */
-    html[data-role="staff"] aside nav a[data-path="customer-dashboard"],
-    html[data-role="staff"] aside nav a[data-path="rooms"],
-    html[data-role="staff"] aside nav a[data-path="my-reservations"],
-    html[data-role="admin"] aside nav a[data-path="customer-dashboard"],
-    html[data-role="admin"] aside nav a[data-path="rooms"],
-    html[data-role="admin"] aside nav a[data-path="my-reservations"] {
-      display: none !important;
-    }
-    
-    html[data-role="staff"] aside nav a[data-path="staff-dashboard"],
-    html[data-role="admin"] aside nav a[data-path="staff-dashboard"] {
-      display: flex !important;
-    }
-    
-    html[data-role="admin"] aside nav a[data-path="admin-governance"] {
-      display: flex !important;
-    }
+    /* One sidebar per role: the whole block for the active role is shown, the
+       others hidden. Staff/Admin get the same items (and order) as their own
+       dashboard; the Customer block is unchanged. data-role is set pre-paint
+       from the login hint above, so there is no flash. */
+    aside [data-rolenav] { display: none; }                        /* unknown role: show none, never a wrong menu */
+    html[data-role="customer"] aside [data-rolenav="customer"] { display: block; }
+    html[data-role="staff"] aside [data-rolenav="staff"] { display: block; }
+    html[data-role="admin"] aside [data-rolenav="admin"] { display: block; }
 
+    /* Active item highlight, matching the dashboard sidebars. */
+    .active-nav-link { background-color: #7a1f2b !important; color: #ffffff !important; }
+    .active-nav-link .nav-icon { color: #ffc641 !important; }
   </style>
 
  </head>
@@ -74,44 +67,95 @@
         </a>
       </div>
 
-      <div class="px-5 pt-3 pb-2">
-        <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">WORKSPACE</span>
-      </div>
-      <nav class="px-3 space-y-1">
-        <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="customer-dashboard" href="dashboard.html">
-          <span class="material-symbols-outlined text-[20px]">grid_view</span>
-          <span>Dashboard</span>
-        </a>
-        <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="rooms" href="rooms.html">
-          <span class="material-symbols-outlined text-[20px]">meeting_room</span>
-          <span>Rooms Directory</span>
-        </a>
-        <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="master-calendar" href="master-calendar.html">
-          <span class="material-symbols-outlined text-[20px]">calendar_month</span>
-          <span>Calendar</span>
-        </a>
-        <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="my-reservations" href="my-reservations.html">
-          <span class="material-symbols-outlined text-[20px]">event_available</span>
-          <span>My Reservations</span>
-        </a>
-        <a class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="staff-dashboard" href="staff-dashboard.html">
-          <span class="material-symbols-outlined text-[20px]">assignment</span>
-          <span>Staff Dashboard</span>
-        </a>
-        <a class="hidden items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="admin-governance" href="admin-governance.html">
-          <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
-          <span>Admin Governance</span>
-        </a>
+      <!-- CUSTOMER sidebar (unchanged shell style). -->
+      <nav data-rolenav="customer" class="flex-1 overflow-y-auto">
+        <div class="px-5 pt-3 pb-2">
+          <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">WORKSPACE</span>
+        </div>
+        <div class="px-3 space-y-1">
+          <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="customer-dashboard" href="dashboard.html">
+            <span class="material-symbols-outlined text-[20px]">grid_view</span>
+            <span>Dashboard</span>
+          </a>
+          <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="rooms" href="rooms.html">
+            <span class="material-symbols-outlined text-[20px]">meeting_room</span>
+            <span>Rooms Directory</span>
+          </a>
+          <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="master-calendar" href="master-calendar.html">
+            <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+            <span>Calendar</span>
+          </a>
+          <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="my-reservations" href="my-reservations.html">
+            <span class="material-symbols-outlined text-[20px]">event_available</span>
+            <span>My Reservations</span>
+          </a>
+        </div>
+        <div class="px-5 pt-6 pb-2">
+          <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">RESOURCES</span>
+        </div>
+        <div class="px-3 space-y-1">
+          <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="handbook" href="handbook.html">
+            <span class="material-symbols-outlined text-[20px]">menu_book</span>
+            <span>Policy Handbook</span>
+          </a>
+        </div>
       </nav>
 
-      <div class="px-5 pt-6 pb-2">
-        <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">RESOURCES</span>
-      </div>
-      <nav class="px-3 space-y-1">
-        <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="handbook" href="handbook.html">
-          <span class="material-symbols-outlined text-[20px]">menu_book</span>
-          <span>Policy Handbook</span>
-        </a>
+      <!-- STAFF sidebar — same items/order as staff-dashboard.html, as links
+           into that hub's hash views. Calendar (this page) is active. -->
+      <nav data-rolenav="staff" class="flex-1 overflow-y-auto px-3 space-y-4 py-2">
+        <div class="space-y-1">
+          <div class="px-3.5 pt-1 pb-1"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">WORKSPACE</span></div>
+          <a href="staff-dashboard.html#dashboard" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">grid_view</span><span>Dashboard</span></a>
+          <a href="master-calendar.html" class="nav-item active-nav-link w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">calendar_month</span><span>Calendar</span></a>
+        </div>
+        <div class="space-y-1">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">RESERVATIONS</span></div>
+          <a href="staff-dashboard.html#reservations" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">assignment</span><span>All Reservations</span></a>
+          <a href="staff-dashboard.html#cancellations" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">event_busy</span><span>Cancellations</span></a>
+        </div>
+        <div class="space-y-1">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">FACILITY &amp; ACADEMIC</span></div>
+          <a href="staff-dashboard.html#rooms" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">meeting_room</span><span>Rooms Directory</span></a>
+          <a href="staff-dashboard.html#classes" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">calendar_month</span><span>Class Schedules</span></a>
+          <a href="staff-dashboard.html#holidays" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">holiday_village</span><span>Holidays &amp; Closures</span></a>
+        </div>
+        <div class="space-y-1">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">RESOURCES</span></div>
+          <a href="handbook.html" target="_blank" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">menu_book</span><span>Policy Handbook</span></a>
+        </div>
+      </nav>
+
+      <!-- ADMIN sidebar — same items/order as admin-governance.html, as links
+           into that page's hash views. Calendar (this page) is active. -->
+      <nav data-rolenav="admin" class="flex-1 overflow-y-auto px-3 space-y-4 py-2">
+        <div class="space-y-1">
+          <div class="px-3.5 pt-1 pb-1"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">WORKSPACE</span></div>
+          <a href="admin-governance.html#overview" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">grid_view</span><span>Dashboard</span></a>
+          <a href="master-calendar.html" class="nav-item active-nav-link w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">calendar_month</span><span>Calendar</span></a>
+        </div>
+        <div class="space-y-1">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">RESERVATIONS &amp; QUEUES</span></div>
+          <a href="admin-governance.html#reservations" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">assignment</span><span>All Reservations</span></a>
+          <a href="admin-governance.html#cancels" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">event_busy</span><span>Cancellations</span></a>
+        </div>
+        <div class="space-y-1">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">FACILITY &amp; ACADEMIC</span></div>
+          <a href="admin-governance.html#facilities" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">meeting_room</span><span>Rooms Directory</span></a>
+          <a href="admin-governance.html#classes" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">calendar_month</span><span>Class Schedules</span></a>
+          <a href="admin-governance.html#holidays" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">holiday_village</span><span>Holidays &amp; Closures</span></a>
+        </div>
+        <div class="space-y-1">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">ADMINISTRATION</span></div>
+          <a href="admin-governance.html#users" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">group</span><span>User Directory</span></a>
+          <a href="admin-governance.html#archives" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">inventory_2</span><span>Data Archives</span></a>
+          <a href="admin-governance.html#config" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">tune</span><span>Configuration</span></a>
+          <a href="admin-governance.html#logs" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">history_edu</span><span>Audit Logs</span></a>
+        </div>
+        <div class="space-y-1">
+          <div class="px-3.5 pt-2 pb-1 border-t border-white/5"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">RESOURCES</span></div>
+          <a href="handbook.html" target="_blank" class="nav-item w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-gray-300 font-medium text-sm hover:bg-white/5 hover:text-white transition-all group no-underline"><span class="material-symbols-outlined text-[19px] nav-icon text-gray-400 group-hover:text-white transition-colors">menu_book</span><span>Policy Handbook</span></a>
+        </div>
       </nav>
 
       <div id="logout-banner" class="mt-auto p-4 border-t border-white/5">

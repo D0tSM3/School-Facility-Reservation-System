@@ -61,6 +61,22 @@ class SettingsController
             Response::error('Business hours must end after they start.', 422);
         }
 
+        // Current academic semester (either both dates together, or neither).
+        $semStartGiven = array_key_exists('semester_start', $body);
+        $semEndGiven   = array_key_exists('semester_end', $body);
+        if ($semStartGiven || $semEndGiven) {
+            $semStart = self::normaliseDate((string) ($body['semester_start'] ?? ''));
+            $semEnd   = self::normaliseDate((string) ($body['semester_end'] ?? ''));
+            if ($semStart === null || $semEnd === null) {
+                Response::error('semester_start and semester_end must both be valid dates (YYYY-MM-DD).', 422);
+            }
+            if ($semEnd <= $semStart) {
+                Response::error('The semester must end after it starts.', 422);
+            }
+            $values['semester_start'] = $semStart;
+            $values['semester_end']   = $semEnd;
+        }
+
         if (array_key_exists('closed_days', $body)) {
             if (!is_array($body['closed_days'])) {
                 Response::error('closed_days must be a list of weekday names.', 422);
@@ -98,6 +114,17 @@ class SettingsController
         }
 
         Response::json($saved);
+    }
+
+    /** A real calendar date 'YYYY-MM-DD' -> itself, or null if invalid. */
+    private static function normaliseDate(string $value): ?string
+    {
+        $value = trim($value);
+        $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+        if ($d === false || $d->format('Y-m-d') !== $value) {
+            return null;
+        }
+        return $value;
     }
 
     /** 'H:MM' / 'HH:MM' / 'HH:MM:SS' -> 'HH:MM', or null. */

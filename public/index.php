@@ -155,7 +155,7 @@ $routes = [
     ['DELETE', '#^/api/rooms/(?P<id>[^/]+)$#',       fn(string $id) => (new RoomController())->destroy($id)],
 
     // Reservations
-    // NOTE: the literal GET routes /mine and /move-requests MUST stay above GET /{id},
+    // NOTE: literal GET routes like /mine and /cancel-requests MUST stay above GET /{id},
     // or the {id} pattern swallows them (this router is a linear first-match list).
     ['GET',   '#^/api/reservations/mine$#',          fn() => (new ReservationController())->mine()],
     ['GET',   '#^/api/reservations/cancel-requests$#', fn() => (new ReservationController())->getCancelRequests()],

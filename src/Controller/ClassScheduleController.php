@@ -6,6 +6,7 @@ namespace CampusRoom\Controller;
 
 use CampusRoom\Core\Auth;
 use CampusRoom\Core\Response;
+use CampusRoom\Core\Settings;
 use CampusRoom\Repository\ClassScheduleRepository;
 use CampusRoom\Repository\ReservationRepository;
 use CampusRoom\Repository\RoomRepository;
@@ -71,6 +72,19 @@ class ClassScheduleController
             Response::error('Room not found.', 404);
         }
 
+        // A class belongs to the current academic semester (Admin-configured).
+        // Its duration is system-controlled: it runs from the semester start to
+        // the semester end — the user never enters dates. Adding a class needs a
+        // configured, not-yet-ended semester.
+        if (!Settings::hasSemester()) {
+            Response::error('No current semester is configured. An Admin must set the semester dates in Configuration before classes can be scheduled.', 409);
+        }
+        $semesterStart = Settings::semesterStart();
+        $semesterEnd   = Settings::semesterEnd();
+        if ($semesterEnd < date('Y-m-d')) {
+            Response::error('The configured semester has already ended. Set the new semester in Configuration before adding classes.', 409);
+        }
+
         // 1. Another class in the same room, same weekday, sharing any minute.
         $classes = $this->repo->findOverlappingClasses($roomId, $dayOfWeek, $startTime, $endTime);
         if ($classes) {
@@ -82,9 +96,10 @@ class ClassScheduleController
             );
         }
 
-        // 2. Upcoming reservations this weekly class would run into. Nothing is
-        //    auto-cancelled: the admin has to move or cancel them first.
-        $bookings = $this->repo->findOverlappingReservations($roomId, $dayOfWeek, $startTime, $endTime);
+        // 2. Upcoming reservations this weekly class would run into, within the
+        //    class's semester window. Nothing is auto-cancelled: the admin has to
+        //    move or cancel them first.
+        $bookings = $this->repo->findOverlappingReservations($roomId, $dayOfWeek, $startTime, $endTime, $semesterStart, $semesterEnd);
         if ($bookings) {
             $b     = $bookings[0];
             $count = count($bookings);
@@ -97,10 +112,11 @@ class ClassScheduleController
             );
         }
 
-        $id = $this->repo->create($roomId, $courseCode, $section, $dayOfWeek, $startTime, $endTime);
+        $id = $this->repo->create($roomId, $courseCode, $section, $dayOfWeek, $startTime, $endTime, $semesterStart, $semesterEnd);
         (new ReservationRepository())->insertLog(
             Auth::userId(),
-            (string) Auth::role() . " added class {$courseCode} {$section} ({$dayOfWeek} " . self::hhmm($startTime) . '-' . self::hhmm($endTime) . ')'
+            (string) Auth::role() . " added class {$courseCode} {$section} ({$dayOfWeek} " . self::hhmm($startTime) . '-' . self::hhmm($endTime)
+                . ", semester {$semesterStart}\u{2013}{$semesterEnd})"
         );
         Response::json(['success' => true, 'schedule_id' => $id], 201);
     }

@@ -22,6 +22,11 @@ final class Settings
         'business_hours_end'   => '21:00',
         'closed_days'          => '',
         'class_periods'        => '',
+        // Current academic semester (Admin-configured). '' = not configured yet.
+        // Classes are stamped with these dates at creation and only apply within
+        // the window, so last term's classes expire on their own.
+        'semester_start'       => '',
+        'semester_end'         => '',
     ];
 
     /** @var array<string, string>|null */
@@ -76,6 +81,24 @@ final class Settings
         return $out;
     }
 
+    /** 'YYYY-MM-DD' the current semester starts, or '' if not configured. */
+    public static function semesterStart(): string
+    {
+        return self::get('semester_start');
+    }
+
+    /** 'YYYY-MM-DD' the current semester ends, or '' if not configured. */
+    public static function semesterEnd(): string
+    {
+        return self::get('semester_end');
+    }
+
+    /** True once both current-semester dates are set. */
+    public static function hasSemester(): bool
+    {
+        return self::semesterStart() !== '' && self::semesterEnd() !== '';
+    }
+
     /** Everything, typed, for the API. */
     public static function toArray(): array
     {
@@ -83,6 +106,8 @@ final class Settings
             'business_hours_start' => self::businessHoursStart(),
             'business_hours_end'   => self::businessHoursEnd(),
             'closed_days'          => self::closedDays(),
+            'semester_start'       => self::semesterStart(),
+            'semester_end'         => self::semesterEnd(),
         ];
     }
 

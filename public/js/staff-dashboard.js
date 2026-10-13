@@ -563,9 +563,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const role = String(me.data && me.data.role || '');
     if (role !== 'Staff' && role !== 'Admin') {
-      showAccessNotice(
-        `You are signed in as ${role || 'Customer'}. Only Staff and Admin accounts can dispatch reservations.`
-      );
+      // The Staff Hub belongs to Staff/Admin only. A Customer is routed to
+      // their own dashboard rather than shown the staff sidebar/tools.
+      window.location.replace('dashboard.html');
       return;
     }
 
@@ -581,8 +581,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------------------------------------------------------------
-  // Actions: approve / reject / inspect  (event delegation, so the
-  // handlers survive every re-render)
+  // Actions: row action menu / inspect / facility toggle (event
+  // delegation, so the handlers survive every re-render)
   // ---------------------------------------------------------------
 
   document.addEventListener('click', (event) => {
@@ -1041,7 +1041,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function reservationRow(r) {
     const id = escapeHtml(r.reservation_id);
     const name = escapeHtml(r.customer_name || r.customer_email || 'Requester');
-    const isPending = r.status === 'Pending';
 
     return `
       <tr class="hover:bg-gray-50/80 transition-colors">
@@ -1059,9 +1058,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <td class="py-4 px-6 text-xs">${reservationPill(r.status)}</td>
         <td class="py-4 px-6 text-right">
           <div class="inline-flex items-center gap-1.5">
-            ${isPending ? `
-              <button type="button" class="btn-approve-req px-2.5 py-1 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-all" data-id="${id}" data-name="${name}">Approve</button>
-              <button type="button" class="btn-reject-req px-2.5 py-1 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-all" data-id="${id}" data-name="${name}">Reject</button>` : ''}
             <button type="button" class="btn-actions-menu p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" data-id="${id}" aria-haspopup="menu" aria-expanded="false" title="More actions">
               <span class="material-symbols-outlined text-[19px]">more_vert</span>
             </button>
