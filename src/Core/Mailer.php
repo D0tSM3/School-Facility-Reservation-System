@@ -42,7 +42,10 @@ class Mailer
             $mail->Password   = str_replace(' ', '', (string)$rawPass);
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port       = (int)($_ENV['SMTP_PORT'] ?? 587);
-            $mail->Timeout    = 1;
+            // SMTP needs several seconds to connect, STARTTLS and authenticate
+            // (Gmail on :587 especially). A too-low timeout makes every send
+            // fail. Configurable via SMTP_TIMEOUT; floored at 5s, default 15s.
+            $mail->Timeout    = max(5, (int)($_ENV['SMTP_TIMEOUT'] ?? 15));
 
             if (($_ENV['APP_ENV'] ?? 'production') === 'development') {
                 $mail->SMTPOptions = [
