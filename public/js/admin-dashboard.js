@@ -2002,6 +2002,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── System Configuration (Operating Hours & Closed Days) ──────────────────
 
+  // ── System Configuration (Operating Hours, Closed Days & Equipment) ───────
+
+  function renderAdminEquipmentList(items) {
+    const container = document.getElementById('adminEquipmentList');
+    if (!container) return;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      container.innerHTML = `
+        <div class="p-6 text-center text-xs text-gray-400">
+          No equipment items found in the catalog. Click "+ Add Equipment" to create one.
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = items.map((item, idx) => `
+      <div class="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50/50 transition-colors">
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 text-gray-500 mt-0.5">
+            <span class="material-symbols-outlined text-[18px]">devices</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-gray-900">${escapeHtml(item.name)}</span>
+              ${item.is_default
+                ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700">Default Selected</span>'
+                : '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600">Optional</span>'}
+            </div>
+            ${item.description ? `<p class="text-[11px] text-gray-500 mt-0.5">${escapeHtml(item.description)}</p>` : ''}
+          </div>
+        </div>
+        <div class="flex items-center gap-2 self-end sm:self-auto shrink-0">
+          <button
+            type="button"
+            data-action="edit-equipment"
+            data-index="${idx}"
+            class="px-2.5 py-1 text-[11px] font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+          >
+            <span class="material-symbols-outlined text-[14px]">edit</span>
+            <span>Edit</span>
+          </button>
+          <button
+            type="button"
+            data-action="delete-equipment"
+            data-index="${idx}"
+            class="px-2.5 py-1 text-[11px] font-semibold text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+          >
+            <span class="material-symbols-outlined text-[14px]">delete</span>
+            <span>Remove</span>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
   async function renderSystemSettings() {
     try {
       if (!state.settings) {
@@ -2025,6 +2079,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const cb = document.getElementById(`closedDay${day}`);
         if (cb) cb.checked = closedDays.includes(day);
       });
+
+      renderAdminEquipmentList(s.equipment_list || []);
     } catch (err) {
       console.error('Failed to load system settings:', err);
       showToast('Could not load current system configuration.', 'error');
@@ -2075,14 +2131,152 @@ document.addEventListener('DOMContentLoaded', () => {
           payload.semester_start = semStart;
           payload.semester_end = semEnd;
         }
+        if (state.settings && Array.isArray(state.settings.equipment_list)) {
+          payload.equipment_list = state.settings.equipment_list;
+        }
         const updated = await apiFetch('api/settings', {
           method: 'PATCH',
           body: JSON.stringify(payload),
         });
-        state.settings = updated || payload;
+        state.settings = updated || { ...state.settings, ...payload };
         showToast('Institution operational hours & closure policy updated.', 'success');
       } catch (err) {
         showToast(err.message, 'error');
+      }
+    });
+  }
+
+  // Equipment Catalog Management
+  const btnAddEquipment = document.getElementById('btn-add-equipment');
+  const equipmentModal = document.getElementById('equipmentModalOverlay');
+  const closeEquipmentModalBtn = document.getElementById('closeEquipmentModalBtn');
+  const cancelEquipmentModalBtn = document.getElementById('cancelEquipmentModalBtn');
+  const equipmentItemForm = document.getElementById('equipmentItemForm');
+  const equipmentModalTitle = document.getElementById('equipmentModalTitle');
+  const equipmentItemId = document.getElementById('equipmentItemId');
+  const equipmentItemName = document.getElementById('equipmentItemName');
+  const equipmentItemDesc = document.getElementById('equipmentItemDesc');
+  const equipmentItemDefault = document.getElementById('equipmentItemDefault');
+  const adminEquipmentList = document.getElementById('adminEquipmentList');
+
+  function openEquipmentModal(item = null, index = null) {
+    if (!equipmentModal) return;
+    if (item) {
+      if (equipmentModalTitle) equipmentModalTitle.textContent = 'Edit Equipment Item';
+      if (equipmentItemId) equipmentItemId.value = String(index);
+      if (equipmentItemName) equipmentItemName.value = item.name || '';
+      if (equipmentItemDesc) equipmentItemDesc.value = item.description || '';
+      if (equipmentItemDefault) equipmentItemDefault.checked = Boolean(item.is_default);
+    } else {
+      if (equipmentModalTitle) equipmentModalTitle.textContent = 'Add Equipment Item';
+      if (equipmentItemId) equipmentItemId.value = '';
+      if (equipmentItemName) equipmentItemName.value = '';
+      if (equipmentItemDesc) equipmentItemDesc.value = '';
+      if (equipmentItemDefault) equipmentItemDefault.checked = false;
+    }
+    equipmentModal.classList.remove('hidden');
+    equipmentModal.classList.add('flex');
+    if (equipmentItemName) equipmentItemName.focus();
+  }
+
+  function closeEquipmentModal() {
+    if (!equipmentModal) return;
+    equipmentModal.classList.add('hidden');
+    equipmentModal.classList.remove('flex');
+  }
+
+  if (btnAddEquipment) btnAddEquipment.addEventListener('click', () => openEquipmentModal());
+  if (closeEquipmentModalBtn) closeEquipmentModalBtn.addEventListener('click', closeEquipmentModal);
+  if (cancelEquipmentModalBtn) cancelEquipmentModalBtn.addEventListener('click', closeEquipmentModal);
+  if (equipmentModal) {
+    equipmentModal.addEventListener('click', (e) => {
+      if (e.target === equipmentModal) closeEquipmentModal();
+    });
+  }
+
+  if (equipmentItemForm) {
+    equipmentItemForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = equipmentItemName.value.trim();
+      if (!name) {
+        showToast('Equipment name is required.', 'error');
+        return;
+      }
+
+      const desc = equipmentItemDesc.value.trim();
+      const isDefault = equipmentItemDefault.checked;
+      const editIdxStr = equipmentItemId.value;
+
+      const currentList = Array.isArray(state.settings?.equipment_list)
+        ? [...state.settings.equipment_list]
+        : [];
+
+      if (editIdxStr !== '') {
+        const idx = parseInt(editIdxStr, 10);
+        if (!isNaN(idx) && currentList[idx]) {
+          currentList[idx] = {
+            ...currentList[idx],
+            name,
+            description: desc,
+            is_default: isDefault,
+          };
+        }
+      } else {
+        const newId = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || `item_${Date.now()}`;
+        currentList.push({
+          id: newId,
+          name,
+          description: desc,
+          is_default: isDefault,
+        });
+      }
+
+      try {
+        const updated = await apiFetch('api/settings', {
+          method: 'PATCH',
+          body: JSON.stringify({ equipment_list: currentList }),
+        });
+        state.settings = updated || { ...state.settings, equipment_list: currentList };
+        renderAdminEquipmentList(state.settings.equipment_list || []);
+        closeEquipmentModal();
+        showToast(editIdxStr !== '' ? 'Equipment item updated.' : 'New equipment item added to catalog.', 'success');
+      } catch (err) {
+        showToast(err.message || 'Failed to update equipment catalog.', 'error');
+      }
+    });
+  }
+
+  if (adminEquipmentList) {
+    adminEquipmentList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+
+      const action = btn.dataset.action;
+      const idx = parseInt(btn.dataset.index, 10);
+      const currentList = Array.isArray(state.settings?.equipment_list)
+        ? state.settings.equipment_list
+        : [];
+      const item = currentList[idx];
+      if (!item) return;
+
+      if (action === 'edit-equipment') {
+        openEquipmentModal(item, idx);
+      } else if (action === 'delete-equipment') {
+        if (!confirm(`Are you sure you want to remove "${item.name}" from the equipment catalog?`)) {
+          return;
+        }
+        const newList = currentList.filter((_, i) => i !== idx);
+        try {
+          const updated = await apiFetch('api/settings', {
+            method: 'PATCH',
+            body: JSON.stringify({ equipment_list: newList }),
+          });
+          state.settings = updated || { ...state.settings, equipment_list: newList };
+          renderAdminEquipmentList(state.settings.equipment_list || []);
+          showToast(`"${item.name}" removed from equipment catalog.`, 'success');
+        } catch (err) {
+          showToast(err.message || 'Failed to delete equipment item.', 'error');
+        }
       }
     });
   }

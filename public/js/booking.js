@@ -246,6 +246,10 @@ window.initBookingForm = function() {
           : json.data;
         rooms.forEach(r => {
           roomsById[r.room_id] = r;
+          // Unavailable rooms (Maintenance or inactive) won't be included in choices for user
+          if (r.status === 'Maintenance' || String(r.is_active) === '0' || r.is_active === false) {
+            return;
+          }
           const opt = document.createElement('option');
           opt.value = r.room_id;
           opt.textContent = `${r.name} (${r.room_type || 'General'} • ${r.capacity} seats)`;
@@ -268,10 +272,10 @@ window.initBookingForm = function() {
           }
         });
 
-        // Only preselect a room that exists and is bookable.
+        // Only preselect a room that exists and is available
         const wantedId = window.bookingModalTargetRoomId || preselectedRoom;
         const wanted = wantedId && roomsById[wantedId];
-        if (wanted && wanted.status !== 'Maintenance') {
+        if (wanted && wanted.status === 'Available' && String(wanted.is_active) !== '0' && wanted.is_active !== false) {
           roomSelect.value = wantedId;
         }
 
@@ -372,13 +376,19 @@ window.initBookingForm = function() {
   }
 
   function updateCalendar(roomId) {
-    if (!roomId) return;
+    const container = document.getElementById('room-calendar-container');
+    if (!roomId) {
+      if (container) {
+        container.innerHTML = '<div class="p-8 text-center text-sm text-gray-400">Please select an available facility above to view its live schedule.</div>';
+      }
+      calendarInstance = null;
+      return;
+    }
     if (calendarInstance && calendarInstance.roomId === roomId) {
       // Same room — just update the date range and highlights
       updateCalendarSelection();
       return;
     }
-    const container = document.getElementById('room-calendar-container');
     if (container) {
       if (typeof RoomCalendar !== 'undefined') {
         const mode  = getBookingMode();
@@ -632,9 +642,10 @@ window.initBookingForm = function() {
       // For Specific Days it is the earliest selected date.
       if (start === todayStr && startTimeInput.value <= nowHHMM) {
         const conflictBanner = document.getElementById('conflictBanner');
-        const requestSlipBtn = document.getElementById('requestSlipBtn');
-        if (conflictBanner) conflictBanner.classList.add('hidden');
-        if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
+        if (conflictBanner) {
+          conflictBanner.classList.add('hidden');
+          conflictBanner.classList.remove('flex');
+        }
         showCollisionError('Reservations must start in the future.', 'Invalid time');
         return false;
       }
@@ -642,9 +653,10 @@ window.initBookingForm = function() {
       if (endTimeInput.value) {
         if (endTimeInput.value <= startTimeInput.value) {
           const conflictBanner = document.getElementById('conflictBanner');
-          const requestSlipBtn = document.getElementById('requestSlipBtn');
-          if (conflictBanner) conflictBanner.classList.add('hidden');
-          if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
+          if (conflictBanner) {
+            conflictBanner.classList.add('hidden');
+            conflictBanner.classList.remove('flex');
+          }
           showCollisionError('End time must be after the start time.', 'Invalid time');
           return false;
         }
@@ -655,39 +667,25 @@ window.initBookingForm = function() {
         if (clash.length) {
           // Show conflict UI
           const conflictBanner = document.getElementById('conflictBanner');
-          const requestSlipBtn = document.getElementById('requestSlipBtn');
+          const conflictText = document.getElementById('conflictText');
           if (conflictBanner) {
             conflictBanner.classList.remove('hidden');
             conflictBanner.classList.add('flex');
           }
-          if (requestSlipBtn) requestSlipBtn.classList.remove('hidden');
-
-          // Populate Request Slip preview
-          const facilitySpan = document.getElementById('rsFacility');
-          const dateSpan     = document.getElementById('rsDate');
-          const timeSpan     = document.getElementById('rsTime');
-          const conflictSpan = document.getElementById('rsConflictInfo');
-          if (facilitySpan && roomSelect && roomSelect.options[roomSelect.selectedIndex]) {
-            facilitySpan.textContent = roomSelect.options[roomSelect.selectedIndex].text;
+          if (conflictText) {
+            const desc = window.CampusSchedule.describeRange(clash, startTimeInput.value, endTimeInput.value);
+            conflictText.textContent = `This selected time overlaps with an existing reservation or class schedule (${desc}) and cannot be booked. Please select a different time slot or facility.`;
           }
-          if (dateSpan) dateSpan.textContent = mode === 'single' ? start : (start + ' to ' + endDateValue());
-          if (timeSpan) timeSpan.textContent =
-            startTimeInput.options[startTimeInput.selectedIndex].text + ' - ' +
-            endTimeInput.options[endTimeInput.selectedIndex].text;
-          if (conflictSpan) conflictSpan.textContent =
-            window.CampusSchedule.describeRange(clash, startTimeInput.value, endTimeInput.value);
 
           document.getElementById('roomReservationForm')?.dispatchEvent(new Event('change'));
           return false; // blocks normal submit
         } else {
           // No conflict — hide conflict UI
           const conflictBanner = document.getElementById('conflictBanner');
-          const requestSlipBtn = document.getElementById('requestSlipBtn');
           if (conflictBanner) {
             conflictBanner.classList.add('hidden');
             conflictBanner.classList.remove('flex');
           }
-          if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
           document.getElementById('roomReservationForm')?.dispatchEvent(new Event('change'));
           return true;
         }
@@ -973,6 +971,48 @@ window.initBookingForm = function() {
    * anything. The API caps equipment_notes at 500, so every default submission
    * came back 422. See the Section 14 report.
    */
+  function renderEquipmentOptions(equipmentList) {
+    const group = document.getElementById('equipmentOptions');
+    if (!group) return;
+
+    if (!Array.isArray(equipmentList) || equipmentList.length === 0) {
+      group.innerHTML = '<p class="text-xs text-gray-400 italic py-2">No optional technical equipment listed.</p>';
+      return;
+    }
+
+    const esc = (s) => (window.CampusRoomUtil && window.CampusRoomUtil.escapeHtml)
+      ? window.CampusRoomUtil.escapeHtml(s)
+      : String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+
+    group.innerHTML = equipmentList.map(item => `
+      <label class="flex items-start gap-3 p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 cursor-pointer transition-colors">
+        <input type="checkbox" data-equipment="${esc(item.name)}" class="mt-0.5 rounded text-[#7A1F2B] focus:ring-[#7A1F2B] border-gray-300" ${item.is_default ? 'checked' : ''}>
+        <div>
+          <span class="block text-sm font-semibold text-gray-900">${esc(item.name)}</span>
+          ${item.description ? `<span class="block text-xs text-gray-500">${esc(item.description)}</span>` : ''}
+        </div>
+      </label>
+    `).join('');
+  }
+
+  // Load equipment catalog dynamically from system settings (admin-configurable)
+  fetch(BASE + 'api/config', { credentials: 'same-origin' })
+    .then(res => res.json())
+    .then(json => {
+      const eq = (json && json.success && json.data && json.data.equipment_list) || [];
+      renderEquipmentOptions(eq);
+      if (rebookSource && rebookSource.equipment_notes) {
+        applyEquipmentNotes(rebookSource.equipment_notes);
+      }
+    })
+    .catch(() => {
+      renderEquipmentOptions([
+        { id: 'lapel_mic', name: 'Wireless Lapel Mic', description: '2 Transmitters & fresh batteries', is_default: true },
+        { id: 'hdmi_kit', name: 'HDMI Cable Kit', description: '4K Ultra-HD 5m shielded cable', is_default: true },
+        { id: 'recording_pod', name: 'Archival Recording Pod', description: 'Dual-camera fixed lecture capture', is_default: false }
+      ]);
+    });
+
   function collectEquipmentNotes() {
     const group = document.getElementById('equipmentOptions');
     if (!group) return '';
@@ -987,9 +1027,9 @@ window.initBookingForm = function() {
   function applyEquipmentNotes(notes) {
     const group = document.getElementById('equipmentOptions');
     if (!group) return;
-    const wanted = String(notes || '').split(',').map(part => part.trim()).filter(Boolean);
+    const wanted = String(notes || '').split(',').map(part => part.trim().toLowerCase()).filter(Boolean);
     group.querySelectorAll('input[type="checkbox"][data-equipment]').forEach(cb => {
-      cb.checked = wanted.indexOf(cb.dataset.equipment) !== -1;
+      cb.checked = wanted.indexOf((cb.dataset.equipment || '').toLowerCase()) !== -1;
     });
   }
 

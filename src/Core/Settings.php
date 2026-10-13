@@ -17,6 +17,27 @@ final class Settings
 {
     public const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+    public const DEFAULT_EQUIPMENT = [
+        [
+            'id'          => 'lapel_mic',
+            'name'        => 'Wireless Lapel Mic',
+            'description' => '2 Transmitters & fresh batteries',
+            'is_default'  => true,
+        ],
+        [
+            'id'          => 'hdmi_kit',
+            'name'        => 'HDMI Cable Kit',
+            'description' => '4K Ultra-HD 5m shielded cable',
+            'is_default'  => true,
+        ],
+        [
+            'id'          => 'recording_pod',
+            'name'        => 'Archival Recording Pod',
+            'description' => 'Dual-camera fixed lecture capture',
+            'is_default'  => false,
+        ],
+    ];
+
     private const DEFAULTS = [
         'business_hours_start' => '06:00',
         'business_hours_end'   => '21:00',
@@ -27,6 +48,7 @@ final class Settings
         // the window, so last term's classes expire on their own.
         'semester_start'       => '',
         'semester_end'         => '',
+        'equipment_list'       => '',
     ];
 
     /** @var array<string, string>|null */
@@ -99,6 +121,20 @@ final class Settings
         return self::semesterStart() !== '' && self::semesterEnd() !== '';
     }
 
+    /** @return array<int, array{id: string, name: string, description: string, is_default: bool}> */
+    public static function equipmentList(): array
+    {
+        $raw = self::get('equipment_list');
+        if ($raw === '') {
+            return self::DEFAULT_EQUIPMENT;
+        }
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return self::DEFAULT_EQUIPMENT;
+        }
+        return $decoded;
+    }
+
     /** Everything, typed, for the API. */
     public static function toArray(): array
     {
@@ -108,6 +144,7 @@ final class Settings
             'closed_days'          => self::closedDays(),
             'semester_start'       => self::semesterStart(),
             'semester_end'         => self::semesterEnd(),
+            'equipment_list'       => self::equipmentList(),
         ];
     }
 

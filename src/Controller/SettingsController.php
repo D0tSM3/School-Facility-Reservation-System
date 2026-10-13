@@ -92,6 +92,33 @@ class SettingsController
             $values['closed_days'] = implode(',', $days);
         }
 
+        if (array_key_exists('equipment_list', $body)) {
+            if (!is_array($body['equipment_list'])) {
+                Response::error('equipment_list must be a list of equipment items.', 422);
+            }
+            $cleanList = [];
+            foreach ($body['equipment_list'] as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $name = trim((string) ($item['name'] ?? ''));
+                if ($name === '') {
+                    continue;
+                }
+                $id = trim((string) ($item['id'] ?? ''));
+                if ($id === '') {
+                    $id = preg_replace('/[^a-z0-9_-]/', '', strtolower(str_replace(' ', '_', $name))) ?: 'equip_' . bin2hex(random_bytes(4));
+                }
+                $cleanList[] = [
+                    'id'          => $id,
+                    'name'        => $name,
+                    'description' => trim((string) ($item['description'] ?? '')),
+                    'is_default'  => !empty($item['is_default']),
+                ];
+            }
+            $values['equipment_list'] = json_encode($cleanList, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
         if ($values === []) {
             Response::error('Nothing to update.', 422);
         }
@@ -103,6 +130,13 @@ class SettingsController
         // One audit line naming what actually changed.
         $changes = [];
         foreach ($saved as $key => $value) {
+            if ($key === 'equipment_list') {
+                $countAfter = is_array($value) ? count($value) : 0;
+                if (($current[$key] ?? null) !== $value) {
+                    $changes[] = "equipment_list updated ({$countAfter} items configured)";
+                }
+                continue;
+            }
             $before = is_array($current[$key]) ? implode(', ', $current[$key]) ?: 'none' : $current[$key];
             $after  = is_array($value) ? implode(', ', $value) ?: 'none' : $value;
             if ($before !== $after) {
