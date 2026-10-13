@@ -84,6 +84,19 @@ date_default_timezone_set($_ENV['APP_TIMEZONE'] ?? 'Asia/Manila');
 // CORS / common headers (adjust origins for production).
 header('Content-Type: application/json; charset=utf-8');
 
+// Last-resort handler for anything thrown outside the per-route try/catch —
+// chiefly the top-level Auth::startSession() below. Without this a bootstrap
+// exception (e.g. a misconfigured APP_SECRET/APP_ORIGIN) crashes PHP to a blank
+// 500; here it degrades to the same JSON envelope every endpoint returns.
+set_exception_handler(static function (\Throwable $e): void {
+    error_log('[CampusRoom] Uncaught bootstrap exception: ' . $e->getMessage());
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'An unexpected error occurred.']);
+    }
+});
+
 // -----------------------------------------------------------------------
 // 2. Parse request
 // -----------------------------------------------------------------------

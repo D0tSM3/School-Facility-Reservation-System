@@ -62,7 +62,11 @@ class Auth
             if (!session_start()) {
                 throw new \RuntimeException('Unable to start the session.');
             }
-            self::getSigningKey();
+            // The signing key (APP_SECRET) is validated lazily — only when a signed
+            // auth cookie is actually issued (login) or verified
+            // (restoreFromSignedCookie), not here. Anonymous bootstrap requests
+            // such as /api/config and /api/auth/csrf must not 500 on a missing or
+            // short secret; a logged-out visitor never needs the key.
         }
 
         // If native session is missing user identity (e.g. Lambda container switch on Vercel),
