@@ -7,7 +7,6 @@ namespace CampusRoom\Controller;
 use CampusRoom\Core\Mailer;
 use CampusRoom\Core\PasswordPolicy;
 use CampusRoom\Core\RateLimiter;
-use CampusRoom\Core\Recaptcha;
 use CampusRoom\Core\RequestSecurity;
 use CampusRoom\Core\Response;
 use CampusRoom\Core\Timing;
@@ -34,15 +33,7 @@ final class ActivationController
         RequestSecurity::requireProtectedJsonPost();
         $body = $this->jsonBody();
 
-        $captchaError = Recaptcha::check(
-            isset($body['recaptcha_token']) ? (string) $body['recaptcha_token'] : null,
-            self::clientIp()
-        );
-        if ($captchaError !== null) {
-            Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
-            Response::error('Unable to process the activation request.', 400);
-        }
-
+        // No reCAPTCHA on activation by product decision: relies on rate limiting and school roster verification.
         $schoolId = strtoupper(trim((string) ($body['student_id'] ?? '')));
         if (!self::validStudentId($schoolId)) {
             Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
@@ -61,20 +52,26 @@ final class ActivationController
         }
 
         $otp = self::newOtp();
+        $key = self::activationOtpKey();
         $roster = $this->activation->requestOtp(
             $schoolId,
-            hash('sha256', $otp),
+            hash_hmac('sha256', $schoolId . '|' . $otp, $key),
             self::activationTtlSeconds(),
             $allowedDomain
         );
 
         if ($roster['eligible'] ?? false) {
+            \CampusRoom\Core\SecurityLog::record('activation_requested', 'Account activation requested', null, $schoolId);
             Mailer::sendOtp(
                 (string) $roster['email'],
                 (string) $roster['name'],
                 $otp,
                 self::activationTtlSeconds()
             );
+        } elseif (($roster['already_active'] ?? false) || ($roster['inactive'] ?? false) || (($roster['status'] ?? '') !== '')) {
+            \CampusRoom\Core\SecurityLog::record('activation_skipped', 'Account activation requested (already active or inactive)', null, $schoolId);
+        } else {
+            \CampusRoom\Core\SecurityLog::record('activation_no_match', 'Account activation requested (no roster match)', null, $schoolId);
         }
 
         Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
@@ -101,12 +98,13 @@ final class ActivationController
 
         $result = $this->activation->verifyOtp(
             $schoolId,
-            $code,
+            hash_hmac('sha256', $schoolId . '|' . $code, self::activationOtpKey()),
             self::activationOtpMaxAttempts()
         );
 
         if (!($result['verified'] ?? false)) {
             RateLimiter::recordFailure('activate_verify', $schoolId);
+            \CampusRoom\Core\SecurityLog::record('activation_verify_failed', 'Wrong activation code', null, $schoolId);
             Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
             Response::error('Invalid or expired activation code.', 422);
         }
@@ -213,6 +211,7 @@ final class ActivationController
         }
 
         RateLimiter::clear('activate_complete', $state['school_id']);
+        \CampusRoom\Core\SecurityLog::record('activation_completed', 'Account activated', $result['user']['user_id'] ?? null, $state['school_id']);
 
         Response::json($result['user'], 201);
     }
@@ -263,6 +262,18 @@ final class ActivationController
             throw new \RuntimeException('ACTIVATION_OTP_MAX_ATTEMPTS must be from 1 to 10.');
         }
         return $attempts;
+    }
+
+    private static function activationOtpKey(): string
+    {
+        $secret = defined('APP_SECRET')
+            ? (string) APP_SECRET
+            : (string) ($_ENV['APP_SECRET'] ?? getenv('APP_SECRET') ?: '');
+        if ($secret === '') {
+            throw new \RuntimeException('APP_SECRET must be configured to secure activation codes.');
+        }
+
+        return hash_hmac('sha256', 'activation-otp-v1', $secret);
     }
 
     private static function newOtp(): string

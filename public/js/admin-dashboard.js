@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
     logsTotal: 0,
     logsLimit: 25,
     logsOffset: 0,
+    logScope: 'activity',
+    logFilter: null,
+    securityAlerts: [],
   };
 
   // =========================================================================
@@ -523,7 +526,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewName === 'holidays') loadHolidays();
     if (viewName === 'archives') loadArchives();
     if (viewName === 'config') renderSystemSettings();
-    if (viewName === 'logs') loadAuditLogs();
+    if (viewName === 'logs') {
+      loadAuditLogs();
+      loadSecurityAlerts();
+    }
   }
 
   // Handle URL hash changes (back/forward navigation)
@@ -1424,16 +1430,17 @@ document.addEventListener('DOMContentLoaded', () => {
     openModal('resDetailsModal');
 
     try {
-      const logs = await apiFetch(`api/reservations/${id}/logs`);
+      const response = await apiFetch(`api/reservations/${id}/logs`);
+      const logs = Array.isArray(response?.items) ? response.items : [];
       if (auditList) {
-        if (!Array.isArray(logs) || logs.length === 0) {
+        if (logs.length === 0) {
           auditList.innerHTML = `<p class="text-xs text-gray-400 italic">No specific audit history logged for this reservation.</p>`;
         } else {
           auditList.innerHTML = logs.map(l => `
             <div class="p-3 bg-white border border-gray-100 rounded-xl flex items-center justify-between text-xs">
               <div>
                 <span class="font-bold text-gray-800">${escapeHtml(l.action_type)}</span>
-                <span class="text-gray-400 ml-1">by ${escapeHtml(l.user_name || 'System')}</span>
+                <span class="text-gray-400 ml-1">by ${escapeHtml(l.actor_name || l.user_name || 'System')}</span>
               </div>
               <span class="text-gray-400">${formatDateTime(l.timestamp)}</span>
             </div>
@@ -2091,19 +2098,182 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Audit Logs ────────────────────────────────────────────────────────────
 
+  const alertWindows = {
+    R1: 'Past 15 minutes',
+    R2: 'Past 15 minutes',
+    R3: 'Past 60 minutes',
+    R4: '15 minutes before sign-in',
+    R5: 'Past 60 minutes',
+    R6: 'Past 15 minutes',
+    R7: 'Past 15 minutes',
+    R8: 'Past 15 minutes',
+  };
+
+  const eventLabels = {
+    login_failed: 'Failed sign-in',
+    login_locked: 'Locked out',
+    login_success: 'Signed in',
+    otp_failed: 'Wrong sign-in code',
+    activation_requested: 'Activation requested',
+    activation_no_match: 'Activation: no match',
+    activation_skipped: 'Activation skipped',
+    activation_verify_failed: 'Wrong activation code',
+    activation_completed: 'Account activated',
+    visit_burst: 'Many page loads',
+  };
+
+  function isSecurityLogScope() {
+    return state.logScope === 'security' || state.logScope === 'all';
+  }
+
+  function updateLogTableHeaders() {
+    const headerRow = document.getElementById('logsTableHeaderRow');
+    if (!headerRow) return;
+    headerRow.innerHTML = isSecurityLogScope()
+      ? `
+        <th class="py-3.5 px-6">Timestamp (Manila)</th>
+        <th class="py-3.5 px-6">Account</th>
+        <th class="py-3.5 px-6">Event</th>
+        <th class="py-3.5 px-6">Address</th>
+        <th class="py-3.5 px-6">Audit Description</th>
+      `
+      : `
+        <th class="py-3.5 px-6">Timestamp (Manila)</th>
+        <th class="py-3.5 px-6">User / Actor ID</th>
+        <th class="py-3.5 px-6">Audit Description</th>
+      `;
+  }
+
+  async function loadSecurityAlerts() {
+    const status = document.getElementById('logAlertsStatus');
+    const list = document.getElementById('logAlertsList');
+    if (!status || !list || state.isStaffOnly) return;
+
+    status.textContent = 'Loading alerts...';
+    list.replaceChildren();
+
+    try {
+      const data = await apiFetch('api/logs/alerts');
+      state.securityAlerts = Array.isArray(data?.items) ? data.items : [];
+
+      if (state.securityAlerts.length === 0) {
+        status.textContent = 'No suspicious activity in the last 24 hours.';
+        return;
+      }
+
+      status.textContent = `${state.securityAlerts.length} security alert${state.securityAlerts.length === 1 ? '' : 's'}.`;
+      list.innerHTML = state.securityAlerts.map((alert, index) => {
+        const severity = String(alert.severity || 'Unknown');
+        const icon = severity === 'High' ? 'warning' : severity === 'Medium' ? 'report' : 'info';
+        const count = Number(alert.count) || 0;
+        const lastSeen = formatDateTime(alert.last_seen);
+        const subject = alert.subject ? `<p class="mt-2 text-xs text-gray-600 break-words">${escapeHtml(alert.subject)}</p>` : '';
+        return `
+          <article class="min-w-0 rounded-xl border border-gray-200 p-4">
+            <h3 class="text-sm font-bold text-gray-900 break-words">${escapeHtml(alert.title || alert.rule || 'Security alert')}</h3>
+            <p class="mt-2 flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+              <span class="material-symbols-outlined text-[17px]" aria-hidden="true">${icon}</span>
+              <span>${escapeHtml(severity)} severity</span>
+            </p>
+            ${subject}
+            <p class="mt-2 text-xs text-gray-700">${escapeHtml(count)} event${count === 1 ? '' : 's'} · ${escapeHtml(alertWindows[alert.rule] || 'Recent activity')}</p>
+            <p class="mt-1 text-xs text-gray-500">Last seen: ${escapeHtml(lastSeen)}</p>
+            <button
+              type="button"
+              class="mt-3 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1f2b]"
+              data-log-alert-index="${index}"
+            >View events</button>
+          </article>
+        `;
+      }).join('');
+    } catch (err) {
+      state.securityAlerts = [];
+      status.textContent = 'Could not load alerts';
+      list.replaceChildren();
+    }
+  }
+
+  function renderLogFilterChip() {
+    const container = document.getElementById('logFilterChipContainer');
+    const chip = document.getElementById('logFilterChip');
+    if (!container || !chip) return;
+
+    if (!state.logFilter) {
+      container.classList.add('hidden');
+      chip.replaceChildren();
+      return;
+    }
+
+    container.classList.remove('hidden');
+    chip.innerHTML = `
+      <span class="inline-flex max-w-full items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700">
+        <span class="min-w-0 break-all">Filtered: ${escapeHtml(state.logFilter.label)}</span>
+        <button
+          type="button"
+          id="btn-clear-log-filter"
+          class="shrink-0 rounded-full px-1 font-bold hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1f2b]"
+          aria-label="Remove active audit log filter"
+        >×</button>
+      </span>
+    `;
+    document.getElementById('btn-clear-log-filter')?.addEventListener('click', () => {
+      state.logFilter = null;
+      state.logsOffset = 0;
+      renderLogFilterChip();
+      loadAuditLogs();
+    });
+  }
+
+  document.getElementById('logAlertsList')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-log-alert-index]');
+    if (!button) return;
+    const alert = state.securityAlerts[Number(button.dataset.logAlertIndex)];
+    if (!alert) return;
+
+    let filter = null;
+    if (alert.subject_type === 'ip') {
+      const ip = alert.ip || alert.filter_value;
+      if (typeof ip === 'string' && ip) {
+        filter = { key: 'ip', value: ip, label: ip };
+      }
+    } else if (alert.subject_type === 'account') {
+      const userId = alert.user_id || alert.filter_value || alert.filter?.user_id;
+      if (typeof userId === 'string' && userId) {
+        filter = {
+          key: 'user_id',
+          value: userId,
+          label: alert.subject || userId,
+        };
+      }
+    }
+
+    if (!filter) return;
+    state.logFilter = filter;
+    state.logScope = 'security';
+    state.logsOffset = 0;
+    const scopeSelect = document.getElementById('logScopeSelect');
+    if (scopeSelect) scopeSelect.value = state.logScope;
+    renderLogFilterChip();
+    loadAuditLogs();
+  });
+
   async function loadAuditLogs() {
     if (state.isStaffOnly) return;
     const tbody = document.getElementById('logsTableBody');
     if (!tbody) return;
-    tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-gray-400 text-xs">Loading audit logs...</td></tr>`;
+    updateLogTableHeaders();
+    const columnCount = isSecurityLogScope() ? 5 : 3;
+    tbody.innerHTML = `<tr><td colspan="${columnCount}" class="p-8 text-center text-gray-400 text-xs">Loading audit logs...</td></tr>`;
 
     const searchEl = document.getElementById('logSearchInput');
     const q = searchEl ? searchEl.value.trim() : '';
     const query = new URLSearchParams({
       limit: String(state.logsLimit),
       offset: String(state.logsOffset),
+      scope: state.logScope,
     });
     if (q) query.set('q', q);
+    if (state.logFilter) query.set(state.logFilter.key, state.logFilter.value);
 
     try {
       const data = await apiFetch(`api/logs?${query.toString()}`);
@@ -2124,25 +2294,51 @@ document.addEventListener('DOMContentLoaded', () => {
       if (btnNext) btnNext.disabled = state.logsOffset + state.logsLimit >= state.logsTotal;
 
       if (state.logs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-gray-400 text-xs">No audit events match your search query.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${columnCount}" class="p-8 text-center text-gray-400 text-xs">No audit events match your search query.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = state.logs.map(l => `
-        <tr class="hover:bg-gray-50/80 transition-colors">
-          <td class="py-3 px-6 text-xs text-gray-500 whitespace-nowrap">${formatDateTime(l.timestamp)}</td>
-          <td class="py-3 px-6 text-xs font-mono font-semibold text-gray-700" title="${escapeHtml(l.user_id || '')}">
-            ${escapeHtml(l.user_name || (l.user_id ? l.user_id.substring(0, 8) : 'System'))}
-          </td>
-          <td class="py-3 px-6 text-xs text-gray-800 leading-normal">
-            ${escapeHtml(l.action_type)}
-            ${l.reservation_id ? `<span class="ml-2 text-[10px] font-mono text-gray-400">(Ref: ${escapeHtml(l.reservation_id.substring(0,8))})</span>` : ''}
-          </td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = state.logs.map((l) => {
+        const securityScope = isSecurityLogScope();
+        const identifierHash = typeof l.identifier_hash === 'string' ? l.identifier_hash : '';
+        const account = securityScope
+          ? (l.actor_name || `Unknown account${identifierHash ? ` ${identifierHash.substring(0, 8)}` : ''}`)
+          : (l.actor_name || (l.user_id ? String(l.user_id).substring(0, 8) : 'System'));
+        const action = `
+          ${escapeHtml(l.action_type)}
+          ${l.reservation_id ? `<span class="ml-2 text-[10px] font-mono text-gray-400">(Ref: ${escapeHtml(String(l.reservation_id).substring(0, 8))})</span>` : ''}
+        `;
+        const eventType = typeof l.event_type === 'string' ? l.event_type : '';
+        const eventLabel = Object.prototype.hasOwnProperty.call(eventLabels, eventType)
+          ? eventLabels[eventType]
+          : eventType;
+        const securityCells = securityScope
+          ? `
+            <td class="py-3 px-6 text-xs text-gray-700" title="${escapeHtml(l.user_agent || '')}">${escapeHtml(account)}</td>
+            <td class="py-3 px-6 text-xs text-gray-700">${escapeHtml(eventLabel)}</td>
+            <td class="py-3 px-6 text-xs font-mono text-gray-700 whitespace-nowrap">${escapeHtml(l.ip_address || '')}</td>
+          `
+          : `<td class="py-3 px-6 text-xs font-mono font-semibold text-gray-700" title="${escapeHtml(l.user_id || '')}">${escapeHtml(account)}</td>`;
+        return `
+            <tr class="hover:bg-gray-50/80 transition-colors">
+              <td class="py-3 px-6 text-xs text-gray-500 whitespace-nowrap">${formatDateTime(l.timestamp)}</td>
+              ${securityCells}
+              <td class="py-3 px-6 text-xs text-gray-800 leading-normal">${action}</td>
+            </tr>
+          `;
+      }).join('');
     } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-red-500 text-xs">Failed to load audit logs: ${escapeHtml(err.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${columnCount}" class="p-8 text-center text-red-500 text-xs">Failed to load audit logs: ${escapeHtml(err.message)}</td></tr>`;
     }
+  }
+
+  const btnRefreshLogs = document.getElementById('btn-refresh-logs');
+  if (btnRefreshLogs) {
+    btnRefreshLogs.addEventListener('click', () => {
+      state.logsOffset = 0;
+      loadSecurityAlerts();
+      loadAuditLogs();
+    });
   }
 
   const btnSearchLogs = document.getElementById('btn-search-logs');
@@ -2160,6 +2356,17 @@ document.addEventListener('DOMContentLoaded', () => {
         state.logsOffset = 0;
         loadAuditLogs();
       }
+    });
+  }
+
+  const logScopeSelect = document.getElementById('logScopeSelect');
+  if (logScopeSelect) {
+    logScopeSelect.addEventListener('change', () => {
+      state.logScope = ['activity', 'security', 'all'].includes(logScopeSelect.value)
+        ? logScopeSelect.value
+        : 'activity';
+      state.logsOffset = 0;
+      loadAuditLogs();
     });
   }
 

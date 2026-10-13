@@ -31,11 +31,34 @@ class AuthController
         $this->users = new UserRepository();
     }
 
-    /** Start the session and record the login in the audit log. */
+    /** Start the session and record the sign-in in the audit log. */
     private function startSession(array $user): void
     {
         Auth::login($user['user_id'], $user['role']);
-        (new ReservationRepository())->insertLog($user['user_id'], "{$user['role']} logged in");
+
+        try {
+            $normalizedIdentifier = strtolower(trim((string) ($user['email'] ?? '')));
+            $secret = defined('APP_SECRET') ? (string) APP_SECRET : (string) ($_ENV['APP_SECRET'] ?? getenv('APP_SECRET') ?? '');
+            $identifierHash = $normalizedIdentifier !== '' && $secret !== ''
+                ? substr(hash_hmac('sha256', $normalizedIdentifier, $secret), 0, 16)
+                : null;
+            $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+            $userAgent = str_replace(["\r", "\n"], '', $userAgent);
+            $userAgent = preg_replace('/[\x00-\x1F\x7F]+/', '', $userAgent) ?? '';
+            $userAgent = mb_scrub($userAgent, 'UTF-8');
+
+            (new ReservationRepository())->insertLog(
+                $user['user_id'],
+                "{$user['role']} logged in",
+                null,
+                'login_success',
+                \CampusRoom\Core\RateLimiter::clientIp(),
+                $identifierHash,
+                mb_substr($userAgent, 0, 200)
+            );
+        } catch (\Throwable $e) {
+            error_log('AuthController::startSession audit log failed: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -139,7 +162,11 @@ class AuthController
             Response::error('Invalid email or password.', 401);
         }
         if (strlen($password) > 256) {
-            RateLimiter::recordFailure('login', $rateId, 5, 300);
+            $failure = RateLimiter::recordFailure('login', $rateId, 5, 300);
+            \CampusRoom\Core\SecurityLog::record('login_failed', 'Failed sign-in attempt', null, $email);
+            if ($failure['is_locked']) {
+                \CampusRoom\Core\SecurityLog::record('login_locked', 'Sign-in locked after repeated failures', null, $email);
+            }
             Timing::pad($startedAt, 1500);
             Response::error('Invalid email or password.', 401);
         }
@@ -153,7 +180,12 @@ class AuthController
             $passwordValid = password_verify($passwordToRehash, $hash);
         }
         if ($user === null || !$passwordValid || empty($user['is_active'])) {
-            RateLimiter::recordFailure('login', $rateId, 5, 300);
+            $userId = $user['user_id'] ?? null;
+            $failure = RateLimiter::recordFailure('login', $rateId, 5, 300);
+            \CampusRoom\Core\SecurityLog::record('login_failed', 'Failed sign-in attempt', $userId, $email);
+            if ($failure['is_locked']) {
+                \CampusRoom\Core\SecurityLog::record('login_locked', 'Sign-in locked after repeated failures', $userId, $email);
+            }
             Timing::pad($startedAt, 1500);
             Response::error('Invalid email or password.', 401);
         }
@@ -227,24 +259,34 @@ class AuthController
 
         if ($code !== $user['otp_code']) {
             RateLimiter::recordFailure('verify_otp', $email);
+            \CampusRoom\Core\SecurityLog::record('otp_failed', 'Wrong sign-in verification code', $user['user_id'], $email);
             Response::error('Invalid or expired verification code.', 422);
         }
 
         // Check expiry
         $expiresAt = strtotime($user['otp_expires_at'] ?? '1970-01-01');
         if (time() > $expiresAt) {
+            \CampusRoom\Core\SecurityLog::record('otp_failed', 'Wrong sign-in verification code', $user['user_id'], $email);
             Response::error('Invalid or expired verification code.', 422);
         }
 
         // Clear rate limit on successful verification
         RateLimiter::clear('verify_otp', $email);
 
-        // Mark verified, clear OTP, and log in
-        $this->users->markVerified($user['user_id']);
-
-        $this->startSession($user);
+        // Mark verified, clear OTP, and log in. The audit insert is allowed to
+        // fail without aborting the user flow: the login itself is the success.
+        try {
+            $this->users->markVerified($user['user_id']);
+            $this->startSession($user);
+        } catch (\Throwable $e) {
+            error_log('AuthController::verifyOtp failed: ' . $e->getMessage());
+            Response::error('An unexpected error occurred.', 500);
+        }
 
         $fresh = $this->users->findById($user['user_id']);
+        if ($fresh === null) {
+            Response::error('Invalid or expired verification code.', 422);
+        }
         unset($fresh['password_hash'], $fresh['otp_code'], $fresh['otp_expires_at']);
         Response::json($fresh);
     }

@@ -419,8 +419,15 @@ class ReservationRepository
      * when identical actions land in the same second (batch approve), and
      * nothing used the return value anyway.
      */
-    public function insertLog(string $userId, string $actionType, ?string $reservationId = null): void
-    {
+    public function insertLog(
+        ?string $userId,
+        string $actionType,
+        ?string $reservationId = null,
+        ?string $eventType = null,
+        ?string $ip = null,
+        ?string $identifierHash = null,
+        ?string $userAgent = null
+    ): void {
         // action_type is VARCHAR(255). Some messages carry user-supplied text
         // (a cancellation reason), so trim to fit rather than let an
         // over-long value turn an already-committed action into a 500.
@@ -428,14 +435,42 @@ class ReservationRepository
             $actionType = mb_substr($actionType, 0, 252) . '...';
         }
 
+        $columns = ['user_id', 'reservation_id', 'action_type'];
+        $placeholders = [':user_id', ':reservation_id', ':action_type'];
+        $params = [
+            ':user_id'        => $userId,
+            ':reservation_id' => $reservationId,
+            ':action_type'    => $actionType,
+        ];
+
+        if ($eventType !== null && $eventType !== '') {
+            $columns[] = 'event_type';
+            $placeholders[] = ':event_type';
+            $params[':event_type'] = $eventType;
+        }
+
+        if ($ip !== null && $ip !== '') {
+            $columns[] = 'ip_address';
+            $placeholders[] = ':ip_address';
+            $params[':ip_address'] = $ip;
+        }
+
+        if ($identifierHash !== null && $identifierHash !== '') {
+            $columns[] = 'identifier_hash';
+            $placeholders[] = ':identifier_hash';
+            $params[':identifier_hash'] = $identifierHash;
+        }
+
+        if ($userAgent !== null && $userAgent !== '') {
+            $columns[] = 'user_agent';
+            $placeholders[] = ':user_agent';
+            $params[':user_agent'] = $userAgent;
+        }
+
         $this->db->query(
-            'INSERT INTO System_Logs (user_id, reservation_id, action_type)
-             VALUES (:user_id, :reservation_id, :action_type)',
-            [
-                ':user_id'        => $userId,
-                ':reservation_id' => $reservationId,
-                ':action_type'    => $actionType,
-            ]
+            'INSERT INTO System_Logs (' . implode(', ', $columns) . ')
+             VALUES (' . implode(', ', $placeholders) . ')',
+            $params
         );
     }
 
@@ -459,7 +494,8 @@ class ReservationRepository
      * name or SQL fragment.
      *
      * Supported: reservation_id, user_id, from (Y-m-d, inclusive),
-     * to (Y-m-d, inclusive of that whole day), q (substring of action_type).
+     * to (Y-m-d, inclusive of that whole day), q (substring of action_type),
+     * scope, event_type, and ip.
      *
      * @param  array<string, mixed> $filters
      * @return array{0: string, 1: array<string, string>}  [where_sql, params]
@@ -508,6 +544,41 @@ class ReservationRepository
             $params[':q'] = '%' . str_replace(['|', '%', '_'], ['||', '|%', '|_'], (string) $filters['q']) . '%';
         }
 
+        if (array_key_exists('scope', $filters)) {
+            $scope = in_array($filters['scope'], ['activity', 'security', 'all'], true)
+                ? $filters['scope']
+                : 'activity';
+            if ($scope === 'activity') {
+                $where[] = "(sl.event_type IS NULL OR sl.event_type IN ('login_success', 'activation_completed'))";
+            } elseif ($scope === 'security') {
+                $where[] = 'sl.event_type IS NOT NULL';
+            }
+        }
+
+        $eventTypes = [
+            'login_failed',
+            'login_locked',
+            'login_success',
+            'otp_failed',
+            'activation_requested',
+            'activation_no_match',
+            'activation_skipped',
+            'activation_verify_failed',
+            'activation_completed',
+        ];
+        if (isset($filters['event_type'])
+            && in_array($filters['event_type'], $eventTypes, true)) {
+            $where[] = 'sl.event_type = :event_type';
+            $params[':event_type'] = $filters['event_type'];
+        }
+
+        if (isset($filters['ip'])
+            && is_string($filters['ip'])
+            && filter_var($filters['ip'], FILTER_VALIDATE_IP) !== false) {
+            $where[] = 'sl.ip_address = :ip';
+            $params[':ip'] = $filters['ip'];
+        }
+
         return [$where ? 'WHERE ' . implode(' AND ', $where) : '', $params];
     }
 
@@ -540,7 +611,11 @@ class ReservationRepository
                     rm.name         AS room_name,
                     res.purpose     AS purpose,
                     sl.action_type,
-                    sl.timestamp
+                    sl.timestamp,
+                    sl.event_type,
+                    sl.ip_address,
+                    sl.identifier_hash,
+                    sl.user_agent
                FROM System_Logs sl
           LEFT JOIN Users        u   ON u.user_id         = sl.user_id
           LEFT JOIN Reservations res ON res.reservation_id = sl.reservation_id
