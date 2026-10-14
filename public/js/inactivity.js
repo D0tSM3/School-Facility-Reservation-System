@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  var INACTIVITY_MINUTES = 15;
+  var INACTIVITY_MINUTES = 3; //for testing
   var WARNING_BEFORE_LOGOUT_SECONDS = 60;
   var TIMEOUT_MS = INACTIVITY_MINUTES * 60 * 1000;
   var WARNING_MS = Math.max(0, TIMEOUT_MS - WARNING_BEFORE_LOGOUT_SECONDS * 1000);
