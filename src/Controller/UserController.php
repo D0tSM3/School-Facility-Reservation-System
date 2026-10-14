@@ -9,6 +9,7 @@ use CampusRoom\Core\Response;
 use CampusRoom\Repository\UserRepository;
 use CampusRoom\Repository\ReservationRepository;
 use CampusRoom\Repository\SecurityLogRepository;
+use CampusRoom\Repository\VisitorDayRepository;
 
 /**
  * UserController — Admin-only user management endpoints.
@@ -156,6 +157,14 @@ class UserController
     {
         Auth::requireRole(['Admin']);
         Response::json(['items' => (new SecurityLogRepository())->findAlerts()]);
+    }
+
+    public function visitorSummary(): never
+    {
+        Auth::requireRole(['Admin']);
+        $timezone = new \DateTimeZone((string) ($_ENV['APP_TIMEZONE'] ?? 'Asia/Manila'));
+        $day = (new \DateTimeImmutable('now', $timezone))->format('Y-m-d');
+        Response::json((new VisitorDayRepository())->todaySummary($day));
     }
 
     // ---------------------------------------------------------------

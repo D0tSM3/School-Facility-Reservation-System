@@ -849,6 +849,12 @@ body{overscroll-behavior:none;}
 </footer>
 
 <script>
+fetch('api/visit?page=landing', {
+  method: 'POST',
+  credentials: 'omit',
+  keepalive: true
+}).catch(() => {});
+
 // Floor tab switching
 document.querySelectorAll('.floor-tab').forEach(tab => {
   tab.addEventListener('click', () => {
