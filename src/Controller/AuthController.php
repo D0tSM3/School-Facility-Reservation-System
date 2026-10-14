@@ -204,8 +204,13 @@ class AuthController
 
         // Two-factor authentication: every active account receives a fresh
         // one-time code, and a session is created only after it is confirmed.
-        $otp  = $this->issueOtp($user['user_id']);
-        $sent = Mailer::sendOtp($email, $user['name'], $otp);
+        // The password already matched, so there is no account-enumeration
+        // concern here: if the code cannot be delivered, say so plainly rather
+        // than claim a code was sent. No code is persisted on failure.
+        if (!$this->deliverOtp($user['user_id'], $email, $user['name'])) {
+            Timing::pad($startedAt, 1500);
+            Response::error('We could not send your verification code right now. Please try again in a moment.', 503);
+        }
 
         $payload = [
             'message' => (bool)$user['is_verified']
@@ -324,8 +329,10 @@ class AuthController
             Response::json($payload);
         }
 
-        $otp  = $this->issueOtp($user['user_id']);
-        Mailer::sendOtp((string) $user['email'], (string) $user['name'], $otp);
+        // Anti-enumeration: the response is identical whether or not the account
+        // exists or the mail actually went out. deliverOtp persists the code only
+        // on a successful send, so a failed delivery leaves no usable code behind.
+        $this->deliverOtp($user['user_id'], (string) $user['email'], (string) $user['name']);
 
         Response::json($payload);
     }
@@ -433,8 +440,7 @@ class AuthController
 
         // No "already verified" short-circuit: a verified account still needs a
         // fresh code for every login (two-factor), so Resend must work for it.
-        $otp  = $this->issueOtp($user['user_id']);
-        Mailer::sendOtp((string) $user['email'], (string) $user['name'], $otp);
+        $this->deliverOtp($user['user_id'], (string) $user['email'], (string) $user['name']);
         Response::json(['message' => 'If an account is eligible, a verification code has been sent.']);
     }
 
@@ -454,14 +460,23 @@ class AuthController
     // ---------------------------------------------------------------
 
     /**
-     * Generate a fresh 6-digit OTP, persist it (valid for 10 minutes), and return it.
+     * Generate a fresh 6-digit OTP, email it, and persist it ONLY if the mail
+     * provider accepted it for delivery (valid for 10 minutes).
+     *
+     * Persisting after a successful send means a delivery failure never leaves
+     * an active code the user never received: callers can honestly refuse to
+     * claim "a code was sent." The OTP is never logged or returned.
+     *
+     * @return bool true = emailed and persisted; false = delivery failed
      */
-    private function issueOtp(string $userId): string
+    private function deliverOtp(string $userId, string $email, string $name): bool
     {
-        $otp       = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $expiresAt = date('Y-m-d H:i:s', time() + 600); // 10 minutes
-        $this->users->saveOtp($userId, $otp, $expiresAt);
-        return $otp;
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        if (!Mailer::sendOtp($email, $name, $otp)) {
+            return false;
+        }
+        $this->users->saveOtp($userId, $otp, date('Y-m-d H:i:s', time() + 600)); // 10 minutes
+        return true;
     }
 
     private function jsonBody(): array

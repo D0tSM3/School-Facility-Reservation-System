@@ -18,6 +18,10 @@ class RoomController
     /** Maximum allowed seating/person capacity for any campus facility */
     public const MAX_CAPACITY = 1000;
 
+    /** Valid building floor range. The campus is 5 floors, 0 (ground) – 4. */
+    public const MIN_FLOOR = 0;
+    public const MAX_FLOOR = 4;
+
     private RoomRepository $rooms;
     private ReservationRepository $reservations;
 
@@ -79,6 +83,9 @@ class RoomController
         }
         if ($floor === null || $floor === '' || !is_numeric($floor)) {
             Response::error('floor is required.', 422);
+        }
+        if ((int) $floor < self::MIN_FLOOR || (int) $floor > self::MAX_FLOOR) {
+            Response::error('Floor must be between ' . self::MIN_FLOOR . ' and ' . self::MAX_FLOOR . '.', 422);
         }
         if ($roomType === '') {
             Response::error('room_type is required.', 422);
@@ -296,6 +303,9 @@ class RoomController
         if (array_key_exists('floor', $body)) {
             if ($body['floor'] === '' || !is_numeric($body['floor'])) {
                 Response::error('floor must be a number.', 422);
+            }
+            if ((int) $body['floor'] < self::MIN_FLOOR || (int) $body['floor'] > self::MAX_FLOOR) {
+                Response::error('Floor must be between ' . self::MIN_FLOOR . ' and ' . self::MAX_FLOOR . '.', 422);
             }
             $details['floor'] = (int) $body['floor'];
         }

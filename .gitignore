@@ -13,3 +13,8 @@
 # captcha.txt is where it arrived, not where it should live.
 /captcha.txt
 /.local/
+
+# Local-only: never commit these
+frontend/
+backups/
+.agents/

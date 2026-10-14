@@ -255,9 +255,14 @@ document.addEventListener('DOMContentLoaded', () => {
           } catch (err) {
             console.warn('Unable to save the session role hint', err);
           }
-          if (payload.role === 'Admin' || payload.role === 'Staff') {
-            // Staff share the admin dashboard (admin-only tabs are hidden there).
+          // Role ownership: Admin owns Admin Governance (superset incl. the
+          // operational views); Staff own the Staff Hub; everyone else the
+          // customer dashboard. Each role lands on its own page — no shared
+          // page with tabs hidden by role.
+          if (payload.role === 'Admin') {
             window.location.href = 'admin-governance.html';
+          } else if (payload.role === 'Staff') {
+            window.location.href = 'staff-dashboard.html';
           } else {
             window.location.href = 'dashboard.html';
           }

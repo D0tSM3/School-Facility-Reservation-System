@@ -55,21 +55,33 @@ final class ActivationRepository
                 return ['eligible' => false];
             }
 
+            // Who, if anyone, already has an account for this identity? We allow
+            // exactly one case through: an UNLINKED legacy account on this exact
+            // roster email (school_id IS NULL). That account can be linked after
+            // the person proves control of the email via the OTP below. Any
+            // account already tied to this school_id, or this email tied to a
+            // different school_id, stays ineligible — never link on email alone.
             $existingQuery = $pdo->prepare(
-                'SELECT EXISTS (
-                    SELECT 1
-                      FROM public.users
-                     WHERE school_id = :school_id
-                        OR lower(email) = lower(:email)
-                 )'
+                'SELECT user_id, school_id, lower(email) AS email
+                   FROM public.users
+                  WHERE school_id = :school_id
+                     OR lower(email) = lower(:email)'
             );
             $existingQuery->execute([
                 ':school_id' => $schoolId,
                 ':email' => $roster['email'],
             ]);
-            if ($existingQuery->fetchColumn()) {
-                $pdo->commit();
-                return ['eligible' => false];
+            $rosterEmail = strtolower((string) $roster['email']);
+            foreach ($existingQuery->fetchAll(PDO::FETCH_ASSOC) as $acct) {
+                if ((string) $acct['school_id'] === (string) $schoolId) {
+                    $pdo->commit();
+                    return ['eligible' => false]; // already activated/linked
+                }
+                if ($acct['email'] === $rosterEmail && $acct['school_id'] !== null) {
+                    $pdo->commit();
+                    return ['eligible' => false]; // email linked to a different school_id
+                }
+                // else: unlinked legacy account on this email → linkable at complete()
             }
 
             $this->replaceActiveOtp($pdo, $schoolId, $codeHash, $ttlSeconds);
@@ -201,6 +213,65 @@ final class ActivationRepository
                 return ['created' => false];
             }
 
+            // Is there already an account for this identity? Lock the candidate
+            // rows so the link/insert decision is atomic against a concurrent one.
+            $acctQuery = $pdo->prepare(
+                'SELECT user_id, school_id, lower(email) AS email
+                   FROM public.users
+                  WHERE school_id = :school_id
+                     OR lower(email) = lower(:email)
+                  FOR UPDATE'
+            );
+            $acctQuery->execute([
+                ':school_id' => $schoolId,
+                ':email' => $roster['email'],
+            ]);
+            $rosterEmail = strtolower((string) $roster['email']);
+            $linkUserId = null;
+            foreach ($acctQuery->fetchAll(PDO::FETCH_ASSOC) as $acct) {
+                if ((string) $acct['school_id'] === (string) $schoolId) {
+                    $pdo->commit();
+                    return ['created' => false, 'reason' => 'already_activated'];
+                }
+                if ($acct['email'] === $rosterEmail) {
+                    if ($acct['school_id'] !== null) {
+                        $pdo->commit();
+                        return ['created' => false, 'reason' => 'conflict'];
+                    }
+                    $linkUserId = (string) $acct['user_id'];
+                }
+            }
+
+            if ($linkUserId !== null) {
+                // LINK the verified roster identity onto the existing unlinked
+                // account. Email control was proven by the activation OTP. We set
+                // the new password and stamp activation, but PRESERVE the existing
+                // role, email, name, user_id and every foreign-key relationship
+                // (reservations, logs, …) — never a duplicate, never a role change.
+                $linkQuery = $pdo->prepare(
+                    'UPDATE public.users
+                        SET school_id = :school_id,
+                            account_type = :person_type,
+                            password_hash = :password_hash,
+                            is_verified = TRUE,
+                            is_active = TRUE,
+                            activated_at = COALESCE(activated_at, CURRENT_TIMESTAMP)
+                      WHERE user_id = :user_id
+                      RETURNING user_id, name, email, role, account_type, school_id,
+                                is_verified::int AS is_verified, is_active::int AS is_active, activated_at'
+                );
+                $linkQuery->execute([
+                    ':school_id' => $schoolId,
+                    ':person_type' => $roster['person_type'],
+                    ':password_hash' => $passwordHash,
+                    ':user_id' => $linkUserId,
+                ]);
+                $user = $linkQuery->fetch(PDO::FETCH_ASSOC);
+                $pdo->commit();
+
+                return ['created' => true, 'linked' => true, 'user' => $user];
+            }
+
             $insertQuery = $pdo->prepare(
                 'INSERT INTO public.users
                     (name, email, password_hash, role, is_verified, account_type,
@@ -252,5 +323,21 @@ final class ActivationRepository
             ':code_hash' => $codeHash,
             ':ttl_seconds' => $ttlSeconds,
         ]);
+    }
+
+    /**
+     * Invalidate any active, unused activation OTP for a school_id. Called when
+     * the code could not be emailed, so an undelivered code is never left valid.
+     */
+    public function invalidateActiveOtp(string $schoolId): void
+    {
+        $this->db->getPdo()->prepare(
+            'UPDATE public.activation_otps
+                SET invalidated_at = CURRENT_TIMESTAMP
+              WHERE school_id = :school_id
+                AND purpose = \'activation\'
+                AND used_at IS NULL
+                AND invalidated_at IS NULL'
+        )->execute([':school_id' => $schoolId]);
     }
 }

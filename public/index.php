@@ -56,6 +56,7 @@ use CampusRoom\Controller\ClassScheduleController;
 use CampusRoom\Controller\HolidayController;
 use CampusRoom\Controller\UserController;
 use CampusRoom\Controller\SettingsController;
+use CampusRoom\Controller\CalendarController;
 
 // Load .env when it exists (local dev). On serverless hosts like Vercel there
 // is no .env file — configuration comes from the platform's environment
@@ -83,6 +84,19 @@ date_default_timezone_set($_ENV['APP_TIMEZONE'] ?? 'Asia/Manila');
 
 // CORS / common headers (adjust origins for production).
 header('Content-Type: application/json; charset=utf-8');
+
+// Last-resort handler for anything thrown outside the per-route try/catch —
+// chiefly the top-level Auth::startSession() below. Without this a bootstrap
+// exception (e.g. a misconfigured APP_SECRET/APP_ORIGIN) crashes PHP to a blank
+// 500; here it degrades to the same JSON envelope every endpoint returns.
+set_exception_handler(static function (\Throwable $e): void {
+    error_log('[CampusRoom] Uncaught bootstrap exception: ' . $e->getMessage());
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'An unexpected error occurred.']);
+    }
+});
 
 // -----------------------------------------------------------------------
 // 2. Parse request
@@ -214,6 +228,24 @@ $routes = [
 
         Response::json(['token' => RequestSecurity::csrfToken()]);
     }],
+    // Public visitor beacon — the landing page posts here on load so visits are
+    // recorded in the audit log. No session/CSRF (the brochure has neither); an
+    // IP window guard plus the per-IP row cap in SecurityLog stop flooding.
+    ['POST', '#^/api/visit$#', function () {
+        $count = RateLimiter::incrementIpWindow(
+            'visit',
+            RateLimiter::clientIp(),
+            RateLimiter::CSRF_WINDOW_SECONDS
+        );
+
+        if ($count <= RateLimiter::CSRF_BLOCK_AT) {
+            SecurityLog::record('page_visit', 'Visitor opened the landing page');
+        }
+
+        // Always 204 regardless of logging outcome: the beacon must never
+        // surface errors or counts to an anonymous visitor.
+        http_response_code(204);
+    }],
     ['POST', '#^/api/auth/activate/request$#',  fn() => (new ActivationController())->request()],
     ['POST', '#^/api/auth/activate/verify$#',   fn() => (new ActivationController())->verify()],
     ['GET',  '#^/api/auth/activate/context$#',  fn() => (new ActivationController())->context()],
@@ -228,6 +260,10 @@ $routes = [
     ['POST', '#^/api/auth/logout$#',      fn() => (new AuthController())->logout()],
 
     // Rooms — Customer (GET) + Admin (POST / PATCH)
+    // Master Calendar (read-only, Customer). Own prefix so it can never collide with /api/rooms/{id}.
+    ['GET',   '#^/api/calendar/master$#',          fn() => (new CalendarController())->master()],
+    ['GET',   '#^/api/calendar/suggest$#',         fn() => (new CalendarController())->suggest()],
+
     ['GET',   '#^/api/rooms$#',                    fn() => (new RoomController())->index()],
     ['GET',   '#^/api/rooms/(?P<id>[^/]+)/calendar$#', fn(string $id) => (new RoomController())->getCalendar($id)],
     ['POST',  '#^/api/rooms$#',                    fn() => (new RoomController())->store()],
@@ -235,10 +271,9 @@ $routes = [
     ['DELETE', '#^/api/rooms/(?P<id>[^/]+)$#',       fn(string $id) => (new RoomController())->destroy($id)],
 
     // Reservations
-    // NOTE: the literal GET routes /mine and /move-requests MUST stay above GET /{id},
+    // NOTE: literal GET routes like /mine and /cancel-requests MUST stay above GET /{id},
     // or the {id} pattern swallows them (this router is a linear first-match list).
     ['GET',   '#^/api/reservations/mine$#',          fn() => (new ReservationController())->mine()],
-    ['GET',   '#^/api/reservations/move-requests$#', fn() => (new ReservationController())->getMoveRequests()],
     ['GET',   '#^/api/reservations/cancel-requests$#', fn() => (new ReservationController())->getCancelRequests()],
     ['GET',   '#^/api/reservations/cancellations$#', fn() => (new ReservationController())->getUserCancellations()],
     ['GET',   '#^/api/reservations/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->show($id)],
@@ -249,12 +284,10 @@ $routes = [
     // Customer "Remove" — a soft hide, not a DELETE of the row.
     ['DELETE', '#^/api/reservations/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->remove($id)],
 
-    // Move Requests
+    // Self-service rebooking (direct booking — no move-request queue).
     ['POST',  '#^/api/reservations/(?P<id>[^/]+)/rebook$#', fn(string $id) => (new ReservationController())->rebook($id)],
     // Two path segments after /reservations/, so it cannot collide with the single-segment GET /{id} above.
     ['GET',   '#^/api/reservations/(?P<id>[^/]+)/logs$#', fn(string $id) => (new ReservationController())->logs($id)],
-    ['POST',  '#^/api/reservations/(?P<id>[^/]+)/move-request$#', fn(string $id) => (new ReservationController())->requestMove($id)],
-    ['PATCH', '#^/api/reservations/move-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->resolveMoveRequest($id)],
 
     // Cancellation Requests (approved bookings)
     // Customers no longer file cancellation requests: they cancel directly via PATCH /{id}/cancel.
@@ -275,13 +308,8 @@ $routes = [
     ['POST',   '#^/api/holidays$#',                  fn() => (new HolidayController())->store()],
     ['DELETE', '#^/api/holidays/(?P<id>[^/]+)$#',    fn(string $id) => (new HolidayController())->destroy($id)],
 
-    // Conflict override requests (Customer)
-    ['GET',    '#^/api/conflict-override-requests/mine$#', fn() => (new ReservationController())->myOverrides()],
-    ['POST',   '#^/api/conflict-override-requests$#',      fn() => (new ReservationController())->requestOverride()],
-    ['DELETE', '#^/api/conflict-override-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->cancelOverride($id)],
-    // Conflict override requests (Staff/Admin)
-    ['GET',    '#^/api/conflict-override-requests$#',      fn() => (new ReservationController())->overrideIndex()],
-    ['PATCH',  '#^/api/conflict-override-requests/(?P<id>[^/]+)$#', fn(string $id) => (new ReservationController())->resolveOverride($id)],
+    // Conflict override requests were retired with the approval queue:
+    // a taken slot is simply unavailable (409), there is no override path.
 
     // System settings (Admin)
     ['GET',   '#^/api/settings$#',                   fn() => (new SettingsController())->show()],

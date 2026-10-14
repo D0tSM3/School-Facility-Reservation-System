@@ -89,6 +89,10 @@
           <span class="material-symbols-outlined text-[20px]">meeting_room</span>
           <span>Rooms Directory</span>
         </a>
+        <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="master-calendar" href="master-calendar.html">
+          <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+          <span>Calendar</span>
+        </a>
         <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="my-reservations" href="my-reservations.html">
           <span class="material-symbols-outlined text-[20px]">event_available</span>
           <span>My Reservations</span>
@@ -397,27 +401,10 @@
             <div class="space-y-3">
               <label class="text-sm font-bold text-gray-800">Special Equipment &amp; Technical Logistics</label>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-3" id="equipmentOptions">
-                <label class="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
-                  <input checked class="mt-0.5 rounded text-[#7a1f2b] focus:ring-[#7a1f2b] w-4 h-4" data-equipment="Wireless Lapel Mic" type="checkbox" />
-                  <div class="flex flex-col">
-                    <span class="text-sm font-bold text-gray-800">Wireless Lapel Mic</span>
-                    <span class="text-xs text-gray-500 mt-0.5">2 Transmitters &amp; fresh batteries</span>
-                  </div>
-                </label>
-                <label class="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
-                  <input checked class="mt-0.5 rounded text-[#7a1f2b] focus:ring-[#7a1f2b] w-4 h-4" data-equipment="HDMI Cable Kit" type="checkbox" />
-                  <div class="flex flex-col">
-                    <span class="text-sm font-bold text-gray-800">HDMI Cable Kit</span>
-                    <span class="text-xs text-gray-500 mt-0.5">USB-C to 4K / DisplayPort</span>
-                  </div>
-                </label>
-                <label class="flex items-start gap-3 p-4 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
-                  <input class="mt-0.5 rounded text-[#7a1f2b] focus:ring-[#7a1f2b] w-4 h-4" data-equipment="Archival Recording Pod" type="checkbox" />
-                  <div class="flex flex-col">
-                    <span class="text-sm font-bold text-gray-800">Archival Recording Pod</span>
-                    <span class="text-xs text-gray-500 mt-0.5">Fixed dual cam room capture</span>
-                  </div>
-                </label>
+                <!-- Dynamically rendered by booking.js from system settings -->
+                <div class="col-span-1 md:col-span-3 text-xs text-gray-400 py-2 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[16px] animate-spin">sync</span> Loading technical equipment options...
+                </div>
               </div>
             </div>
 
@@ -522,4 +509,4 @@
       });
     </script>
   </body>
-</html>
+</html></html>

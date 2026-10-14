@@ -161,26 +161,6 @@
     return by ? `${reason}<div class="cr-slip-sub">${by}</div>` : reason;
   }
 
-  function moveHistoryHtml(moves) {
-    const items = moves.map((m) => {
-      const reviewer = has(m.processed_by_name) ? ` · Reviewed by ${escapeHtml(m.processed_by_name)}` : '';
-      const comment = has(m.staff_comment)
-        ? `<div class="cr-slip-move-comment">Staff comment: ${escapeHtml(m.staff_comment)}</div>`
-        : '';
-      return `
-        <li class="cr-slip-move">
-          <div class="cr-slip-move-top">
-            <span>Requested: ${escapeHtml(formatRangeShort(m.requested_start_time, m.requested_end_time))}</span>
-            ${statusChip(m.status)}
-          </div>
-          <div class="cr-slip-sub">Filed ${escapeHtml(formatDayShort(m.created_at))} ${escapeHtml(formatTimeShort(m.created_at))}${reviewer}</div>
-          ${comment}
-        </li>`;
-    }).join('');
-
-    return `<section class="cr-slip-section"><h3>Move history</h3><ul class="cr-slip-moves">${items}</ul></section>`;
-  }
-
   function slipHtml(r) {
     const status = has(r.status) ? String(r.status) : 'Unknown';
     const valid = VALID_STATUSES.includes(status);
@@ -225,10 +205,6 @@
         ? row('Cancellation', cancellationValue(r))
         : ''));
 
-    const moves = Array.isArray(r.move_requests) && r.move_requests.length
-      ? moveHistoryHtml(r.move_requests)
-      : '';
-
     return `
       <div class="cr-slip-paper">
         ${watermark}
@@ -249,7 +225,6 @@
         ${facility}
         ${booking}
         ${record}
-        ${moves}
         <div class="cr-slip-foot">
           <div>Generated <span id="crSlipGenerated">${escapeHtml(generatedStamp())}</span> — valid only with an Approved status.</div>
           <div>All times are Philippine Standard Time (Asia/Manila).</div>
@@ -333,11 +308,6 @@
     .cr-slip-row dt { color: #6b7280; font-weight: 600; }
     .cr-slip-row dd { margin: 0; font-weight: 500; white-space: pre-wrap; overflow-wrap: anywhere; }
     .cr-slip-sub { font-size: 12px; color: #6b7280; font-weight: 400; }
-    .cr-slip-moves { list-style: none; margin: 0; padding: 0; }
-    .cr-slip-move { padding: 6px 0; border-bottom: 1px dashed #e5e7eb; break-inside: avoid; }
-    .cr-slip-move:last-child { border-bottom: 0; }
-    .cr-slip-move-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-weight: 500; }
-    .cr-slip-move-comment { font-size: 12px; color: #374151; overflow-wrap: anywhere; white-space: pre-wrap; }
     .cr-slip-foot { position: relative; z-index: 1; margin-top: 16px; padding-top: 10px; border-top: 2px solid #7A1F2B;
       font-size: 11px; color: #6b7280; text-align: center; }
 

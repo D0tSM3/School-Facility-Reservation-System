@@ -236,8 +236,20 @@ window.initBookingForm = function() {
         }
 
         roomSelect.innerHTML = '<option value="">Select a room</option>';
-        json.data.forEach(r => {
+        // With a long room list, group the dropdown by room type (Laboratories, Lecture Halls, …).
+        const grouped = json.data.length > 10;
+        const typeGroups = new Map();
+        const rooms = grouped
+          ? json.data.slice().sort((a, b) =>
+              String(a.room_type || '\uffff').localeCompare(String(b.room_type || '\uffff')) ||
+              String(a.name).localeCompare(String(b.name), undefined, { numeric: true }))
+          : json.data;
+        rooms.forEach(r => {
           roomsById[r.room_id] = r;
+          // Unavailable rooms (Maintenance or inactive) won't be included in choices for user
+          if (r.status === 'Maintenance' || String(r.is_active) === '0' || r.is_active === false) {
+            return;
+          }
           const opt = document.createElement('option');
           opt.value = r.room_id;
           opt.textContent = `${r.name} (${r.room_type || 'General'} • ${r.capacity} seats)`;
@@ -245,13 +257,25 @@ window.initBookingForm = function() {
             opt.textContent += ' [Under Maintenance]';
             opt.disabled = true;
           }
-          roomSelect.appendChild(opt);
+          if (grouped) {
+            const typeName = r.room_type || 'Other';
+            let grp = typeGroups.get(typeName);
+            if (!grp) {
+              grp = document.createElement('optgroup');
+              grp.label = typeName;
+              typeGroups.set(typeName, grp);
+              roomSelect.appendChild(grp);
+            }
+            grp.appendChild(opt);
+          } else {
+            roomSelect.appendChild(opt);
+          }
         });
 
-        // Only preselect a room that exists and is bookable.
+        // Only preselect a room that exists and is available
         const wantedId = window.bookingModalTargetRoomId || preselectedRoom;
         const wanted = wantedId && roomsById[wantedId];
-        if (wanted && wanted.status !== 'Maintenance') {
+        if (wanted && wanted.status === 'Available' && String(wanted.is_active) !== '0' && wanted.is_active !== false) {
           roomSelect.value = wantedId;
         }
 
@@ -352,13 +376,19 @@ window.initBookingForm = function() {
   }
 
   function updateCalendar(roomId) {
-    if (!roomId) return;
+    const container = document.getElementById('room-calendar-container');
+    if (!roomId) {
+      if (container) {
+        container.innerHTML = '<div class="p-8 text-center text-sm text-gray-400">Please select an available facility above to view its live schedule.</div>';
+      }
+      calendarInstance = null;
+      return;
+    }
     if (calendarInstance && calendarInstance.roomId === roomId) {
       // Same room — just update the date range and highlights
       updateCalendarSelection();
       return;
     }
-    const container = document.getElementById('room-calendar-container');
     if (container) {
       if (typeof RoomCalendar !== 'undefined') {
         const mode  = getBookingMode();
@@ -597,188 +627,6 @@ window.initBookingForm = function() {
     });
   }
 
-    const requestSlipBtn = document.getElementById('requestSlipBtn');
-  const rsModal = document.getElementById('requestSlipModalOverlay');
-  const closeRsBtn = document.getElementById('closeRequestSlipModalBtn');
-  const cancelRsBtn = document.getElementById('cancelRequestSlipBtn');
-  const rsAltSchedule = document.getElementById('rsAltSchedule');
-  const rsAltFields = document.getElementById('rsAltScheduleFields');
-
-  if (requestSlipBtn && rsModal) {
-    requestSlipBtn.addEventListener('click', () => {
-      rsModal.classList.remove('hidden');
-      rsModal.classList.add('flex');
-    });
-    
-    const closeRs = () => {
-      rsModal.classList.add('hidden');
-      rsModal.classList.remove('flex');
-    };
-    
-    if (closeRsBtn) closeRsBtn.addEventListener('click', closeRs);
-    if (cancelRsBtn) cancelRsBtn.addEventListener('click', closeRs);
-    
-    if (rsAltSchedule && rsAltFields) {
-      rsAltSchedule.addEventListener('change', () => {
-        if (rsAltSchedule.value === 'Yes') {
-          rsAltFields.classList.remove('hidden');
-        } else {
-          rsAltFields.classList.add('hidden');
-        }
-      });
-    }
-    
-    const rsForm = document.getElementById('requestSlipForm');
-    const rsErrorBanner = document.getElementById('rsErrorBanner');
-    const submitRsBtn = document.getElementById('submitRequestSlipBtn') || (rsForm ? rsForm.querySelector('button[type="submit"]') : null);
-
-    if (rsForm) {
-      rsForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (submitting) return;
-
-        const setRsError = (msg) => {
-          if (rsErrorBanner) {
-            rsErrorBanner.textContent = msg;
-            rsErrorBanner.classList.remove('hidden');
-          } else {
-            alert(msg);
-          }
-        };
-
-        if (rsErrorBanner) rsErrorBanner.classList.add('hidden');
-
-        const ack = document.getElementById('rsAcknowledgement');
-        if (ack && !ack.checked) {
-          return setRsError('Please check the acknowledgement checkbox to proceed.');
-        }
-
-        const reasonEl = rsForm.querySelector('textarea[name="reason"]');
-        const reason = reasonEl ? reasonEl.value.trim() : '';
-        if (!reason) {
-          return setRsError('Please explain why you need this facility (Justification is required).');
-        }
-
-        const reqTypeEl = rsForm.querySelector('select[name="request_type"]');
-        const requestType = reqTypeEl ? reqTypeEl.value : '';
-        if (!requestType) {
-          return setRsError('Please select a Request Type.');
-        }
-
-        const addInfoEl = rsForm.querySelector('textarea[name="additional_info"]');
-        const additionalInfo = addInfoEl ? addInfoEl.value.trim() : '';
-
-        const altSchedule = rsAltSchedule ? rsAltSchedule.value : 'No';
-        const altDateInput = rsForm.querySelector('input[name="alt_date"]');
-        const altStartInput = rsForm.querySelector('input[name="alt_start"]');
-        const altEndInput = rsForm.querySelector('input[name="alt_end"]');
-
-        const altDate = altDateInput ? altDateInput.value : '';
-        const altStart = altStartInput ? altStartInput.value : '';
-        const altEnd = altEndInput ? altEndInput.value : '';
-
-        if (altSchedule === 'Yes') {
-          if (!altDate || !altStart || !altEnd) {
-            return setRsError('Please fill out all fields for your alternative schedule, or set alternative schedule to "No".');
-          }
-          if (altEnd <= altStart) {
-            return setRsError('Alternative end time must be after the alternative start time.');
-          }
-        }
-
-        const roomId = roomSelect ? roomSelect.value : '';
-        const dateVal = startDateValue();
-        const endDateVal = endDateValue();
-        const startVal = startTimeInput ? startTimeInput.value : '';
-        const endVal = endTimeInput ? endTimeInput.value : '';
-
-        if (!roomId || !dateVal || !endDateVal || !startVal || !endVal) {
-          return setRsError('Facility, dates, and times must be selected on the booking form.');
-        }
-
-        const picked = form ? form.querySelector('input[name="reservation_purpose"]:checked') : null;
-        const PURPOSE_MAP = {
-          'Academic Requirement': 'Academic Lecture',
-          'Faculty-Directed Activity': 'Faculty Defense',
-          'Schedule Conflict': 'Academic Lecture',
-          'Special Event': 'Dept Workshop',
-          'Other': 'Academic Lecture'
-        };
-        const category = (picked && PURPOSE_LABELS[picked.value]) 
-          ? PURPOSE_LABELS[picked.value] 
-          : (PURPOSE_MAP[requestType] || 'Academic Lecture');
-
-        let purposeText = purposeInput ? purposeInput.value.trim() : '';
-        if (!purposeText) {
-          purposeText = `${requestType}: ${reason}`.substring(0, 250);
-        }
-
-        const payload = {
-          room_id: roomId,
-          purpose: purposeText,
-          category: category,
-          start_time: `${dateVal}T${startVal}:00`,
-          end_time: `${endDateVal}T${endVal}:00`,
-          equipment_notes: collectEquipmentNotes() || 'Standard Academic Setup',
-          reason: reason,
-          request_type: requestType,
-          additional_info: additionalInfo || null,
-          alt_start_time: (altSchedule === 'Yes' && altDate && altStart) ? `${altDate} ${altStart}:00` : null,
-          alt_end_time: (altSchedule === 'Yes' && altDate && altEnd) ? `${altDate} ${altEnd}:00` : null
-        };
-
-        if (getBookingMode() === 'specific') {
-          payload.active_dates = getSelectedDates();
-        }
-
-        if (submitRsBtn) {
-          submitRsBtn.disabled = true;
-          submitRsBtn.classList.add('opacity-70', 'cursor-not-allowed');
-          const btnSpan = submitRsBtn.querySelector('span:last-child');
-          if (btnSpan) btnSpan.textContent = 'Submitting…';
-        }
-
-        try {
-          const result = await sendReservation('api/conflict-override-requests', payload);
-          if (!result) return; // 401 redirecting
-
-          if (!result.ok || (result.json && !result.json.success)) {
-            const errMsg = (result.json && result.json.error) ? result.json.error : 'Could not submit your Request Slip. Please try again.';
-            if (submitRsBtn) {
-              submitRsBtn.disabled = false;
-              submitRsBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-              const btnSpan = submitRsBtn.querySelector('span:last-child');
-              if (btnSpan) btnSpan.textContent = 'Submit Request Slip';
-            }
-            return setRsError(errMsg);
-          }
-
-          // Success!
-          closeRs();
-          const mainModal = document.getElementById('bookingModalOverlay');
-          if (mainModal) {
-            mainModal.classList.add('hidden');
-            mainModal.classList.remove('flex');
-          }
-
-          redirecting = true;
-          setSubmitting(true);
-          showSuccess('Request Slip submitted successfully! Staff will review it shortly. Redirecting to My Reservations…');
-          setTimeout(() => {
-            window.location.href = 'my-reservations.html?filter=pending';
-          }, 1500);
-        } catch (err) {
-          if (submitRsBtn) {
-            submitRsBtn.disabled = false;
-            submitRsBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-            const btnSpan = submitRsBtn.querySelector('span:last-child');
-            if (btnSpan) btnSpan.textContent = 'Submit Request Slip';
-          }
-          return setRsError('Could not reach the server. Please check your connection and try again.');
-        }
-      });
-    }
-  }
   const validateTime = () => {
     if (startTimeInput && endTimeInput && startTimeInput.value) {
       const mode = getBookingMode();
@@ -794,9 +642,10 @@ window.initBookingForm = function() {
       // For Specific Days it is the earliest selected date.
       if (start === todayStr && startTimeInput.value <= nowHHMM) {
         const conflictBanner = document.getElementById('conflictBanner');
-        const requestSlipBtn = document.getElementById('requestSlipBtn');
-        if (conflictBanner) conflictBanner.classList.add('hidden');
-        if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
+        if (conflictBanner) {
+          conflictBanner.classList.add('hidden');
+          conflictBanner.classList.remove('flex');
+        }
         showCollisionError('Reservations must start in the future.', 'Invalid time');
         return false;
       }
@@ -804,9 +653,10 @@ window.initBookingForm = function() {
       if (endTimeInput.value) {
         if (endTimeInput.value <= startTimeInput.value) {
           const conflictBanner = document.getElementById('conflictBanner');
-          const requestSlipBtn = document.getElementById('requestSlipBtn');
-          if (conflictBanner) conflictBanner.classList.add('hidden');
-          if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
+          if (conflictBanner) {
+            conflictBanner.classList.add('hidden');
+            conflictBanner.classList.remove('flex');
+          }
           showCollisionError('End time must be after the start time.', 'Invalid time');
           return false;
         }
@@ -817,39 +667,25 @@ window.initBookingForm = function() {
         if (clash.length) {
           // Show conflict UI
           const conflictBanner = document.getElementById('conflictBanner');
-          const requestSlipBtn = document.getElementById('requestSlipBtn');
+          const conflictText = document.getElementById('conflictText');
           if (conflictBanner) {
             conflictBanner.classList.remove('hidden');
             conflictBanner.classList.add('flex');
           }
-          if (requestSlipBtn) requestSlipBtn.classList.remove('hidden');
-
-          // Populate Request Slip preview
-          const facilitySpan = document.getElementById('rsFacility');
-          const dateSpan     = document.getElementById('rsDate');
-          const timeSpan     = document.getElementById('rsTime');
-          const conflictSpan = document.getElementById('rsConflictInfo');
-          if (facilitySpan && roomSelect && roomSelect.options[roomSelect.selectedIndex]) {
-            facilitySpan.textContent = roomSelect.options[roomSelect.selectedIndex].text;
+          if (conflictText) {
+            const desc = window.CampusSchedule.describeRange(clash, startTimeInput.value, endTimeInput.value);
+            conflictText.textContent = `This selected time overlaps with an existing reservation or class schedule (${desc}) and cannot be booked. Please select a different time slot or facility.`;
           }
-          if (dateSpan) dateSpan.textContent = mode === 'single' ? start : (start + ' to ' + endDateValue());
-          if (timeSpan) timeSpan.textContent =
-            startTimeInput.options[startTimeInput.selectedIndex].text + ' - ' +
-            endTimeInput.options[endTimeInput.selectedIndex].text;
-          if (conflictSpan) conflictSpan.textContent =
-            window.CampusSchedule.describeRange(clash, startTimeInput.value, endTimeInput.value);
 
           document.getElementById('roomReservationForm')?.dispatchEvent(new Event('change'));
           return false; // blocks normal submit
         } else {
           // No conflict — hide conflict UI
           const conflictBanner = document.getElementById('conflictBanner');
-          const requestSlipBtn = document.getElementById('requestSlipBtn');
           if (conflictBanner) {
             conflictBanner.classList.add('hidden');
             conflictBanner.classList.remove('flex');
           }
-          if (requestSlipBtn) requestSlipBtn.classList.add('hidden');
           document.getElementById('roomReservationForm')?.dispatchEvent(new Event('change'));
           return true;
         }
@@ -1135,6 +971,48 @@ window.initBookingForm = function() {
    * anything. The API caps equipment_notes at 500, so every default submission
    * came back 422. See the Section 14 report.
    */
+  function renderEquipmentOptions(equipmentList) {
+    const group = document.getElementById('equipmentOptions');
+    if (!group) return;
+
+    if (!Array.isArray(equipmentList) || equipmentList.length === 0) {
+      group.innerHTML = '<p class="text-xs text-gray-400 italic py-2">No optional technical equipment listed.</p>';
+      return;
+    }
+
+    const esc = (s) => (window.CampusRoomUtil && window.CampusRoomUtil.escapeHtml)
+      ? window.CampusRoomUtil.escapeHtml(s)
+      : String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+
+    group.innerHTML = equipmentList.map(item => `
+      <label class="flex items-start gap-3 p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 cursor-pointer transition-colors">
+        <input type="checkbox" data-equipment="${esc(item.name)}" class="mt-0.5 rounded text-[#7A1F2B] focus:ring-[#7A1F2B] border-gray-300" ${item.is_default ? 'checked' : ''}>
+        <div>
+          <span class="block text-sm font-semibold text-gray-900">${esc(item.name)}</span>
+          ${item.description ? `<span class="block text-xs text-gray-500">${esc(item.description)}</span>` : ''}
+        </div>
+      </label>
+    `).join('');
+  }
+
+  // Load equipment catalog dynamically from system settings (admin-configurable)
+  fetch(BASE + 'api/config', { credentials: 'same-origin' })
+    .then(res => res.json())
+    .then(json => {
+      const eq = (json && json.success && json.data && json.data.equipment_list) || [];
+      renderEquipmentOptions(eq);
+      if (rebookSource && rebookSource.equipment_notes) {
+        applyEquipmentNotes(rebookSource.equipment_notes);
+      }
+    })
+    .catch(() => {
+      renderEquipmentOptions([
+        { id: 'lapel_mic', name: 'Wireless Lapel Mic', description: '2 Transmitters & fresh batteries', is_default: true },
+        { id: 'hdmi_kit', name: 'HDMI Cable Kit', description: '4K Ultra-HD 5m shielded cable', is_default: true },
+        { id: 'recording_pod', name: 'Archival Recording Pod', description: 'Dual-camera fixed lecture capture', is_default: false }
+      ]);
+    });
+
   function collectEquipmentNotes() {
     const group = document.getElementById('equipmentOptions');
     if (!group) return '';
@@ -1149,9 +1027,9 @@ window.initBookingForm = function() {
   function applyEquipmentNotes(notes) {
     const group = document.getElementById('equipmentOptions');
     if (!group) return;
-    const wanted = String(notes || '').split(',').map(part => part.trim()).filter(Boolean);
+    const wanted = String(notes || '').split(',').map(part => part.trim().toLowerCase()).filter(Boolean);
     group.querySelectorAll('input[type="checkbox"][data-equipment]').forEach(cb => {
-      cb.checked = wanted.indexOf(cb.dataset.equipment) !== -1;
+      cb.checked = wanted.indexOf((cb.dataset.equipment || '').toLowerCase()) !== -1;
     });
   }
 
@@ -1350,141 +1228,6 @@ window.initBookingForm = function() {
     return { ok: res.ok, status: res.status, json };
   }
 
-  // ---------------------------------------------------------------
-  // Conflict override (urgent) request. Shown when POST api/reservations
-  // answers 409 with override_eligible: the slot is taken only by someone
-  // else's Approved booking, so staff could move it. The customer either
-  // goes back to pick another time or files POST
-  // api/conflict-override-requests with a reason.
-  // ---------------------------------------------------------------
-
-  /** "2026-10-01 09:00:00" -> "Thu, Oct 1, 9:00 AM" (literal Manila wall-clock). */
-  function formatSlot(value) {
-    const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(value || ''));
-    if (!m) return String(value || '');
-    const day = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
-      .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    return day + ', ' + window.CampusSchedule.fmt12(m[4] + ':' + m[5]);
-  }
-
-  let overrideModal = null;
-
-  function buildOverrideModal() {
-    const wrap = document.createElement('div');
-    wrap.className = 'fixed inset-0 z-[100] hidden items-center justify-center bg-black/40 p-4';
-    wrap.setAttribute('role', 'dialog');
-    wrap.setAttribute('aria-modal', 'true');
-    wrap.setAttribute('aria-labelledby', 'overrideModalTitle');
-    wrap.innerHTML = `
-      <div class="w-full max-w-md rounded-2xl bg-white shadow-xl p-6 space-y-4">
-        <div class="flex items-start gap-3">
-          <span class="material-symbols-outlined text-amber-500 text-[28px]">event_busy</span>
-          <div>
-            <h2 id="overrideModalTitle" class="text-base font-bold text-gray-900">This room is already booked</h2>
-            <p class="text-sm text-gray-600 mt-1" data-override-text></p>
-          </div>
-        </div>
-        <div data-override-choice class="flex flex-col sm:flex-row gap-2 sm:justify-end">
-          <button type="button" data-override-back class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Choose a different time</button>
-          <button type="button" data-override-open class="px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600">Request override (urgent)</button>
-        </div>
-        <form data-override-form class="hidden space-y-3" novalidate>
-          <label class="block text-sm font-bold text-gray-800" for="overrideReason">Why is this urgent? <span class="text-red-500">*</span></label>
-          <textarea id="overrideReason" rows="4" maxlength="500" class="w-full p-3 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[#7a1f2b]" placeholder="Explain why you need this exact slot. Staff will read this when deciding whether to ask the current holder to move."></textarea>
-          <p class="text-xs text-gray-500">Staff review every override. If approved, the current booking is asked to move and your request joins the normal approval queue.</p>
-          <p data-override-error class="hidden text-sm font-semibold text-red-600" role="alert"></p>
-          <div class="flex flex-col sm:flex-row gap-2 sm:justify-end">
-            <button type="button" data-override-back class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Choose a different time</button>
-            <button type="submit" data-override-submit class="px-4 py-2 rounded-xl bg-[#7a1f2b] text-white text-sm font-semibold hover:opacity-90">Submit override request</button>
-          </div>
-        </form>
-      </div>`;
-    document.body.appendChild(wrap);
-
-    const close = () => { wrap.classList.add('hidden'); wrap.classList.remove('flex'); };
-    wrap.querySelectorAll('[data-override-back]').forEach(b => b.addEventListener('click', close));
-    wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !wrap.classList.contains('hidden')) close(); });
-    wrap.querySelector('[data-override-open]').addEventListener('click', () => {
-      wrap.querySelector('[data-override-choice]').classList.add('hidden');
-      wrap.querySelector('[data-override-form]').classList.remove('hidden');
-      wrap.querySelector('#overrideReason').focus();
-    });
-    wrap.querySelector('[data-override-form]').addEventListener('submit', (e) => {
-      e.preventDefault();
-      submitOverride();
-    });
-    return { wrap, close, payload: null };
-  }
-
-  function openOverrideModal(payload, conflict, message) {
-    if (!overrideModal) overrideModal = buildOverrideModal();
-    const { wrap } = overrideModal;
-    overrideModal.payload = payload;
-
-    const when = conflict && conflict.start_time
-      ? `${formatSlot(conflict.start_time)} – ${window.CampusSchedule.fmt12(String(conflict.end_time).slice(11, 16))}`
-      : 'the time you picked';
-    wrap.querySelector('[data-override-text]').textContent =
-      `This room is already booked during ${when}. You can pick another time, or request a slip for a conflict override.`;
-    wrap.title = message || '';
-
-    wrap.querySelector('[data-override-choice]').classList.remove('hidden');
-    wrap.querySelector('[data-override-form]').classList.add('hidden');
-    wrap.querySelector('#overrideReason').value = '';
-    const err = wrap.querySelector('[data-override-error]');
-    err.classList.add('hidden');
-    wrap.querySelector('[data-override-submit]').disabled = false;
-
-    wrap.classList.remove('hidden');
-    wrap.classList.add('flex');
-    wrap.querySelector('[data-override-back]').focus();
-  }
-
-  async function submitOverride() {
-    const { wrap, close, payload } = overrideModal;
-    const reason = wrap.querySelector('#overrideReason').value.trim();
-    const err = wrap.querySelector('[data-override-error]');
-    const btn = wrap.querySelector('[data-override-submit]');
-    const fail = (msg) => { err.textContent = msg; err.classList.remove('hidden'); btn.disabled = false; };
-
-    const altSchedule = wrap.querySelector('#rsAltSchedule') ? wrap.querySelector('#rsAltSchedule').value : 'No';
-    const altDate = wrap.querySelector('input[name="alt_date"]') ? wrap.querySelector('input[name="alt_date"]').value : '';
-    const altStart = wrap.querySelector('input[name="alt_start"]') ? wrap.querySelector('input[name="alt_start"]').value : '';
-    const altEnd = wrap.querySelector('input[name="alt_end"]') ? wrap.querySelector('input[name="alt_end"]').value : '';
-
-    if (!reason) return fail('Please explain why this booking is urgent.');
-    btn.disabled = true;
-    err.classList.add('hidden');
-
-    const overridePayload = Object.assign({}, payload, { 
-      reason,
-      request_type: altSchedule === 'Yes' ? 'Alternative Schedule' : 'Specific Time',
-      alt_start_time: altSchedule === 'Yes' && altDate && altStart ? `${altDate} ${altStart}:00` : null,
-      alt_end_time: altSchedule === 'Yes' && altDate && altEnd ? `${altDate} ${altEnd}:00` : null
-    });
-
-    let result;
-    try {
-      result = await sendReservation('api/conflict-override-requests', overridePayload);
-    } catch (_) {
-      return fail('Could not reach the server. Check your connection and try again.');
-    }
-    if (!result) return;                                   // 401 → already redirecting to login
-    const { ok, status, json } = result;
-    if (!ok) {
-      if (json && json.error) return fail(json.error);
-      return fail(`The server sent an unexpected response (HTTP ${status}). Please try again.`);
-    }
-    if (json && !json.success) return fail(json.error || 'Your override request could not be submitted.');
-
-    close();
-    redirecting = true;
-    setSubmitting(true);
-    showSuccess('Override request sent: staff will review it and you can follow its status in My Reservations. Redirecting…');
-    setTimeout(() => { window.location.href = 'my-reservations.html?filter=pending'; }, 1800);
-  }
-
   if (form) {
     form.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -1513,11 +1256,10 @@ window.initBookingForm = function() {
       }
       // The whole window must be free on every day, not just its first block.
       // (Only checked once the schedule has loaded; otherwise the server's
-      // 409 says the same.)
-      // A clash with Approved bookings only goes on to the server, whose 409
-      // offers the urgent-override choice.
+      // 409 says the same.) Direct booking: any clash is simply unavailable —
+      // there is no override path.
       const clash = rangeConflicts(startVal, endVal);
-      if (clash.length && (isRebook || !window.CampusSchedule.onlyApprovedConflicts(clash))) {
+      if (clash.length) {
         return showCollisionError(window.CampusSchedule.describeRange(clash, startVal, endVal), 'Scheduling conflict');
       }
       if (!picked) {
@@ -1556,12 +1298,9 @@ window.initBookingForm = function() {
           const { ok, status, json } = result;
 
           if (!ok) {
-            if (json && !json.success && status === 409 && !isRebook && json.data && json.data.override_eligible) {
-              return openOverrideModal(payload, json.data.conflict, json.error);
-            }
             return showCollisionError(
               (json && json.error) ? json.error : `The server sent an unexpected response (HTTP ${status}). Please try again.`,
-              status === 409 ? 'Scheduling conflict' : 'Something went wrong'
+              status === 409 ? 'Room unavailable' : 'Something went wrong'
             );
           }
 
@@ -1584,9 +1323,9 @@ window.initBookingForm = function() {
               }
           }
           
-          const what = isRebook ? 'Re-booking created'
-            : dayCount > 1 ? `Reservation request created for ${dayCount} days` : 'Reservation request created';
-          showSuccess(`${what}: ${ref} is now in the staff queue for verification. Redirecting to My Reservations…`);
+          const what = isRebook ? 'Re-booking confirmed'
+            : dayCount > 1 ? `Reservation confirmed for ${dayCount} days` : 'Reservation confirmed';
+          showSuccess(`${what}: ${ref} is booked. Redirecting to My Reservations…`);
           setTimeout(() => { window.location.href = 'my-reservations.html'; }, 1500);
         })
         .catch(() => showCollisionError('Could not reach the server. Check your connection and try again.', 'Network error'))

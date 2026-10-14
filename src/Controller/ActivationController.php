@@ -62,12 +62,19 @@ final class ActivationController
 
         if ($roster['eligible'] ?? false) {
             \CampusRoom\Core\SecurityLog::record('activation_requested', 'Account activation requested', null, $schoolId);
-            Mailer::sendOtp(
+            $sent = Mailer::sendOtp(
                 (string) $roster['email'],
                 (string) $roster['name'],
                 $otp,
                 self::activationTtlSeconds()
             );
+            if (!$sent) {
+                // Delivery failed: drop the code we just stored so no undelivered
+                // code stays valid. Response stays uniform (anti-enumeration);
+                // only the failure is logged, never the OTP itself.
+                $this->activation->invalidateActiveOtp($schoolId);
+                \CampusRoom\Core\SecurityLog::record('activation_otp_send_failed', 'Activation code could not be emailed', null, $schoolId);
+            }
         } elseif (($roster['already_active'] ?? false) || ($roster['inactive'] ?? false) || (($roster['status'] ?? '') !== '')) {
             \CampusRoom\Core\SecurityLog::record('activation_skipped', 'Account activation requested (already active or inactive)', null, $schoolId);
         } else {

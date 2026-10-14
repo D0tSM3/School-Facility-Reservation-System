@@ -225,6 +225,9 @@ class ReservationValidator
         ?array $activeDates = null
     ): ?array {
         $pdo  = Database::getInstance()->getPdo();
+        // A class only runs during its own semester, so it can only clash with a
+        // requested date that falls inside [semester_start, semester_end].
+        // (NULL bounds — a legacy row — are treated as always-active.)
         $stmt = $pdo->prepare("
             SELECT schedule_id, course_code, section, day_of_week, start_time, end_time
               FROM ClassSchedules
@@ -232,6 +235,8 @@ class ReservationValidator
                AND day_of_week::text = ?
                AND ? < end_time
                AND ? > start_time
+               AND ?::date BETWEEN COALESCE(semester_start, DATE '0001-01-01')
+                                AND COALESCE(semester_end,   DATE '9999-12-31')
              ORDER BY start_time
              LIMIT 1
         ");
@@ -243,7 +248,7 @@ class ReservationValidator
 
         foreach ($days as $day) {
             $dayOfWeek = date('l', strtotime($day));
-            $stmt->execute([$roomId, $dayOfWeek, $dailyStart, $dailyEnd]);
+            $stmt->execute([$roomId, $dayOfWeek, $dailyStart, $dailyEnd, $day]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($row !== false) {
                 return $row;
@@ -317,6 +322,12 @@ class ReservationValidator
     ): ?string {
         $startDate = date('Y-m-d', $start);
 
+        // Minimum reservation length: enforced for single bookings, ranges,
+        // moves and other flows that reuse this shared validation method.
+        if (($end - $start) < 30 * 60) {
+            return "Reservations must be at least 30 minutes long.";
+        }
+
         // 2. Closed Day Check (System Configuration)
         $dayOfWeek = date('l', $start);
         if (in_array($dayOfWeek, Settings::closedDays(), true)) {
@@ -347,23 +358,29 @@ class ReservationValidator
         $timeStart = date('H:i:s', $start);
         $timeEnd = date('H:i:s', $end);
 
+        // A class only runs during its own semester window (NULL bounds = legacy
+        // row, always-active), so a booking outside that window can't collide.
+        $bookingDate = date('Y-m-d', $start);
         $stmtClass = $pdo->prepare("
-            SELECT course_code, section 
-            FROM ClassSchedules 
-            WHERE room_id = ? 
+            SELECT course_code, section
+            FROM ClassSchedules
+            WHERE room_id = ?
               AND day_of_week::text = ?
               AND (
                 (? >= start_time AND ? < end_time) OR
                 (? > start_time AND ? <= end_time) OR
                 (? <= start_time AND ? >= end_time)
               )
+              AND ?::date BETWEEN COALESCE(semester_start, DATE '0001-01-01')
+                               AND COALESCE(semester_end,   DATE '9999-12-31')
             LIMIT 1
         ");
         $stmtClass->execute([
             $roomId, $dayOfWeek,
             $timeStart, $timeStart,
             $timeEnd, $timeEnd,
-            $timeStart, $timeEnd
+            $timeStart, $timeEnd,
+            $bookingDate
         ]);
         $class = $stmtClass->fetch(PDO::FETCH_ASSOC);
 
