@@ -10,6 +10,7 @@ use PDO;
 final class VisitorDayRepository
 {
     private const NEW_ROW_DAILY_CAP = 10000;
+    private const REPEAT_MIN_HITS = 5;
 
     private Database $db;
 
@@ -135,7 +136,7 @@ final class VisitorDayRepository
              HAVING SUM(hits) >= :repeat_min_hits
            ORDER BY SUM(hits) DESC, visitor_hash
               LIMIT 5',
-            [':day' => $day, ':repeat_min_hits' => 5]
+            [':day' => $day, ':repeat_min_hits' => self::REPEAT_MIN_HITS]
         )->fetchAll(PDO::FETCH_ASSOC);
 
         return [
@@ -157,5 +158,36 @@ final class VisitorDayRepository
                 $repeatRows
             ),
         ];
+    }
+
+    /**
+     * @param array<string, string> $hashesByDay
+     * @return array<int, array<string, mixed>>
+     */
+    public function findMatchingDays(array $hashesByDay): array
+    {
+        if ($hashesByDay === []) {
+            return [];
+        }
+
+        $conditions = [];
+        $params = [];
+        $index = 0;
+        foreach ($hashesByDay as $day => $hash) {
+            $dayParam = ':day_' . $index;
+            $hashParam = ':hash_' . $index;
+            $conditions[] = "(day = {$dayParam} AND visitor_hash = {$hashParam})";
+            $params[$dayParam] = $day;
+            $params[$hashParam] = $hash;
+            $index++;
+        }
+
+        return $this->db->query(
+            'SELECT day, visitor_hash, page, hits, first_seen, last_seen, browser_family
+               FROM public.visitor_days
+              WHERE ' . implode(' OR ', $conditions) . '
+           ORDER BY day DESC, page',
+            $params
+        )->fetchAll(PDO::FETCH_ASSOC);
     }
 }

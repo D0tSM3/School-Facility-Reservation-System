@@ -2894,6 +2894,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  document.getElementById('visitorLookupForm')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const input = document.getElementById('visitorLookupIp');
+    const status = document.getElementById('visitorLookupStatus');
+    const results = document.getElementById('visitorLookupResults');
+    if (!input || !status || !results || state.isStaffOnly) return;
+
+    status.textContent = 'Searching the last 30 days...';
+    results.replaceChildren();
+    try {
+      const data = await apiFetch('api/logs/visitors/lookup', {
+        method: 'POST',
+        body: JSON.stringify({ ip: input.value.trim() }),
+      });
+      const items = Array.isArray(data?.items) ? data.items : [];
+      items.forEach((item) => {
+        const row = document.createElement('li');
+        row.textContent = `${String(item.day || '')} · ${String(item.page || '')} · ${Number(item.hits) || 0} hits · ${String(item.browser_family || '')} · ${String(item.visitor_hash || '')}`;
+        results.appendChild(row);
+      });
+      status.textContent = items.length
+        ? `${items.length} matching daily page record${items.length === 1 ? '' : 's'}.`
+        : 'No matching records found in the last 30 days.';
+    } catch (err) {
+      status.textContent = err instanceof Error ? err.message : 'Could not complete visitor lookup.';
+    }
+  });
+
   function renderLogFilterChip() {
     const container = document.getElementById('logFilterChipContainer');
     const chip = document.getElementById('logFilterChip');

@@ -42,14 +42,26 @@ final class VisitorLog
             }
 
             $ip = RateLimiter::clientIp();
-            $dailyKey = hash_hmac('sha256', $day, $secret, true);
-            $visitorHash = substr(hash_hmac('sha256', $ip, $dailyKey), 0, 16);
+            $visitorHash = self::hashIpForDay($ip, $day);
             $browserFamily = self::browserFamily((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
 
             (new VisitorDayRepository())->record($day, $visitorHash, $page, $browserFamily);
         } catch (Throwable $e) {
             error_log('[CampusRoom] Visitor summary record failed: ' . $e->getMessage());
         }
+    }
+
+    public static function hashIpForDay(string $ip, string $day): string
+    {
+        $secret = defined('APP_SECRET')
+            ? (string) APP_SECRET
+            : (string) ($_ENV['APP_SECRET'] ?? getenv('APP_SECRET') ?: '');
+        if ($secret === '') {
+            throw new \RuntimeException('APP_SECRET is not configured for visitor summaries.');
+        }
+
+        $dailyKey = hash_hmac('sha256', $day, $secret, true);
+        return substr(hash_hmac('sha256', $ip, $dailyKey), 0, 16);
     }
 
     private static function browserFamily(string $userAgent): string
