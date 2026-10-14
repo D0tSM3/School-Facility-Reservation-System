@@ -22,9 +22,7 @@ final class RequestSecurity
             Response::error('Invalid request.', 400);
         }
 
-        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-        $expectedOrigin = self::expectedOrigin();
-        if ($origin === '' || !hash_equals($expectedOrigin, rtrim($origin, '/'))) {
+        if (!self::originIsValid($_SERVER['HTTP_ORIGIN'] ?? '')) {
             Response::error('Invalid request origin.', 403);
         }
 
@@ -36,23 +34,55 @@ final class RequestSecurity
         }
     }
 
-    private static function expectedOrigin(): string
+    /**
+     * Accept a protected POST's Origin only when it is one of our allowed
+     * origins. A missing Origin, or one carrying header-injection characters,
+     * is never a valid same-site browser POST and is rejected outright.
+     */
+    private static function originIsValid(string $origin): bool
     {
+        if ($origin === '' || preg_match('/[\r\n]/', $origin)) {
+            return false;
+        }
+
+        $candidate = rtrim($origin, '/');
+        foreach (self::allowedOrigins() as $expected) {
+            if (hash_equals($expected, $candidate)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Origins a protected POST may legitimately come from:
+     *   - the configured canonical APP_ORIGIN, and
+     *   - this exact request's own scheme + host (same-origin). This lets Vercel
+     *     preview deployments — whose hosts carry a dynamic hash and never equal
+     *     the canonical APP_ORIGIN — work without enumerating every URL. It stays
+     *     safe against CSRF: a cross-site attacker's browser sends its OWN domain
+     *     as Origin while Host remains this deployment's, so the two never match;
+     *     and the CSRF token check below is still enforced regardless.
+     *
+     * Malformed hosts (empty or with CR/LF) are never trusted as same-origin.
+     *
+     * @return list<string> normalized origins, no trailing slash
+     */
+    private static function allowedOrigins(): array
+    {
+        $allowed = [];
+
         $configured = trim((string) ($_ENV['APP_ORIGIN'] ?? ''));
         if ($configured !== '') {
-            return rtrim($configured, '/');
+            $allowed[] = rtrim($configured, '/');
         }
 
-        if (($_ENV['APP_ENV'] ?? 'development') === 'production') {
-            throw new \RuntimeException('APP_ORIGIN must be configured in production.');
-        }
-
-        $scheme = Auth::isSecure() ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? '';
-        if ($host === '' || preg_match('/[\r\n]/', $host)) {
-            throw new \RuntimeException('Cannot determine the application origin.');
+        if ($host !== '' && !preg_match('/[\r\n]/', $host)) {
+            $scheme = Auth::isSecure() ? 'https://' : 'http://';
+            $allowed[] = $scheme . strtolower($host);
         }
 
-        return $scheme . '://' . strtolower($host);
+        return $allowed;
     }
 }
