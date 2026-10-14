@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     logScope: 'activity',
     logFilter: null,
     securityAlerts: [],
+    visitorSummary: null,
   };
 
   // =========================================================================
@@ -566,6 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewName === 'logs') {
       loadAuditLogs();
       loadSecurityAlerts();
+      loadVisitorSummary();
     }
   }
 
@@ -2843,6 +2845,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  async function loadVisitorSummary() {
+    const status = document.getElementById('visitorSummaryStatus');
+    const pageLoads = document.getElementById('visitorPageLoads');
+    const distinctCount = document.getElementById('visitorDistinctCount');
+    const pages = document.getElementById('visitorPages');
+    const repeats = document.getElementById('visitorRepeats');
+    if (!status || !pageLoads || !distinctCount || !pages || !repeats || state.isStaffOnly) return;
+
+    status.textContent = 'Loading visitor summary...';
+    pageLoads.textContent = '—';
+    distinctCount.textContent = '—';
+    pages.replaceChildren();
+    repeats.replaceChildren();
+
+    try {
+      const summary = await apiFetch('api/logs/visitors');
+      state.visitorSummary = summary;
+      pageLoads.textContent = String(Number(summary?.page_loads) || 0);
+      distinctCount.textContent = String(Number(summary?.distinct_visitors) || 0);
+
+      const pageLabels = { landing: 'Landing', login: 'Login', activate: 'Activation' };
+      (Array.isArray(summary?.pages) ? summary.pages : []).forEach((item) => {
+        const row = document.createElement('li');
+        row.textContent = `${pageLabels[item.page] || 'Other'}: ${Number(item.hits) || 0}`;
+        pages.appendChild(row);
+      });
+      if (!pages.childElementCount) {
+        const empty = document.createElement('li');
+        empty.textContent = 'No page loads recorded today.';
+        pages.appendChild(empty);
+      }
+
+      (Array.isArray(summary?.repeat_visitors) ? summary.repeat_visitors : []).forEach((visitor) => {
+        const row = document.createElement('li');
+        row.textContent = `${String(visitor.visitor_hash || '')}: ${Number(visitor.hits) || 0} hits across ${Number(visitor.pages) || 0} pages`;
+        repeats.appendChild(row);
+      });
+      if (!repeats.childElementCount) {
+        const empty = document.createElement('li');
+        empty.textContent = 'No repeat visitors met the minimum today.';
+        repeats.appendChild(empty);
+      }
+      status.textContent = 'Visitor summary for today.';
+    } catch (err) {
+      state.visitorSummary = null;
+      status.textContent = 'Could not load visitor summary.';
+    }
+  }
+
   function renderLogFilterChip() {
     const container = document.getElementById('logFilterChipContainer');
     const chip = document.getElementById('logFilterChip');
@@ -2987,6 +3038,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnRefreshLogs.addEventListener('click', () => {
       state.logsOffset = 0;
       loadSecurityAlerts();
+      loadVisitorSummary();
       loadAuditLogs();
     });
   }

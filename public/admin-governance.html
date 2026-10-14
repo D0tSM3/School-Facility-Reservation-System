@@ -1913,6 +1913,7 @@
         <!-- VIEW 11: SYSTEM AUDIT LOGS (Dedicated Sidebar View)                   -->
         <!-- ===================================================================== -->
         <section id="view-logs" class="dashboard-view hidden space-y-6">
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <section
             class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5"
             aria-labelledby="logAlertsHeading"
@@ -1938,6 +1939,34 @@
             >Loading alerts...</div>
             <div id="logAlertsList" class="grid w-full min-w-0 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3"></div>
           </section>
+          <section
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5"
+            aria-labelledby="visitorSummaryHeading"
+          >
+            <div class="mb-4">
+              <h2 id="visitorSummaryHeading" class="text-sm font-bold text-gray-900">
+                Visitors
+              </h2>
+            </div>
+            <div id="visitorSummaryStatus" class="mb-3 text-xs text-gray-500" role="status" aria-live="polite">
+              Loading visitor summary...
+            </div>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="rounded-xl border border-gray-200 p-3">
+                <dt class="text-xs font-medium text-gray-600">Page loads (approx.)</dt>
+                <dd id="visitorPageLoads" class="mt-1 text-lg font-bold text-gray-900">—</dd>
+              </div>
+              <div class="rounded-xl border border-gray-200 p-3">
+                <dt class="text-xs font-medium text-gray-600">Visitors (approx., shared networks count as one)</dt>
+                <dd id="visitorDistinctCount" class="mt-1 text-lg font-bold text-gray-900">—</dd>
+              </div>
+            </dl>
+            <h3 class="mt-4 text-xs font-bold uppercase tracking-wide text-gray-700">Page loads by page</h3>
+            <ul id="visitorPages" class="mt-2 space-y-1 text-xs text-gray-700" aria-label="Approximate page loads by page"></ul>
+            <h3 class="mt-4 text-xs font-bold uppercase tracking-wide text-gray-700">Top repeat visitors (approx.)</h3>
+            <ul id="visitorRepeats" class="mt-2 space-y-1 text-xs text-gray-700" aria-label="Top approximate repeat visitors"></ul>
+          </section>
+          </div>
 
           <!-- Search Control Card -->
           <div
