@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const BASE_URI = window.location.pathname.replace(/[^\/]*$/, '');
   let csrfToken = '';
-  const csrfReady = fetch(BASE_URI + 'api/auth/csrf', { credentials: 'same-origin' })
+  const csrfReady = fetch(BASE_URI + 'api/auth/csrf?page=login', { credentials: 'same-origin' })
     .then(response => response.json())
     .then(json => {
       csrfToken = json && json.success && json.data && typeof json.data.token === 'string'

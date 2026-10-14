@@ -95,8 +95,9 @@ document.addEventListener('DOMContentLoaded', () => {
     return { response, json };
   }
 
-  async function refreshCsrfToken() {
-    const { response, json } = await getEnvelope('api/auth/csrf');
+  async function refreshCsrfToken(page = '') {
+    const marker = page ? `?page=${encodeURIComponent(page)}` : '';
+    const { response, json } = await getEnvelope(`api/auth/csrf${marker}`);
     if (!response.ok || !json.success || typeof json.data?.token !== 'string') {
       throw new Error('Unable to initialize activation security.');
     }
@@ -450,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
   captchaConfigPromise = loadCaptchaConfig().catch(() => {
     captchaEnabled = false;
   });
-  refreshCsrfToken().catch(() => {
+  refreshCsrfToken('activate').catch(() => {
     showMessage(requestMessage, 'Unable to initialize activation. Please refresh and try again.');
   });
   updateResendButton();

@@ -69,7 +69,7 @@ Copy the example file and fill in your Supabase credentials:
 cp .env.example .env
 ```
 
-Open `.env` and set:
+For a local database connection, set:
 
 ```ini
 DB_HOST=db.<your-project-ref>.supabase.co
@@ -82,6 +82,13 @@ DB_PASSWORD=<your-supabase-db-password>
 > **Supabase tip:** credentials are in  
 > Supabase Dashboard → Project Settings → Database → Connection info.  
 > Use port **5432** (direct) or **6543** (Supabase pooler — pgBouncer).
+
+Production also requires `APP_ENV`, `APP_ORIGIN`, `APP_SECRET`, and
+`ALLOWED_EMAIL_DOMAIN`. Email-based activation and login verification require
+`SMTP_HOST`, `SMTP_USER`, and one of `SMTP_PASS` or `SMTP_PASSWORD`.
+`APP_SECRET` must have at least 32 characters. The complete list of runtime
+environment variable names, optional settings, and production requirements is
+in [ACTIVATION_CHANGES.md](./ACTIVATION_CHANGES.md#environment-variables-read-by-application-and-utility-php-code).
 
 ---
 
@@ -107,9 +114,20 @@ All responses follow the envelope:
 
 #### Activate an account
 
-Open `http://127.0.0.1:8000/activate.html` and follow the roster verification
-steps. Activation requires a current `school_directory` row with an allowed-
-domain email address.
+Open `http://127.0.0.1:8000/activate.html` and verify the 8-digit school ID
+against a current `school_directory` row. An eligible person receives a
+six-digit code at the email on that roster row, then chooses and confirms a
+password. The account is created as a `Customer` only after code verification;
+activation does not sign the person in. Responses do not reveal whether a
+submitted ID matched. Activation requests do not use reCAPTCHA.
+
+| Method and path | Purpose |
+|---|---|
+| `GET /api/auth/csrf` | Starts the protected form flow and returns a CSRF token. |
+| `POST /api/auth/activate/request` | Requests a code using `student_id`. |
+| `POST /api/auth/activate/verify` | Verifies `student_id` and `otp`. |
+| `GET /api/auth/activate/context` | Returns name, masked email, person type, and password bounds after verification. |
+| `POST /api/auth/activate/complete` | Creates the account using `password` and `password_confirm`. |
 
 #### Login (session cookie saved to `cookies.txt`)
 ```bash
@@ -241,11 +259,26 @@ curl -s http://localhost:8000/api/logs \
   -b cookies.txt | jq
 ```
 
+#### Security alerts and visitor summaries
+
+`GET /api/logs/alerts` returns the nine computed security alert rules.
+`GET /api/logs/visitors` returns today's approximate public-page load summary.
+To look up visitor summary rows, send an Admin-only
+`POST /api/logs/visitors/lookup` with a JSON IPv4/IPv6 `ip`; the service
+recomputes daily IP hashes for the last 30 days and returns any matches.
+`POST /api/visit?page=landing|login|activate` is the public no-session
+collector. Its per-day IP HMACs are stored instead of raw visitor IPs.
+
+See [ACTIVATION_CHANGES.md](./ACTIVATION_CHANGES.md) for the alert thresholds,
+event types, migration inventory, privacy/retention details, and complete
+endpoint behavior.
+
 ---
 
 ## 6 — Security notes
 
-* Passwords are hashed with **bcrypt** (`PASSWORD_BCRYPT`).
+* New passwords are hashed with **Argon2id**. Activation and reset passwords
+  use the 15–128 Unicode-code-point policy and breach lookup documented above.
 * Every SQL statement uses **PDO prepared statements** — no string
   interpolation ever reaches the database.
 * Session IDs are **regenerated** on login to prevent session fixation.
@@ -254,6 +287,11 @@ curl -s http://localhost:8000/api/logs \
 * The Postgres `prevent_double_booking` trigger is the **authoritative**
   concurrency guard; the PHP layer returns a clean `409` when it fires.
 * `.env` is never committed (listed in `.gitignore`).
+* The browser signs a user out after 15 minutes without activity, with a
+  one-minute warning. This is a client-side timeout.
+* The landing and activation pages disclose aggregate visitor collection.
+  Visitor summaries are retained for 30 days; security-event data is deleted
+  or partially anonymized after 90 days.
 
 ---
 

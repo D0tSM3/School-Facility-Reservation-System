@@ -11,6 +11,14 @@ namespace CampusRoom\Core;
  */
 class Response
 {
+    public static function noContent(): never
+    {
+        http_response_code(204);
+        header('Cache-Control: no-store');
+        header('Content-Length: 0');
+        exit;
+    }
+
     public static function json(mixed $data = null, int $status = 200): never
     {
         http_response_code($status);

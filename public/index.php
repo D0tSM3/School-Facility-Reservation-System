@@ -46,6 +46,7 @@ use CampusRoom\Core\Auth;
 use CampusRoom\Core\RequestSecurity;
 use CampusRoom\Core\RateLimiter;
 use CampusRoom\Core\SecurityLog;
+use CampusRoom\Core\VisitorLog;
 use CampusRoom\Core\Settings;
 use CampusRoom\Controller\ActivationController;
 use CampusRoom\Controller\AuthController;
@@ -127,12 +128,10 @@ if (in_array($uri, ['/index.php', '/public/index.php', '/public'], true)) {
 
 $uri = rtrim($uri, '/') ?: '/';
 
-// The CSRF endpoint must count and block abusive requests before creating or
-// writing a session. The public visitor beacon is anonymous and must not spawn
-// a DB session per visitor. Every other route retains the normal startup.
-$skipsSession = ($method === 'GET' && $uri === '/api/auth/csrf')
-    || ($method === 'POST' && $uri === '/api/visit');
-if (!$skipsSession) {
+// These endpoints count/block before starting a session. /api/visit never
+// starts one because public-page summaries must not create session rows.
+if (!(($method === 'GET' && $uri === '/api/auth/csrf')
+    || ($method === 'POST' && $uri === '/api/visit'))) {
     Auth::startSession();
 }
 
@@ -149,6 +148,33 @@ if (str_starts_with($uri, '/api/auth/')) {
 // Named captures (?P<name>...) are passed to the callable as arguments.
 
 $routes = [
+    ['POST', '#^/api/visit$#', function () {
+        header('Cache-Control: no-store');
+        $page = $_GET['page'] ?? '';
+        if (!is_string($page) || !in_array($page, ['landing', 'login', 'activate'], true)) {
+            Response::noContent();
+        }
+
+        try {
+            $ip = RateLimiter::clientIp();
+            $count = RateLimiter::incrementIpWindow('visitor', $ip, RateLimiter::CSRF_WINDOW_SECONDS);
+            if ($count === RateLimiter::CSRF_FLAG_AT) {
+                SecurityLog::record(
+                    'visit_burst',
+                    'Unusually many page loads from one address'
+                );
+            }
+            if ($count >= RateLimiter::CSRF_BLOCK_AT) {
+                Response::error('Too many requests. Please try again later.', 429);
+            }
+        } catch (\Throwable $e) {
+            error_log('[CampusRoom] Visitor endpoint rate limit failed: ' . $e->getMessage());
+            Response::noContent();
+        }
+
+        VisitorLog::record($page);
+        Response::noContent();
+    }],
     // Public bootstrap — the login screen reads the reCAPTCHA site key from
     // here so .env stays the single source for it. No auth: it must answer
     // before anyone can log in, and it returns only public values.
@@ -193,6 +219,11 @@ $routes = [
         if ($count >= RateLimiter::CSRF_BLOCK_AT) {
             Response::error('Too many requests. Please try again later.', 429);
             return;
+        }
+
+        $page = $_GET['page'] ?? '';
+        if (is_string($page) && in_array($page, ['login', 'activate'], true)) {
+            VisitorLog::record($page);
         }
 
         Response::json(['token' => RequestSecurity::csrfToken()]);
@@ -285,6 +316,8 @@ $routes = [
     ['PATCH', '#^/api/settings$#',                   fn() => (new SettingsController())->update()],
 
     // Logs (Admin)
+    ['POST',  '#^/api/logs/visitors/lookup$#',    fn() => (new UserController())->visitorLookup()],
+    ['GET',   '#^/api/logs/visitors$#',           fn() => (new UserController())->visitorSummary()],
     ['GET',   '#^/api/logs/alerts$#',              fn() => (new UserController())->logAlerts()],
     ['GET',   '#^/api/logs$#',                       fn() => (new UserController())->logs()],
 
