@@ -10,7 +10,7 @@ This document describes the implementation in the current source tree. Endpoint 
 4. A valid code is consumed once. Only then is short-lived verified activation state created in the session; the context endpoint reveals the name and a masked email.
 5. The person chooses and confirms a password. A user is created transactionally with the roster's name, email, person type and school ID, and the `Customer` role. The flow does not sign the person in; it sends them to sign in.
 
-The activation ID/code path is protected by a CSRF token, same-origin check, and JSON-only POST requirement. The activation request response is padded to a 1.5-second floor. Verification state expires after 15 minutes. The six-digit code defaults to a 10-minute lifetime (configurable from 60 to 3,600 seconds) and five guesses (configurable from one to ten); a new request invalidates the previous active code.
+The activation ID/code path is protected by a CSRF token, same-origin check, and JSON-only POST requirement. The activation request response is padded to a 1.5-second floor. Verification state expires after 15 minutes. The six-digit code defaults to a 10-minute lifetime (configurable from 60 to 3,600 seconds) and five guesses (configurable from one to ten); a replacement code request for an eligible ID invalidates its previous active code.
 
 ### Activation and related endpoints
 
@@ -43,11 +43,11 @@ Event types emitted by the current code:
 |---|---|
 | `login_failed` | Unknown account, inactive account, or incorrect password |
 | `login_locked` | Login lockout begins |
-| `login_success` | Password accepted and sign-in verification code issued |
+| `login_success` | Login verification succeeded and a session was started |
 | `otp_failed` | Login verification code was wrong or expired |
 | `activation_requested` | Eligible roster entry requested a code |
-| `activation_no_match` | No matching eligible roster entry |
-| `activation_skipped` | Roster entry is already active or inactive |
+| `activation_no_match` | No matching eligible roster entry; the repository currently returns the same ineligible result for other rejected roster cases. |
+| `activation_skipped` | A controller branch exists for already-active/inactive results, but the current repository does not return those result keys, so this event is not emitted by the current repository flow. |
 | `activation_verify_failed` | Activation code check failed |
 | `activation_completed` | Account activation completed |
 | `visit_burst` | A page-load counter crossed the logging threshold |
@@ -131,7 +131,7 @@ Names only; no values are included here. “Production required” means require
 
 ## Migration inventory
 
-The repository has no migration ledger; these states reflect the current project record/code contract, not a fresh database inspection. `2026-10-10_activation.sql` is recorded as applied in the activation verification notes. The grants migration is **not applied**, as stated by the project owner. Verify/rollback files are support scripts, not forward migrations.
+The repository has no migration ledger, so this table is not a fresh database inspection. `2026-10-10_activation.sql` is recorded as applied in the activation verification notes; the remaining forward migrations are listed as applied per project-owner confirmation. The grants migration is **not applied**, as stated by the project owner. Verify/rollback files are support scripts, not forward migrations.
 
 | Migration file | Status |
 |---|---|
@@ -159,8 +159,9 @@ The repository has no migration ledger; these states reflect the current project
 ## Known limitations
 
 - Activation supports only the implemented 8-digit `19`/`20` school-ID format; other staff/faculty identifier formats are not supported by this flow.
-- Login verification codes continue to use the legacy `users.otp_code` field; unlike activation codes, they are stored as plaintext until consumed or expired.
+- Login and password-reset verification codes continue to use the legacy `users.otp_code` field and are stored as plaintext. Expiration rejects a code but does not itself clear the stored value; successful verification/reset or replacement clears/replaces it.
 - The HIBP breach check fails open when its network dependency is unavailable.
 - Activation request/verification use response-time padding, not a constant-time guarantee.
+- The controller has an `activation_skipped` log branch, but the current activation repository does not return the status keys that branch checks; ineligible roster results are consequently categorized as `activation_no_match`.
 - Visitor summaries are approximate: an IP can represent multiple people, the browser family is heuristic, and daily hashes intentionally cannot identify a person across different days without an IP supplied to the Admin lookup.
 - The public API-role grants-revocation migration has not been applied.
