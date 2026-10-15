@@ -159,6 +159,9 @@ window.initBookingForm = function() {
   const resEndDateInput = document.getElementById('resEndDate');
   const startTimeInput = document.getElementById('startTime');
   const endTimeInput = document.getElementById('endTime');
+  const classificationInput = document.getElementById('classification');
+  const classificationCustomInput = document.getElementById('classificationCustom');
+  const classificationCustomWrapper = document.getElementById('classificationCustomWrapper');
   const purposeInput = document.getElementById('purpose');
   const errorBanner = document.getElementById('collisionErrorBanner');
   const errorBannerText = document.getElementById('collisionErrorText');
@@ -168,6 +171,25 @@ window.initBookingForm = function() {
   const cancelModalBtn = document.getElementById('cancelModalBtn');
   const submitBtn = document.querySelector('button[type="submit"][form="roomReservationForm"]');
   const errorBannerTitle = document.getElementById('collisionErrorTitle');
+
+  function getClassification() {
+    return classificationInput && classificationInput.value === 'Other'
+      ? (classificationCustomInput ? classificationCustomInput.value.trim() : '')
+      : (classificationInput ? classificationInput.value : '');
+  }
+
+  function updateClassificationInput() {
+    if (!classificationInput || !classificationCustomInput || !classificationCustomWrapper) return;
+    const isOther = classificationInput.value === 'Other';
+    classificationCustomWrapper.classList.toggle('hidden', !isOther);
+    classificationCustomWrapper.classList.toggle('flex', isOther);
+    classificationCustomInput.required = isOther;
+    if (!isOther) classificationCustomInput.value = '';
+  }
+
+  if (classificationInput) {
+    classificationInput.addEventListener('change', updateClassificationInput);
+  }
 
   function navigateBack() {
     if (window.history.length > 1) {
@@ -1034,7 +1056,7 @@ window.initBookingForm = function() {
   }
 
   // ---------------------------------------------------------------
-  // Reservation classification (Fix Guide 1.3)
+  // Reservation purpose category (Reservations.category, Fix Guide 1.3)
   // ---------------------------------------------------------------
 
   // These strings are the Reservations.category ENUM verbatim — they are sent
@@ -1058,7 +1080,7 @@ window.initBookingForm = function() {
   }
 
   /**
-   * Prefill the classification radio and the description for a re-booking.
+   * Prefill the purpose-category radio and description for a re-booking.
    * Prefers the source's own `category` column; falls back to parsing a legacy
    * inline prefix, and strips it so submitting again cannot double it up.
    */
@@ -1127,6 +1149,16 @@ window.initBookingForm = function() {
         // Purpose and duration. Date is left blank on purpose.
         if (purposeInput && rebookSource.purpose) {
           purposeInput.value = applyPurpose(rebookSource.purpose, rebookSource.category);
+        }
+        if (classificationInput && rebookSource.classification) {
+          const knownClassifications = ['Class/Lecture', 'Meeting', 'Event', 'Exam'];
+          if (knownClassifications.includes(rebookSource.classification)) {
+            classificationInput.value = rebookSource.classification;
+          } else {
+            classificationInput.value = 'Other';
+            if (classificationCustomInput) classificationCustomInput.value = rebookSource.classification;
+          }
+          updateClassificationInput();
         }
 
         // startTime/endTime are <select>s pinned to the 90-minute block grid,
@@ -1239,6 +1271,7 @@ window.initBookingForm = function() {
       const endDateVal  = endDateValue();
       const startVal    = startTimeInput ? startTimeInput.value : '';
       const endVal      = endTimeInput ? endTimeInput.value : '';
+      const classification = getClassification();
       const picked      = form.querySelector('input[name="reservation_purpose"]:checked');
       const description = purposeInput ? purposeInput.value.trim() : '';
       const policyBox   = document.getElementById('policyAcknowledgement');
@@ -1263,7 +1296,10 @@ window.initBookingForm = function() {
         return showCollisionError(window.CampusSchedule.describeRange(clash, startVal, endVal), 'Scheduling conflict');
       }
       if (!picked) {
-        return showCollisionError('Please choose a reservation classification.', 'Missing information');
+        return showCollisionError('Please choose a reservation purpose category.', 'Missing information');
+      }
+      if (!classification || classification.length > 100) {
+        return showCollisionError('Please choose a primary reservation classification (max 100 characters).', 'Missing information');
       }
       if (!description) {
         return showCollisionError('Please describe the purpose of this reservation.', 'Missing information');
@@ -1276,6 +1312,7 @@ window.initBookingForm = function() {
         room_id: roomId,
         purpose: description,
         category: PURPOSE_LABELS[picked.value],
+        classification,
         start_time: `${dateVal}T${startVal}:00`,
         end_time: `${endDateVal}T${endVal}:00`,
         equipment_notes: collectEquipmentNotes() || 'Standard Academic Setup'

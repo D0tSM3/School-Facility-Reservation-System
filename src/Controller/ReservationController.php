@@ -154,7 +154,8 @@ class ReservationController
         $body = $this->jsonBody();
         [
             'room_id' => $roomId, 'purpose' => $purpose, 'category' => $category,
-            'equipment_notes' => $equipmentNotes, 'start_time' => $startTime, 'end_time' => $endTime,
+            'classification' => $classification, 'equipment_notes' => $equipmentNotes,
+            'start_time' => $startTime, 'end_time' => $endTime,
         ] = $this->bookingRequest($body);
 
         // Different dates = a multi-day booking: start_time's date to
@@ -162,7 +163,7 @@ class ReservationController
         // window on every one of those days.
         $activeDates = $body['active_dates'] ?? null;
         if (substr($startTime, 0, 10) !== substr($endTime, 0, 10)) {
-            $this->storeSeries($roomId, $purpose, $category, $equipmentNotes, $startTime, $endTime, $activeDates);
+            $this->storeSeries($roomId, $purpose, $category, $classification, $equipmentNotes, $startTime, $endTime, $activeDates);
         }
 
         $error = ReservationValidator::check($roomId, $startTime, $endTime);
@@ -186,7 +187,8 @@ class ReservationController
                 $category,
                 null,
                 $status,
-                $approvalType
+                $approvalType,
+                $classification
             );
         } catch (PDOException $e) {
             // Fallback in case of race condition caught by the DB trigger
@@ -216,7 +218,7 @@ class ReservationController
      * /api/conflict-override-requests share them), validated and normalised.
      * Ends the request with 422 on the first problem.
      *
-     * @return array{room_id: string, purpose: string, category: string, equipment_notes: string, start_time: string, end_time: string}
+     * @return array{room_id: string, purpose: string, category: string, classification: string, equipment_notes: string, start_time: string, end_time: string}
      */
     private function bookingRequest(array $body): array
     {
@@ -225,6 +227,9 @@ class ReservationController
         $startTime = trim((string) ($body['start_time'] ?? ''));
         $endTime   = trim((string) ($body['end_time']   ?? ''));
         $category  = trim((string) ($body['category']   ?? ''));
+        $classification = is_string($body['classification'] ?? null)
+            ? trim($body['classification'])
+            : '';
         $equipmentNotes = trim((string) ($body['equipment_notes'] ?? ''));
 
         if ($roomId === '' || $purpose === '' || $startTime === '' || $endTime === '') {
@@ -236,6 +241,10 @@ class ReservationController
         // are meant to report on.
         if (!in_array($category, self::CATEGORIES, true)) {
             Response::error('category must be one of: ' . implode(', ', self::CATEGORIES) . '.', 422);
+        }
+
+        if ($classification === '' || mb_strlen($classification) > 100) {
+            Response::error('Classification is required (max 100 characters).', 422);
         }
 
         // Reservations.purpose is VARCHAR(255); mb_strlen() counts characters,
@@ -268,6 +277,7 @@ class ReservationController
             'room_id'         => $roomId,
             'purpose'         => $purpose,
             'category'        => $category,
+            'classification'  => $classification,
             'equipment_notes' => $equipmentNotes,
             'start_time'      => $startTime,
             'end_time'        => $endTime,
@@ -296,6 +306,7 @@ class ReservationController
         string $roomId,
         string $purpose,
         string $category,
+        string $classification,
         string $equipmentNotes,
         string $startTime,
         string $endTime,
@@ -322,7 +333,7 @@ class ReservationController
 
         try {
             $rows = $this->createBookingRows(
-                Auth::userId(), $roomId, $purpose, $category,
+                Auth::userId(), $roomId, $purpose, $category, $classification,
                 $equipmentNotes !== '' ? $equipmentNotes : null, $startTime, $endTime, $activeDates, $status, $approvalType
             );
         } catch (PDOException $e) {
@@ -371,6 +382,7 @@ class ReservationController
         string $roomId,
         string $purpose,
         string $category,
+        string $classification,
         ?string $equipmentNotes,
         string $startTime,
         string $endTime,
@@ -382,7 +394,7 @@ class ReservationController
         $endDate   = substr($endTime, 0, 10);
 
         if ($startDate === $endDate) {
-            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $equipmentNotes, $category, null, $status, $approvalType)];
+            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $equipmentNotes, $category, null, $status, $approvalType, $classification)];
         }
 
         
@@ -398,12 +410,12 @@ class ReservationController
         $dailyEnd   = substr($endTime, 11);
         $seriesId   = $this->reservations->newSeriesId();
 
-        return $this->reservations->transaction(function () use ($days, $customerId, $roomId, $purpose, $category, $equipmentNotes, $dailyStart, $dailyEnd, $seriesId, $status, $approvalType): array {
+        return $this->reservations->transaction(function () use ($days, $customerId, $roomId, $purpose, $category, $classification, $equipmentNotes, $dailyStart, $dailyEnd, $seriesId, $status, $approvalType): array {
             $rows = [];
             foreach ($days as $day) {
                 $rows[] = $this->reservations->create(
                     $customerId, $roomId, $purpose, "$day $dailyStart", "$day $dailyEnd",
-                    $equipmentNotes, $category, $seriesId, $status, $approvalType
+                    $equipmentNotes, $category, $seriesId, $status, $approvalType, $classification
                 );
             }
             return $rows;
@@ -707,6 +719,16 @@ class ReservationController
         $startTime      = trim((string) ($body['start_time'] ?? ''));
         $endTime        = trim((string) ($body['end_time']   ?? ''));
         $equipmentNotes = trim((string) ($body['equipment_notes'] ?? '')) ?: (string) ($source['equipment_notes'] ?? '');
+        if (array_key_exists('classification', $body) && !is_string($body['classification'])) {
+            Response::error('classification must be a string.', 422);
+        }
+        $classification = trim((string) ($body['classification'] ?? ''));
+        if ($classification === '') {
+            $classification = (string) ($source['classification'] ?? '');
+        }
+        if (mb_strlen($classification) > 100) {
+            Response::error('Classification must be 100 characters or fewer.', 422);
+        }
 
         // A re-booking keeps the original's category unless the caller sends a
         // different one. The staff modal sends none, so it always inherits.
@@ -769,7 +791,8 @@ class ReservationController
                 $category,
                 null,
                 'Approved',
-                'auto'
+                'auto',
+                $classification !== '' ? $classification : null
             );
         } catch (PDOException $e) {
             if ($e->getCode() === '45000') {
