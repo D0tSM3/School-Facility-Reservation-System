@@ -66,8 +66,8 @@ final class PasswordPolicy
         if ($length > self::MAX_LENGTH) {
             $codes[] = 'too_long';
         }
-        if (self::hasWhitespaceEdges($password)) {
-            $codes[] = 'whitespace_edges';
+        if (self::containsWhitespace($password)) {
+            $codes[] = 'no_spaces';
         }
         if (self::isRepetitive($characters)) {
             $codes[] = 'repetitive';
@@ -96,7 +96,7 @@ final class PasswordPolicy
             'too_short' => 'Password must be at least ' . self::MIN_LENGTH . ' characters.',
             'too_long' => 'Password must be ' . self::MAX_LENGTH . ' characters or fewer.',
             'invalid_input' => 'Enter a valid password.',
-            'whitespace_edges' => 'Password must not start or end with whitespace.',
+            'no_spaces' => 'Password must not contain spaces.',
             'repetitive' => 'Avoid repeated or sequential characters.',
             'contains_personal' => 'Password must not contain personal information.',
             'common' => 'Choose a less common password.',
@@ -107,6 +107,12 @@ final class PasswordPolicy
     public static function hasWhitespaceEdges(string $password): bool
     {
         return preg_match('/(?:\A[\s\p{Z}]|[\s\p{Z}]\z)/u', $password) === 1;
+    }
+
+    /** True if the password contains ANY whitespace character (spaces are not allowed anywhere). */
+    public static function containsWhitespace(string $password): bool
+    {
+        return preg_match('/[\s\p{Z}]/u', $password) === 1;
     }
 
     private static function containsPersonalInformation(string $password, array $context): bool

@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const policyMessages = {
     too_short: () => `Use at least ${passwordMinimum} characters.`,
     too_long: () => `Use ${passwordMaximum} characters or fewer.`,
-    whitespace_edges: () => 'Remove spaces at the start or end.',
+    no_spaces: () => 'Remove all spaces.',
     contains_personal: () => "Don't include your name, student number or email.",
     repetitive: () => 'Avoid repeated or sequential characters.',
     common: () => 'That password is too common. Choose a less predictable one.',
@@ -223,11 +223,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function updatePasswordGuidance() {
     const password = passwordInput.value;
     const validLength = passwordMinimum !== null && Array.from(password).length >= passwordMinimum;
-    const validEdges = !(/^\s|\s$/u.test(password));
+    const validNoSpaces = !(/\s/u.test(password));
     const validPersonal = !includesPersonalInformation(password);
     const matches = password !== '' && password === confirmInput.value;
     setGuidance('check-length', validLength);
-    setGuidance('check-whitespace', validEdges);
+    setGuidance('check-whitespace', validNoSpaces);
     setGuidance('check-personal', validPersonal);
     setGuidance('check-match', matches, confirmationTouched);
   }
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function checkClientPolicy(password, confirmation) {
     const codes = [];
     if (Array.from(password).length < passwordMinimum) codes.push('too_short');
-    if (/^\s|\s$/u.test(password)) codes.push('whitespace_edges');
+    if (/\s/u.test(password)) codes.push('no_spaces');
     if (includesPersonalInformation(password)) codes.push('contains_personal');
     if (password !== confirmation) codes.push('mismatch');
     return codes;
