@@ -15,14 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ? json.data.token
         : '';
     });
-  if (new URLSearchParams(window.location.search).get('activated') === '1') {
-    const successBanner = document.getElementById('activationSuccessBanner');
-    if (successBanner) {
-      successBanner.textContent = "Your account is active. Sign in with your school email or student number and the password you just created. After you enter your password, we'll email you a code to finish signing in.";
-      successBanner.hidden = false;
-      successBanner.classList.remove('hidden');
-    }
-  }
 
   // ==========================================
   // 0. reCAPTCHA bootstrap
