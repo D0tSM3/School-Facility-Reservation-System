@@ -85,35 +85,48 @@ class ClassScheduleController
             Response::error('The configured semester has already ended. Set the new semester in Configuration before adding classes.', 409);
         }
 
-        // 1. Another class in the same room, same weekday, sharing any minute.
-        $classes = $this->repo->findOverlappingClasses($roomId, $dayOfWeek, $startTime, $endTime);
-        if ($classes) {
-            $c = $classes[0];
-            Response::error(
-                "Scheduling Collision: Overlaps an existing class in this room ({$c['course_code']} - {$c['section']}, "
-                . "{$dayOfWeek} " . self::hhmm($c['start_time']) . '-' . self::hhmm($c['end_time']) . ').',
-                409
-            );
-        }
+        // Lock the room, re-check for overlaps, and insert in ONE transaction so
+        // a class and a concurrent booking (or a concurrent class) for the same
+        // room/time cannot slip past each other's check. The overlap reads below
+        // run under the advisory lock; the room-lock key is shared with the
+        // reservation writers (ReservationRepository::lockRooms), so the two
+        // paths serialize on the same room and cannot bypass one another.
+        $reservations = new ReservationRepository();
+        $id = $reservations->transaction(function () use ($reservations, $roomId, $courseCode, $section, $dayOfWeek, $startTime, $endTime, $semesterStart, $semesterEnd): string {
+            $reservations->lockRooms([$roomId]);
 
-        // 2. Upcoming reservations this weekly class would run into, within the
-        //    class's semester window. Nothing is auto-cancelled: the admin has to
-        //    move or cancel them first.
-        $bookings = $this->repo->findOverlappingReservations($roomId, $dayOfWeek, $startTime, $endTime, $semesterStart, $semesterEnd);
-        if ($bookings) {
-            $b     = $bookings[0];
-            $count = count($bookings);
-            Response::error(
-                'Scheduling Collision: ' . ($count === 1 ? 'an upcoming reservation already occupies' : "{$count} upcoming reservations already occupy")
-                . " this room during that time on {$dayOfWeek}s. The first is {$b['status']}, "
-                . substr((string) $b['start_time'], 0, 10) . ' ' . self::hhmm($b['start_time']) . '-' . self::hhmm($b['end_time'])
-                . '. Move or cancel it before adding the class.',
-                409
-            );
-        }
+            // 1. Another class in the same room, same weekday, sharing any minute.
+            $classes = $this->repo->findOverlappingClasses($roomId, $dayOfWeek, $startTime, $endTime);
+            if ($classes) {
+                $c = $classes[0];
+                Response::error(
+                    "Scheduling Collision: Overlaps an existing class in this room ({$c['course_code']} - {$c['section']}, "
+                    . "{$dayOfWeek} " . self::hhmm($c['start_time']) . '-' . self::hhmm($c['end_time']) . ').',
+                    409
+                );
+            }
 
-        $id = $this->repo->create($roomId, $courseCode, $section, $dayOfWeek, $startTime, $endTime, $semesterStart, $semesterEnd);
-        (new ReservationRepository())->insertLog(
+            // 2. Upcoming reservations this weekly class would run into, within the
+            //    class's semester window. Nothing is auto-cancelled: the admin has to
+            //    move or cancel them first — a new class never overrides an approved
+            //    booking.
+            $bookings = $this->repo->findOverlappingReservations($roomId, $dayOfWeek, $startTime, $endTime, $semesterStart, $semesterEnd);
+            if ($bookings) {
+                $b     = $bookings[0];
+                $count = count($bookings);
+                Response::error(
+                    'Scheduling Collision: ' . ($count === 1 ? 'an upcoming reservation already occupies' : "{$count} upcoming reservations already occupy")
+                    . " this room during that time on {$dayOfWeek}s. The first is {$b['status']}, "
+                    . substr((string) $b['start_time'], 0, 10) . ' ' . self::hhmm($b['start_time']) . '-' . self::hhmm($b['end_time'])
+                    . '. Move or cancel it before adding the class.',
+                    409
+                );
+            }
+
+            return $this->repo->create($roomId, $courseCode, $section, $dayOfWeek, $startTime, $endTime, $semesterStart, $semesterEnd);
+        });
+
+        $reservations->insertLog(
             Auth::userId(),
             (string) Auth::role() . " added class {$courseCode} {$section} ({$dayOfWeek} " . self::hhmm($startTime) . '-' . self::hhmm($endTime)
                 . ", semester {$semesterStart}\u{2013}{$semesterEnd})"
@@ -161,28 +174,39 @@ class ClassScheduleController
         $start = $class['start_time'];
         $end   = $class['end_time'];
 
-        // The destination room must be free at this weekday/time.
-        $classes = $this->repo->findOverlappingClasses($newRoomId, $day, $start, $end);
-        if ($classes) {
-            $c = $classes[0];
-            Response::error(
-                "Scheduling Collision: the destination room already has a class then ({$c['course_code']} - {$c['section']}, "
-                . "{$day} " . self::hhmm($c['start_time']) . '-' . self::hhmm($c['end_time']) . ').',
-                409
-            );
-        }
-        $bookings = $this->repo->findOverlappingReservations($newRoomId, $day, $start, $end);
-        if ($bookings) {
-            $count = count($bookings);
-            Response::error(
-                'Scheduling Collision: ' . ($count === 1 ? 'an upcoming reservation already occupies' : "{$count} upcoming reservations already occupy")
-                . " the destination room during that time on {$day}s. Move or cancel it first.",
-                409
-            );
-        }
+        // Lock BOTH rooms (source and destination), re-check the destination is
+        // free, and move the class in ONE transaction. Locking both — in the
+        // sorted order lockRooms() enforces — stops a booking from racing into
+        // either room between the check and the move, and shares the room-lock
+        // key with the reservation writers so they serialize together.
+        $reservations = new ReservationRepository();
+        $reservations->transaction(function () use ($reservations, $id, $class, $newRoomId, $day, $start, $end): void {
+            $reservations->lockRooms([(string) $class['room_id'], $newRoomId]);
 
-        $this->repo->updateRoom($id, $newRoomId);
-        (new ReservationRepository())->insertLog(
+            // The destination room must be free at this weekday/time.
+            $classes = $this->repo->findOverlappingClasses($newRoomId, $day, $start, $end);
+            if ($classes) {
+                $c = $classes[0];
+                Response::error(
+                    "Scheduling Collision: the destination room already has a class then ({$c['course_code']} - {$c['section']}, "
+                    . "{$day} " . self::hhmm($c['start_time']) . '-' . self::hhmm($c['end_time']) . ').',
+                    409
+                );
+            }
+            $bookings = $this->repo->findOverlappingReservations($newRoomId, $day, $start, $end);
+            if ($bookings) {
+                $count = count($bookings);
+                Response::error(
+                    'Scheduling Collision: ' . ($count === 1 ? 'an upcoming reservation already occupies' : "{$count} upcoming reservations already occupy")
+                    . " the destination room during that time on {$day}s. Move or cancel it first.",
+                    409
+                );
+            }
+
+            $this->repo->updateRoom($id, $newRoomId);
+        });
+
+        $reservations->insertLog(
             Auth::userId(),
             (string) Auth::role() . " relocated class {$class['course_code']} {$class['section']} ({$day} "
                 . self::hhmm($start) . '-' . self::hhmm($end) . ') to another room'

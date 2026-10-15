@@ -43,8 +43,13 @@ class ReservationRepository
 
     /**
      * Create a new reservation for a customer.
-     * The prevent_double_booking_insert MySQL trigger fires here;
-     * callers must catch PDOException with SQLSTATE 45000.
+     *
+     * Overlap safety is enforced by the caller running lockRooms() + a fresh
+     * ReservationValidator check in the SAME transaction as this insert (see
+     * ReservationController). A database trigger raising SQLSTATE 45000 is a
+     * belt-and-suspenders backstop IF one is installed — callers still catch it
+     * — but the advisory-lock path is the primary guarantee and does not depend
+     * on any trigger existing on the Postgres side.
      */
     public function create(
         string $customerId,
@@ -320,6 +325,41 @@ class ReservationRepository
                 $pdo->rollBack();
             }
             throw $e;
+        }
+    }
+
+    /**
+     * Take a transaction-scoped advisory lock on each room so that the
+     * check-then-insert sequence for that room cannot interleave with another
+     * writer's. MUST be called inside an open transaction (pg_advisory_xact_lock
+     * releases automatically on COMMIT/ROLLBACK — never a leaked lock).
+     *
+     * The lock key is hashed in SQL (hashtext('room:' || id)): every writer,
+     * PHP or SQL, derives the identical 32-bit key from the same room id, as
+     * the brief requires. Locks are taken in a deterministic sorted order so
+     * two requests touching the same set of rooms can never deadlock.
+     *
+     * This is the room-lock convention for ALL reservation and class-schedule
+     * writers; reuse it rather than inventing a second key scheme.
+     *
+     * @param string[] $roomIds one or more room UUIDs (duplicates/empties ignored)
+     */
+    public function lockRooms(array $roomIds): void
+    {
+        $pdo = $this->db->getPdo();
+        if (!$pdo->inTransaction()) {
+            throw new \RuntimeException('lockRooms() must be called inside a transaction.');
+        }
+
+        $tokens = array_values(array_unique(array_filter(
+            $roomIds,
+            static fn($id): bool => is_string($id) && $id !== ''
+        )));
+        sort($tokens, SORT_STRING); // deterministic order -> no deadlocks
+
+        $stmt = $pdo->prepare("SELECT pg_advisory_xact_lock(hashtext('room:' || ?))");
+        foreach ($tokens as $token) {
+            $stmt->execute([$token]);
         }
     }
 
