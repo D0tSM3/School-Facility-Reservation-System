@@ -362,13 +362,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   [studentIdInput, otpInput].forEach((input) => {
     if (!input) return;
+    const maxLen = input === studentIdInput ? 8 : 6;
     input.addEventListener('beforeinput', (event) => {
       if (event.data && /\D/.test(event.data)) {
+        event.preventDefault();
+        return;
+      }
+      if (event.data && input.value.length >= maxLen && input.selectionStart === input.selectionEnd) {
         event.preventDefault();
       }
     });
     input.addEventListener('input', () => {
-      input.value = input.value.replace(/\D/g, '');
+      input.value = input.value.replace(/\D/g, '').slice(0, maxLen);
     });
   });
 
