@@ -10,6 +10,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const BASE_URI = window.location.pathname.replace(/[^\/]*$/, '');
 
   // ==========================================
+  // CSRF Token Management
+  // ==========================================
+  let csrfToken = '';
+  let csrfPromise = null;
+
+  function refreshCsrfToken() {
+    csrfPromise = fetch(BASE_URI + 'api/auth/csrf', { credentials: 'same-origin' })
+      .then(response => response.json())
+      .then(json => {
+        csrfToken = json && json.success && json.data && typeof json.data.token === 'string'
+          ? json.data.token
+          : '';
+        return csrfToken;
+      })
+      .catch(err => {
+        console.warn('[forgot-password] Failed to fetch CSRF token:', err);
+        csrfToken = '';
+        return '';
+      });
+    return csrfPromise;
+  }
+
+  async function getCsrfToken() {
+    if (csrfToken) return csrfToken;
+    if (csrfPromise) return await csrfPromise;
+    return await refreshCsrfToken();
+  }
+
+  // Pre-fetch CSRF token immediately on DOM ready
+  refreshCsrfToken();
+
+  // ==========================================
   // 1. Elements
   // ==========================================
   // Step 1: Email Form Elements
@@ -515,8 +547,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const token = getCaptchaToken();
-      if (captcha.enabled && captcha.ready && !token) {
+      const captchaToken = getCaptchaToken();
+      if (captcha.enabled && captcha.ready && !captchaToken) {
         showError('Please confirm you are not a robot before submitting.');
         return;
       }
@@ -524,20 +556,43 @@ document.addEventListener('DOMContentLoaded', () => {
       setLoadingState(true);
 
       try {
-        const response = await fetch(BASE_URI + 'api/auth/forgot-password', {
+        let activeCsrfToken = await getCsrfToken();
+        let response = await fetch(BASE_URI + 'api/auth/forgot-password', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'X-CSRF-Token': activeCsrfToken
           },
           credentials: 'same-origin',
           body: JSON.stringify({
             email: email,
-            recaptcha_token: token
+            recaptcha_token: captchaToken
           })
         });
 
-        const data = await response.json().catch(() => ({}));
+        let data = await response.json().catch(() => ({}));
+
+        // If CSRF token expired or mismatch, refresh and retry once
+        if (response.status === 403 && ((data && data.error === 'Invalid CSRF token.') || !activeCsrfToken)) {
+          activeCsrfToken = await refreshCsrfToken();
+          if (activeCsrfToken) {
+            response = await fetch(BASE_URI + 'api/auth/forgot-password', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-Token': activeCsrfToken
+              },
+              credentials: 'same-origin',
+              body: JSON.stringify({
+                email: email,
+                recaptcha_token: captchaToken
+              })
+            });
+            data = await response.json().catch(() => ({}));
+          }
+        }
 
         if (response.ok) {
           sessionStorage.setItem('otp_email', email);
@@ -590,11 +645,13 @@ document.addEventListener('DOMContentLoaded', () => {
       setResetLoadingState(true);
 
       try {
-        const response = await fetch(BASE_URI + 'api/auth/reset-password', {
+        let activeCsrfToken = await getCsrfToken();
+        let response = await fetch(BASE_URI + 'api/auth/reset-password', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'X-CSRF-Token': activeCsrfToken
           },
           credentials: 'same-origin',
           body: JSON.stringify({
@@ -604,7 +661,28 @@ document.addEventListener('DOMContentLoaded', () => {
           })
         });
 
-        const data = await response.json().catch(() => ({}));
+        let data = await response.json().catch(() => ({}));
+
+        if (response.status === 403 && ((data && data.error === 'Invalid CSRF token.') || !activeCsrfToken)) {
+          activeCsrfToken = await refreshCsrfToken();
+          if (activeCsrfToken) {
+            response = await fetch(BASE_URI + 'api/auth/reset-password', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-Token': activeCsrfToken
+              },
+              credentials: 'same-origin',
+              body: JSON.stringify({
+                email: currentEmail,
+                otp: otp,
+                password: newPassword
+              })
+            });
+            data = await response.json().catch(() => ({}));
+          }
+        }
 
         if (response.ok) {
           sessionStorage.removeItem('otp_email');
@@ -670,13 +748,39 @@ document.addEventListener('DOMContentLoaded', () => {
       resendBtn.disabled = true;
 
       try {
-        const response = await fetch(BASE_URI + 'api/auth/forgot-password', {
+        let activeCsrfToken = await getCsrfToken();
+        let response = await fetch(BASE_URI + 'api/auth/resend-otp', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-Token': activeCsrfToken
+          },
           credentials: 'same-origin',
           body: JSON.stringify({ email: currentEmail })
         });
+
+        if (response.status === 403) {
+          activeCsrfToken = await refreshCsrfToken();
+          if (activeCsrfToken) {
+            response = await fetch(BASE_URI + 'api/auth/resend-otp', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-Token': activeCsrfToken
+              },
+              credentials: 'same-origin',
+              body: JSON.stringify({ email: currentEmail })
+            });
+          }
+        }
+
         const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showResetError(data.error || (data.data && data.data.error) || 'Could not resend code. Please try again.');
+        }
+
         // 30-second countdown
         let count = 30;
         resendCountdown.textContent = `(${count}s)`;

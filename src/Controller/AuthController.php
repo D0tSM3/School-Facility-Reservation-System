@@ -24,6 +24,19 @@ use PDOException;
  */
 class AuthController
 {
+    /** Consecutive failed sign-ins before the account is locked. */
+    private const LOGIN_MAX_ATTEMPTS = 3;
+
+    /** How long a login lock lasts before it lifts on its own, in seconds. */
+    private const LOGIN_LOCKOUT_SECONDS = 300;
+
+    /**
+     * Shown when an account is locked after too many failed sign-ins.
+     */
+    private const ACCOUNT_LOCKED_MESSAGE =
+        'Your account is locked. Please contact an administrator to unlock it.';
+
+
     private UserRepository $users;
 
     public function __construct()
@@ -149,26 +162,41 @@ class AuthController
 
         if (self::isStudentId($email)) {
             if (!self::validStudentId($email)) {
-                Response::error('Invalid email or password.', 401);
+                Response::error('Invalid email/ID or password.', 401);
             }
-            $email = $this->users->emailBySchoolId($email) ?? $email;
+            // Activation stores school_id upper-cased (ActivationController
+            // strtoupper), so resolve the login ID the same way — otherwise a
+            // lower-cased alphanumeric ID would never match. ($email was
+            // lower-cased above for the email path.)
+            $email = $this->users->emailBySchoolId(strtoupper($email)) ?? $email;
         }
         if (!self::allowedEmail($email)) {
-            Response::error('Invalid email or password.', 401);
+            Response::error('Invalid email/ID or password.', 401);
         }
 
         $rateId = strtolower($email);
         if (RateLimiter::isLocked('login', $rateId)) {
-            Response::error('Invalid email or password.', 401);
+            // A locked account gets a clear, distinct message (not the generic
+            // "invalid credentials") plus retry_after so the sign-in form can
+            // show the countdown. This does not leak whether the account exists:
+            // the lock is keyed on the submitted email and trips identically for
+            // a non-existent address, so "locked" reveals nothing a wrong
+            // password wouldn't. The lock lifts automatically when it expires.
+            Response::error(
+                self::ACCOUNT_LOCKED_MESSAGE,
+                423,
+                ['retry_after' => RateLimiter::getRemainingSeconds('login', $rateId)]
+            );
         }
         if (strlen($password) > 256) {
-            $failure = RateLimiter::recordFailure('login', $rateId, 5, 300);
+            $failure = RateLimiter::recordFailure('login', $rateId, self::LOGIN_MAX_ATTEMPTS, self::LOGIN_LOCKOUT_SECONDS);
             \CampusRoom\Core\SecurityLog::record('login_failed', 'Failed sign-in attempt', null, $email);
+            Timing::pad($startedAt, 1500);
             if ($failure['is_locked']) {
                 \CampusRoom\Core\SecurityLog::record('login_locked', 'Sign-in locked after repeated failures', null, $email);
+                Response::error(self::ACCOUNT_LOCKED_MESSAGE, 423, ['retry_after' => $failure['retry_after']]);
             }
-            Timing::pad($startedAt, 1500);
-            Response::error('Invalid email or password.', 401);
+            Response::error('Invalid email/ID or password.', 401);
         }
 
         $user = $this->users->findByEmailFull($email);
@@ -181,13 +209,14 @@ class AuthController
         }
         if ($user === null || !$passwordValid || empty($user['is_active'])) {
             $userId = $user['user_id'] ?? null;
-            $failure = RateLimiter::recordFailure('login', $rateId, 5, 300);
+            $failure = RateLimiter::recordFailure('login', $rateId, self::LOGIN_MAX_ATTEMPTS, self::LOGIN_LOCKOUT_SECONDS);
             \CampusRoom\Core\SecurityLog::record('login_failed', 'Failed sign-in attempt', $userId, $email);
+            Timing::pad($startedAt, 1500);
             if ($failure['is_locked']) {
                 \CampusRoom\Core\SecurityLog::record('login_locked', 'Sign-in locked after repeated failures', $userId, $email);
+                Response::error(self::ACCOUNT_LOCKED_MESSAGE, 423, ['retry_after' => $failure['retry_after']]);
             }
-            Timing::pad($startedAt, 1500);
-            Response::error('Invalid email or password.', 401);
+            Response::error('Invalid email/ID or password.', 401);
         }
 
         if ($passwordToRehash !== $password || password_needs_rehash($user['password_hash'], PASSWORD_ARGON2ID)) {
@@ -491,13 +520,15 @@ class AuthController
 
     private static function isStudentId(string $value): bool
     {
-        return preg_match('/^(19|20)\d{6}$/', $value) === 1;
+        // A School ID is a text-based 8-character alphanumeric code (matches
+        // public.school_directory). It never contains '@', so it is unambiguous
+        // against an email address at sign-in.
+        return preg_match('/^[A-Za-z0-9]{8}$/', $value) === 1;
     }
 
     private static function validStudentId(string $value): bool
     {
-        return self::isStudentId($value)
-            && (int) substr($value, 0, 4) <= (int) date('Y');
+        return self::isStudentId($value);
     }
 
     private static function allowedEmail(string $email): bool

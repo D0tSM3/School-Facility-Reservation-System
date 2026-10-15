@@ -296,6 +296,8 @@ $routes = [
     // Users (Admin)
     ['GET',   '#^/api/users$#',                      fn() => (new UserController())->index()],
     ['PATCH', '#^/api/users/(?P<id>[^/]+)/role$#',   fn(string $id) => (new UserController())->updateRole($id)],
+    ['POST',  '#^/api/users/(?P<id>[^/]+)/unlock$#', fn(string $id) => (new UserController())->unlock($id)],
+
 
     // Class Schedules (Staff + Admin)
     ['GET',    '#^/api/classes$#',                   fn() => (new ClassScheduleController())->index()],

@@ -19,6 +19,10 @@ final class ActivationController
     private const STATE_TTL_SECONDS = 900;
     private const RESPONSE_FLOOR_MILLISECONDS = 1500;
     private const REQUEST_MESSAGE = 'If eligible, an activation code has been sent to the email address on the school roster.';
+    // Neutral, non-enumerable response for the activation request: identical for
+    // a freshly-sent code and an already-active account, so neither can be
+    // probed. It routes the user for both outcomes.
+    private const ACTIVATION_NEUTRAL_MESSAGE = 'If this School ID is eligible and not yet activated, a verification code has been emailed to your registered address. If your account is already active, please proceed to sign in.';
 
     private ActivationRepository $activation;
 
@@ -37,7 +41,7 @@ final class ActivationController
         $schoolId = strtoupper(trim((string) ($body['student_id'] ?? '')));
         if (!self::validStudentId($schoolId)) {
             Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
-            Response::error('Please enter a valid numeric School ID.', 422);
+            Response::error('Please enter a valid 8-character School ID.', 422);
         }
 
         if (RateLimiter::isLocked('activate_request', $schoolId)) {
@@ -60,9 +64,13 @@ final class ActivationController
         if (!($roster['eligible'] ?? false)) {
             $reason = $roster['reason'] ?? 'not_found';
             if ($reason === 'already_active') {
+                // Anti-enumeration: respond exactly like the success path so a
+                // caller cannot tell an already-active ID from a freshly-sent
+                // one. The neutral message routes both cases. (Still logged
+                // server-side for audit.)
                 \CampusRoom\Core\SecurityLog::record('activation_skipped', 'Account activation requested (already active)', null, $schoolId);
                 Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
-                Response::error('This School ID is already activated. Please sign in.', 409);
+                Response::json(['message' => self::ACTIVATION_NEUTRAL_MESSAGE], 200);
             }
             if ($reason === 'email_taken') {
                 \CampusRoom\Core\SecurityLog::record('activation_skipped', 'Account activation requested (email linked to different ID)', null, $schoolId);
@@ -98,9 +106,7 @@ final class ActivationController
         }
 
         Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
-        Response::json([
-            'message' => 'An activation code has been sent to your registered school email address.'
-        ], 200);
+        Response::json(['message' => self::ACTIVATION_NEUTRAL_MESSAGE], 200);
     }
 
     public function verify(): never
@@ -265,7 +271,9 @@ final class ActivationController
 
     private static function validStudentId(string $studentId): bool
     {
-        return (bool) preg_match('/^\d{4,64}$/', $studentId);
+        // Text-based 8-character alphanumeric School ID (matches
+        // public.school_directory). Replaces the old numeric-only rule.
+        return (bool) preg_match('/^[A-Za-z0-9]{8}$/', $studentId);
     }
 
     private static function activationTtlSeconds(): int

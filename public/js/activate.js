@@ -362,9 +362,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   [studentIdInput, otpInput].forEach((input) => {
     if (!input) return;
-    const maxLen = input === studentIdInput ? 8 : 6;
+    const isStudentId = input === studentIdInput;
+    // School ID is a text-based 8-char alphanumeric code (matches
+    // public.school_directory); the OTP stays 6 numeric digits.
+    const maxLen = isStudentId ? 8 : 6;
+    const blockRe = isStudentId ? /[^A-Za-z0-9]/ : /\D/;
+    const stripRe = isStudentId ? /[^A-Za-z0-9]/g : /\D/g;
     input.addEventListener('beforeinput', (event) => {
-      if (event.data && /\D/.test(event.data)) {
+      if (event.data && blockRe.test(event.data)) {
         event.preventDefault();
         return;
       }
@@ -373,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     input.addEventListener('input', () => {
-      input.value = input.value.replace(/\D/g, '').slice(0, maxLen);
+      input.value = input.value.replace(stripRe, '').slice(0, maxLen);
     });
   });
 

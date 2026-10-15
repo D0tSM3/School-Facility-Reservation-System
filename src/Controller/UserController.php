@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CampusRoom\Controller;
 
 use CampusRoom\Core\Auth;
+use CampusRoom\Core\RateLimiter;
 use CampusRoom\Core\Response;
 use CampusRoom\Repository\UserRepository;
 use CampusRoom\Repository\ReservationRepository;
@@ -81,6 +82,34 @@ class UserController
             'previous_role' => $oldRole,
             'new_role'      => $role,
             'message'       => "User role for {$existing['name']} successfully changed from {$oldRole} to {$role}.",
+        ]);
+    }
+
+    // ---------------------------------------------------------------
+    // Admin: POST /api/users/{id}/unlock
+    // ---------------------------------------------------------------
+
+    public function unlock(string $userId): never
+    {
+        Auth::requireRole(['Admin']);
+
+        $existing = $this->users->findById($userId);
+        if ($existing === null) {
+            Response::error('User not found.', 404);
+        }
+
+        $cleared = RateLimiter::unlockUser((string) $existing['email']);
+        $currentAdminId = Auth::userId();
+
+        $this->reservations->insertLog(
+            $currentAdminId,
+            "Admin unlocked account for user {$existing['name']} ({$existing['email']})"
+        );
+
+        Response::json([
+            'success'         => true,
+            'cleared_entries' => $cleared,
+            'message'         => "Account for {$existing['name']} ({$existing['email']}) has been unlocked.",
         ]);
     }
 

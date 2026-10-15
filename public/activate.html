@@ -40,9 +40,9 @@
         <h2 id="stage-1-heading" class="mb-4 text-xl font-semibold text-gray-900">1. Request a code</h2>
         <form id="requestForm" class="space-y-4">
           <label class="block text-sm font-medium text-gray-800" for="student-id">School ID</label>
-          <input id="student-id" name="student_id" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="username" required
+          <input id="student-id" name="student_id" type="text" pattern="[A-Za-z0-9]{8}" maxlength="8" autocomplete="username" required
             class="w-full rounded-lg border border-gray-300 px-3.5 py-3 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition-all placeholder:text-gray-400"
-            placeholder="e.g. 20269999" />
+            placeholder="8-character School ID" />
           <p id="requestMessage" class="hidden rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-900" role="status"></p>
           <button id="requestButton" class="w-full rounded-lg bg-orange-500 hover:bg-orange-600 px-4 py-3 font-semibold text-white transition-colors shadow-sm disabled:opacity-60 cursor-pointer" type="submit">Continue</button>
         </form>

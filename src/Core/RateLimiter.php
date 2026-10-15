@@ -144,6 +144,51 @@ final class RateLimiter
     }
 
     /**
+     * Unlock an account across all IPs by removing all login rate-limit rows
+     * matching the hashed user identifier.
+     */
+    public static function unlockUser(string $email): int
+    {
+        $normalizedIdentifier = strtolower(trim($email));
+        if ($normalizedIdentifier === '') {
+            return 0;
+        }
+        $hash = hash('sha256', $normalizedIdentifier);
+        $pdo = Database::getInstance()->getPdo();
+        $stmt = $pdo->prepare(
+            "DELETE FROM auth_rate_limits
+              WHERE action = 'login'
+                AND identifier LIKE :pattern"
+        );
+        $stmt->execute([':pattern' => '%:id:' . $hash]);
+        return $stmt->rowCount();
+    }
+
+    /**
+     * Check if an account is currently locked by login attempts across any IP.
+     */
+    public static function isUserLocked(string $email): bool
+    {
+        $normalizedIdentifier = strtolower(trim($email));
+        if ($normalizedIdentifier === '') {
+            return false;
+        }
+        $hash = hash('sha256', $normalizedIdentifier);
+        $pdo = Database::getInstance()->getPdo();
+        $stmt = $pdo->prepare(
+            "SELECT EXISTS (
+                SELECT 1 FROM auth_rate_limits
+                 WHERE action = 'login'
+                   AND identifier LIKE :pattern
+                   AND locked_until > CURRENT_TIMESTAMP
+             )"
+        );
+        $stmt->execute([':pattern' => '%:id:' . $hash]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+
+    /**
      * Increment a fixed-window counter keyed only by a hashed client IP.
      *
      * @return int The request count in the current window.

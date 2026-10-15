@@ -200,6 +200,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      // Accept EITHER a valid email OR an 8-character alphanumeric School ID.
+      // (#bpu-email is type="text" so the browser won't block a School ID.)
+      const looksLikeEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+      const looksLikeSchoolId = /^[A-Za-z0-9]{8}$/.test(email);
+      if (!looksLikeEmail && !looksLikeSchoolId) {
+        showLoginError('Enter your school email or your 8-character School ID.');
+        return;
+      }
+
       if (email.length > 255) {
         showLoginError('Email address must be 255 characters or fewer.');
         return;
@@ -270,12 +279,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (submitBtn.dataset.originalHtml) submitBtn.innerHTML = submitBtn.dataset.originalHtml;
           }
           captchaReset('loginRecaptcha');
-          const errorMsg = payload.error || json.error || 'Authentication failed: Invalid credentials provided.';
+          const isLocked = status === 423;
+          const errorMsg = json.error || payload.error || (isLocked
+            ? 'Your account is locked. Please contact an administrator to unlock it.'
+            : 'Invalid email or password.');
           showLoginError(errorMsg);
           const retryAfter = json.retry_after || payload.retry_after;
           const attempts = json.attempts || json.attempt_count || payload.attempts || payload.attempt_count;
           if (retryAfter && Number(retryAfter) > 0) {
-            startLoginTimeout(Number(retryAfter), attempts);
+            startLoginTimeout(Number(retryAfter), attempts, isLocked ? errorMsg : null);
           }
         }
       })
@@ -292,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     let loginCooldownTimer = null;
-    function startLoginTimeout(seconds, attempts) {
+    function startLoginTimeout(seconds, attempts, lockedMsg = null) {
       const submitBtn = loginForm ? loginForm.querySelector('button[type="submit"]') : null;
       if (!submitBtn) return;
       if (loginCooldownTimer) clearInterval(loginCooldownTimer);
@@ -313,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (remaining > 0) {
           updateButton();
           if (errorAlertText) {
-            errorAlertText.textContent = `Too many failed attempts. Please wait ${remaining}s before trying again.`;
+            errorAlertText.textContent = lockedMsg || `Too many failed attempts. Please wait ${remaining}s before trying again.`;
           }
         } else {
           clearInterval(loginCooldownTimer);

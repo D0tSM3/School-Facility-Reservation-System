@@ -1635,15 +1635,45 @@ document.addEventListener('DOMContentLoaded', () => {
           <td class="py-4 px-6 text-xs text-gray-500 whitespace-nowrap">${formatDate(u.created_at)}</td>
           <td class="py-4 px-6 text-right">
             ${isCurrentAdmin ? `<span class="text-xs text-gray-400 italic">Self</span>` : `
-              <button type="button" class="btn-change-role px-3 py-1.5 bg-gray-100 hover:bg-[#7a1f2b] hover:text-white text-gray-700 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 ml-auto" data-id="${u.user_id}" data-name="${escapeHtml(u.name)}" data-email="${escapeHtml(u.email)}" data-role="${escapeHtml(u.role)}">
-                <span class="material-symbols-outlined text-[16px]">manage_accounts</span>
-                <span>Change Role</span>
-              </button>
+              <div class="flex items-center justify-end gap-2">
+                <button type="button" class="btn-unlock-user px-2.5 py-1.5 bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-700 border border-amber-200 font-bold text-xs rounded-lg transition-colors flex items-center gap-1" data-id="${u.user_id}" data-name="${escapeHtml(u.name)}" data-email="${escapeHtml(u.email)}" title="Unlock account if locked after failed attempts">
+                  <span class="material-symbols-outlined text-[16px]">lock_open</span>
+                  <span>Unlock</span>
+                </button>
+                <button type="button" class="btn-change-role px-3 py-1.5 bg-gray-100 hover:bg-[#7a1f2b] hover:text-white text-gray-700 font-bold text-xs rounded-lg transition-colors flex items-center gap-1" data-id="${u.user_id}" data-name="${escapeHtml(u.name)}" data-email="${escapeHtml(u.email)}" data-role="${escapeHtml(u.role)}">
+                  <span class="material-symbols-outlined text-[16px]">manage_accounts</span>
+                  <span>Change Role</span>
+                </button>
+              </div>
             `}
           </td>
         </tr>
       `;
     }).join('');
+
+    document.querySelectorAll('.btn-unlock-user').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const name = btn.getAttribute('data-name');
+        const email = btn.getAttribute('data-email');
+
+        const ok = await confirmAction({
+          title: 'Unlock Account',
+          message: `Are you sure you want to clear the sign-in lockout for <strong>${escapeHtml(name)}</strong> (${escapeHtml(email)})?<br><br><span class="text-xs text-gray-500">This resets failed sign-in attempt counters and removes any active rate-limit lock.</span>`,
+          proceedText: 'Unlock Account',
+          icon: 'lock_open',
+          isDestructive: false,
+        });
+        if (!ok) return;
+
+        try {
+          const res = await apiFetch(`api/users/${id}/unlock`, { method: 'POST' });
+          showToast(res.message || `Account for ${name} unlocked successfully.`, 'success');
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+    });
 
     document.querySelectorAll('.btn-change-role').forEach(btn => {
       btn.addEventListener('click', () => {
