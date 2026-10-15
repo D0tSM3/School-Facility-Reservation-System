@@ -227,8 +227,7 @@
     else if (S.isClosedDay(date, rules.closedDays)) col.overlay = { kind: 'closed', label: 'Closed' };
     else if (room.status === 'Maintenance') col.overlay = { kind: 'maint', label: 'Under maintenance' };
     else {
-      const dow = S.dayName(date);
-      room.classes.filter(c => c.day_of_week === dow).forEach(c => {
+      room.classes.filter(c => S.classRunsOn(c, date)).forEach(c => {
         const label = c.course_code + ' – Sec ' + c.section;
         const range = S.fmt12(c.start_time) + ' – ' + S.fmt12(c.end_time);
         col.blocks.push({
@@ -273,7 +272,7 @@
     else {
       entry.rooms.forEach(room => {
         if (room.status === 'Maintenance') return;
-        room.classes.filter(c => c.day_of_week === S.dayName(date)).forEach(c => {
+        room.classes.filter(c => S.classRunsOn(c, date)).forEach(c => {
           const label = c.course_code + ' – Sec ' + c.section;
           col.blocks.push({ startMin:G.toMin(c.start_time), endMin:G.toMin(c.end_time), cls:'is-class', rt:rtCls(room), label, sub:room.name, tip:label+' · '+room.name });
         });
@@ -631,10 +630,10 @@
   // ---------- agenda (list) view ----------
   /** Every booking (and, if shown, class) on `date` for the given rooms, sorted by start time. */
   function agendaItems(date, rooms) {
-    const dow = S.dayName(date), items = [];
+    const items = [];
     rooms.forEach(room => {
       if (room.status === 'Maintenance') return;
-      room.classes.filter(c => c.day_of_week === dow).forEach(c => {
+      room.classes.filter(c => S.classRunsOn(c, date)).forEach(c => {
         items.push({ s: G.toMin(c.start_time), e: G.toMin(c.end_time), title: c.course_code + ' – Sec ' + c.section, sub: 'Class', room: room.name, rt: rtCls(room), kind: 'is-class', badge: '' });
       });
       room.reservations.filter(r => String(r.start_time).slice(0, 10) === date).forEach(r => {
@@ -1112,8 +1111,8 @@
         if (entry.holidays.some(h => String(h.holiday_date).slice(0,10) === date)) return 'Holiday';
         if (S.isClosedDay(date, entry.rules.closedDays)) return 'Closed day';
         if (room.status === 'Maintenance') return 'Room under maintenance';
-        const dow=S.dayName(date), start=G.toMin(slot.start), end=G.toMin(slot.end);
-        if (room.classes.some(c=>c.day_of_week===dow && G.toMin(c.start_time)<end && G.toMin(c.end_time)>start)) return 'Class conflict';
+        const start=G.toMin(slot.start), end=G.toMin(slot.end);
+        if (room.classes.some(c=>S.classRunsOn(c,date) && G.toMin(c.start_time)<end && G.toMin(c.end_time)>start)) return 'Class conflict';
         if (room.reservations.some(rv=>String(rv.start_time).slice(0,10)===date && G.toMin(S.hhmm(rv.start_time))<end && G.toMin(S.hhmm(rv.end_time))>start)) return 'Reserved';
         const n=now(); if(n && (date<n.ymd || (date===n.ymd && start<=n.min))) return 'Past';
         return '';

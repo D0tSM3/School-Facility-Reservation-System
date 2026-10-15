@@ -284,11 +284,15 @@
     const startParts = parts(source.start_time);
     const endParts = parts(source.end_time);
 
-    // Default the new booking to the source booking's length.
+    // Default the new booking to the source booking's length and date.
     const sourceStartMin = startParts ? toMinutes(startParts.time) : null;
     const sourceEndMin = endParts ? toMinutes(endParts.time) : null;
     const defaultStart = startParts ? startParts.time : '';
     const defaultEnd = endParts ? endParts.time : '';
+    const sourceDay = startParts ? startParts.day : '';
+    const initialDate = (sourceDay && sourceDay >= todayYmd() && !isClosed(sourceDay))
+      ? sourceDay
+      : todayYmd();
 
     const sourceRoomStillBookable = state.rooms.some((room) => room.room_id === source.room_id);
 
@@ -313,7 +317,8 @@
           <div><dt>Purpose</dt><dd>${escapeHtml(source.purpose || '—')}</dd></div>
         </dl>
         <p class="cr-rebook-note">
-          The new booking is filed as <strong>Pending</strong> under the original requester, not under you.
+          The new booking is filed under the <strong>original requester</strong>, not under you, and is
+          confirmed on the spot once the slot clears the schedule check.
         </p>
       </section>
 
@@ -337,7 +342,7 @@
           </label>
           <label class="cr-rebook-field">
             <span>Date</span>
-            <input type="date" id="crRebookDate" min="${escapeHtml(todayYmd())}" ${noRooms ? 'disabled' : ''}>
+            <input type="date" id="crRebookDate" min="${escapeHtml(todayYmd())}" value="${escapeHtml(initialDate)}" ${noRooms ? 'disabled' : ''}>
           </label>
         </div>
 
@@ -380,14 +385,16 @@
     const roomSelect = bodyEl.querySelector('#crRebookRoom');
     const startInput = bodyEl.querySelector('#crRebookStart');
 
-    // Date is deliberately left blank — picking a new one is the whole point.
     if (dateInput) dateInput.addEventListener('change', () => { clearError(); loadHint(); });
     if (roomSelect) roomSelect.addEventListener('change', () => { clearError(); loadHint(); });
     if (startInput) startInput.addEventListener('change', () => { clearError(); shiftEndWithStart(); liveRangeCheck(); });
     const endInput = bodyEl.querySelector('#crRebookEnd');
     if (endInput) endInput.addEventListener('change', () => { clearError(); liveRangeCheck(); });
 
-    if (dateInput && !noRooms) dateInput.focus();
+    if (dateInput && !noRooms) {
+      dateInput.focus();
+      loadHint();
+    }
   }
 
   /** Keep the source booking's duration when the operator moves the start time. */
@@ -512,8 +519,12 @@
     }
 
     const weekday = dayName(date);
+    // Only a class actually running on `date`: right weekday AND inside its
+    // semester window (inclusive; null/'' bounds = legacy always-active).
     (data.class_schedules || [])
-      .filter((c) => c.day_of_week === weekday)
+      .filter((c) => c.day_of_week === weekday &&
+        (!c.semester_start || date >= String(c.semester_start).slice(0, 10)) &&
+        (!c.semester_end   || date <= String(c.semester_end).slice(0, 10)))
       .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)))
       .forEach((c) => {
         rows.push(hintRow(
@@ -598,7 +609,6 @@
     }
     const clash = rangeClash();
     if (clash) return showError(clash);
-    if (!purpose) return showError('Give the booking a purpose.');
 
     setSubmitting(true);
 

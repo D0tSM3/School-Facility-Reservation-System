@@ -539,6 +539,12 @@ class RoomCalendar {
       dates.forEach((date) => {
         const dateYMD = this.formatDateYMD(date);
         const dayName = dayNames[date.getDay()];
+        // A class occupies this cell only on its weekday AND within its semester
+        // window (inclusive; null/'' bounds = legacy always-active row). Without
+        // the date check an expired class keeps showing after semester_end.
+        const classOn = c => c.day_of_week === dayName &&
+          (!c.semester_start || dateYMD >= String(c.semester_start).slice(0, 10)) &&
+          (!c.semester_end   || dateYMD <= String(c.semester_end).slice(0, 10));
         const isSelected = this.isInSelection(dateYMD);
         const beforeOpen = this.minDate && dateYMD < this.minDate;
 
@@ -563,7 +569,7 @@ class RoomCalendar {
         const overlapsSelected = isSelected && this.selectedStartTime && this.selectedEndTime &&
           overlaps(this.selectedStartTime, this.selectedEndTime);
 
-        const hasClass = (data.class_schedules || []).some(c => c.day_of_week === dayName && overlaps(c.start_time.slice(0, 5), c.end_time.slice(0, 5)));
+        const hasClass = (data.class_schedules || []).some(c => classOn(c) && overlaps(c.start_time.slice(0, 5), c.end_time.slice(0, 5)));
         const hasReservation = (data.reservations || []).some(r => r.start_time.startsWith(dateYMD) && overlaps(r.start_time.slice(11, 16), r.end_time.slice(11, 16)));
         const isConflict = overlapsSelected && (hasClass || hasReservation);
 
@@ -586,7 +592,7 @@ class RoomCalendar {
 
         // Classes
         (data.class_schedules || [])
-          .filter(c => c.day_of_week === dayName &&
+          .filter(c => classOn(c) &&
             overlaps(c.start_time.slice(0, 5), c.end_time.slice(0, 5)))
           .forEach(c => {
             td.className = td.className.replace(/bg-\S+/g, '') + ' bg-blue-50 p-0.5';

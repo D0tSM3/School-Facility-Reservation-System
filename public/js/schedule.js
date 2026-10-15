@@ -41,6 +41,29 @@
     return m ? DAY_NAMES[new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getDay()] : '';
   }
 
+  /**
+   * Does class `c` actually run on 'YYYY-MM-DD' `date`? Its weekday must match,
+   * AND the date must fall inside the class's semester window when one is set.
+   *
+   * A class row carries semester_start / semester_end as 'YYYY-MM-DD' (or
+   * null/'' — a legacy row with no bounds, treated as always-active, matching
+   * the server's COALESCE(..., '0001-01-01' / '9999-12-31')). Bounds are
+   * inclusive on both ends. Dates compare as ISO strings, so this stays
+   * timezone-independent — the same rule ReservationValidator (PHP) enforces.
+   *
+   * Without this, a weekday-only filter renders (and warns about) an expired
+   * class: e.g. a week spanning Oct 12–18 would still show a class whose
+   * semester_end is Oct 17 on Oct 18.
+   */
+  function classRunsOn(c, date) {
+    if (!c || c.day_of_week !== dayName(date)) return false;
+    const ss = c.semester_start ? String(c.semester_start).slice(0, 10) : '';
+    const se = c.semester_end ? String(c.semester_end).slice(0, 10) : '';
+    if (ss && date < ss) return false;
+    if (se && date > se) return false;
+    return true;
+  }
+
   /** "13:30" -> "1:30 PM". */
   function fmt12(time) {
     const m = /^(\d{2}):(\d{2})$/.exec(time);
@@ -58,11 +81,10 @@
    */
   function busyBlocks(data, date, opts) {
     const exclude = opts && opts.excludeReservationId;
-    const weekday = dayName(date);
     const blocks = [];
 
     ((data && data.class_schedules) || [])
-      .filter(c => c.day_of_week === weekday)
+      .filter(c => classRunsOn(c, date))
       .forEach(c => blocks.push({
         kind: 'class',
         start: hhmm(c.start_time),
@@ -232,7 +254,7 @@
   }
 
   window.CampusSchedule = Object.freeze({
-    hhmm, dayName, fmt12, busyBlocks, findConflicts, describe, fetchDay,
+    hhmm, dayName, classRunsOn, fmt12, busyBlocks, findConflicts, describe, fetchDay,
     datesBetween, findRangeConflicts, describeRange, fetchRange, onlyApprovedConflicts,
     DEFAULT_RULES, loadRules, halfHours, isClosedDay
   });
