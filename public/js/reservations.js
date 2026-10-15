@@ -508,11 +508,11 @@ function renderReservations() {
                 <span class="material-symbols-outlined text-[15px] text-gray-400">location_on</span>
                 <span class="font-medium text-gray-700">${escapeHtml(reservation.room_name || reservation.room_id)}</span>
               </span>
-                ${(reservation.classification || reservation.category) ? `
+                ${reservation.classification ? `
                 <span class="text-gray-300 select-none">•</span>
                 <span class="flex items-center gap-1">
                   <span class="material-symbols-outlined text-[15px] text-gray-400">sell</span>
-                  <span>${escapeHtml(reservation.classification || reservation.category)}</span>
+                  <span>${escapeHtml(reservation.classification)}</span>
                 </span>` : ''}
               <span class="text-gray-300 select-none">•</span>
               <span class="flex items-center gap-1">
