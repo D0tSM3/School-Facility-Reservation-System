@@ -37,19 +37,16 @@ final class ActivationController
         $schoolId = strtoupper(trim((string) ($body['student_id'] ?? '')));
         if (!self::validStudentId($schoolId)) {
             Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
-            Response::json(['message' => self::REQUEST_MESSAGE], 202);
+            Response::error('Please enter a valid numeric School ID.', 422);
         }
 
         if (RateLimiter::isLocked('activate_request', $schoolId)) {
             Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
-            Response::json(['message' => self::REQUEST_MESSAGE], 202);
+            Response::error('Too many requests. Please try again later.', 429);
         }
         RateLimiter::recordFailure('activate_request', $schoolId);
 
         $allowedDomain = strtolower(ltrim(trim((string) ($_ENV['ALLOWED_EMAIL_DOMAIN'] ?? '')), '@'));
-        if ($allowedDomain === '') {
-            throw new \RuntimeException('ALLOWED_EMAIL_DOMAIN must be configured.');
-        }
 
         $otp = self::newOtp();
         $key = self::activationOtpKey();
@@ -60,29 +57,50 @@ final class ActivationController
             $allowedDomain
         );
 
-        if ($roster['eligible'] ?? false) {
-            \CampusRoom\Core\SecurityLog::record('activation_requested', 'Account activation requested', null, $schoolId);
-            $sent = Mailer::sendOtp(
-                (string) $roster['email'],
-                (string) $roster['name'],
-                $otp,
-                self::activationTtlSeconds()
-            );
-            if (!$sent) {
-                // Delivery failed: drop the code we just stored so no undelivered
-                // code stays valid. Response stays uniform (anti-enumeration);
-                // only the failure is logged, never the OTP itself.
-                $this->activation->invalidateActiveOtp($schoolId);
-                \CampusRoom\Core\SecurityLog::record('activation_otp_send_failed', 'Activation code could not be emailed', null, $schoolId);
+        if (!($roster['eligible'] ?? false)) {
+            $reason = $roster['reason'] ?? 'not_found';
+            if ($reason === 'already_active') {
+                \CampusRoom\Core\SecurityLog::record('activation_skipped', 'Account activation requested (already active)', null, $schoolId);
+                Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
+                Response::error('This School ID is already activated. Please sign in.', 409);
             }
-        } elseif (($roster['already_active'] ?? false) || ($roster['inactive'] ?? false) || (($roster['status'] ?? '') !== '')) {
-            \CampusRoom\Core\SecurityLog::record('activation_skipped', 'Account activation requested (already active or inactive)', null, $schoolId);
-        } else {
+            if ($reason === 'email_taken') {
+                \CampusRoom\Core\SecurityLog::record('activation_skipped', 'Account activation requested (email linked to different ID)', null, $schoolId);
+                Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
+                Response::error('The email associated with this School ID is already linked to another account.', 409);
+            }
+            if ($reason === 'invalid_domain') {
+                \CampusRoom\Core\SecurityLog::record('activation_skipped', 'Account activation requested (domain not allowed)', null, $schoolId);
+                Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
+                Response::error('The email associated with this School ID is not eligible for activation.', 403);
+            }
+
             \CampusRoom\Core\SecurityLog::record('activation_no_match', 'Account activation requested (no roster match)', null, $schoolId);
+            Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
+            Response::error('School ID not found in the school directory. Only enrolled students and active staff may activate an account.', 404);
+        }
+
+        \CampusRoom\Core\SecurityLog::record('activation_requested', 'Account activation requested', null, $schoolId);
+        $sent = Mailer::sendOtp(
+            (string) $roster['email'],
+            (string) $roster['name'],
+            $otp,
+            self::activationTtlSeconds()
+        );
+
+        if (!$sent) {
+            // Delivery failed: drop the code we just stored so no undelivered
+            // code stays valid. Only the failure is logged, never the OTP itself.
+            $this->activation->invalidateActiveOtp($schoolId);
+            \CampusRoom\Core\SecurityLog::record('activation_otp_send_failed', 'Activation code could not be emailed', null, $schoolId);
+            Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
+            Response::error('Failed to send verification code to your email. Please contact administration.', 500);
         }
 
         Timing::pad($startedAt, self::RESPONSE_FLOOR_MILLISECONDS);
-        Response::json(['message' => self::REQUEST_MESSAGE], 202);
+        Response::json([
+            'message' => 'An activation code has been sent to your registered school email address.'
+        ], 200);
     }
 
     public function verify(): never
@@ -247,10 +265,7 @@ final class ActivationController
 
     private static function validStudentId(string $studentId): bool
     {
-        if (!preg_match('/^(19|20)\d{6}$/', $studentId)) {
-            return false;
-        }
-        return (int) substr($studentId, 0, 4) <= (int) date('Y');
+        return (bool) preg_match('/^\d{4,64}$/', $studentId);
     }
 
     private static function activationTtlSeconds(): int

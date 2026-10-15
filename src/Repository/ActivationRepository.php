@@ -45,14 +45,16 @@ final class ActivationRepository
 
             if (!$roster) {
                 $pdo->commit();
-                return ['eligible' => false];
+                return ['eligible' => false, 'reason' => 'not_found'];
             }
 
-            $email = strtolower((string) $roster['email']);
-            $at = strrpos($email, '@');
-            if ($at === false || !hash_equals($allowedDomain, substr($email, $at + 1))) {
-                $pdo->commit();
-                return ['eligible' => false];
+            if ($allowedDomain !== '') {
+                $email = strtolower((string) $roster['email']);
+                $at = strrpos($email, '@');
+                if ($at === false || !hash_equals($allowedDomain, substr($email, $at + 1))) {
+                    $pdo->commit();
+                    return ['eligible' => false, 'reason' => 'invalid_domain'];
+                }
             }
 
             // Who, if anyone, already has an account for this identity? We allow
@@ -75,11 +77,11 @@ final class ActivationRepository
             foreach ($existingQuery->fetchAll(PDO::FETCH_ASSOC) as $acct) {
                 if ((string) $acct['school_id'] === (string) $schoolId) {
                     $pdo->commit();
-                    return ['eligible' => false]; // already activated/linked
+                    return ['eligible' => false, 'reason' => 'already_active']; // already activated/linked
                 }
                 if ($acct['email'] === $rosterEmail && $acct['school_id'] !== null) {
                     $pdo->commit();
-                    return ['eligible' => false]; // email linked to a different school_id
+                    return ['eligible' => false, 'reason' => 'email_taken']; // email linked to a different school_id
                 }
                 // else: unlinked legacy account on this email → linkable at complete()
             }

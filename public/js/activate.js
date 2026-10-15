@@ -70,6 +70,22 @@ document.addEventListener('DOMContentLoaded', () => {
     element.classList.remove('hidden');
   }
 
+  function showRequestError(text) {
+    requestMessage.textContent = text;
+    requestMessage.className = 'rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-900';
+    requestMessage.hidden = false;
+    requestMessage.classList.remove('hidden');
+    requestMessage.setAttribute('role', 'alert');
+  }
+
+  function showRequestSuccess(text) {
+    requestMessage.textContent = text;
+    requestMessage.className = 'rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-900';
+    requestMessage.hidden = false;
+    requestMessage.classList.remove('hidden');
+    requestMessage.setAttribute('role', 'status');
+  }
+
   function setBusy(value) {
     busy = value;
     document.querySelectorAll('button').forEach((button) => {
@@ -129,18 +145,34 @@ document.addEventListener('DOMContentLoaded', () => {
   function resetCaptcha(containerId) {}
 
   async function activationRequest() {
-    try {
-      await postJson('api/auth/activate/request', {
-        student_id: studentIdInput.value.trim(),
-      });
-    } catch {
-      // Keep eligibility and delivery details indistinguishable in the UI.
+    requestMessage.hidden = true;
+    requestMessage.classList.add('hidden');
+    const studentId = studentIdInput.value.trim();
+    if (!studentId) {
+      showRequestError('Please enter your School ID.');
+      return;
     }
-    showMessage(requestMessage, requestGeneric);
-    stage2Message.textContent = requestGeneric;
-    otpInput.value = '';
-    showStage(2);
-    startResendCountdown();
+
+    try {
+      const { response, json } = await postJson('api/auth/activate/request', {
+        student_id: studentId,
+      });
+
+      if (!response.ok || !json.success) {
+        const errorMsg = json.error || 'School ID not found in the school directory. Please verify your ID or contact administration.';
+        showRequestError(errorMsg);
+        return;
+      }
+
+      const successMsg = json.data?.message || requestGeneric;
+      showRequestSuccess(successMsg);
+      stage2Message.textContent = successMsg;
+      otpInput.value = '';
+      showStage(2);
+      startResendCountdown();
+    } catch {
+      showRequestError('Unable to verify School ID right now. Please check your connection and try again.');
+    }
   }
 
   function startResendCountdown() {
@@ -403,7 +435,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('differentIdLink').addEventListener('click', (event) => {
     event.preventDefault();
     requestMessage.hidden = true;
+    requestMessage.classList.add('hidden');
     verifyMessage.hidden = true;
+    verifyMessage.classList.add('hidden');
     studentIdInput.value = '';
     otpInput.value = '';
     showStage(1);

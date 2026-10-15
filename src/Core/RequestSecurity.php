@@ -22,7 +22,15 @@ final class RequestSecurity
             Response::error('Invalid request.', 400);
         }
 
-        if (!self::originIsValid($_SERVER['HTTP_ORIGIN'] ?? '')) {
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+        if ($origin === '' && !empty($_SERVER['HTTP_REFERER'])) {
+            $ref = parse_url($_SERVER['HTTP_REFERER']);
+            if (!empty($ref['scheme']) && !empty($ref['host'])) {
+                $origin = $ref['scheme'] . '://' . $ref['host'] . (!empty($ref['port']) ? ':' . $ref['port'] : '');
+            }
+        }
+
+        if (!self::originIsValid($origin)) {
             Response::error('Invalid request origin.', 403);
         }
 
@@ -81,6 +89,9 @@ final class RequestSecurity
         if ($host !== '' && !preg_match('/[\r\n]/', $host)) {
             $scheme = Auth::isSecure() ? 'https://' : 'http://';
             $allowed[] = $scheme . strtolower($host);
+            if (str_ends_with(strtolower($host), '.vercel.app')) {
+                $allowed[] = 'https://' . strtolower($host);
+            }
         }
 
         return $allowed;
