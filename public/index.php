@@ -316,7 +316,6 @@ $routes = [
     ['PATCH', '#^/api/settings$#',                   fn() => (new SettingsController())->update()],
 
     // Logs (Admin)
-    ['POST',  '#^/api/logs/visitors/lookup$#',    fn() => (new UserController())->visitorLookup()],
     ['GET',   '#^/api/logs/visitors$#',           fn() => (new UserController())->visitorSummary()],
     ['GET',   '#^/api/logs/alerts$#',              fn() => (new UserController())->logAlerts()],
     ['GET',   '#^/api/logs$#',                       fn() => (new UserController())->logs()],

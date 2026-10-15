@@ -5,7 +5,7 @@
  * the booking form asks for (classification, purpose, equipment, policy) and
  * submits through the EXISTING POST api/reservations with exactly the payload
  * booking.js sends:
- *   { room_id, purpose, category, start_time, end_time, equipment_notes }
+ *   { room_id, purpose, category, classification, start_time, end_time, equipment_notes }
  * Nothing here changes a booking rule: the server (ReservationValidator and
  * the DB trigger) still decides everything. Direct booking: a successful
  * request is confirmed immediately, and a 409 means the slot is unavailable —
@@ -23,7 +23,8 @@
     ['Faculty Defense', 'Faculty Defense'],
     ['Student Org Meeting', 'Student Org Meeting'],
     ['Dept Workshop', 'Dept Workshop'],
-    ['Exam/Quiz', 'Exam / Quiz']
+    ['Exam/Quiz', 'Exam / Quiz'],
+    ['Other', 'Other (specify)']
   ];
   // Same canonical names and defaults as book-room.html's #equipmentOptions.
   const EQUIPMENT = [
@@ -38,7 +39,7 @@
   let sel = null;            // { roomId, date, start, end }
   let problem = '';
   let submitting = false, done = false;
-  const f = { category: '', purpose: '', policy: false, equip: new Set(EQUIPMENT.filter(e => e.on).map(e => e.name)), repeat: { mode: 'single', through: '', activeDates: null } };
+  const f = { category: '', customClassification: '', purpose: '', policy: false, equip: new Set(EQUIPMENT.filter(e => e.on).map(e => e.name)), repeat: { mode: 'single', through: '', activeDates: null } };
   let seriesState = { days: [], blocked: [], valid: true };
   let seriesSig = '';
 
@@ -54,6 +55,11 @@
     return (h ? h + ' hr' : '') + (h && m ? ' ' : '') + (m ? m + ' min' : '');
   }
   const equipmentString = () => EQUIPMENT.filter(e => f.equip.has(e.name)).map(e => e.name).join(', ').substring(0, 500) || 'Standard Academic Setup';
+  const classification = () => f.category === 'Other' ? f.customClassification.trim() : f.category;
+  const classificationIsValid = () => {
+    const value = classification();
+    return !!value && value.length <= 100 && (f.category !== 'Other' || value !== 'Other');
+  };
 
   // ---------- markup (built once; inputs survive re-selecting a slot) ----------
   function build() {
@@ -110,6 +116,11 @@
             '<div class="mc-cats" role="radiogroup" aria-labelledby="mcCardCatT">' + CATEGORIES.map((c, i) =>
               '<label class="mc-cat"><input type="radio" name="mcCat" value="' + esc(c[0]) + '" id="mcCat' + i + '"><span>' + esc(c[1]) + '</span></label>').join('') +
             '</div>' +
+            '<div id="mcCustomClassificationWrap" class="hidden mt-2">' +
+              '<label class="mc-flabel" for="mcCustomClassification">Custom classification <span class="mc-req" title="Required">*</span></label>' +
+              '<input id="mcCustomClassification" type="text" maxlength="100" class="mc-input" placeholder="Enter custom classification" />' +
+              '<p class="mc-fnote">Enter a specific classification, not “Other”. Maximum 100 characters.</p>' +
+            '</div>' +
           '</section>' +
 
           '<section class="mc-card" aria-labelledby="mcCardPurposeT">' +
@@ -162,12 +173,27 @@
       if (t.id === 'mcRepeatMode') { f.repeat.mode=t.value; f.repeat.activeDates=null; f.repeat.through=sel ? sel.date : ''; refresh(); return; }
       if (t.id === 'mcRepeatThrough') { f.repeat.through=t.value; f.repeat.activeDates=null; refresh(); return; }
       if (t.matches && t.matches('[data-repeat-date]')) { const boxes=Array.from(body.querySelectorAll('[data-repeat-date]')); f.repeat.activeDates=boxes.filter(b=>b.checked).map(b=>b.value); refresh(); return; }
-      if (t.name === 'mcCat') f.category = t.value;
+      if (t.name === 'mcCat') {
+        f.category = t.value;
+        const customWrap = $('mcCustomClassificationWrap');
+        const customInput = $('mcCustomClassification');
+        const isOther = f.category === 'Other';
+        customWrap.classList.toggle('hidden', !isOther);
+        customInput.required = isOther;
+        if (!isOther) {
+          f.customClassification = '';
+          customInput.value = '';
+        }
+      }
       else if (t.id === 'mcPolicy') f.policy = t.checked;
       else if (t.dataset && t.dataset.equip) {
         if (t.checked) f.equip.add(t.dataset.equip); else f.equip.delete(t.dataset.equip);
         paintEquip();
       }
+      refresh();
+    });
+    $('mcCustomClassification').addEventListener('input', e => {
+      f.customClassification = e.target.value;
       refresh();
     });
     $('mcPurpose').addEventListener('input', e => { f.purpose = e.target.value; $('mcPurposeCount').textContent = e.target.value.length; refresh(); });
@@ -396,7 +422,7 @@
         ? '<b>' + days.length + ' days</b><span class="block text-xs text-gray-500">' + days.map(d => esc(fmtDate(d))).join('<br>') + '</span>'
         : esc(fmtDate(days[0]))) +
       row('Time', esc(S.fmt12(sel.start) + ' – ' + S.fmt12(sel.end)) + '<span class="block text-xs text-gray-500">' + esc(fmtDur(sel.start, sel.end)) + (days.length > 1 ? ' each day' : '') + '</span>') +
-      row('Classification', esc(f.category)) +
+      row('Classification', esc(classification())) +
       row('Purpose', esc(f.purpose.trim())) +
       row('Equipment', esc(equipmentString()));
     const ap = wrap.querySelector('[data-confirm-approval]');
@@ -415,7 +441,7 @@
   }
 
   function canSubmit() {
-    return !!(sel && opts.getRoom(sel.roomId) && f.category && f.purpose.trim() && f.policy && !problem && !startedAlready() && seriesState.valid && !submitting && !done);
+    return !!(sel && opts.getRoom(sel.roomId) && f.category && classificationIsValid() && f.purpose.trim() && f.policy && !problem && !startedAlready() && seriesState.valid && !submitting && !done);
   }
 
   function refresh() {
@@ -459,6 +485,7 @@
     if (submitting || done || prob) { el.textContent = ''; return; }
     const need = [];
     if (!f.category) need.push('classification');
+    else if (!classificationIsValid()) need.push('valid custom classification');
     if (!f.purpose.trim()) need.push('purpose');
     if (!f.policy) need.push('policy acknowledgement');
     el.textContent = need.length ? 'Still needed: ' + need.join(', ') + '.' : '';
@@ -479,7 +506,7 @@
     m.innerHTML = html;
   }
 
-  // ---------- submit (existing endpoint, unchanged payload) ----------
+  // ---------- submit (existing endpoint) ----------
   async function submit() {
     if (!canSubmit()) return;
     const room = opts.getRoom(sel.roomId);
@@ -487,6 +514,7 @@
       room_id: sel.roomId,
       purpose: f.purpose.trim(),
       category: f.category,
+      classification: classification(),
       start_time: sel.date + 'T' + sel.start + ':00',
       end_time: (f.repeat.mode === 'single' ? sel.date : (f.repeat.through || sel.date)) + 'T' + sel.end + ':00',
       equipment_notes: equipmentString()
