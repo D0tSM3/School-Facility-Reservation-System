@@ -946,4 +946,3 @@ function renderReservations() {
 
   fetchReservations();
 });
-

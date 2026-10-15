@@ -1313,14 +1313,22 @@ document.addEventListener('DOMContentLoaded', () => {
   function filterAndRenderReservations() {
     const searchInput = document.getElementById('resSearchInput');
     const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
-    const cat = document.getElementById('resCategoryFilter')?.value || 'all';
+    const classificationSelect = document.getElementById('resCategoryFilter');
+    if (classificationSelect) {
+      const previous = classificationSelect.value;
+      const classifications = [...new Set(state.reservations.map(res => res.classification).filter(Boolean))].sort();
+      classificationSelect.innerHTML = '<option value="all">All Classifications</option>'
+        + classifications.map(classification => `<option value="${escapeHtml(classification)}">${escapeHtml(classification)}</option>`).join('');
+      classificationSelect.value = classifications.includes(previous) ? previous : 'all';
+    }
+    const classification = classificationSelect?.value || 'all';
     const subtab = state.activeResSubtab;
 
     const filtered = state.reservations.filter(res => {
       if (subtab !== 'all') {
         if (res.status !== subtab) return false;
       }
-      if (cat !== 'all' && res.category !== cat) {
+      if (classification !== 'all' && res.classification !== classification) {
         return false;
       }
       if (search) {
@@ -1328,8 +1336,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const matchesEmail = (res.user_email || '').toLowerCase().includes(search);
         const matchesRoom = (res.room_name || '').toLowerCase().includes(search);
         const matchesPurpose = (res.purpose || '').toLowerCase().includes(search);
+        const matchesClassification = (res.classification || '').toLowerCase().includes(search);
         const matchesId = (res.reservation_id || '').toLowerCase().includes(search);
-        if (!matchesName && !matchesEmail && !matchesRoom && !matchesPurpose && !matchesId) {
+        if (!matchesName && !matchesEmail && !matchesRoom && !matchesPurpose && !matchesClassification && !matchesId) {
           return false;
         }
       }
@@ -1370,7 +1379,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <td class="py-4 px-6 text-xs font-semibold text-gray-800">${escapeHtml(r.room_name || 'Facility')}</td>
           <td class="py-4 px-6 text-xs text-gray-600 whitespace-nowrap">${formatRange(r.start_time, r.end_time)}</td>
           <td class="py-4 px-6 text-xs text-gray-600">
-            <span class="font-semibold text-gray-800">${escapeHtml(r.category || 'General')}</span>
+            <span class="font-semibold text-gray-800">${escapeHtml(r.classification || '—')}</span>
             ${r.purpose ? `<div class="text-[11px] text-gray-400 truncate max-w-xs" title="${escapeHtml(r.purpose)}">${escapeHtml(r.purpose)}</div>` : ''}
           </td>
           <td class="py-4 px-6 text-xs">${statusPillBadge(r.status)}</td>
@@ -1434,7 +1443,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div>
             <span class="text-gray-400 block">Status / Classification</span>
-            <span class="font-semibold text-gray-900">${escapeHtml(res.status)} (${escapeHtml(res.category || 'Standard')})</span>
+            <span class="font-semibold text-gray-900">${escapeHtml(res.status)} (${escapeHtml(res.classification || '—')})</span>
             <span class="text-gray-500 block italic">"${escapeHtml(res.purpose || 'No purpose notes provided')}"</span>
           </div>
           ${res.equipment_notes ? `
