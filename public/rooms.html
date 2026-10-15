@@ -107,6 +107,10 @@
           <span class="material-symbols-outlined text-[20px]">grid_view</span>
           <span>Dashboard</span>
         </a>
+        <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="master-calendar" href="master-calendar.html">
+          <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+          <span>Calendar</span>
+        </a>
         <a
           aria-current="page"
           class="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors bg-[#7a1f2b] text-white font-medium text-sm"
@@ -115,10 +119,6 @@
         >
           <span class="material-symbols-outlined text-[20px]">meeting_room</span>
           <span>Rooms Directory</span>
-        </a>
-        <a class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors" data-path="master-calendar" href="master-calendar.html">
-          <span class="material-symbols-outlined text-[20px]">calendar_month</span>
-          <span>Calendar</span>
         </a>
         <a
           class="flex items-center gap-3 px-4 py-2.5 text-gray-400 font-medium text-sm rounded-xl hover:bg-white/5 hover:text-white transition-colors"
@@ -557,14 +557,13 @@
 
             <!-- Purpose Textarea -->
             <div class="flex flex-col space-y-2">
-              <span class="text-[10px] font-extrabold text-[#2a303c] uppercase tracking-widest mb-3 block">DETAILED PURPOSE DESCRIPTION <span class="text-red-500">*</span></span>
+              <span class="text-[10px] font-extrabold text-[#2a303c] uppercase tracking-widest mb-3 block">DETAILED PURPOSE DESCRIPTION</span>
               <textarea
                 id="purpose"
                 rows="3"
                 maxlength="200"
                 class="w-full p-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]"
-                placeholder="e.g. Weekly officers' meeting — agenda review and budget planning"
-                required
+                placeholder="e.g. Weekly officers' meeting — agenda review and budget planning (optional)"
               ></textarea>
             </div>
 
@@ -659,8 +658,8 @@
           if (!resEndDate || !resEndDate.value) return false;
           
           // Validate 7-day limit in UI
-          const sDate = new Date(resDate.value);
-          const eDate = new Date(resEndDate.value);
+          const sDate = new Date(resDate.value + 'T00:00:00');
+          const eDate = new Date(resEndDate.value + 'T00:00:00');
           if ((eDate - sDate) / (1000 * 60 * 60 * 24) > 6 && mode !== 'single') return false;
 
           // Validate specific days
@@ -680,8 +679,8 @@
           // 5. Primary classification
           if (!classification || !classification.value) return false;
           if (classification.value === 'Other' && (!classificationCustom || !classificationCustom.value.trim())) return false;
-          // 6. Purpose description (non-empty after trim)
-          if (!purposeInput || !purposeInput.value.trim()) return false;
+          // 6. Purpose is OPTIONAL — an empty purpose is accepted; the backend
+          //    routes those bookings to Pending for staff/admin review.
           // 7. Policy acknowledgement
           if (!policyBox || !policyBox.checked) return false;
           return true;

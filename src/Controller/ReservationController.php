@@ -167,30 +167,38 @@ class ReservationController
             $this->storeSeries($roomId, $purpose, $category, $classification, $equipmentNotes, $startTime, $endTime, $activeDates);
         }
 
-        $error = ReservationValidator::check($roomId, $startTime, $endTime);
-        if ($error !== null) {
-            $this->conflictError($error, $roomId, $startTime, $endTime, $activeDates);
-        }
-
         // A clean single-day booking is approved on the spot unless the room
-        // asks for Staff review. Anything that must wait lands as Pending and
-        // shows up in the Staff / Admin Approval Queue.
-        [$status, $approvalType] = $this->approvalOutcome($roomId, 1);
+        // asks for Staff review, or the purpose was left empty (staff review required).
+        // Anything that must wait lands as Pending and shows up in the Staff / Admin queue.
+        [$status, $approvalType] = $this->approvalOutcome($roomId, 1, $purpose);
 
+        // Lock the room, re-validate, and insert in ONE transaction so two
+        // concurrent requests for the same slot cannot both pass the overlap
+        // check and both insert (the check used to run before, and outside,
+        // the write). On a clash the validator returns an error and we abort
+        // with the same conflict response as before; the advisory lock is
+        // released when the (empty) transaction commits.
         try {
-            $reservation = $this->reservations->create(
-                Auth::userId(),
-                $roomId,
-                $purpose,
-                $startTime,
-                $endTime,
-                $equipmentNotes !== '' ? $equipmentNotes : null,
-                $category,
-                null,
-                $status,
-                $approvalType,
-                $classification
-            );
+            $result = $this->reservations->transaction(function () use ($roomId, $purpose, $startTime, $endTime, $equipmentNotes, $category, $status, $approvalType, $classification): array {
+                $this->reservations->lockRooms([$roomId]);
+                $error = ReservationValidator::check($roomId, $startTime, $endTime);
+                if ($error !== null) {
+                    return ['error' => $error];
+                }
+                return ['row' => $this->reservations->create(
+                    Auth::userId(),
+                    $roomId,
+                    $purpose,
+                    $startTime,
+                    $endTime,
+                    $equipmentNotes !== '' ? $equipmentNotes : null,
+                    $category,
+                    null,
+                    $status,
+                    $approvalType,
+                    $classification
+                )];
+            });
         } catch (PDOException $e) {
             // Fallback in case of race condition caught by the DB trigger
             if ($e->getCode() === '45000') {
@@ -201,6 +209,11 @@ class ReservationController
             }
             throw $e;
         }
+
+        if (isset($result['error'])) {
+            $this->conflictError($result['error'], $roomId, $startTime, $endTime, $activeDates);
+        }
+        $reservation = $result['row'];
 
         // The booking's audit trail now starts at submission, not approval.
         $dayLabel = self::compactDates([substr((string) $startTime, 0, 10)], true);
@@ -233,8 +246,8 @@ class ReservationController
             : '';
         $equipmentNotes = trim((string) ($body['equipment_notes'] ?? ''));
 
-        if ($roomId === '' || $purpose === '' || $startTime === '' || $endTime === '') {
-            Response::error('room_id, purpose, start_time, and end_time are required.', 422);
+        if ($roomId === '' || $startTime === '' || $endTime === '') {
+            Response::error('room_id, start_time, and end_time are required.', 422);
         }
 
         // Required rather than defaulted: silently filing an uncategorised
@@ -322,22 +335,21 @@ class ReservationController
         $dailyStart  = substr($startTime, 11);
         $dailyEnd    = substr($endTime, 11);
 
-        $error = ReservationValidator::checkRange($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, [], ['Pending', 'Approved'], $activeDates);
-        if ($error !== null) {
-            $this->conflictError($error, $roomId, $startTime, $endTime, $activeDates);
-        }
-
         // Whole-range decision: a short, clean hold is auto-approved for every
         // day; a range longer than the policy limit, or a room that asks for
-        // it, waits as Pending (see approvalOutcome()).
+        // it, waits as Pending (see approvalOutcome()). datesBetween() is pure,
+        // so this needs no DB and is safe to compute before the lock.
         $dayCount = count(ReservationValidator::datesBetween($startDate, $endDate) ?? []);
         if (is_array($activeDates) && count($activeDates) > 0) {
             $dayCount = count(array_intersect(ReservationValidator::datesBetween($startDate, $endDate) ?? [], $activeDates));
         }
-        [$status, $approvalType] = $this->approvalOutcome($roomId, $dayCount);
+        [$status, $approvalType] = $this->approvalOutcome($roomId, $dayCount, $purpose);
 
+        // createBookingRows() now locks the room, re-validates the whole range,
+        // and inserts every day in ONE transaction. It returns ['error' => ...]
+        // on a clash (lock released on commit) or ['rows' => [...]] on success.
         try {
-            $rows = $this->createBookingRows(
+            $result = $this->createBookingRows(
                 Auth::userId(), $roomId, $purpose, $category, $classification,
                 $equipmentNotes !== '' ? $equipmentNotes : null, $startTime, $endTime, $activeDates, $status, $approvalType
             );
@@ -350,6 +362,11 @@ class ReservationController
             }
             throw $e;
         }
+
+        if (isset($result['error'])) {
+            $this->conflictError($result['error'], $roomId, $startTime, $endTime, $activeDates);
+        }
+        $rows = $result['rows'];
 
         // One combined audit entry for the whole booking, not one per day.
         // A consecutive range reads 'Oct 1 - 3'; separately chosen days read
@@ -375,12 +392,17 @@ class ReservationController
     }
 
     /**
-     * Insert the Pending row(s) for a booking in one transaction: one row when
-     * start and end share a date, otherwise one per day sharing a series_id
-     * (dates = range, clocks = daily window). Validation is the caller's job.
-     * Throws PDOException (45000 = the double-booking trigger) on a clash.
+     * Lock the room, re-validate the whole range, and insert the booking row(s)
+     * in ONE transaction: one row when start and end share a date, otherwise one
+     * per day sharing a series_id (dates = range, clocks = daily window).
      *
-     * @return array[] the created rows, earliest first
+     * Re-validating under the advisory lock closes the check-then-insert race:
+     * a competing writer for an overlapping slot is serialized behind the lock
+     * and then sees this booking, or vice versa. Throws PDOException
+     * (45000 = the double-booking trigger) if one is installed.
+     *
+     * @return array{error: string}|array{rows: array[]} the clash reason, or
+     *         the created rows earliest first
      */
     private function createBookingRows(
         string $customerId,
@@ -395,27 +417,39 @@ class ReservationController
         string $status = 'Approved',
         string $approvalType = 'auto'
     ): array {
-        $startDate = substr($startTime, 0, 10);
-        $endDate   = substr($endTime, 0, 10);
+        $startDate  = substr($startTime, 0, 10);
+        $endDate    = substr($endTime, 0, 10);
+        $dailyStart = substr($startTime, 11);
+        $dailyEnd   = substr($endTime, 11);
 
-        if ($startDate === $endDate) {
-            return [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $equipmentNotes, $category, null, $status, $approvalType, $classification)];
-        }
-
-        
-        $days       = ReservationValidator::datesBetween($startDate, $endDate) ?? [];
+        $days = ReservationValidator::datesBetween($startDate, $endDate) ?? [];
         if ($activeDates !== null && count($activeDates) > 0) {
             $days = array_values(array_intersect($days, $activeDates));
         }
-        if (empty($days)) {
+        if ($startDate !== $endDate && empty($days)) {
             Response::error('No valid dates selected within the range.', 400);
         }
 
-        $dailyStart = substr($startTime, 11);
-        $dailyEnd   = substr($endTime, 11);
-        $seriesId   = $this->reservations->newSeriesId();
+        $seriesId = $startDate === $endDate ? null : $this->reservations->newSeriesId();
 
-        return $this->reservations->transaction(function () use ($days, $customerId, $roomId, $purpose, $category, $classification, $equipmentNotes, $dailyStart, $dailyEnd, $seriesId, $status, $approvalType): array {
+        return $this->reservations->transaction(function () use ($days, $startDate, $endDate, $dailyStart, $dailyEnd, $customerId, $roomId, $purpose, $category, $classification, $equipmentNotes, $startTime, $endTime, $seriesId, $status, $approvalType, $activeDates): array {
+            $this->reservations->lockRooms([$roomId]);
+
+            // Re-run the exact validation the caller would have, now under the
+            // lock, so a race that slipped in between check and insert is caught.
+            if ($startDate === $endDate) {
+                $error = ReservationValidator::check($roomId, $startTime, $endTime);
+            } else {
+                $error = ReservationValidator::checkRange($roomId, $startDate, $endDate, $dailyStart, $dailyEnd, [], ['Pending', 'Approved'], $activeDates);
+            }
+            if ($error !== null) {
+                return ['error' => $error];
+            }
+
+            if ($startDate === $endDate) {
+                return ['rows' => [$this->reservations->create($customerId, $roomId, $purpose, $startTime, $endTime, $equipmentNotes, $category, null, $status, $approvalType, $classification)]];
+            }
+
             $rows = [];
             foreach ($days as $day) {
                 $rows[] = $this->reservations->create(
@@ -423,7 +457,7 @@ class ReservationController
                     $equipmentNotes, $category, $seriesId, $status, $approvalType, $classification
                 );
             }
-            return $rows;
+            return ['rows' => $rows];
         });
     }
 
@@ -508,24 +542,31 @@ class ReservationController
         // before it becomes Approved. Only on the way INTO Approved: completing
         // or rejecting must never be blocked by a schedule that changed later.
         // The reservation itself is excluded so it doesn't collide with itself.
-        if ($status === 'Approved' && $existing['status'] !== 'Approved') {
-            $error = ReservationValidator::check(
-                $existing['room_id'],
-                $existing['start_time'],
-                $existing['end_time'],
-                $reservationId
-            );
-            if ($error !== null) {
-                Response::error($error, 409);
-            }
-        }
-
+        //
+        // Lock the room, re-validate, and flip the status in ONE transaction so
+        // two pending bookings for the same slot cannot both pass this check and
+        // both become Approved. The lock is only needed on the way into Approved
+        // (Rejected/Completed free the slot or leave it, creating no overlap).
         try {
-            $reservation = $this->reservations->updateStatus(
-                $reservationId,
-                $status,
-                Auth::userId()
-            );
+            $reservation = $this->reservations->transaction(function () use ($existing, $reservationId, $status) {
+                if ($status === 'Approved' && $existing['status'] !== 'Approved') {
+                    $this->reservations->lockRooms([(string) $existing['room_id']]);
+                    $error = ReservationValidator::check(
+                        $existing['room_id'],
+                        $existing['start_time'],
+                        $existing['end_time'],
+                        $reservationId
+                    );
+                    if ($error !== null) {
+                        Response::error($error, 409);
+                    }
+                }
+                return $this->reservations->updateStatus(
+                    $reservationId,
+                    $status,
+                    Auth::userId()
+                );
+            });
         } catch (PDOException $e) {
             if ($e->getCode() === '45000') {
                 Response::error(
@@ -566,25 +607,30 @@ class ReservationController
         ));
         $seriesIds = array_column($series, 'reservation_id');
 
-        if ($status === 'Approved') {
-            foreach ($targets as $row) {
-                $day   = substr($row['start_time'], 0, 10);
-                $error = ReservationValidator::checkRange(
-                    $row['room_id'],
-                    $day,
-                    $day,
-                    substr($row['start_time'], 11, 8),
-                    substr($row['end_time'], 11, 8),
-                    $seriesIds
-                );
-                if ($error !== null) {
-                    Response::error($error, 409);
-                }
-            }
-        }
-
+        // Lock every room in the series, re-validate each approved day, and flip
+        // all the statuses in ONE transaction. Locking (in lockRooms' sorted
+        // order) before the re-check closes the race where two series for the
+        // same slot both pass validation and both get approved.
         try {
-            $this->reservations->transaction(function () use ($targets, $status): void {
+            $this->reservations->transaction(function () use ($targets, $status, $seriesIds): void {
+                if ($status === 'Approved') {
+                    $roomIds = array_map(static fn(array $r): string => (string) $r['room_id'], $targets);
+                    $this->reservations->lockRooms($roomIds);
+                    foreach ($targets as $row) {
+                        $day   = substr($row['start_time'], 0, 10);
+                        $error = ReservationValidator::checkRange(
+                            $row['room_id'],
+                            $day,
+                            $day,
+                            substr($row['start_time'], 11, 8),
+                            substr($row['end_time'], 11, 8),
+                            $seriesIds
+                        );
+                        if ($error !== null) {
+                            Response::error($error, 409);
+                        }
+                    }
+                }
                 foreach ($targets as $row) {
                     $this->reservations->updateStatus($row['reservation_id'], $status, Auth::userId());
                 }
@@ -785,27 +831,32 @@ class ReservationController
         // this because "it was valid before". This also covers the
         // Maintenance / is_active check via ReservationValidator's own
         // step 0, so no separate room-status check is needed here.
-        $error = ReservationValidator::check($roomId, $startTime, $endTime);
-        if ($error !== null) {
-            Response::error($error, 409);
-        }
-
+        //
+        // Lock the room, re-validate, and insert in ONE transaction so a
+        // re-file can't race another booking into the same slot.
         try {
             // Direct booking: a re-filed reservation is confirmed on the spot,
             // just like a fresh one (it already cleared ReservationValidator).
-            $reservation = $this->reservations->create(
-                $source['customer_id'],
-                $roomId,
-                $purpose,
-                $startTime,
-                $endTime,
-                $equipmentNotes !== '' ? $equipmentNotes : null,
-                $category,
-                null,
-                'Approved',
-                'auto',
-                $classification !== '' ? $classification : null
-            );
+            $result = $this->reservations->transaction(function () use ($roomId, $startTime, $endTime, $source, $purpose, $equipmentNotes, $category, $classification): array {
+                $this->reservations->lockRooms([$roomId]);
+                $error = ReservationValidator::check($roomId, $startTime, $endTime);
+                if ($error !== null) {
+                    return ['error' => $error];
+                }
+                return ['row' => $this->reservations->create(
+                    $source['customer_id'],
+                    $roomId,
+                    $purpose,
+                    $startTime,
+                    $endTime,
+                    $equipmentNotes !== '' ? $equipmentNotes : null,
+                    $category,
+                    null,
+                    'Approved',
+                    'auto',
+                    $classification !== '' ? $classification : null
+                )];
+            });
         } catch (PDOException $e) {
             if ($e->getCode() === '45000') {
                 Response::error(
@@ -815,6 +866,11 @@ class ReservationController
             }
             throw $e;
         }
+
+        if (isset($result['error'])) {
+            Response::error($result['error'], 409);
+        }
+        $reservation = $result['row'];
 
         // Attached to the NEW booking, so its history opens with where it came from.
         $this->reservations->insertLog(
@@ -1057,8 +1113,26 @@ class ReservationController
      *
      * @return array{0:string,1:string}
      */
-    private function approvalOutcome(string $roomId, int $dayCount): array
+    private function approvalOutcome(string $roomId, int $dayCount, string $purpose = ''): array
     {
+        // When purpose is left empty, route to Pending so staff/admin can review and approve or reject.
+        if (trim($purpose) === '') {
+            return ['Pending', 'manual'];
+        }
+
+        try {
+            if ((new \CampusRoom\Repository\RoomRepository())->requiresApproval($roomId)) {
+                return ['Pending', 'special'];
+            }
+        } catch (\Throwable $e) {
+            error_log('[ReservationController] requiresApproval lookup failed: ' . $e->getMessage());
+            return ['Pending', 'manual'];
+        }
+
+        if ($dayCount > 3) {
+            return ['Pending', 'manual'];
+        }
+
         return ['Approved', 'auto'];
     }
 
