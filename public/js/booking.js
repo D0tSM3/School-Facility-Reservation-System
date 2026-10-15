@@ -63,8 +63,8 @@ window.initBookingForm = function() {
         return;
       }
       
-      const sDate = new Date(start);
-      const eDate = new Date(end);
+      const sDate = new Date(start + 'T00:00:00');
+      const eDate = new Date(end + 'T00:00:00');
       dayCheckboxesContainer.innerHTML = '';
       
       const daysDiff = (eDate - sDate) / (1000 * 60 * 60 * 24);
@@ -135,8 +135,8 @@ window.initBookingForm = function() {
       
       if (mode === 'range') {
         let dates = [];
-        let curr = new Date(start);
-        const eDate = new Date(end);
+        let curr = new Date(start + 'T00:00:00');
+        const eDate = new Date(end + 'T00:00:00');
         while (curr <= eDate) {
           dates.push(toYMD(curr));
           curr.setDate(curr.getDate() + 1);
@@ -467,8 +467,7 @@ window.initBookingForm = function() {
 
   if (resDateInput) {
     resDateInput.min = toYMD(earliestOpenDay());
-    // A re-booking deliberately starts with a blank date.
-    if (!resDateInput.value && !isRebook) {
+    if (!resDateInput.value) {
       resDateInput.value = toYMD(earliestOpenDay());
     }
   }
@@ -533,8 +532,8 @@ window.initBookingForm = function() {
   /** '' when every day in the range can be booked, otherwise the reason it can't. */
   function dateProblem(start, end) {
     if (!start || !end) return '';
-    const sDate = new Date(start);
-    const eDate = new Date(end);
+    const sDate = new Date(start + 'T00:00:00');
+    const eDate = new Date(end + 'T00:00:00');
     const diff = (eDate - sDate) / (1000 * 60 * 60 * 24);
     if (diff > 6 && getBookingMode() !== 'single') {
         return 'Multiple day bookings are strictly limited to a maximum range of 7 days.';
@@ -1129,7 +1128,7 @@ window.initBookingForm = function() {
 
         rebookSource = json.data;
 
-        // Purpose and duration. Date is left blank on purpose.
+        // Purpose and classification
         if (purposeInput && rebookSource.purpose) {
           purposeInput.value = applyPurpose(rebookSource.purpose);
         }
@@ -1147,6 +1146,21 @@ window.initBookingForm = function() {
             }
           }
           updateClassificationInput();
+        }
+
+        // Prefill date: preserve original booking date if open & within allowable window,
+        // otherwise default cleanly to earliest open date (timezone-safe rebook fix).
+        const sourceDate = String(rebookSource.start_time || '').split(/[T\s]/)[0];
+        let dateCarried = false;
+        if (resDateInput && sourceDate) {
+          const minDate = resDateInput.min || toYMD(earliestOpenDay());
+          if (sourceDate >= minDate && !window.CampusSchedule.isClosedDay(sourceDate, rules.closedDays)) {
+            resDateInput.value = sourceDate;
+            dateCarried = true;
+          } else if (!resDateInput.value) {
+            resDateInput.value = minDate;
+          }
+          syncEndDate();
         }
 
         // startTime/endTime are <select>s pinned to the 90-minute block grid,
@@ -1180,7 +1194,12 @@ window.initBookingForm = function() {
             ? Array.prototype.some.call(roomSelect.options, opt => opt.value === rebookSource.room_id && !opt.disabled)
             : true;
 
-          const carried = rebookTimesCarried ? 'Room, purpose and duration are' : 'Room and purpose are';
+          const carriedItems = ['Room'];
+          if (dateCarried) carriedItems.push('date');
+          if (rebookTimesCarried) carriedItems.push('duration');
+          if (rebookSource.purpose) carriedItems.push('purpose');
+          const carried = carriedItems.join(', ') + (carriedItems.length > 1 ? ' are' : ' is');
+
           const timesNote = rebookTimesCarried
             ? ''
             : ' The original times are not on the standard time blocks, so pick them again.';
@@ -1190,7 +1209,7 @@ window.initBookingForm = function() {
             roomUsable
               ? carried + ' carried over from your ' +
                 String(rebookSource.status || '').toLowerCase() +
-                ' booking in ' + roomLabel + '. Pick a new date and time.' + timesNote
+                ' booking in ' + roomLabel + '. Verify or adjust your date and time.' + timesNote
               : roomLabel + ' is not bookable right now, so no room is pre-selected. ' +
                 'Pick a room, date and time.' + timesNote
           );
@@ -1285,9 +1304,6 @@ window.initBookingForm = function() {
       if (!classificationInput || !classificationInput.value || !classification || classification.length > 100) {
         return showCollisionError('Please choose a primary reservation classification (max 100 characters).', 'Missing information');
       }
-      if (!description) {
-        return showCollisionError('Please describe the purpose of this reservation.', 'Missing information');
-      }
       if (policyBox && !policyBox.checked) {
         return showCollisionError('Please acknowledge the Institutional Space Policy to continue.', 'Acknowledgement required');
       }
@@ -1335,18 +1351,27 @@ window.initBookingForm = function() {
           redirecting = true;
           let ref = 'REQ-XXXXXXXX';
           let dayCount = 1;
+          let resStatus = 'Approved';
           if (json && json.data) {
               if (json.data.reservation_id) {
                   ref = 'REQ-' + String(json.data.reservation_id).substring(0, 8).toUpperCase();
               }
               if (Array.isArray(json.data.series)) {
                   dayCount = json.data.series.length;
+                  resStatus = (json.data.series[0] && json.data.series[0].status) || json.data.status || 'Approved';
+              } else if (json.data.status) {
+                  resStatus = json.data.status;
               }
           }
           
-          const what = isRebook ? 'Re-booking confirmed'
-            : dayCount > 1 ? `Reservation confirmed for ${dayCount} days` : 'Reservation confirmed';
-          showSuccess(`${what}: ${ref} is booked. Redirecting to My Reservations…`);
+          const isPending = resStatus === 'Pending';
+          const what = isRebook
+            ? (isPending ? 'Re-booking submitted for approval' : 'Re-booking confirmed')
+            : (dayCount > 1
+                ? (isPending ? `Reservation submitted for approval (${dayCount} days)` : `Reservation confirmed for ${dayCount} days`)
+                : (isPending ? 'Reservation submitted for approval' : 'Reservation confirmed'));
+          const stateMsg = isPending ? 'is pending review' : 'is booked';
+          showSuccess(`${what}: ${ref} ${stateMsg}. Redirecting to My Reservations…`);
           setTimeout(() => { window.location.href = 'my-reservations.html'; }, 1500);
         })
         .catch(() => showCollisionError('Could not reach the server. Check your connection and try again.', 'Network error'))

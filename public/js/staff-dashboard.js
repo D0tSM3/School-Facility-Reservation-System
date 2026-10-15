@@ -437,7 +437,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /** Reservations that count as live operations today (Approved only). */
   function activeToday() {
-    const today = new Date().toISOString().slice(0, 10);
+    // Local wall-clock date, NOT toISOString() (that is UTC and, in Asia/Manila,
+    // reads as the previous day until 08:00 — so the "today" KPI counted the
+    // wrong day's bookings every local morning). Matches reservations.js.
+    const now = new Date();
+    const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
     return state.reservations.filter(
       (r) => r.status === 'Approved' && String(r.start_time).slice(0, 10) === today
     );
