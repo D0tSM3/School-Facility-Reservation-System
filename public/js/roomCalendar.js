@@ -178,11 +178,12 @@ class RoomCalendar {
       return;
     }
 
-    // Window changed: update the header label now so it doesn't lag, then
-    // show a loading placeholder. booking.js's markTakenSlots will call
-    // ingestData() with the real data; if for some reason it doesn't (e.g.
-    // user navigated using the prev/next week buttons directly), loadData()
-    // kicks in as a fallback via the prev/next click handlers.
+    if (this.pendingStart === newStart && this.pendingEnd === newEnd) {
+      // In-flight fetch is already loading this exact window; let it complete
+      return;
+    }
+
+    // Window changed: update the header label now so it doesn't lag
     const opts = { month: 'short', day: 'numeric' };
     const weekLabel = this.container.querySelector('.week-label');
     if (weekLabel) {
@@ -194,15 +195,10 @@ class RoomCalendar {
       colgroup.innerHTML = `<col style="width:68px">` +
         newDates.map(() => `<col>`).join('');
     }
-    // Clear stale cache so we don't briefly flash old data
+    // Clear stale cache and load new window immediately
     this.lastDates = null;
     this.lastData = null;
-    // Cancel any old in-flight fetch
-    const seq = ++this.requestSeq;
-    clearTimeout(this.loadingTimer);
-    this.loadingTimer = setTimeout(() => {
-      if (seq === this.requestSeq) this.showLoading();
-    }, 200);
+    this.loadData();
   }
 
   /**
@@ -317,36 +313,35 @@ class RoomCalendar {
         dates.map(() => `<col>`).join('');
     }
 
+    this.pendingStart = startStr;
+    this.pendingEnd = endStr;
     const seq = ++this.requestSeq;
     clearTimeout(this.loadingTimer);
     this.loadingTimer = setTimeout(() => {
       if (seq === this.requestSeq) this.showLoading();
     }, 200);
 
-    fetch(`${this.baseUri}api/rooms/${encodeURIComponent(this.roomId)}/calendar?start=${startStr}&end=${endStr}`, {
-      credentials: 'include'
-    })
-      .then(res => res.json())
-      .then(json => {
-        if (seq !== this.requestSeq) return;
-        clearTimeout(this.loadingTimer);
-        if (json.success) {
-          this.lastDates = dates;
-          this.lastData = json.data;
-          this.renderGrid(dates, json.data);
-          // Notify booking.js that fresh data is available (for time-slot greying)
-          if (typeof this.onDataLoaded === 'function') this.onDataLoaded(dates, json.data);
-        } else {
-          console.error('Calendar fetch error:', json.error);
-          this.showLoadError();
-        }
-      })
-      .catch(err => {
-        if (seq !== this.requestSeq) return;
-        clearTimeout(this.loadingTimer);
-        console.error('Calendar fetch error:', err);
+    const fetchPromise = (window.CampusSchedule && typeof window.CampusSchedule.fetchRange === 'function')
+      ? window.CampusSchedule.fetchRange(this.baseUri, this.roomId, startStr, endStr)
+      : fetch(`${this.baseUri}api/rooms/${encodeURIComponent(this.roomId)}/calendar?start=${startStr}&end=${endStr}`, {
+          credentials: 'include'
+        }).then(res => res.json()).then(json => (json && json.success) ? json.data : null).catch(() => null);
+
+    fetchPromise.then(data => {
+      if (seq !== this.requestSeq) return;
+      this.pendingStart = null;
+      this.pendingEnd = null;
+      clearTimeout(this.loadingTimer);
+      if (data) {
+        this.lastDates = dates;
+        this.lastData = data;
+        this.renderGrid(dates, data);
+        // Notify booking.js that fresh data is available (for time-slot greying)
+        if (typeof this.onDataLoaded === 'function') this.onDataLoaded(dates, data);
+      } else {
         this.showLoadError();
-      });
+      }
+    });
   }
 
   /**
@@ -355,6 +350,7 @@ class RoomCalendar {
    * `dates` must be an array of Date objects matching the current view window.
    */
   ingestData(dates, data) {
+    if (!data) return;
     // Update the label and colgroup for this window
     const opts = { month: 'short', day: 'numeric' };
     const weekLabel = this.container.querySelector('.week-label');
@@ -370,7 +366,8 @@ class RoomCalendar {
 
     // Cancel any in-flight fetch — we already have the data
     clearTimeout(this.loadingTimer);
-    this.requestSeq++;           // any pending fetch callback sees an old seq and discards itself
+    this.pendingStart = null;
+    this.pendingEnd = null;
 
     // Return to selection-snap mode (browsing mode was set by prev/next, not by ingestData)
     this.browsing = false;

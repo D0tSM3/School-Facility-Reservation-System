@@ -191,17 +191,23 @@
       '/calendar?start=' + encodeURIComponent(start) + '&end=' + encodeURIComponent(end);
     
     if (_cache.has(url)) {
-      return Promise.resolve(_cache.get(url));
+      return _cache.get(url);
     }
 
-    return fetch(url, { credentials: 'include' })
+    const p = fetch(url, { credentials: 'include' })
       .then(res => res.json())
       .then(json => {
         const data = (json && json.success) ? json.data : null;
-        if (data) _cache.set(url, data);
+        if (!data) _cache.delete(url);
         return data;
       })
-      .catch(() => null);
+      .catch(() => {
+        _cache.delete(url);
+        return null;
+      });
+
+    _cache.set(url, p);
+    return p;
   }
 
   // ---- Booking rules (Admin > System Configuration, via GET api/config) ----

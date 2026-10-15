@@ -47,17 +47,36 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function fetchRooms() {
-    fetch(BASE + 'api/rooms')
+    window.CampusRoomsPromise = fetch(BASE + 'api/rooms')
       .then(res => res.json())
       .then(json => {
         if (json.success && json.data) {
           allRooms = json.data;
+          window.CampusRooms = json.data;
           populateFilters();
           renderRooms();
         }
+        return json;
       })
-      .catch(err => console.error('Error fetching rooms:', err));
+      .catch(err => {
+        console.error('Error fetching rooms:', err);
+        return { success: false };
+      });
+    return window.CampusRoomsPromise;
   }
+
+  window.prefetchRoomCalendar = function(roomId) {
+    if (!roomId || !window.CampusSchedule || typeof window.CampusSchedule.fetchRange !== 'function') return;
+    const now = new Date();
+    const day = now.getDay();
+    const diffToMon = (day === 0) ? -6 : 1 - day;
+    const mon = new Date(now);
+    mon.setDate(now.getDate() + diffToMon);
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    const fmt = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    window.CampusSchedule.fetchRange(BASE, roomId, fmt(mon), fmt(sun));
+  };
 
   function populateFilters() {
     const floors = new Set();
@@ -188,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (currentRole === 'staff' || currentRole === 'admin') {
         actionBtn = `<div class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-semibold min-w-[100px]">View Only</div>`;
       } else {
-        actionBtn = `<button type="button" onclick="window.openBookingModal('${r.room_id}')" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 rounded-lg bg-[#7A1F2B] hover:bg-[#5e1821] text-white text-xs font-semibold transition-colors shadow-xs min-w-[100px] cursor-pointer">Reserve</button>`;
+        actionBtn = `<button type="button" onpointerenter="window.prefetchRoomCalendar && window.prefetchRoomCalendar('${r.room_id}')" onclick="window.openBookingModal('${r.room_id}')" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 rounded-lg bg-[#7A1F2B] hover:bg-[#5e1821] text-white text-xs font-semibold transition-colors shadow-xs min-w-[100px] cursor-pointer">Reserve</button>`;
       }
 
       if (currentView === 'list') {

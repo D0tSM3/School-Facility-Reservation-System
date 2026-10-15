@@ -6,6 +6,19 @@
 window.initBookingForm = function() {
   'use strict';
 
+  if (window._bookingFormInitialized) {
+    const wantedId = window.bookingModalTargetRoomId;
+    const roomSelect = document.getElementById('roomSelect');
+    if (roomSelect && wantedId && roomSelect.value !== wantedId) {
+      if (roomSelect.querySelector(`option[value="${wantedId}"]`)) {
+        roomSelect.value = wantedId;
+        roomSelect.dispatchEvent(new Event('change'));
+      }
+    }
+    return;
+  }
+  window._bookingFormInitialized = true;
+
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
 
   const form = document.getElementById('roomReservationForm');
@@ -250,8 +263,17 @@ window.initBookingForm = function() {
   let roomsReady = Promise.resolve();
 
   if (roomSelect) {
-    roomsReady = fetch(BASE + 'api/rooms', { credentials: 'same-origin' })
-      .then(res => res.json())
+    const fetchRoomsData = () => {
+      if (window.CampusRoomsPromise) {
+        return window.CampusRoomsPromise;
+      }
+      if (Array.isArray(window.CampusRooms) && window.CampusRooms.length) {
+        return Promise.resolve({ success: true, data: window.CampusRooms });
+      }
+      return fetch(BASE + 'api/rooms', { credentials: 'same-origin' }).then(res => res.json());
+    };
+
+    roomsReady = fetchRoomsData()
       .then(json => {
         if (!json.success || !Array.isArray(json.data)) {
           throw new Error(json.error || 'Could not load rooms.');
@@ -1379,3 +1401,16 @@ window.initBookingForm = function() {
     });
   }
 };
+
+// Auto-initialize when the DOM is ready so room options, rules, and calendars load immediately
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('roomReservationForm')) {
+      window.initBookingForm();
+    }
+  });
+} else {
+  if (document.getElementById('roomReservationForm')) {
+    window.initBookingForm();
+  }
+}
