@@ -43,6 +43,10 @@ document.addEventListener('DOMContentLoaded', () => {
     too_short: () => `Use at least ${passwordMinimum} characters.`,
     too_long: () => `Use ${passwordMaximum} characters or fewer.`,
     no_spaces: () => 'Remove all spaces.',
+    no_uppercase: () => 'Add an uppercase letter.',
+    no_lowercase: () => 'Add a lowercase letter.',
+    no_number: () => 'Add a number.',
+    no_special: () => 'Add a special character.',
     contains_personal: () => "Don't include your name, student number or email.",
     repetitive: () => 'Avoid repeated or sequential characters.',
     common: () => 'That password is too common. Choose a less predictable one.',
@@ -224,9 +228,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const password = passwordInput.value;
     const validLength = passwordMinimum !== null && Array.from(password).length >= passwordMinimum;
     const validNoSpaces = !(/\s/u.test(password));
+    const validUpper = /\p{Lu}/u.test(password);
+    const validLower = /\p{Ll}/u.test(password);
+    const validNumber = /\p{N}/u.test(password);
+    const validSpecial = /[^\p{L}\p{N}\s]/u.test(password);
     const validPersonal = !includesPersonalInformation(password);
     const matches = password !== '' && password === confirmInput.value;
     setGuidance('check-length', validLength);
+    setGuidance('check-uppercase', validUpper);
+    setGuidance('check-lowercase', validLower);
+    setGuidance('check-number', validNumber);
+    setGuidance('check-special', validSpecial);
     setGuidance('check-whitespace', validNoSpaces);
     setGuidance('check-personal', validPersonal);
     setGuidance('check-match', matches, confirmationTouched);
@@ -291,6 +303,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const codes = [];
     if (Array.from(password).length < passwordMinimum) codes.push('too_short');
     if (/\s/u.test(password)) codes.push('no_spaces');
+    if (!/\p{Lu}/u.test(password)) codes.push('no_uppercase');
+    if (!/\p{Ll}/u.test(password)) codes.push('no_lowercase');
+    if (!/\p{N}/u.test(password)) codes.push('no_number');
+    if (!/[^\p{L}\p{N}\s]/u.test(password)) codes.push('no_special');
     if (includesPersonalInformation(password)) codes.push('contains_personal');
     if (password !== confirmation) codes.push('mismatch');
     return codes;

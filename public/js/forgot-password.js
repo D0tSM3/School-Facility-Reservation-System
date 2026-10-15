@@ -72,6 +72,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const sendAnotherBtn = document.getElementById('btn-send-another');
   const otpInputs = document.querySelectorAll('.otp-digit');
   const critLength = document.getElementById('crit-length');
+  const critUpper = document.getElementById('crit-upper');
+  const critLower = document.getElementById('crit-lower');
+  const critNumber = document.getElementById('crit-number');
+  const critSpecial = document.getElementById('crit-special');
   const critNoSpace = document.getElementById('crit-nospace');
   const critPersonal = document.getElementById('crit-personal');
   const errConfirm = document.getElementById('err-confirm');
@@ -88,9 +92,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Friendly text for the server policy codes (PasswordPolicy), mirroring
   // activate.js so both flows explain a rejected password the same way.
   const POLICY_MESSAGES = {
-    too_short: 'Use at least 15 characters.',
+    too_short: 'Use at least 8 characters.',
     too_long: 'Use 128 characters or fewer.',
     no_spaces: 'Remove all spaces.',
+    no_uppercase: 'Add an uppercase letter.',
+    no_lowercase: 'Add a lowercase letter.',
+    no_number: 'Add a number.',
+    no_special: 'Add a special character.',
     contains_personal: "Don't include your name, student number or email.",
     repetitive: 'Avoid repeated or sequential characters.',
     common: 'That password is too common. Choose a less predictable one.',
@@ -500,21 +508,29 @@ document.addEventListener('DOMContentLoaded', () => {
     return tokens.some((token) => Array.from(token).length >= 4 && candidate.includes(token));
   }
 
-  // The live checklist matches the actual account policy: at least 15 characters
-  // (max 128), no spaces anywhere, and no personal information. Character-class
-  // rules (uppercase / number / special) are NOT required — same as activation.
+  // The live checklist matches the actual account policy: at least 8 characters
+  // (max 128), an uppercase letter, a lowercase letter, a number, a special
+  // character, no spaces anywhere, and no personal information — same as activation.
   function checkPasswordCriteria(val) {
     const str = val || '';
     const len = Array.from(str).length;
-    const hasLength = len >= 15 && len <= 128;
+    const hasLength = len >= 8 && len <= 128;
+    const hasUpper = /\p{Lu}/u.test(str);
+    const hasLower = /\p{Ll}/u.test(str);
+    const hasNumber = /\p{N}/u.test(str);
+    const hasSpecial = /[^\p{L}\p{N}\s]/u.test(str);
     const hasNoSpaces = len > 0 && !/\s/u.test(str);
     const noPersonal = len > 0 && !includesPersonalInformation(str);
 
     updateCrit(critLength, hasLength);
+    updateCrit(critUpper, hasUpper);
+    updateCrit(critLower, hasLower);
+    updateCrit(critNumber, hasNumber);
+    updateCrit(critSpecial, hasSpecial);
     updateCrit(critNoSpace, hasNoSpaces);
     updateCrit(critPersonal, noPersonal);
 
-    return hasLength && hasNoSpaces && noPersonal;
+    return hasLength && hasUpper && hasLower && hasNumber && hasSpecial && hasNoSpaces && noPersonal;
   }
 
   if (newPasswordInput) {
@@ -656,7 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (!checkPasswordCriteria(newPassword)) {
-        showResetError('Password must be at least 15 characters, contain no spaces, and not include your personal information.');
+        showResetError('Password must meet all the requirements: at least 8 characters with an uppercase letter, a lowercase letter, a number, and a special character, no spaces, and no personal information.');
         if (newPasswordInput) newPasswordInput.focus();
         return;
       }

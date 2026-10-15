@@ -6,7 +6,7 @@ namespace CampusRoom\Core;
 
 final class PasswordPolicy
 {
-    public const MIN_LENGTH = 15;
+    public const MIN_LENGTH = 8;
     public const MAX_LENGTH = 128;
 
     private const COMMON_PASSWORDS = [
@@ -69,6 +69,20 @@ final class PasswordPolicy
         if (self::containsWhitespace($password)) {
             $codes[] = 'no_spaces';
         }
+        if (!preg_match('/\p{Lu}/u', $password)) {
+            $codes[] = 'no_uppercase';
+        }
+        if (!preg_match('/\p{Ll}/u', $password)) {
+            $codes[] = 'no_lowercase';
+        }
+        if (!preg_match('/\p{N}/u', $password)) {
+            $codes[] = 'no_number';
+        }
+        // A special character is anything that is not a letter, number, or
+        // whitespace (spaces are already rejected above).
+        if (!preg_match('/[^\p{L}\p{N}\s]/u', $password)) {
+            $codes[] = 'no_special';
+        }
         if (self::isRepetitive($characters)) {
             $codes[] = 'repetitive';
         }
@@ -97,6 +111,10 @@ final class PasswordPolicy
             'too_long' => 'Password must be ' . self::MAX_LENGTH . ' characters or fewer.',
             'invalid_input' => 'Enter a valid password.',
             'no_spaces' => 'Password must not contain spaces.',
+            'no_uppercase' => 'Password must include an uppercase letter.',
+            'no_lowercase' => 'Password must include a lowercase letter.',
+            'no_number' => 'Password must include a number.',
+            'no_special' => 'Password must include a special character.',
             'repetitive' => 'Avoid repeated or sequential characters.',
             'contains_personal' => 'Password must not contain personal information.',
             'common' => 'Choose a less common password.',
