@@ -342,9 +342,25 @@
               </div>
             </div>
 
-            <!-- Classification Radios -->
+            <div class="flex flex-col space-y-2">
+              <label class="text-sm font-bold text-gray-800" for="classification">Primary Reservation Classification <span class="text-red-500">*</span></label>
+              <select id="classification" name="classification" class="w-full px-4 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" required>
+                <option value="">-- Select --</option>
+                <option value="Class/Lecture">Class / Lecture</option>
+                <option value="Meeting">Meeting</option>
+                <option value="Event">Event</option>
+                <option value="Exam">Exam</option>
+                <option value="Other">Other (specify)</option>
+              </select>
+              <div id="classificationCustomWrapper" class="hidden flex-col space-y-2">
+                <label class="text-sm font-bold text-gray-800" for="classificationCustom">Custom Classification <span class="text-red-500">*</span></label>
+                <input id="classificationCustom" name="classification_custom" type="text" maxlength="100" placeholder="Enter custom classification" class="w-full px-4 py-2.5 bg-[#f8f9fb] border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" />
+              </div>
+            </div>
+
+            <!-- Reservation Purpose Category -->
             <div class="space-y-3">
-              <label class="text-sm font-bold text-gray-800">Primary Reservation Classification <span class="text-red-500">*</span></label>
+              <label class="text-sm font-bold text-gray-800">Reservation Purpose Category <span class="text-red-500">*</span></label>
               <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                 <label class="relative cursor-pointer">
                   <input class="peer sr-only" name="reservation_purpose" type="radio" value="lecture" data-label="Academic Lecture" required />
@@ -460,6 +476,8 @@
         const resEndDate = document.getElementById('resEndDate');
         const startTime = document.getElementById('startTime');
         const endTime = document.getElementById('endTime');
+        const classification = document.getElementById('classification');
+        const classificationCustom = document.getElementById('classificationCustom');
         const purposeInput = document.getElementById('purpose');
         const policyBox = document.getElementById('policyAcknowledgement');
 
@@ -471,6 +489,8 @@
           if (resEndDate && !resEndDate.value) return false;
           if (startTime && !startTime.value) return false;
           if (endTime && !endTime.value) return false;
+          if (classification && !classification.value) return false;
+          if (classification && classification.value === 'Other' && classificationCustom && !classificationCustom.value.trim()) return false;
           if (purposeInput && !purposeInput.value.trim()) return false;
           if (policyBox && !policyBox.checked) return false;
           
@@ -497,7 +517,7 @@
           }
         }
 
-        const watchTargets = [roomSelect, resDate, resEndDate, startTime, endTime, purposeInput, policyBox];
+        const watchTargets = [roomSelect, resDate, resEndDate, startTime, endTime, classification, classificationCustom, purposeInput, policyBox];
         watchTargets.forEach(el => {
           if (!el) return;
           el.addEventListener('change', updateBtn);

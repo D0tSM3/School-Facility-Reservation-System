@@ -56,7 +56,8 @@ class ReservationRepository
         string $category = 'Academic Lecture',
         ?string $seriesId = null,
         string $status = 'Approved',
-        string $approvalType = 'auto'
+        string $approvalType = 'auto',
+        ?string $classification = null
     ): array {
         $reservationId = self::uuidv4();
 
@@ -67,14 +68,15 @@ class ReservationRepository
         $processedAt = $status === 'Approved' ? date('Y-m-d H:i:s') : null;
 
         $this->db->query(
-            'INSERT INTO Reservations (reservation_id, customer_id, room_id, purpose, category, equipment_notes, start_time, end_time, series_id, status, approval_type, processed_at)
-             VALUES (:reservation_id, :customer_id, :room_id, :purpose, :category, :equipment_notes, :start_time, :end_time, :series_id, :status, :approval_type, :processed_at)',
+            'INSERT INTO Reservations (reservation_id, customer_id, room_id, purpose, category, classification, equipment_notes, start_time, end_time, series_id, status, approval_type, processed_at)
+             VALUES (:reservation_id, :customer_id, :room_id, :purpose, :category, :classification, :equipment_notes, :start_time, :end_time, :series_id, :status, :approval_type, :processed_at)',
             [
                 ':reservation_id'  => $reservationId,
                 ':customer_id'     => $customerId,
                 ':room_id'         => $roomId,
                 ':purpose'         => $purpose,
                 ':category'        => $category,
+                ':classification'  => $classification,
                 ':equipment_notes' => $equipmentNotes,
                 ':start_time'      => $startTime,
                 ':end_time'        => $endTime,
@@ -114,6 +116,7 @@ class ReservationRepository
                     r.capacity      AS capacity,
                     res.purpose,
                     res.category,
+                    res.classification,
                     res.start_time,
                     res.end_time,
                     res.series_id,
@@ -184,6 +187,7 @@ class ReservationRepository
                     r.status        AS room_status,
                     res.purpose,
                     res.category,
+                    res.classification,
                     res.start_time,
                     res.end_time,
                     res.series_id,
@@ -226,6 +230,7 @@ class ReservationRepository
                     r.status        AS room_status,
                     res.purpose,
                     res.category,
+                    res.classification,
                     res.equipment_notes,
                     res.start_time,
                     res.end_time,
@@ -258,7 +263,7 @@ class ReservationRepository
     public function findById(string $reservationId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT reservation_id, customer_id, room_id, purpose, category, equipment_notes,
+            'SELECT reservation_id, customer_id, room_id, purpose, category, classification, equipment_notes,
                     start_time, end_time, series_id, status, approval_type, processed_by, processed_at,
                     cancellation_reason, cancelled_by, created_at
                FROM Reservations
@@ -283,7 +288,7 @@ class ReservationRepository
     public function findSeries(string $seriesId): array
     {
         $stmt = $this->db->query(
-            'SELECT reservation_id, customer_id, room_id, purpose, category, equipment_notes,
+            'SELECT reservation_id, customer_id, room_id, purpose, category, classification, equipment_notes,
                     start_time, end_time, series_id, status, approval_type, processed_by, processed_at,
                     cancellation_reason, cancelled_by, created_at
                FROM Reservations
