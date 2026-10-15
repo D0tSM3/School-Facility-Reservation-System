@@ -328,6 +328,18 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStrength();
   }
 
+  [studentIdInput, otpInput].forEach((input) => {
+    if (!input) return;
+    input.addEventListener('beforeinput', (event) => {
+      if (event.data && /\D/.test(event.data)) {
+        event.preventDefault();
+      }
+    });
+    input.addEventListener('input', () => {
+      input.value = input.value.replace(/\D/g, '');
+    });
+  });
+
   requestForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (busy) return;
