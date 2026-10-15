@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
           captchaReset('loginRecaptcha');
           const isLocked = status === 423;
           const errorMsg = json.error || payload.error || (isLocked
-            ? 'Your account is locked. Please contact an administrator to unlock it.'
+            ? 'Your account is locked.'
             : 'Invalid email or password.');
           showLoginError(errorMsg);
           const retryAfter = json.retry_after || payload.retry_after;

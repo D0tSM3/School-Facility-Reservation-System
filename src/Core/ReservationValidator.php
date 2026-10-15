@@ -116,6 +116,12 @@ class ReservationValidator
             if ($start === false || $end === false || $start >= $end) {
                 return "Invalid time range.";
             }
+            // Reject any day whose start is in the past or exactly now, matching
+            // the single-day check(). Guards against a frontend that no longer
+            // blocks past times from creating a back-dated multi-day series.
+            if ($start <= time()) {
+                return date('D, M j', $start) . ": Reservations must start in the future.";
+            }
 
             $error = self::dayProblem($pdo, $roomId, $start, $end, $excludeReservationIds, $blockingStatuses);
             if ($error !== null) {

@@ -8,8 +8,7 @@
  *   { room_id, purpose, category, classification, start_time, end_time, equipment_notes }
  * Nothing here changes a booking rule: the server (ReservationValidator and
  * the DB trigger) still decides everything. Direct booking: a successful
- * request is confirmed immediately, and a 409 means the slot is unavailable —
- * the suggestion card (mc/suggest.js) offers other times/rooms instead.
+ * request is confirmed immediately, and a 409 means the slot is unavailable.
  */
 (function () {
   'use strict';
@@ -99,7 +98,6 @@
             '</dl>' +
             '<p id="mcSumApproval" class="mc-sum-approval"></p>' +
             '<p id="mcSumProblem" class="hidden mc-fwarn" role="alert"></p>' +
-            '<div id="mcSumSuggest" class="hidden" aria-live="polite"></div>' +
           '</section>' +
 
           '<section class="mc-card" aria-labelledby="mcCardRepeatT">' +
@@ -327,7 +325,6 @@
     const keep = { room: room.value, start: st.value, end: en.value };
     fillRooms(room, keep.room);
     const now = opts.getNow && opts.getNow();
-    if (now) date.min = now.ymd;
     if (!date.value && now) date.value = now.ymd;
     const all = boundaries();
     fillSelect(st, all.slice(0, -1), keep.start && all.includes(mins(keep.start)) ? keep.start : (all.length ? hmOf(all[0]) : ''));
@@ -352,8 +349,6 @@
     if (!roomId) return quickMsg('Choose a room.');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return quickMsg('Choose a date.');
     if (!start || !end || mins(end) <= mins(start)) return quickMsg('Choose a start time and a later end time.');
-    const now = opts.getNow && opts.getNow();
-    if (now && (date < now.ymd || (date === now.ymd && mins(start) <= now.min))) return quickMsg('That time has already started. Pick a later time.');
     quickMsg('');
     if (opts.onPickSlot) opts.onPickSlot({ roomId, date, start, end });
   }
@@ -435,13 +430,8 @@
   // ---------- painting ----------
   function paintEquip() { $('mcSumEquip').textContent = equipmentString(); }
 
-  function startedAlready() {
-    const n = opts.getNow && opts.getNow();
-    return !!(n && sel && (sel.date < n.ymd || (sel.date === n.ymd && mins(sel.start) <= n.min)));
-  }
-
   function canSubmit() {
-    return !!(sel && opts.getRoom(sel.roomId) && f.category && classificationIsValid() && f.purpose.trim() && f.policy && !problem && !startedAlready() && seriesState.valid && !submitting && !done);
+    return !!(sel && opts.getRoom(sel.roomId) && f.category && classificationIsValid() && f.purpose.trim() && f.policy && !problem && seriesState.valid && !submitting && !done);
   }
 
   function refresh() {
@@ -457,7 +447,7 @@
         esc(room.room_type || 'Unspecified') + ' · ' + (room.floor == null ? 'Floor —' : 'Floor ' + esc(room.floor)) + '</span>'
       : 'Unknown room';
     fillRooms($('mcSumRoomSel'), sel.roomId);
-    { const di = $('mcSumDateIn'); const n = opts.getNow && opts.getNow(); if (n) di.min = n.ymd; di.value = sel.date; }
+    { const di = $('mcSumDateIn'); di.value = sel.date; }
     paintTimes();
     paintEquip();
     paintRepeat();
@@ -466,7 +456,7 @@
     ap.className = 'mc-sum-approval is-auto';
     ap.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">bolt</span>Confirmed instantly if the slot is still free when you submit.';
 
-    const prob = problem || (startedAlready() ? 'This time has already started. Pick a later period.' : '');
+    const prob = problem;
     const pe = $('mcSumProblem');
     pe.textContent = prob;
     pe.classList.toggle('hidden', !prob);
@@ -548,11 +538,10 @@
     submitting = false; setBusy(false);
     const text = (json && (json.error || json.message)) || 'The server sent an unexpected response (HTTP ' + (res ? res.status : '?') + '). Please try again.';
     if (res.status === 409) {
-      // Someone got there first (or a rule applies). Refresh the grid so the taken slot shows,
-      // and let the page offer other times/rooms (mc/suggest.js). Direct booking: a taken
-      // slot is simply unavailable — there is no override path.
+      // Someone got there first (or a rule applies). Refresh the grid so the taken slot shows.
+      // Direct booking: a taken slot is simply unavailable — there is no override path.
       if (opts.onConflict) opts.onConflict(json, text);
-      message('error', '<b>Room unavailable.</b> ' + esc(text) + ' Pick one of the options below or another time on the calendar.');
+      message('error', '<b>Room unavailable.</b> ' + esc(text) + ' Pick another time on the calendar.');
     } else {
       message('error', '<b>Could not submit.</b> ' + esc(text));
     }

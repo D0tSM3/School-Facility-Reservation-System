@@ -1,5 +1,5 @@
 /**
- * CampusRoom — Master Calendar page (Phase 4: smart suggestions on top of drag-to-book).
+ * CampusRoom — Master Calendar page (drag-to-book).
  *
  * Reads GET api/calendar/master. Picking a slot only fills the summary panel
  * (mc/summary.js); the booking itself goes through the existing POST api/reservations.
@@ -10,8 +10,6 @@
  * Filters (mc/filters.js) are applied client-side to the room list; the same
  * all-rooms response also answers "Available Now" and "Only free during…".
  * "Now" always comes from the server (Asia/Manila), never the device clock.
- * Phase 4: when a pick is taken / no longer free / refused with a 409, mc/suggest.js shows the
- * next free times in that room and similar free rooms inside the summary panel.
  */
 (function () {
   'use strict';
@@ -22,7 +20,6 @@
   const W = window.MCWeek;
   const F = window.MCFilters;
   const M = window.MCSummary;
-  const SG = window.MCSuggest;
   const esc = v => window.CampusRoomUtil.escapeHtml(v);
   const BASE = window.location.pathname.replace(/[^\/]*$/, '');
   const query = new URLSearchParams(window.location.search);
@@ -503,7 +500,7 @@
       units: F.units(entry.rules),
       readonly: READONLY, staffReadonly: READONLY,
       selection: state.sel ? { key: state.sel.roomId + '|' + state.sel.date, startMin: G.toMin(state.sel.start), endMin: G.toMin(state.sel.end) } : null,
-      onPreview: s => { if (s) SG.clear(); M.set(s ? fromGrid(s) : state.sel); },
+      onPreview: s => { M.set(s ? fromGrid(s) : state.sel); },
       onCommit: commitSel,
       onNotice: onGridNotice,
       onToggleGroup: key => { if (state.closedGroups.has(key)) state.closedGroups.delete(key); else state.closedGroups.add(key); draw(); }
@@ -551,7 +548,7 @@
       extraSelections: state.sel ? state.seriesDays.filter(x => x.date !== state.sel.date).map(x => ({
         key: state.sel.roomId + '|' + x.date, startMin: G.toMin(state.sel.start), endMin: G.toMin(state.sel.end), blocked: x.blocked, reason: x.reason
       })) : [],
-      onPreview: s => { if (s) SG.clear(); M.set(s ? fromGrid(s) : state.sel); },
+      onPreview: s => { M.set(s ? fromGrid(s) : state.sel); },
       onCommit: commitSel,
       onNotice: onGridNotice
     });
@@ -684,7 +681,6 @@
       window.top.location.href = 'master-calendar.html?date=' + encodeURIComponent(p.date) + '&room=' + encodeURIComponent(p.roomId) + '&start=' + encodeURIComponent(p.start) + '&end=' + encodeURIComponent(p.end);
       return;
     }
-    SG.clear();
     M.set(state.sel);
     paintSelBadge();
     if (state.sel && !READONLY) { panels.summary.set(true, { persist: false }); if (window.innerWidth < 1500) panels.filters.set(false, { persist: false }); }
@@ -709,39 +705,19 @@
     if (entry.holidays.some(h => String(h.holiday_date).slice(0, 10) === s.date)) text = 'That date is a holiday.';
     else if (S.isClosedDay(s.date, entry.rules.closedDays)) text = 'The campus is closed that day.';
     else if (room.status === 'Maintenance') text = 'This room is under maintenance.';
-    else {
-      const clash = S.findConflicts({ class_schedules: room.classes, reservations: room.reservations, holidays: entry.holidays }, s.date, s.start, s.end);
-      if (clash.length) text = 'No longer free. ' + S.describe(clash, s.start, s.end);
-    }
+    // Class / reservation time-overlap is no longer flagged in the customer booking
+    // summary; the server still enforces overlap on submit.
     M.setProblem(text);
-    // Taken or no longer free: don't just say so — offer other times and rooms (Phase 4).
-    if (text) SG.request(s, { origin: 'stale', reason: text });
-    else SG.clear('stale');
   }
 
-  // ---------- smart suggestions (Phase 4) ----------
-  const fmtRange = (a, b) => S.fmt12(a) + ' – ' + S.fmt12(b);
-
-  /** A drag / Shift+extend ran into an occupied period: say so gently and offer the other options. */
-  function onGridNotice(text, wanted) {
-    if (!wanted) { toast(text); return; }
-    toast(text, { label: 'See other options', run: () => showOptionsFor(wanted) });
-  }
-
-  function showOptionsFor(w) {
-    // Only while the shortened pick the drag left behind is still the current one.
-    const c = state.sel;
-    if (!c || c.roomId !== w.meta.roomId || c.date !== w.meta.date || c.start < w.start || c.end > w.end) return;
-    panels.summary.set(true, { persist: false });
-    SG.request({ roomId: w.meta.roomId, date: w.meta.date, start: w.start, end: w.end }, {
-      origin: 'drag',
-      reason: fmtRange(w.start, w.end) + ' runs into another booking or class in this room.'
-    });
+  // ---------- grid notices ----------
+  /** A drag / Shift+extend ran into an occupied period: say so gently. */
+  function onGridNotice(text) {
+    toast(text);
   }
 
   /** The customer chose a suggested room/time: move the pick there (nothing is submitted). */
   async function pickSuggestion(p) {
-    SG.clear();
     state.sel = { roomId: p.roomId, date: p.date, start: p.start, end: p.end };
     M.set(state.sel);
     paintSelBadge();
@@ -1098,7 +1074,7 @@
       getUnits: () => state.rules ? F.units(state.rules) : [],
       // Start/end edited by hand in the summary: move the pick on the grid and re-check it against the bookings on screen.
       onTimesChanged: sel => {
-        state.sel = sel; SG.clear();
+        state.sel = sel;
         if (state.current) checkSelection(state.current.entry);
         draw();
       },
@@ -1111,25 +1087,22 @@
         if (entry.holidays.some(h => String(h.holiday_date).slice(0,10) === date)) return 'Holiday';
         if (S.isClosedDay(date, entry.rules.closedDays)) return 'Closed day';
         if (room.status === 'Maintenance') return 'Room under maintenance';
-        const start=G.toMin(slot.start), end=G.toMin(slot.end);
-        if (room.classes.some(c=>S.classRunsOn(c,date) && G.toMin(c.start_time)<end && G.toMin(c.end_time)>start)) return 'Class conflict';
-        if (room.reservations.some(rv=>String(rv.start_time).slice(0,10)===date && G.toMin(S.hhmm(rv.start_time))<end && G.toMin(S.hhmm(rv.end_time))>start)) return 'Reserved';
-        const n=now(); if(n && (date<n.ymd || (date===n.ymd && start<=n.min))) return 'Past';
+        // Class / reservation time-overlap and past-time are no longer blocked
+        // per day in the customer booking summary; the server still enforces
+        // overlap on submit.
         return '';
       },
-      onClear: () => { state.sel = null; SG.clear(); M.set(null); paintSelBadge(); draw(); },
+      onClear: () => { state.sel = null; M.set(null); paintSelBadge(); draw(); },
       onGoto: s => {
         if (state.sel && state.seriesDays.length > 1) { onSeriesChange(state.seriesDays); return; }
         state.date = s.date; state.roomId = s.roomId; state.scrollTo = G.toMin(s.start);
         if (state.view === 'month') setView('day'); else refresh();
       },
-      onConflict: (json, text) => {
-        if (state.sel) SG.request(state.sel, { origin: 'conflict', reason: text });
+      onConflict: () => {
         cache.clear(); refresh();
       },
       onBooked: () => { cache.clear(); }
     });
-    SG.init({ containerId: 'mcSumSuggest', base: BASE, getNow: now, getSeats: () => F.get().seats, onPick: pickSuggestion });
     try {
       // No dates: the server answers for "today", tells us what time it is, and lists every active room.
       const first = await fetchMaster({});

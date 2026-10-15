@@ -107,7 +107,7 @@ console.log('--- Account Lockout Security Rules ---');
 
 const LOGIN_MAX_ATTEMPTS = 3;
 const ACCOUNT_LOCKED_MESSAGE =
-  'Your account is locked. Please contact an administrator to unlock it.';
+  'Your account is locked.';
 
 test('Lockout trips strictly at 3 consecutive failed attempts', () => {
   let failedAttempts = 0;

@@ -34,7 +34,7 @@ class AuthController
      * Shown when an account is locked after too many failed sign-ins.
      */
     private const ACCOUNT_LOCKED_MESSAGE =
-        'Your account is locked. Please contact an administrator to unlock it.';
+        'Your account is locked.';
 
 
     private UserRepository $users;

@@ -72,11 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const sendAnotherBtn = document.getElementById('btn-send-another');
   const otpInputs = document.querySelectorAll('.otp-digit');
   const critLength = document.getElementById('crit-length');
-  const critUpper = document.getElementById('crit-upper');
-  const critLower = document.getElementById('crit-lower');
-  const critNumber = document.getElementById('crit-number');
-  const critSpecial = document.getElementById('crit-special');
   const critNoSpace = document.getElementById('crit-nospace');
+  const critPersonal = document.getElementById('crit-personal');
   const errConfirm = document.getElementById('err-confirm');
 
   // Step 3: Success Card
@@ -87,6 +84,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Strict email regex matching RFC-compliant institutional format
   const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9]+([.-][a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$/;
+
+  // Friendly text for the server policy codes (PasswordPolicy), mirroring
+  // activate.js so both flows explain a rejected password the same way.
+  const POLICY_MESSAGES = {
+    too_short: 'Use at least 15 characters.',
+    too_long: 'Use 128 characters or fewer.',
+    no_spaces: 'Remove all spaces.',
+    contains_personal: "Don't include your name, student number or email.",
+    repetitive: 'Avoid repeated or sequential characters.',
+    common: 'That password is too common. Choose a less predictable one.',
+    breached: 'This password has appeared in a data breach. Choose a different one.',
+    invalid_input: 'Enter a valid password.'
+  };
+
+  /** Turn the server's policy `codes` array into one readable sentence, or '' if none. */
+  function policyCodesToMessage(codes) {
+    if (!Array.isArray(codes) || codes.length === 0) return '';
+    return codes.map(code => POLICY_MESSAGES[code] || POLICY_MESSAGES.invalid_input).join(' ');
+  }
 
   // ==========================================
   // 2. reCAPTCHA Bootstrap
@@ -474,23 +490,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Mirrors the server policy's personal-information rule (PasswordPolicy).
+  // Only the email is known client-side here, so the name / school ID portions
+  // stay server-enforced and surface via the reset endpoint's error message.
+  function includesPersonalInformation(value) {
+    const candidate = (value || '').toLocaleLowerCase();
+    if (!candidate || !currentEmail) return false;
+    const tokens = currentEmail.toLocaleLowerCase().split(/[^\p{L}\p{N}]+/u);
+    return tokens.some((token) => Array.from(token).length >= 4 && candidate.includes(token));
+  }
+
+  // The live checklist matches the actual account policy: at least 15 characters
+  // (max 128), no spaces anywhere, and no personal information. Character-class
+  // rules (uppercase / number / special) are NOT required — same as activation.
   function checkPasswordCriteria(val) {
     const str = val || '';
-    const hasLength = str.length >= 15 && str.length <= 72;
-    const hasUpper = /[A-Z]/.test(str);
-    const hasLower = /[a-z]/.test(str);
-    const hasNumber = /[0-9]/.test(str);
-    const hasSpecial = /[^A-Za-z0-9\s]/.test(str);
-    const hasNoSpaces = str.length > 0 && !/\s/u.test(str);
+    const len = Array.from(str).length;
+    const hasLength = len >= 15 && len <= 128;
+    const hasNoSpaces = len > 0 && !/\s/u.test(str);
+    const noPersonal = len > 0 && !includesPersonalInformation(str);
 
     updateCrit(critLength, hasLength);
-    updateCrit(critUpper, hasUpper);
-    updateCrit(critLower, hasLower);
-    updateCrit(critNumber, hasNumber);
-    updateCrit(critSpecial, hasSpecial);
     updateCrit(critNoSpace, hasNoSpaces);
+    updateCrit(critPersonal, noPersonal);
 
-    return hasLength && hasUpper && hasLower && hasNumber && hasSpecial && hasNoSpaces;
+    return hasLength && hasNoSpaces && noPersonal;
   }
 
   if (newPasswordInput) {
@@ -632,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (!checkPasswordCriteria(newPassword)) {
-        showResetError('Password must be at least 15 characters, contain no spaces, and meet all security criteria.');
+        showResetError('Password must be at least 15 characters, contain no spaces, and not include your personal information.');
         if (newPasswordInput) newPasswordInput.focus();
         return;
       }
@@ -692,7 +716,8 @@ document.addEventListener('DOMContentLoaded', () => {
           showSuccessState();
         } else {
           setResetLoadingState(false);
-          const errorMsg = data.error || (data.data && data.data.error) || 'Password reset failed. Please check the code and try again.';
+          const policyMsg = policyCodesToMessage(data.data && data.data.codes);
+          const errorMsg = policyMsg || data.error || (data.data && data.data.error) || 'Password reset failed. Please check the code and try again.';
           showResetError(errorMsg);
           const retryAfter = data.retry_after || (data.data && data.data.retry_after);
           const attempts = data.attempts || data.attempt_count || (data.data && (data.data.attempts || data.data.attempt_count));
