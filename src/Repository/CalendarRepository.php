@@ -27,7 +27,7 @@ class CalendarRepository
      * Privacy (identical to RoomController::getCalendar for customers, but
      * enforced in SQL so other people's data never leaves the database):
      * another customer's booking comes back with purpose "Reserved", no
-     * category, no name, no customer_id and no reservation_id/series_id.
+     * category/classification, no name, no customer_id and no reservation_id/series_id.
      * Only is_mine says whose it is.
      *
      * @param string[] $roomIds validated UUIDs; empty = every active room
@@ -56,7 +56,8 @@ class CalendarRepository
                            CASE WHEN rv.customer_id = :me5 THEN rv.series_id ELSE NULL END AS series_id,
                            (rv.customer_id = :me1) AS is_mine,
                            CASE WHEN rv.customer_id = :me2 THEN rv.purpose ELSE 'Reserved' END AS purpose,
-                           CASE WHEN rv.customer_id = :me3 THEN rv.category::text ELSE NULL END AS category
+                           CASE WHEN rv.customer_id = :me3 THEN rv.category::text ELSE NULL END AS category,
+                           CASE WHEN rv.customer_id = :me6 THEN rv.classification ELSE NULL END AS classification
                       FROM Reservations rv
                       JOIN sel ON sel.room_id = rv.room_id
                      WHERE rv.status IN ('Pending', 'Approved')
@@ -92,6 +93,7 @@ class CalendarRepository
                 ':me3'      => $userId,
                 ':me4'      => $userId,
                 ':me5'      => $userId,
+                ':me6'      => $userId,
                 ':start_ts' => $startDate . ' 00:00:00',
                 ':end_ts'   => $endDate . ' 23:59:59',
                 ':start_d'  => $startDate,
@@ -133,7 +135,7 @@ class CalendarRepository
                 (SELECT COALESCE(json_agg(row_to_json(r) ORDER BY r.start_time), '[]') FROM (
                     SELECT rv.reservation_id, rv.room_id, rv.start_time, rv.end_time,
                            rv.status::text AS status, rv.series_id,
-                           rv.purpose, rv.category::text AS category,
+                           rv.purpose, rv.category::text AS category, rv.classification,
                            u.name AS requester_name, FALSE AS is_mine
                       FROM Reservations rv
                       JOIN sel ON sel.room_id = rv.room_id

@@ -235,7 +235,7 @@ class RoomRepository
                     SELECT r.reservation_id,
                            r.customer_id,
                            u.name AS customer_name,
-                           r.purpose, r.start_time, r.end_time, r.series_id, r.status
+                           r.purpose, r.classification, r.start_time, r.end_time, r.series_id, r.status
                       FROM Reservations r
                       JOIN Users u ON u.user_id = r.customer_id
                      WHERE r.room_id = :room_id

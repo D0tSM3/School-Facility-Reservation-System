@@ -542,10 +542,11 @@
                 <label class="text-[10px] font-extrabold text-[#2a303c] uppercase tracking-widest mb-1 block" for="classification">Primary Reservation Classification <span class="text-red-500">*</span></label>
                 <select id="classification" name="classification" class="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" required>
                   <option value="">-- Select --</option>
-                  <option value="Class/Lecture">Class / Lecture</option>
-                  <option value="Meeting">Meeting</option>
-                  <option value="Event">Event</option>
-                  <option value="Exam">Exam</option>
+                  <option value="Academic Lecture">Academic Lecture</option>
+                  <option value="Faculty Defense">Faculty Defense</option>
+                  <option value="Student Org Meeting">Student Org Meeting</option>
+                  <option value="Dept Workshop">Dept Workshop</option>
+                  <option value="Exam/Quiz">Exam / Quiz</option>
                   <option value="Other">Other (specify)</option>
                 </select>
                 <div id="classificationCustomWrapper" class="hidden flex-col space-y-2 mt-2">
@@ -553,48 +554,6 @@
                   <input id="classificationCustom" name="classification_custom" type="text" maxlength="100" placeholder="Enter custom classification" class="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#7a1f2b] focus:border-[#7a1f2b]" />
                 </div>
               </div>
-
-              <!-- Reservation Purpose Category -->
-            <div class="space-y-3">
-              <span class="text-[10px] font-extrabold text-[#2a303c] uppercase tracking-widest mb-3 block">RESERVATION PURPOSE CATEGORY <span class="text-red-500">*</span></span>
-              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                <label class="relative cursor-pointer">
-                  <input class="peer sr-only" name="reservation_purpose" type="radio" value="lecture" data-label="Academic Lecture" required />
-                  <div class="h-full px-2 py-4 rounded-xl border border-gray-300 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-[#faf5f6] hover:border-[#7a1f2b]/30 shadow-sm">
-                    <span class="material-symbols-outlined text-[24px]">menu_book</span>
-                    <span class="text-xs font-semibold">Academic Lecture</span>
-                  </div>
-                </label>
-                <label class="relative cursor-pointer">
-                  <input class="peer sr-only" name="reservation_purpose" type="radio" value="defense" data-label="Faculty Defense" required />
-                  <div class="h-full px-2 py-4 rounded-xl border border-gray-300 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-[#faf5f6] hover:border-[#7a1f2b]/30 shadow-sm">
-                    <span class="material-symbols-outlined text-[24px]">workspace_premium</span>
-                    <span class="text-xs font-semibold">Faculty Defense</span>
-                  </div>
-                </label>
-                <label class="relative cursor-pointer">
-                  <input class="peer sr-only" name="reservation_purpose" type="radio" value="student_org" data-label="Student Org Meeting" required />
-                  <div class="h-full px-2 py-4 rounded-xl border border-gray-300 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-[#faf5f6] hover:border-[#7a1f2b]/30 shadow-sm">
-                    <span class="material-symbols-outlined text-[24px]">diversity_3</span>
-                    <span class="text-xs font-semibold">Student Org</span>
-                  </div>
-                </label>
-                <label class="relative cursor-pointer">
-                  <input class="peer sr-only" name="reservation_purpose" type="radio" value="workshop" data-label="Dept Workshop" required />
-                  <div class="h-full px-2 py-4 rounded-xl border border-gray-300 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-[#faf5f6] hover:border-[#7a1f2b]/30 shadow-sm">
-                    <span class="material-symbols-outlined text-[24px]">architecture</span>
-                    <span class="text-xs font-semibold">Dept Workshop</span>
-                  </div>
-                </label>
-                <label class="relative cursor-pointer col-span-2 sm:col-span-1">
-                  <input class="peer sr-only" name="reservation_purpose" type="radio" value="exam" data-label="Exam / Quiz" required />
-                  <div class="h-full px-2 py-4 rounded-xl border border-gray-300 bg-white text-gray-500 text-center transition-all peer-checked:bg-[#7a1f2b] peer-checked:border-[#7a1f2b] peer-checked:text-white flex flex-col items-center gap-2 hover:bg-[#faf5f6] hover:border-[#7a1f2b]/30 shadow-sm">
-                    <span class="material-symbols-outlined text-[24px]">quiz</span>
-                    <span class="text-xs font-semibold">Exam / Quiz</span>
-                  </div>
-                </label>
-              </div>
-            </div>
 
             <!-- Purpose Textarea -->
             <div class="flex flex-col space-y-2">
@@ -718,15 +677,12 @@
           // 4. End time AND end > start
           if (!endTime || !endTime.value) return false;
           if (endTime.value <= startTime.value) return false;
-          // 5. Reservation purpose category
-          const picked = form.querySelector('input[name="reservation_purpose"]:checked');
-          if (!picked) return false;
-          // 6. Primary classification
+          // 5. Primary classification
           if (!classification || !classification.value) return false;
           if (classification.value === 'Other' && (!classificationCustom || !classificationCustom.value.trim())) return false;
-          // 7. Purpose description (non-empty after trim)
+          // 6. Purpose description (non-empty after trim)
           if (!purposeInput || !purposeInput.value.trim()) return false;
-          // 8. Policy acknowledgement
+          // 7. Policy acknowledgement
           if (!policyBox || !policyBox.checked) return false;
           return true;
         }
@@ -758,7 +714,7 @@
           el.addEventListener('input',  updateBtn);
         });
 
-        // Radios share a name — watch the form for radio changes too
+        // Watch form-level changes so classification updates are reflected.
         form.addEventListener('change', updateBtn);
 
         // Also re-check whenever the booking modal is opened (room pre-selected)

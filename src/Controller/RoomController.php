@@ -262,6 +262,7 @@ class RoomController
             foreach ($calendarData['reservations'] as &$reservation) {
                 if ($reservation['customer_id'] !== $me) {
                     $reservation['purpose']       = 'Reserved';
+                    $reservation['classification'] = null;
                     $reservation['customer_name'] = '';
                 }
                 unset($reservation['customer_id']);

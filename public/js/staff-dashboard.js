@@ -348,8 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   <h3 class="text-base font-bold text-gray-900 truncate">${requester}</h3>
                   ${reservation.customer_email ? `<span class="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold uppercase truncate">${escapeHtml(reservation.customer_email)}</span>` : ''}
                   <span class="px-2 py-0.5 rounded ${badgeBg} text-[10px] font-bold uppercase tracking-wider">${escapeHtml(reservation.status)}</span>
-                  ${reservation.classification ? `<span class="px-2 py-0.5 rounded border border-[#7a1f2b]/20 bg-[#fdf2f4] text-[#7a1f2b] text-xs">${escapeHtml(reservation.classification)}</span>` : ''}
-                  ${reservation.category ? `<span class="px-2 py-0.5 rounded border border-gray-200 text-gray-500 text-xs">${escapeHtml(reservation.category)}</span>` : ''}
+                  ${(reservation.classification || reservation.category) ? `<span class="px-2 py-0.5 rounded border border-[#7a1f2b]/20 bg-[#fdf2f4] text-[#7a1f2b] text-xs">${escapeHtml(reservation.classification || reservation.category)}</span>` : ''}
                 </div>
                 
                 <div class="flex items-center gap-2 text-sm text-gray-500 mt-1 mb-2">
@@ -725,8 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
       detailRow('Email', reservation.customer_email || '—') +
       detailRow('Room', reservation.room_name || '—') +
       detailRow('Room Details', roomMeta(reservation)) +
-      detailRow('Primary Classification', reservation.classification || '—') +
-      detailRow('Category', reservation.category || '—') +
+      detailRow('Primary Classification', reservation.classification || reservation.category || '—') +
       detailRow('Purpose', reservation.purpose || '—') +
       detailRow('Start', formatDateTime(reservation.start_time)) +
       detailRow('End', formatDateTime(reservation.end_time)) +
@@ -1062,8 +1060,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td class="py-4 px-6 text-xs font-semibold text-gray-800">${escapeHtml(r.room_name || 'Facility')}</td>
         <td class="py-4 px-6 text-xs text-gray-600 whitespace-nowrap">${formatDateTime(r.start_time)} &rarr; ${formatTime(r.end_time)}</td>
         <td class="py-4 px-6 text-xs text-gray-600">
-            ${r.classification ? `<div class="text-[11px] font-semibold text-[#7a1f2b]">${escapeHtml(r.classification)}</div>` : ''}
-            <span class="font-semibold text-gray-800">${escapeHtml(r.category || 'General')}</span>
+            <span class="font-semibold text-gray-800">${escapeHtml(r.classification || r.category || 'General')}</span>
           ${r.purpose ? `<div class="text-[11px] text-gray-400 truncate max-w-xs" title="${escapeHtml(r.purpose)}">${escapeHtml(r.purpose)}</div>` : ''}
         </td>
         <td class="py-4 px-6 text-xs">${reservationPill(r.status)}</td>
@@ -1081,14 +1078,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const tbody = el('reservationsTableBody');
     if (!tbody) return;
 
-    // Purpose-category filter is built from the data actually present.
-    const categorySelect = el('resCategoryFilter');
-    if (categorySelect) {
-      const previous = categorySelect.value;
-      const categories = [...new Set(state.reservations.map((r) => r.category).filter(Boolean))].sort();
-      categorySelect.innerHTML = '<option value="all">All Purpose Categories</option>'
-        + categories.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-      categorySelect.value = categories.includes(previous) ? previous : 'all';
+    // Classification filter is built from the data actually present.
+    const classificationSelect = el('resCategoryFilter');
+    if (classificationSelect) {
+      const previous = classificationSelect.value;
+      const classifications = [...new Set(state.reservations.map((r) => r.classification || r.category).filter(Boolean))].sort();
+      classificationSelect.innerHTML = '<option value="all">All Classifications</option>'
+        + classifications.map((classification) => `<option value="${escapeHtml(classification)}">${escapeHtml(classification)}</option>`).join('');
+      classificationSelect.value = classifications.includes(previous) ? previous : 'all';
     }
 
     document.querySelectorAll('.res-subtab-btn').forEach((btn) => {
@@ -1100,11 +1097,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const search = ((el('resSearchInput') || {}).value || '').trim().toLowerCase();
-    const category = categorySelect ? categorySelect.value : 'all';
+    const classificationFilter = classificationSelect ? classificationSelect.value : 'all';
 
     const rows = state.reservations.filter((r) => {
       if (state.resSubtab !== 'all' && r.status !== state.resSubtab) return false;
-      if (category !== 'all' && r.category !== category) return false;
+      if (classificationFilter !== 'all' && (r.classification || r.category) !== classificationFilter) return false;
       if (!search) return true;
       return [r.reservation_id, r.customer_name, r.customer_email, r.room_name, r.classification, r.purpose]
         .some((f) => f && String(f).toLowerCase().includes(search));
