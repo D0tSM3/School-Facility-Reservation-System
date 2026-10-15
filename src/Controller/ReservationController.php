@@ -27,6 +27,7 @@ class ReservationController
         'Student Org Meeting',
         'Dept Workshop',
         'Exam/Quiz',
+        'Other',
     ];
 
     private ReservationRepository $reservations;
@@ -245,6 +246,10 @@ class ReservationController
 
         if ($classification === '' || mb_strlen($classification) > 100) {
             Response::error('Classification is required (max 100 characters).', 422);
+        }
+        if (($category === 'Other' && $classification === 'Other')
+            || ($category !== 'Other' && $classification !== $category)) {
+            Response::error('classification must match category, or provide a custom classification for Other.', 422);
         }
 
         // Reservations.purpose is VARCHAR(255); mb_strlen() counts characters,
@@ -719,16 +724,6 @@ class ReservationController
         $startTime      = trim((string) ($body['start_time'] ?? ''));
         $endTime        = trim((string) ($body['end_time']   ?? ''));
         $equipmentNotes = trim((string) ($body['equipment_notes'] ?? '')) ?: (string) ($source['equipment_notes'] ?? '');
-        if (array_key_exists('classification', $body) && !is_string($body['classification'])) {
-            Response::error('classification must be a string.', 422);
-        }
-        $classification = trim((string) ($body['classification'] ?? ''));
-        if ($classification === '') {
-            $classification = (string) ($source['classification'] ?? '');
-        }
-        if (mb_strlen($classification) > 100) {
-            Response::error('Classification must be 100 characters or fewer.', 422);
-        }
 
         // A re-booking keeps the original's category unless the caller sends a
         // different one. The staff modal sends none, so it always inherits.
@@ -738,6 +733,23 @@ class ReservationController
         }
         if (!in_array($category, self::CATEGORIES, true)) {
             Response::error('category must be one of: ' . implode(', ', self::CATEGORIES) . '.', 422);
+        }
+
+        if (array_key_exists('classification', $body) && !is_string($body['classification'])) {
+            Response::error('classification must be a string.', 422);
+        }
+        $classification = trim((string) ($body['classification'] ?? ''));
+        if ($classification === '') {
+            $classification = $category === 'Other'
+                ? (string) ($source['classification'] ?? '')
+                : $category;
+        }
+        if ($classification === '' || mb_strlen($classification) > 100) {
+            Response::error('Classification is required (max 100 characters).', 422);
+        }
+        if (($category === 'Other' && $classification === 'Other')
+            || ($category !== 'Other' && $classification !== $category)) {
+            Response::error('classification must match category, or provide a custom classification for Other.', 422);
         }
 
         if ($startTime === '' || $endTime === '') {

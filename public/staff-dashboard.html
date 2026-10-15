@@ -267,7 +267,7 @@
         <!-- Calendar preview (full page: master-calendar.html) -->
         <section id="calendar" class="mt-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <div><h2 class="text-lg font-bold text-gray-900">Calendar</h2><p class="text-sm text-gray-500 mt-1">Read-only view of room reservations, requester, purpose, category, and status.</p></div>
+            <div><h2 class="text-lg font-bold text-gray-900">Calendar</h2><p class="text-sm text-gray-500 mt-1">Read-only view of room reservations, requester, classification, purpose, and status.</p></div>
             <a href="master-calendar.html" class="inline-flex items-center gap-2 rounded-lg bg-[#7a1f2b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#5e1821]">Open full calendar <span aria-hidden="true">↗</span></a>
           </div>
           <iframe title="Calendar" src="master-calendar.html?embed=1&amp;readonly=1&amp;view=week" loading="lazy" class="w-full rounded-xl border border-gray-200 bg-white" style="height:clamp(420px,70vh,760px)" referrerpolicy="same-origin"></iframe>
@@ -298,7 +298,7 @@
             <input type="text" id="resSearchInput" placeholder="Filter by requester, facility, classification, or purpose..." class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#7a1f2b] focus:ring-1 focus:ring-[#7a1f2b] transition-all" />
           </div>
           <select id="resCategoryFilter" class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 font-medium focus:outline-none focus:border-[#7a1f2b]">
-            <option value="all">All Purpose Categories</option>
+            <option value="all">All Classifications</option>
           </select>
         </div>
         <div id="resSubTabsContainer" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 overflow-x-auto flex items-center gap-1.5">

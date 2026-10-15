@@ -244,15 +244,15 @@
         if (r.is_mine) {
           cls += ' is-mine' + (r.category === 'Exam/Quiz' ? ' is-exam' : '');
           label = r.purpose;
-          tip = r.purpose + ' · ' + r.category + ' · ' + r.status + ' · ' + range;
+          tip = r.purpose + ' · ' + (r.classification || r.category || 'Unclassified') + ' · ' + r.status + ' · ' + range;
         } else if (READONLY && r.requester_name) {
           label = r.purpose || 'Reserved';
-          tip = label + ' · ' + r.requester_name + ' · ' + (r.category || 'Uncategorized') + ' · ' + r.status + ' · ' + range;
+          tip = label + ' · ' + r.requester_name + ' · ' + (r.classification || r.category || 'Unclassified') + ' · ' + r.status + ' · ' + range;
         } else {
           label = pending ? 'Reserved (pending)' : 'Reserved';
           tip = (pending ? 'Reserved · Pending approval' : 'Reserved') + ' · ' + range;
         }
-        const sub = READONLY && !r.is_mine && r.requester_name ? (r.requester_name + ' · ' + (r.category || 'Uncategorized') + ' · ' + r.status) : range;
+        const sub = READONLY && !r.is_mine && r.requester_name ? (r.requester_name + ' · ' + (r.classification || r.category || 'Unclassified') + ' · ' + r.status) : range;
         col.blocks.push({ startMin: G.toMin(s), endMin: G.toMin(e), cls, rt: rtCls(room), label, sub, tip });
       });
     }
@@ -283,7 +283,8 @@
           const cls = (pending ? 'is-pending ' : '') + (rv.is_mine ? 'is-mine' + (rv.category === 'Exam/Quiz' ? ' is-exam' : '') : '');
           const label = READONLY ? (rv.purpose || 'Reserved') : (rv.is_mine ? rv.purpose : (pending ? 'Reserved (pending)' : 'Reserved'));
           const sub = READONLY ? ((rv.requester_name || 'Requester unavailable')+' · '+room.name+' · '+rv.status) : (room.name+' · '+range+' · '+rv.status);
-          const tip = READONLY ? (label+' · '+(rv.category || '')+' · '+sub+' · '+range) : (rv.is_mine ? label+' · '+(rv.category || '')+' · '+range : 'Reserved · '+range);
+          const classification = rv.classification || rv.category || '';
+          const tip = READONLY ? (label+' · '+classification+' · '+sub+' · '+range) : (rv.is_mine ? label+' · '+classification+' · '+range : 'Reserved · '+range);
           col.blocks.push({ startMin:G.toMin(start), endMin:G.toMin(end), cls, rt:rtCls(room), label, sub, tip });
         });
       });
@@ -641,7 +642,7 @@
         const title = detailed ? (r.purpose || 'Reserved') : (pending ? 'Reserved (pending)' : 'Reserved');
         const bits = [];
         if (READONLY && r.requester_name) bits.push(r.requester_name);
-        if (detailed && r.category) bits.push(r.category);
+        if (detailed && (r.classification || r.category)) bits.push(r.classification || r.category);
         items.push({
           s: G.toMin(S.hhmm(r.start_time)), e: G.toMin(S.hhmm(r.end_time)), title, sub: bits.join(' · '), room: room.name, rt: rtCls(room),
           kind: (r.is_mine ? 'is-mine ' : '') + (pending ? 'is-pending' : ''), badge: pending ? 'Pending' : (r.status && r.status !== 'Approved' ? r.status : '')

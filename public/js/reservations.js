@@ -508,18 +508,12 @@ function renderReservations() {
                 <span class="material-symbols-outlined text-[15px] text-gray-400">location_on</span>
                 <span class="font-medium text-gray-700">${escapeHtml(reservation.room_name || reservation.room_id)}</span>
               </span>
-                ${reservation.classification ? `
+                ${(reservation.classification || reservation.category) ? `
                 <span class="text-gray-300 select-none">•</span>
                 <span class="flex items-center gap-1">
                   <span class="material-symbols-outlined text-[15px] text-gray-400">sell</span>
-                  <span>${escapeHtml(reservation.classification)}</span>
+                  <span>${escapeHtml(reservation.classification || reservation.category)}</span>
                 </span>` : ''}
-                ${reservation.category ? `
-              <span class="text-gray-300 select-none">•</span>
-              <span class="flex items-center gap-1">
-                <span class="material-symbols-outlined text-[15px] text-gray-400">supervisor_account</span>
-                <span>${escapeHtml(reservation.category)}</span>
-              </span>` : ''}
               <span class="text-gray-300 select-none">•</span>
               <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[15px] text-gray-400">schedule</span>
@@ -725,13 +719,12 @@ function renderReservations() {
         showToast('No reservations to export yet.');
         return;
       }
-      const rows = ['Permit,Venue,Classification,Category,Purpose,Start Time,End Time,Status'];
+      const rows = ['Permit,Venue,Classification,Purpose,Start Time,End Time,Status'];
       allReservations.forEach(r => {
         rows.push([
           csvCell('REQ-' + String(r.reservation_id || '').substring(0, 8)),
           csvCell(r.room_name || r.room_id || ''),
           csvCell(r.classification || ''),
-          csvCell(r.category || ''),
           csvCell(r.purpose || ''),
           csvCell(r.start_time || ''),
           csvCell(r.end_time || ''),
@@ -953,6 +946,4 @@ function renderReservations() {
 
   fetchReservations();
 });
-
-
 

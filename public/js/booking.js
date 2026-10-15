@@ -1055,47 +1055,30 @@ window.initBookingForm = function() {
     });
   }
 
-  // ---------------------------------------------------------------
-  // Reservation purpose category (Reservations.category, Fix Guide 1.3)
-  // ---------------------------------------------------------------
-
-  // These strings are the Reservations.category ENUM verbatim — they are sent
-  // as the `category` field, not glued onto `purpose` as they once were.
-  const PURPOSE_LABELS = {
-    lecture: 'Academic Lecture',
-    defense: 'Faculty Defense',
-    student_org: 'Student Org Meeting',
-    workshop: 'Dept Workshop',
-    exam: 'Exam/Quiz'
-  };
-
-  // The prefixes the form used to write into `purpose` before `category`
-  // existed. The migration strips these, but a re-book of a row that predates
-  // it would otherwise carry the prefix back in. Note the old "Exam / Quiz"
-  // spacing, which the ENUM does not use.
-  const LEGACY_PREFIXES = { ...PURPOSE_LABELS, exam_legacy: 'Exam / Quiz' };
-
-  function radioFor(categoryValue) {
-    return form && form.querySelector(`input[name="reservation_purpose"][value="${categoryValue}"]`);
-  }
+  const PURPOSE_CATEGORIES = [
+    'Academic Lecture',
+    'Faculty Defense',
+    'Student Org Meeting',
+    'Dept Workshop',
+    'Exam/Quiz',
+    'Other'
+  ];
+  const LEGACY_PURPOSE_PREFIXES = [
+    'Academic Lecture',
+    'Faculty Defense',
+    'Student Org Meeting',
+    'Dept Workshop',
+    'Exam/Quiz',
+    'Exam / Quiz'
+  ];
 
   /**
-   * Prefill the purpose-category radio and description for a re-booking.
-   * Prefers the source's own `category` column; falls back to parsing a legacy
-   * inline prefix, and strips it so submitting again cannot double it up.
+   * Strip legacy purpose prefixes so re-booking doesn't add them again.
    */
-  function applyPurpose(stored, category) {
-    if (category) {
-      const entry = Object.entries(PURPOSE_LABELS).find(([, label]) => label === category);
-      const radio = entry && radioFor(entry[0]);
-      if (radio) radio.checked = true;
-    }
-
+  function applyPurpose(stored) {
     const text = String(stored || '');
-    for (const [key, label] of Object.entries(LEGACY_PREFIXES)) {
+    for (const label of LEGACY_PURPOSE_PREFIXES) {
       if (text.startsWith(label + ': ')) {
-        const radio = radioFor(key === 'exam_legacy' ? 'exam' : key);
-        if (radio) radio.checked = true;
         return text.slice(label.length + 2);
       }
     }
@@ -1148,15 +1131,20 @@ window.initBookingForm = function() {
 
         // Purpose and duration. Date is left blank on purpose.
         if (purposeInput && rebookSource.purpose) {
-          purposeInput.value = applyPurpose(rebookSource.purpose, rebookSource.category);
+          purposeInput.value = applyPurpose(rebookSource.purpose);
         }
-        if (classificationInput && rebookSource.classification) {
-          const knownClassifications = ['Class/Lecture', 'Meeting', 'Event', 'Exam'];
-          if (knownClassifications.includes(rebookSource.classification)) {
-            classificationInput.value = rebookSource.classification;
+        if (classificationInput) {
+          const savedClassification = String(rebookSource.classification || '');
+          const savedCategory = String(rebookSource.category || '');
+          if (PURPOSE_CATEGORIES.includes(savedClassification) && savedClassification !== 'Other') {
+            classificationInput.value = savedClassification;
+          } else if (PURPOSE_CATEGORIES.includes(savedCategory) && savedCategory !== 'Other') {
+            classificationInput.value = savedCategory;
           } else {
             classificationInput.value = 'Other';
-            if (classificationCustomInput) classificationCustomInput.value = rebookSource.classification;
+            if (classificationCustomInput && savedClassification && savedClassification !== 'Other') {
+              classificationCustomInput.value = savedClassification;
+            }
           }
           updateClassificationInput();
         }
@@ -1272,7 +1260,6 @@ window.initBookingForm = function() {
       const startVal    = startTimeInput ? startTimeInput.value : '';
       const endVal      = endTimeInput ? endTimeInput.value : '';
       const classification = getClassification();
-      const picked      = form.querySelector('input[name="reservation_purpose"]:checked');
       const description = purposeInput ? purposeInput.value.trim() : '';
       const policyBox   = document.getElementById('policyAcknowledgement');
 
@@ -1295,10 +1282,7 @@ window.initBookingForm = function() {
       if (clash.length) {
         return showCollisionError(window.CampusSchedule.describeRange(clash, startVal, endVal), 'Scheduling conflict');
       }
-      if (!picked) {
-        return showCollisionError('Please choose a reservation purpose category.', 'Missing information');
-      }
-      if (!classification || classification.length > 100) {
+      if (!classificationInput || !classificationInput.value || !classification || classification.length > 100) {
         return showCollisionError('Please choose a primary reservation classification (max 100 characters).', 'Missing information');
       }
       if (!description) {
@@ -1311,7 +1295,7 @@ window.initBookingForm = function() {
       const payload = {
         room_id: roomId,
         purpose: description,
-        category: PURPOSE_LABELS[picked.value],
+        category: classificationInput.value,
         classification,
         start_time: `${dateVal}T${startVal}:00`,
         end_time: `${endDateVal}T${endVal}:00`,
