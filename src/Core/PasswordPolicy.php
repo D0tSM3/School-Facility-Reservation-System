@@ -7,7 +7,7 @@ namespace CampusRoom\Core;
 final class PasswordPolicy
 {
     public const MIN_LENGTH = 8;
-    public const MAX_LENGTH = 128;
+    public const MAX_LENGTH = 15;
 
     private const COMMON_PASSWORDS = [
         '1234567890123',

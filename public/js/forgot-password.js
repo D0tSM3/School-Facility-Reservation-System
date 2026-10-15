@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // activate.js so both flows explain a rejected password the same way.
   const POLICY_MESSAGES = {
     too_short: 'Use at least 8 characters.',
-    too_long: 'Use 128 characters or fewer.',
+    too_long: 'Use 15 characters or fewer.',
     no_spaces: 'Remove all spaces.',
     no_uppercase: 'Add an uppercase letter.',
     no_lowercase: 'Add a lowercase letter.',
@@ -508,13 +508,13 @@ document.addEventListener('DOMContentLoaded', () => {
     return tokens.some((token) => Array.from(token).length >= 4 && candidate.includes(token));
   }
 
-  // The live checklist matches the actual account policy: at least 8 characters
-  // (max 128), an uppercase letter, a lowercase letter, a number, a special
-  // character, no spaces anywhere, and no personal information — same as activation.
+  // The live checklist matches the actual account policy: 8 to 15 characters,
+  // an uppercase letter, a lowercase letter, a number, a special character,
+  // no spaces anywhere, and no personal information — same as activation.
   function checkPasswordCriteria(val) {
     const str = val || '';
     const len = Array.from(str).length;
-    const hasLength = len >= 8 && len <= 128;
+    const hasLength = len >= 8 && len <= 15;
     const hasUpper = /\p{Lu}/u.test(str);
     const hasLower = /\p{Ll}/u.test(str);
     const hasNumber = /\p{N}/u.test(str);

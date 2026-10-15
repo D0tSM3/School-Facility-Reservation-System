@@ -226,7 +226,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updatePasswordGuidance() {
     const password = passwordInput.value;
-    const validLength = passwordMinimum !== null && Array.from(password).length >= passwordMinimum;
+    const pwLen = Array.from(password).length;
+    const validLength = passwordMinimum !== null && pwLen >= passwordMinimum
+      && (passwordMaximum === null || pwLen <= passwordMaximum);
     const validNoSpaces = !(/\s/u.test(password));
     const validUpper = /\p{Lu}/u.test(password);
     const validLower = /\p{Ll}/u.test(password);
@@ -302,6 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function checkClientPolicy(password, confirmation) {
     const codes = [];
     if (Array.from(password).length < passwordMinimum) codes.push('too_short');
+    if (passwordMaximum !== null && Array.from(password).length > passwordMaximum) codes.push('too_long');
     if (/\s/u.test(password)) codes.push('no_spaces');
     if (!/\p{Lu}/u.test(password)) codes.push('no_uppercase');
     if (!/\p{Ll}/u.test(password)) codes.push('no_lowercase');
@@ -372,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
     rosterName = typeof context.name === 'string' ? context.name : '';
     usernameInput.value = studentIdInput.value.trim();
     document.getElementById('minimum-length').textContent = String(passwordMinimum);
+    document.getElementById('maximum-length').textContent = String(passwordMaximum);
     updatePasswordGuidance();
     updateStrength();
   }

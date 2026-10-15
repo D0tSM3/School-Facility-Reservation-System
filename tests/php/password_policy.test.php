@@ -1,6 +1,6 @@
 <?php
 /**
- * Regression: password policy requires at least 8 characters, forbids ANY
+ * Regression: password policy requires 8 to 15 characters, forbids ANY
  * whitespace (no spaces anywhere), and requires an uppercase letter, a
  * lowercase letter, a number and a special character — enforced for
  * new-account activation and password reset alike (both call
@@ -35,6 +35,10 @@ check('edge space flagged no_spaces',
 check('short password flagged too_short',
     in_array('too_short', PasswordPolicy::validateAll('Ab1!xy', [], false), true));
 
+// Too long (>15) -> too_long
+check('long password flagged too_long',
+    in_array('too_long', PasswordPolicy::validateAll('Umbrella7Falcon!x', [], false), true));
+
 // Complexity: missing each required class is flagged
 check('missing uppercase flagged no_uppercase',
     in_array('no_uppercase', PasswordPolicy::validateAll('lowercase9!xy', [], false), true));
@@ -49,12 +53,12 @@ check('missing special flagged no_special',
 check('containsWhitespace true for a space', PasswordPolicy::containsWhitespace('a b') === true);
 check('containsWhitespace false without space', PasswordPolicy::containsWhitespace('abcdef') === false);
 
-// A clean 8+ char, space-free password meeting every class passes (offline)
-$clean = PasswordPolicy::validateAll('Umbrella7Falcon!x', [], false);
-check('valid 17-char password has no codes', $clean === []);
+// A clean 8-15 char, space-free password meeting every class passes (offline)
+$clean = PasswordPolicy::validateAll('Falcon7!xK', [], false);
+check('valid 10-char password has no codes', $clean === []);
 
 // The user-facing message for a spaced password mentions spaces (checked first)
-check('message mentions spaces', PasswordPolicy::validate('bad password here') === 'Password must not contain spaces.');
+check('message mentions spaces', PasswordPolicy::validate('bad pass!') === 'Password must not contain spaces.');
 
 echo "\n$pass passed, $fail failed\n";
 exit($fail ? 1 : 0);

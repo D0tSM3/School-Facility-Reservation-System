@@ -183,6 +183,7 @@
                 type="password"
                 autocomplete="new-password"
                 required
+                maxlength="15"
                 spellcheck="false"
                 autocapitalize="off"
                 autocorrect="off"
@@ -205,6 +206,7 @@
                 type="password"
                 autocomplete="new-password"
                 required
+                maxlength="15"
                 spellcheck="false"
                 autocapitalize="off"
                 autocorrect="off"
@@ -228,7 +230,7 @@
           <ul id="password-guidance" class="space-y-1 text-sm">
             <li id="check-length" class="text-gray-700">
               <span aria-hidden="true">○</span>
-              <span>At least <span id="minimum-length"></span> characters</span>
+              <span><span id="minimum-length"></span> to <span id="maximum-length"></span> characters</span>
             </li>
             <li id="check-uppercase" class="text-gray-700">
               <span aria-hidden="true">○</span>
