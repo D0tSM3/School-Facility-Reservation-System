@@ -15,6 +15,7 @@ final class VisitorLog
 
     public static function record(string $page): void
     {
+        $ip = null;
         try {
             if (!in_array($page, ['landing', 'login', 'activate'], true)) {
                 return;
@@ -31,37 +32,30 @@ final class VisitorLog
                     );
                 }
             } catch (Throwable $e) {
-                error_log('[CampusRoom] Visitor summary retention failed: ' . $e->getMessage());
-            }
-
-            $secret = defined('APP_SECRET')
-                ? (string) APP_SECRET
-                : (string) ($_ENV['APP_SECRET'] ?? getenv('APP_SECRET') ?: '');
-            if ($secret === '') {
-                throw new \RuntimeException('APP_SECRET is not configured for visitor summaries.');
+                error_log(
+                    '[CampusRoom] Visitor summary retention failed: '
+                    . self::redactIp($e->getMessage(), $ip)
+                );
             }
 
             $ip = RateLimiter::clientIp();
-            $visitorHash = self::hashIpForDay($ip, $day);
+            if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
+                return;
+            }
             $browserFamily = self::browserFamily((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
 
-            (new VisitorDayRepository())->record($day, $visitorHash, $page, $browserFamily);
+            (new VisitorDayRepository())->record($day, $ip, $page, $browserFamily);
         } catch (Throwable $e) {
-            error_log('[CampusRoom] Visitor summary record failed: ' . $e->getMessage());
+            error_log(
+                '[CampusRoom] Visitor summary record failed: '
+                . self::redactIp($e->getMessage(), $ip)
+            );
         }
     }
 
-    public static function hashIpForDay(string $ip, string $day): string
+    private static function redactIp(string $message, ?string $ip): string
     {
-        $secret = defined('APP_SECRET')
-            ? (string) APP_SECRET
-            : (string) ($_ENV['APP_SECRET'] ?? getenv('APP_SECRET') ?: '');
-        if ($secret === '') {
-            throw new \RuntimeException('APP_SECRET is not configured for visitor summaries.');
-        }
-
-        $dailyKey = hash_hmac('sha256', $day, $secret, true);
-        return substr(hash_hmac('sha256', $ip, $dailyKey), 0, 16);
+        return $ip === null || $ip === '' ? $message : str_replace($ip, '[redacted]', $message);
     }
 
     private static function browserFamily(string $userAgent): string

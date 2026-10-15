@@ -19,7 +19,7 @@ final class VisitorDayRepository
         $this->db = Database::getInstance();
     }
 
-    public function record(string $day, string $visitorHash, string $page, string $browserFamily): void
+    public function record(string $day, string $ipAddress, string $page, string $browserFamily): void
     {
         $updated = $this->db->query(
             'UPDATE public.visitor_days
@@ -27,13 +27,13 @@ final class VisitorDayRepository
                     last_seen = CURRENT_TIMESTAMP,
                     browser_family = :browser_family
               WHERE day = :day
-                AND visitor_hash = :visitor_hash
+                AND ip_address = :ip_address
                 AND page = :page
-          RETURNING visitor_hash',
+          RETURNING ip_address',
             [
                 ':browser_family' => $browserFamily,
                 ':day' => $day,
-                ':visitor_hash' => $visitorHash,
+                ':ip_address' => $ipAddress,
                 ':page' => $page,
             ]
         );
@@ -66,17 +66,17 @@ final class VisitorDayRepository
 
         $insert = $this->db->query(
             'INSERT INTO public.visitor_days
-                (day, visitor_hash, page, hits, first_seen, last_seen, browser_family)
+                (day, ip_address, page, hits, first_seen, last_seen, browser_family)
              VALUES
-                (:day, :visitor_hash, :page, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, :browser_family)
-             ON CONFLICT (day, visitor_hash, page) DO UPDATE
+                (:day, :ip_address, :page, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, :browser_family)
+             ON CONFLICT (day, ip_address, page) DO UPDATE
                SET hits = public.visitor_days.hits + 1,
                    last_seen = CURRENT_TIMESTAMP,
                    browser_family = EXCLUDED.browser_family
              RETURNING (xmax = 0)::int AS inserted',
             [
                 ':day' => $day,
-                ':visitor_hash' => $visitorHash,
+                ':ip_address' => $ipAddress,
                 ':page' => $page,
                 ':browser_family' => $browserFamily,
             ]
@@ -107,12 +107,12 @@ final class VisitorDayRepository
         );
     }
 
-    /** @return array{page_loads:int, distinct_visitors:int, pages:array<int, array{page:string, hits:int}>, repeat_visitors:array<int, array{visitor_hash:string, hits:int, pages:int}>} */
+    /** @return array{page_loads:int, distinct_visitors:int, pages:array<int, array{page:string, hits:int}>, repeat_visitors:array<int, array{ip_address:string, hits:int, pages:int}>} */
     public function todaySummary(string $day): array
     {
         $totals = $this->db->query(
             'SELECT COALESCE(SUM(hits), 0)::int AS page_loads,
-                    COUNT(DISTINCT visitor_hash)::int AS distinct_visitors
+                    COUNT(DISTINCT ip_address)::int AS distinct_visitors
                FROM public.visitor_days
               WHERE day = :day',
             [':day' => $day]
@@ -128,13 +128,13 @@ final class VisitorDayRepository
         )->fetchAll(PDO::FETCH_ASSOC);
 
         $repeatRows = $this->db->query(
-            'SELECT visitor_hash, SUM(hits)::int AS hits,
+            'SELECT ip_address, SUM(hits)::int AS hits,
                     COUNT(DISTINCT page)::int AS pages
                FROM public.visitor_days
               WHERE day = :day
-           GROUP BY visitor_hash
+           GROUP BY ip_address
              HAVING SUM(hits) >= :repeat_min_hits
-           ORDER BY SUM(hits) DESC, visitor_hash
+           ORDER BY SUM(hits) DESC, ip_address
               LIMIT 5',
             [':day' => $day, ':repeat_min_hits' => self::REPEAT_MIN_HITS]
         )->fetchAll(PDO::FETCH_ASSOC);
@@ -151,43 +151,12 @@ final class VisitorDayRepository
             ),
             'repeat_visitors' => array_map(
                 static fn(array $row): array => [
-                    'visitor_hash' => (string) $row['visitor_hash'],
+                    'ip_address' => (string) $row['ip_address'],
                     'hits' => (int) $row['hits'],
                     'pages' => (int) $row['pages'],
                 ],
                 $repeatRows
             ),
         ];
-    }
-
-    /**
-     * @param array<string, string> $hashesByDay
-     * @return array<int, array<string, mixed>>
-     */
-    public function findMatchingDays(array $hashesByDay): array
-    {
-        if ($hashesByDay === []) {
-            return [];
-        }
-
-        $conditions = [];
-        $params = [];
-        $index = 0;
-        foreach ($hashesByDay as $day => $hash) {
-            $dayParam = ':day_' . $index;
-            $hashParam = ':hash_' . $index;
-            $conditions[] = "(day = {$dayParam} AND visitor_hash = {$hashParam})";
-            $params[$dayParam] = $day;
-            $params[$hashParam] = $hash;
-            $index++;
-        }
-
-        return $this->db->query(
-            'SELECT day, visitor_hash, page, hits, first_seen, last_seen, browser_family
-               FROM public.visitor_days
-              WHERE ' . implode(' OR ', $conditions) . '
-           ORDER BY day DESC, page',
-            $params
-        )->fetchAll(PDO::FETCH_ASSOC);
     }
 }

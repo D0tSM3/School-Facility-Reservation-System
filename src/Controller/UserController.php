@@ -6,7 +6,6 @@ namespace CampusRoom\Controller;
 
 use CampusRoom\Core\Auth;
 use CampusRoom\Core\Response;
-use CampusRoom\Core\VisitorLog;
 use CampusRoom\Repository\UserRepository;
 use CampusRoom\Repository\ReservationRepository;
 use CampusRoom\Repository\SecurityLogRepository;
@@ -166,28 +165,6 @@ class UserController
         $timezone = new \DateTimeZone((string) ($_ENV['APP_TIMEZONE'] ?? 'Asia/Manila'));
         $day = (new \DateTimeImmutable('now', $timezone))->format('Y-m-d');
         Response::json((new VisitorDayRepository())->todaySummary($day));
-    }
-
-    public function visitorLookup(): never
-    {
-        Auth::requireRole(['Admin']);
-        $body = $this->jsonBody();
-        $ip = $body['ip'] ?? null;
-        if (!is_string($ip) || filter_var($ip, FILTER_VALIDATE_IP) === false) {
-            Response::error('ip must be a valid IPv4 or IPv6 address.', 422);
-        }
-
-        $timezone = new \DateTimeZone((string) ($_ENV['APP_TIMEZONE'] ?? 'Asia/Manila'));
-        $today = new \DateTimeImmutable('now', $timezone);
-        $hashesByDay = [];
-        for ($offset = 0; $offset < 30; $offset++) {
-            $day = $today->modify("-{$offset} days")->format('Y-m-d');
-            $hashesByDay[$day] = VisitorLog::hashIpForDay($ip, $day);
-        }
-
-        Response::json([
-            'items' => (new VisitorDayRepository())->findMatchingDays($hashesByDay),
-        ]);
     }
 
     // ---------------------------------------------------------------
