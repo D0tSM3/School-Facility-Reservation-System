@@ -705,8 +705,12 @@
     if (entry.holidays.some(h => String(h.holiday_date).slice(0, 10) === s.date)) text = 'That date is a holiday.';
     else if (S.isClosedDay(s.date, entry.rules.closedDays)) text = 'The campus is closed that day.';
     else if (room.status === 'Maintenance') text = 'This room is under maintenance.';
-    // Class / reservation time-overlap is no longer flagged in the customer booking
-    // summary; the server still enforces overlap on submit.
+    else {
+      // Class and existing-reservation overlaps block the booking in the summary
+      // (no override path); past-time is deliberately not flagged here.
+      const clash = S.findConflicts({ class_schedules: room.classes, reservations: room.reservations, holidays: entry.holidays }, s.date, s.start, s.end);
+      if (clash.length) text = 'No longer free. ' + S.describe(clash, s.start, s.end);
+    }
     M.setProblem(text);
   }
 
@@ -1087,9 +1091,11 @@
         if (entry.holidays.some(h => String(h.holiday_date).slice(0,10) === date)) return 'Holiday';
         if (S.isClosedDay(date, entry.rules.closedDays)) return 'Closed day';
         if (room.status === 'Maintenance') return 'Room under maintenance';
-        // Class / reservation time-overlap and past-time are no longer blocked
-        // per day in the customer booking summary; the server still enforces
-        // overlap on submit.
+        // Class and existing-reservation overlaps block the day; past-time is
+        // deliberately not flagged (customers may book earlier times/dates).
+        const start=G.toMin(slot.start), end=G.toMin(slot.end);
+        if (room.classes.some(c=>S.classRunsOn(c,date) && G.toMin(c.start_time)<end && G.toMin(c.end_time)>start)) return 'Class conflict';
+        if (room.reservations.some(rv=>String(rv.start_time).slice(0,10)===date && G.toMin(S.hhmm(rv.start_time))<end && G.toMin(S.hhmm(rv.end_time))>start)) return 'Reserved';
         return '';
       },
       onClear: () => { state.sel = null; M.set(null); paintSelBadge(); draw(); },
